@@ -15,14 +15,8 @@ nodes:
   - containerPort: 443
     hostPort: 443
     protocol: TCP
-  - containerPort: 6001
-    hostPort: 6001
-    protocol: TCP
-  - containerPort: 6002
-    hostPort: 6002
-    protocol: TCP
-  - containerPort: 6003
-    hostPort: 6003
+  - containerPort: 30001
+    hostPort: 30001
     protocol: TCP
 - role: worker
 - role: worker
