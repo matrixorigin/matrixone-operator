@@ -123,9 +123,3 @@ docker-compose up
 # stop cluster
 docker-compose down  --remove-orphans
 ```
-
-
-
-
-
-
