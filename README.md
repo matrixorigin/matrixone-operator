@@ -31,7 +31,7 @@ brew install minikube
 
 # Linux
 wget https://github.com/kubernetes/minikube/releases/download/v1.24.0/minikube-1.24.0-0.x86_64.rpm
-sudo rpm -ivh minikube-1.18.1-0.x86_64.rpm
+sudo rpm -ivh minikube-1.24.0-0.x86_64.rpm
 
 # start cluster
 minikube start
@@ -123,9 +123,3 @@ docker-compose up
 # stop cluster
 docker-compose down  --remove-orphans
 ```
-
-
-
-
-
-
