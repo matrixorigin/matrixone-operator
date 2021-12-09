@@ -1,0 +1,13 @@
+mode: set
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:38.101,44.16 5 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:52.2,52.92 1 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:55.2,56.16 2 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:59.2,60.16 2 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:64.2,66.57 2 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:44.16,45.29 1 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:49.3,49.28 1 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:45.29,47.4 1 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:52.92,54.3 1 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:56.16,58.3 1 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:60.16,62.3 1 0
+github.com/matrixorigin/matrixone-operator/controllers/matrixone_controller.go:71.72,75.2 1 0

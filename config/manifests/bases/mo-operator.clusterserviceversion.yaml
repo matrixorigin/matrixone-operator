@@ -1,0 +1,48 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: mo-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: Matrixone is the Schema for the matrixones API
+      displayName: Matrixone
+      kind: Matrixone
+      name: matrixones.matrixone.matrixorigin.cn
+      version: v1alpha1
+  description: matirxone operator
+  displayName: matrixone
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - matrixone
+  links:
+  - name: Mo Operator
+    url: https://mo-operator.domain
+  maintainers:
+  - email: wanglei@matrixorigin.cn
+    name: lei
+  maturity: alpha
+  provider:
+    name: matrixorigin
+    url: matrixorigin.cn
+  version: 0.0.0

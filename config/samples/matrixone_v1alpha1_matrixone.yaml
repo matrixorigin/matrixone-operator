@@ -1,0 +1,6 @@
+apiVersion: matrixone.matrixorigin.cn/v1alpha1
+kind: Matrixone
+metadata:
+  name: matrixone-sample
+spec:
+  # Add fields here

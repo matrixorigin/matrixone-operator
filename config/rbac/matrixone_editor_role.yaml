@@ -1,0 +1,24 @@
+# permissions for end users to edit matrixones.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: matrixone-editor-role
+rules:
+- apiGroups:
+  - matrixone.matrixorigin.cn
+  resources:
+  - matrixones
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - matrixone.matrixorigin.cn
+  resources:
+  - matrixones/status
+  verbs:
+  - get
