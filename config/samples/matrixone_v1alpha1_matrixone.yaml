@@ -1,6 +1,27 @@
 apiVersion: matrixone.matrixorigin.cn/v1alpha1
 kind: Matrixone
 metadata:
-  name: matrixone-sample
+  name: matrixone-standalone
 spec:
-  # Add fields here
+  kubernetesConfig:
+    image: "matrixorigin/matrixone:latest"
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 101m
+        memory: 128Mi
+      limits:
+        cpu: 101m
+        memory: 128Mi
+    serviceType: ClusterIP
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  redisExporter:
+    enabled: false
+    image: 'matrixorigin/matirxone-exporter:latest'
