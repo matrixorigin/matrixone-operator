@@ -8,9 +8,43 @@ metadata:
           "apiVersion": "matrixone.matrixorigin.cn/v1alpha1",
           "kind": "Matrixone",
           "metadata": {
-            "name": "matrixone-sample"
+            "name": "matrixone-standalone"
           },
-          "spec": null
+          "spec": {
+            "kubernetesConfig": {
+              "image": "matrixorigin/matrixone:latest",
+              "imagePullPolicy": "IfNotPresent",
+              "resources": {
+                "limits": {
+                  "cpu": "101m",
+                  "memory": "128Mi"
+                },
+                "requests": {
+                  "cpu": "101m",
+                  "memory": "128Mi"
+                }
+              },
+              "serviceType": "ClusterIP"
+            },
+            "matrixExporter": {
+              "enabled": false,
+              "image": "matrixorigin/matrixone-exporter:latest"
+            },
+            "storage": {
+              "volumeClaimTemplate": {
+                "spec": {
+                  "accessModes": [
+                    "ReadWriteOnce"
+                  ],
+                  "resources": {
+                    "requests": {
+                      "storage": "1Gi"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       ]
     capabilities: Basic Install
@@ -107,7 +141,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: wanglei1995/matirxone-operator:0.0.1
+                image: wanglei1995/matrixone-operator:0.0.1
                 livenessProbe:
                   httpGet:
                     path: /healthz
