@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   node0: 
-    image: wanglei1995/matrixone:0.0.1
+    image: matrixorigin/matrixone:latest
     ports:
       - "10000"
       - "20000"
@@ -21,7 +21,7 @@ services:
         ipv4_address: 172.19.0.2
 
   node1:
-    image: wanglei1995/matrixone:0.0.1
+    image: matrixorigin/matrixone:latest
     ports:
       - "10000"
       - "20000"
@@ -47,7 +47,7 @@ services:
         ipv4_address: 172.19.0.3
 
   node2:
-    image: wanglei1995/matrixone:0.0.1
+    image: matrixorigin/matrixone:latest
     ports:
       - "40000"
       - "50000"
