@@ -29,10 +29,10 @@ func getService(namespace string, service string) (*corev1.Service, error) {
 	logger := serviceLogger(namespace, service)
 	serviceInfo, err := generateK8sClient().CoreV1().Services(namespace).Get(context.TODO(), service, metav1.GetOptions{})
 	if err != nil {
-		logger.Info("Redis service get action is failed")
+		logger.Info("Matrixnoe service get action is failed")
 		return nil, err
 	}
-	logger.Info("Redis service get action is successful")
+	logger.Info("Matrixone service get action is successful")
 	return serviceInfo, nil
 }
 
@@ -156,7 +156,7 @@ func generateServiceDef(serviceMeta metav1.ObjectMeta, labels map[string]string,
 			Selector: labels,
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "redis-client",
+					Name:       "matrixone-client",
 					Port:       matrixonePort,
 					TargetPort: intstr.FromInt(int(matrixonePort)),
 					Protocol:   corev1.ProtocolTCP,
@@ -165,8 +165,8 @@ func generateServiceDef(serviceMeta metav1.ObjectMeta, labels map[string]string,
 		},
 	}
 	if enableMetrics {
-		redisExporterService := enableMetricsPort()
-		service.Spec.Ports = append(service.Spec.Ports, *redisExporterService)
+		matrixoneExporterService := enableMetricsPort()
+		service.Spec.Ports = append(service.Spec.Ports, *matrixoneExporterService)
 	}
 	AddOwnerRefToObject(service, ownerDef)
 	return service
@@ -179,7 +179,7 @@ func CreateOrUpdateService(namespace string, serviceMeta metav1.ObjectMeta, labe
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(serviceDef); err != nil {
-				logger.Error(err, "Unable to patch redis service with compare annotations")
+				logger.Error(err, "Unable to patch matrixone service with compare annotations")
 			}
 			return createService(namespace, serviceDef)
 		}

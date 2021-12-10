@@ -8,7 +8,7 @@ type KubernetesConfig struct {
 	Image                  string                         `json:"image"`
 	ImagePullPolicy        corev1.PullPolicy              `json:"imagePullPolicy,omitempty"`
 	Resources              *corev1.ResourceRequirements   `json:"resources,omitempty"`
-	ExistingPasswordSecret *ExistingPasswordSecret        `json:"redisSecret,omitempty"`
+	ExistingPasswordSecret *ExistingPasswordSecret        `json:"matrixoneSecret,omitempty"`
 	ImagePullSecrets       *[]corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 }
 

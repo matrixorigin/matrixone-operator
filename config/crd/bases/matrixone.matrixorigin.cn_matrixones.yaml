@@ -880,7 +880,7 @@ spec:
                           type: string
                       type: object
                     type: array
-                  redisSecret:
+                  matrixoneSecret:
                     properties:
                       key:
                         type: string
@@ -2673,7 +2673,7 @@ spec:
                               type: string
                           type: object
                         type: array
-                      redisSecret:
+                      matrixoneSecret:
                         properties:
                           key:
                             type: string

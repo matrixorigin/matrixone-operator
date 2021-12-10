@@ -101,12 +101,12 @@ func CreateStandAloneService(cr *matrixonev1alpha1.Matrixone) error {
 	headlessObjectMetaInfo := generateObjectMetaInformation(cr.ObjectMeta.Name+"-headless", cr.Namespace, labels, generateServiceAnots())
 	err := CreateOrUpdateHeadlessService(cr.Namespace, headlessObjectMetaInfo, labels, matrixoneAsOwner(cr))
 	if err != nil {
-		logger.Error(err, "Cannot create standalone headless service for Redis")
+		logger.Error(err, "Cannot create standalone headless service for Matrixone")
 		return err
 	}
 	err = CreateOrUpdateService(cr.Namespace, objectMetaInfo, labels, matrixoneAsOwner(cr), enableMetrics)
 	if err != nil {
-		logger.Error(err, "Cannot create standalone service for Redis")
+		logger.Error(err, "Cannot create standalone service for Matrixone")
 		return err
 	}
 	return nil

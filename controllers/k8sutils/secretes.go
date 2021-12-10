@@ -10,8 +10,8 @@ import (
 
 var log = logf.Log.WithName("controller_matrixone")
 
-// getRedisPassword method will return the redis password
-func getRedisPassword(namespace, name, secretKey string) (string, error) {
+// getMatrixonePassword method will return the matrixone password
+func getMatrixonePassword(namespace, name, secretKey string) (string, error) {
 	logger := secretLogger(namespace, name)
 	secretName, err := generateK8sClient().CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
