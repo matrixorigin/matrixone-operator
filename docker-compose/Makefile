@@ -24,7 +24,7 @@ dev-pre:
 	
 .PHONY: matrixone dev image build
 dev-build:
-	cd matrixone && docker build . -t matrixone:dc
+	cd matrixone && docker build --platform=linux/amd64 . -t matrixone:dc
 
 .PHONY: matrixone dev cluster start
 dev-up:
