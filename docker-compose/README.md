@@ -65,5 +65,5 @@ make down
 make clean
 
 # clean data, log and repo
-make all-clena
+make all-clean
 ```
