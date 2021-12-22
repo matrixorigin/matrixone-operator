@@ -11,10 +11,6 @@ matrix cluster start with latest image
 export HOST=<YOUR MACHINE IP>
 export PORT=<CLUSTER_PORT>
 make mo-client
-
-# test other node
-export PORT=<OTHER_PORT>
-make mo-client
 ```
 
 ### start wtih custom image
