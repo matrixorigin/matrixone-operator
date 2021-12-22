@@ -17,8 +17,7 @@ make mo-client
 
 ```shell
 # image and tag
-export IMAGE=<IMAGE>
-export TAG=<TAG>
+export IMAGE=<IMAGE> TAG=<TAG>
 
 # start cluster
 make up
