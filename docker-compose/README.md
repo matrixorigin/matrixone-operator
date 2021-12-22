@@ -5,14 +5,17 @@
 matrix cluster start with latest image
 
 ```shell
+# image and tag
+export IMAGE=matrixorigin/matrixone TAG=latest
+
 # start cluster
-make pro-start
+make up
 
 # stop cluster
-make pro-down
+make down
 
 # clean data and log
-make pro-clean
+make clean
 ```
 
 ## Test Matrixone Cluster with docker compose
@@ -28,13 +31,13 @@ make dev-pre
 make dev-build
 
 # start cluster
-make dev-start
+make up
 
 # stop cluster
-make dev-down
+make down
 
 # clean data and log
-make dev-clean
+make clean
 
 # connect mo cluster
 export HOST=<YOUR MACHINE IP>

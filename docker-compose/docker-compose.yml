@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   node0: 
-    image: matrixorigin/matrixone:latest
+    image: ${IMAGE}:${TAG}
     ports:
       - "10000"
       - "20000"
@@ -22,7 +22,7 @@ services:
         ipv4_address: 172.19.0.2
 
   node1:
-    image: matrixorigin/matrixone:latest
+    image: ${IMAGE}:${TAG}
     ports:
       - "10000"
       - "20000"
@@ -42,7 +42,7 @@ services:
         ipv4_address: 172.19.0.3
 
   node2:
-    image: matrixorigin/matrixone:latest
+    image: ${IMAGE}:${TAG}
     ports:
       - "40000"
       - "50000"
