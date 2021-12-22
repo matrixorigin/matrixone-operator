@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   node0: 
-    image: matrixorigin/matrixone:latest
+    image: matrixone:dev
     ports:
       - "10000"
       - "20000"
@@ -13,16 +13,16 @@ services:
       - "6001:6001"
     volumes:
       - $PWD/config0/config.toml:/config/config.toml:ro
-      - $PWD/store0:/store
-      - $PWD/log0:/log
+      - $PWD/store-dev0:/store
+      - $PWD/log-dev0:/log
     restart: on-failure
     tty: true
     networks: 
       monet:
-        ipv4_address: 172.19.0.2
+        ipv4_address: 173.19.0.2
 
   node1:
-    image: matrixorigin/matrixone:latest
+    image: matrixone:dev
     ports:
       - "10000"
       - "20000"
@@ -33,16 +33,16 @@ services:
       - "6002:6001"
     volumes:
       - $PWD/config1/config.toml:/config/config.toml:ro 
-      - $PWD/store1:/store
-      - $PWD/log1:/log
+      - $PWD/store-dev1:/store
+      - $PWD/log-dev1:/log
     restart: on-failure
     tty: true
     networks: 
       monet:
-        ipv4_address: 172.19.0.3
+        ipv4_address: 173.19.0.3
 
   node2:
-    image: matrixorigin/matrixone:latest
+    image: matrixone:dev
     ports:
       - "40000"
       - "50000"
@@ -53,16 +53,16 @@ services:
       - "6003:6001"
     volumes:
       - $PWD/config2/config.toml:/config/config.toml:ro
-      - $PWD/store2:/store
-      - $PWD/log2:/log
+      - $PWD/store-dev2:/store
+      - $PWD/log-dev2:/log
     restart: on-failure
     tty: true
     networks: 
       monet:
-        ipv4_address: 172.19.0.4
+        ipv4_address: 173.19.0.4
 networks:
   monet:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.19.0.0/16
+        - subnet: 173.19.0.0/16

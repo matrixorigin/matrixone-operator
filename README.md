@@ -1,5 +1,7 @@
 # MO K8S Cluster
 
+[![LICENSE](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 matrixone cluster deployment document.
 
 ## k8s cluster
@@ -110,16 +112,10 @@ mysql -h mo.matrixone.svc.cluster.local -P 6001 -udump -p
 
 ## matrixone docker compose start
 
+[matrixone docker compose tutorial](./docker-compose/README.md)
+
+**reference:**
+
 [docker document](https://docs.docker.com/)
 
 [docker compose document](https://docs.docker.com/compose/)
-
-```shell
-cd docker-compose
-
-# start cluster
-docker-compose up
-
-# stop cluster
-docker-compose down  --remove-orphans
-```
