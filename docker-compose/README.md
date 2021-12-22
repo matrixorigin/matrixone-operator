@@ -35,4 +35,13 @@ make dev-down
 
 # clean data and log
 make dev-clean
+
+# connect mo cluster
+export HOST=<YOUR MACHINE IP>
+export PORT=<CLUSTER_PORT>
+make mo-client
+
+# test other node
+export PORT=<OTHER_PORT>
+make mo-client
 ```

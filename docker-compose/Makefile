@@ -1,5 +1,5 @@
 .PHONY: matrixone production start
-pro-start:
+pro-up:
 	docker-compose -f docker-compose.yml up -d
 
 .PHONY: matrixone production stop 
@@ -8,7 +8,7 @@ pro-down:
 
 .PHONY: matrixone production clean
 pro-clean:
-	rm -rf log* && rm -rf store* && docker rmi matrixorigin/matrixone:latest
+	rm -rf log* && rm -rf store*
  
 .PHONY: matrixone dev clone and build
 dev-pre:
@@ -19,13 +19,21 @@ dev-build:
 	cd matrixone && docker build . -t matrixone:dev
 
 .PHONY: matrixone dev start
-dev-start:
-	docker-compose -f dev/docker-compose-dev.yml up -d
+dev-up:
+	cd dev && docker-compose -f docker-compose-dev.yml up -d
 
 .PHONY: matrixone dev stop
 dev-down:
-	docker-compose -f dev/docker-compose-dev.yml down --remove-orphans
+	cd dev && docker-compose -f docker-compose-dev.yml down --remove-orphans
 
 .PHONY: matrixone dev clean
 dev-clean:
-	rm -rf log-dev* && rm -rf store-dev* && rm -rf matrixone && docker rmi matrixone:dev
+	cd dev && rm -rf log-dev* && rm -rf store-dev* && rm -rf matrixone 
+
+.PHONY: matrixone client start
+mo-client:
+	docker run -it arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111
+
+.PHONY: image cleam
+img-clean:
+	docker rmi matrixone:dev && docker rmi matrixorigin/matrixone:latest
