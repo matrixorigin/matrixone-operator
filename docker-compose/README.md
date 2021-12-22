@@ -8,8 +8,7 @@ matrix cluster start with latest image
 
 ```shell
 # connect mo cluster
-export HOST=<YOUR MACHINE IP>
-export PORT=<CLUSTER_PORT>
+export HOST=<YOUR MACHINE IP> PORT=<CLUSTER_PORT>
 make mo-client
 ```
 
