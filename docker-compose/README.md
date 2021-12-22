@@ -1,8 +1,7 @@
-# Matrixone Docker Compose
+# Deploy MatrixOne Cluster with Docker Compose
 
-## Matrixone Cluster start up
+You can use the following command to start a 3-node MatrixOne Cluster directly which will get MatrixOne from Docker hub automatically:
 
-matrix cluster start with latest image
 
 ```shell
 # image and tag
@@ -18,8 +17,7 @@ make down
 make clean
 ```
 
-## Test Matrixone Cluster with docker compose
-
+You can also use following command to build a MatrixOne image directly:
 Build image and start matrixone cluster
 
 ```shell
