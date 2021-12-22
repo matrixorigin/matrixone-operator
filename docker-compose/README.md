@@ -1,11 +1,28 @@
-# Deploy MatrixOne Cluster with Docker Compose
+# Matrixone Docker Compose
 
-You can use the following command to start a 3-node MatrixOne Cluster directly which will get MatrixOne from Docker hub automatically:
+## Matrixone Cluster start up
 
+matrix cluster start with latest image
+
+### connect mo-client
+
+```shell
+# connect mo cluster
+export HOST=<YOUR MACHINE IP>
+export PORT=<CLUSTER_PORT>
+make mo-client
+
+# test other node
+export PORT=<OTHER_PORT>
+make mo-client
+```
+
+### start wtih custom image
 
 ```shell
 # image and tag
-export IMAGE=matrixorigin/matrixone TAG=latest
+export IMAGE=<IMAGE>
+export TAG=<TAG>
 
 # start cluster
 make up
@@ -17,7 +34,23 @@ make down
 make clean
 ```
 
-You can also use following command to build a MatrixOne image directly:
+### start with latest image
+
+```shell
+
+# start cluster
+make prod-up
+
+# stop cluster
+make down
+
+# clean
+make clean
+
+```
+
+### Test Matrixone Cluster with docker compose
+
 Build image and start matrixone cluster
 
 ```shell
@@ -29,7 +62,7 @@ make dev-pre
 make dev-build
 
 # start cluster
-make up
+make dev-up
 
 # stop cluster
 make down
@@ -37,12 +70,6 @@ make down
 # clean data and log
 make clean
 
-# connect mo cluster
-export HOST=<YOUR MACHINE IP>
-export PORT=<CLUSTER_PORT>
-make mo-client
-
-# test other node
-export PORT=<OTHER_PORT>
-make mo-client
+# clean data, log and repo
+make all-clena
 ```
