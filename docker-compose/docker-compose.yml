@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   node0: 
-    image: ${IMAGE}:${TAG}
+    image: matrixorigin/matrixone:latest
     ports:
       - "10000"
       - "20000"
@@ -12,9 +12,8 @@ services:
       - "50000"
       - "6001:6001"
     volumes:
-      - $PWD/config0/config.toml:/config/config.toml:ro
-      - $PWD/store0:/store
-      - $PWD/log0:/log
+      - $PWD/config0/config.toml:/config/config.toml
+      - cube0:/cube0
     restart: on-failure
     tty: true
     networks: 
@@ -22,7 +21,7 @@ services:
         ipv4_address: 172.19.0.2
 
   node1:
-    image: ${IMAGE}:${TAG}
+    image: matrixorigin/matrixone:latest
     ports:
       - "10000"
       - "20000"
@@ -30,19 +29,25 @@ services:
       - "30000"
       - "40000"
       - "50000"
-      - "6002:6001"
+      - "6002:6002"
     volumes:
-      - $PWD/config1/config.toml:/config/config.toml:ro 
-      - $PWD/store1:/store
-      - $PWD/log1:/log
+      - $PWD/config1/config.toml:/config/config.toml
+      - cube1:/cube1
     restart: on-failure
     tty: true
+    depends_on:
+      - node0
+    command: >
+     sh -c "sleep 10s &&
+            /usr/local/bin/dumb-init /mo-server /config/config.toml"
+            
+
     networks: 
       monet:
         ipv4_address: 172.19.0.3
 
   node2:
-    image: ${IMAGE}:${TAG}
+    image: matrixorigin/matrixone:latest
     ports:
       - "40000"
       - "50000"
@@ -50,16 +55,26 @@ services:
       - "10000"
       - "20000"
       - "30000"
-      - "6003:6001"
+      - "6003:6003"
     volumes:
       - $PWD/config2/config.toml:/config/config.toml:ro
-      - $PWD/store2:/store
-      - $PWD/log2:/log
+      - cube2:/cube2
     restart: on-failure
     tty: true
+    depends_on:
+      - node0
     networks: 
       monet:
         ipv4_address: 172.19.0.4
+    command: >
+     sh -c "sleep 10s &&
+            /usr/local/bin/dumb-init /mo-server /config/config.toml"
+
+volumes:
+  cube0:
+  cube1:
+  cube2:
+
 networks:
   monet:
     driver: bridge
