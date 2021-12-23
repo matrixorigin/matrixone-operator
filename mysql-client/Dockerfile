@@ -1,3 +1,3 @@
-FROM ubuntu:latest
-
-RUN apt-get update -y && apt-get install mysql-client -y
+FROM alpine
+RUN apk add --no-cache mysql-client
+ENTRYPOINT ["mysql"]
