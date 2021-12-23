@@ -110,16 +110,10 @@ mysql -h mo.matrixone.svc.cluster.local -P 6001 -udump -p
 
 ## matrixone docker compose start
 
+[matrixone docker compose tutorial](./docker-compose/README.md)
+
+**reference:**
+
 [docker document](https://docs.docker.com/)
 
 [docker compose document](https://docs.docker.com/compose/)
-
-```shell
-cd docker-compose
-
-# start cluster
-docker-compose up
-
-# stop cluster
-docker-compose down  --remove-orphans
-```

@@ -1,71 +1,49 @@
-# Deploy MatrixOne Cluster with Docker Compose
+# Deployment Introduction
 
-You can use the following command to start a 3-node MatrixOne Cluster directly which will get MatrixOne from Docker hub automatically:
+## Build
 
-## Matrixone Cluster start up
+1. Make sure `Docker` is installed.
+2. Use `make` to start/delete a 3-node MatrixOne cluster
 
-matrix cluster start with latest image
+## Usage
 
-### connect mo-cluster
+### Start a 3-node cluster with default configuration
+
+You can use the following command to start a MatrixOne cluster using the official MatrixOne image (which will be automatically downloaded from the docker hub).
+
+```shell
+# Start cluster using the latest image.
+make up
+
+# Or start cluster using a specific image by specifying `tag`.
+make up TAG=<TAG>
+```
+
+You can also build a MatrixOne Image from the source directly.
+
+```shell
+# Clone MatrixOne into the current directory, default branch is `main`.
+make dev-pre
+
+# You can also specify a branch name when executing the following command.
+make dev-pre BRANCH=<BRANCH>
+```
+
+### run mo-client to connect the cluster
 
 ```shell
 # connect mo cluster
-export HOST=<YOUR MACHINE IP> PORT=<CLUSTER_PORT>
-make mo-client
+make mo-client HOST=<YOUR MACHINE IP> PORT=<CLUSTER_PORT>
 ```
 
-### start wtih custom image
+### Close cluster
 
 ```shell
-# image and tag
-export IMAGE=<IMAGE> TAG=<TAG>
-
-# start cluster
-make up
-
-# stop cluster
 make down
-
-# clean data and log
-make clean
 ```
 
-### start with latest image
+### Clear residual data
 
 ```shell
-
-# start cluster
-make prod-up
-
-# stop cluster
-make down
-
-# clean
 make clean
-
-```
-
-You can also use following command to build a MatrixOne image directly:
-
-Build image and start matrixone cluster
-
-```shell
-# clone repo
-export BRANCH=main
-make dev-pre
-
-# build testing image
-make dev-build
-
-# start cluster
-make dev-up
-
-# stop cluster
-make down
-
-# clean data and log
-make clean
-
-# clean data, log and repo
-make all-clean
 ```

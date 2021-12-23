@@ -1,14 +1,15 @@
+PLATFORM ?= linux/amd64
+TAG ?= latest
+IMAGE ?= matrixorigin/matrixone
+BRANCH ?= main
+
 .PHONY: matrixone production start
-prod-up:
-	export IMAGE=matrixorigin/matrixone TAG=latest; docker-compose -f docker-compose.yml up -d
+up:
+	export IMAGE=${IMAGE} TAG=${TAG}; docker-compose -f docker-compose.yml up -d
 
 .PHONY: matrixone production stop
 down:
 	docker-compose -f docker-compose.yml down --remove-orphans
-
-.PHONY: custom image version start
-up:
-	docker-compose -f docker-compose.yml up -d
 
 .PHONY: clean data and log
 clean:
@@ -24,12 +25,8 @@ dev-pre:
 	
 .PHONY: matrixone dev image build
 dev-build:
-	cd matrixone && docker build --platform=linux/amd64 . -t matrixone:dc
-
-.PHONY: matrixone dev cluster start
-dev-up:
-	export IMAGE=matrixone TAG=dc; docker-compose -f docker-compose.yml up -d
+	cd matrixone && docker build --platform=${PLATFORM} . -t ${IMAGE}:${TAG}
 
 .PHONY: matrixone client start
 mo-client:
-	docker run -it --rm --name mo-client arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111 
+	docker run -it --rm --name mo-client --network docker-compose_monet arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111
