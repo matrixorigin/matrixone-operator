@@ -1,11 +1,20 @@
 PLATFORM ?= linux/amd64
 TAG ?= latest
 IMAGE ?= matrixorigin/matrixone
+PORT ?= 6001
+HOST ?= 172.19.0.2
 BRANCH ?= main
+PWD = $(shell pwd)
 
 .PHONY: matrixone production start
 up:
-	export IMAGE=${IMAGE} TAG=${TAG}; docker-compose -f docker-compose.yml up -d
+	@echo "store/log path: ${PWD}"
+	@echo "mo cluster ip: 172.19.0.2-172.19.0.4"
+	@echo "mo cluster port: 6001"
+	@echo "image ${IMAGE}:${TAG}"
+	@echo "mapped ports: 6001-6003"
+	@echo "connect: mysql -h <MACHINE_IP> -P <PORT> -udump -p111"
+	@export IMAGE=${IMAGE} TAG=${TAG}; docker-compose -f docker-compose.yml up -d
 
 .PHONY: matrixone production stop
 down:
@@ -29,4 +38,10 @@ dev-build:
 
 .PHONY: matrixone client start
 mo-client:
-	docker run -it --rm --name mo-client --network docker-compose_monet arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111
+	@echo "HOST: ${HOST}, PORT: ${PORT}"
+	@docker run -it --rm --name mo-client --network docker-compose_monet arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111
+
+.PHONY: mysql client
+mysql-client:
+	@echo "HOST: ${HOST}, PORT: ${PORT}"
+	docker run -it --rm --name mysql-client  arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111
