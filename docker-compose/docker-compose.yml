@@ -1,7 +1,7 @@
 version: '3.9'
 
 services:
-  node0: 
+  node0:
     image: ${IMAGE}:${TAG}
     ports:
       - "10000"
@@ -12,12 +12,12 @@ services:
       - "50000"
       - "6001:6001"
     volumes:
-      - $PWD/config0/config.toml:/config/config.toml:ro
-      - $PWD/store0:/store
-      - $PWD/log0:/log
+      - $PWD/config0/config.toml:/opt/matrixone/system_vars_config.toml:ro
+      - $PWD/store0:/opt/matrixone/store
+      - $PWD/log0:/opt/matrixone/log
     restart: on-failure
     tty: true
-    networks: 
+    networks:
       monet:
         ipv4_address: 172.19.0.2
 
@@ -32,12 +32,12 @@ services:
       - "50000"
       - "6002:6001"
     volumes:
-      - $PWD/config1/config.toml:/config/config.toml:ro 
-      - $PWD/store1:/store
-      - $PWD/log1:/log
+      - $PWD/config1/config.toml:/opt/matrixone/system_vars_config.toml:ro
+      - $PWD/store1:/opt/matrixone/store
+      - $PWD/log1:/opt/matrixone/log
     restart: on-failure
     tty: true
-    networks: 
+    networks:
       monet:
         ipv4_address: 172.19.0.3
 
@@ -52,12 +52,12 @@ services:
       - "30000"
       - "6003:6001"
     volumes:
-      - $PWD/config2/config.toml:/config/config.toml:ro
-      - $PWD/store2:/store
-      - $PWD/log2:/log
+      - $PWD/config2/config.toml:/opt/matrixone/system_vars_config.toml:ro
+      - $PWD/store2:/opt/matrixone/store
+      - $PWD/log2:/opt/matrixone/log
     restart: on-failure
     tty: true
-    networks: 
+    networks:
       monet:
         ipv4_address: 172.19.0.4
 networks:

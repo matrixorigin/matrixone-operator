@@ -1,7 +1,10 @@
 PLATFORM ?= linux/amd64
 TAG ?= latest
 IMAGE ?= matrixorigin/matrixone
+REPO ?= git@github.com:matrixorigin/matrixone.git
 BRANCH ?= main
+PORT ?= 6001
+HOST ?= 172.19.0.2
 
 .PHONY: matrixone production start
 up:
@@ -21,7 +24,7 @@ all-clean:
  
 .PHONY: matrixone dev clone and build
 dev-pre:
-	git clone git@github.com:matrixorigin/matrixone.git -b ${BRANCH} && cp Dockerfile matrixone
+	git clone ${REPO} -b ${BRANCH} && cp Dockerfile matrixone
 	
 .PHONY: matrixone dev image build
 dev-build:
@@ -29,4 +32,5 @@ dev-build:
 
 .PHONY: matrixone client start
 mo-client:
-	docker run -it --rm --name mo-client --network docker-compose_monet arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111
+	@echo "HOST: ${HOST}, PORT: ${PORT}"
+	@docker run -it --rm --name mo-client --network docker-compose_monet arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111
