@@ -32,4 +32,5 @@ dev-build:
 
 .PHONY: matrixone client start
 mo-client:
-	docker run -it --rm --name mo-client --network docker-compose_monet arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111
+	@echo "HOST: ${HOST}, PORT: ${PORT}"
+	@docker run -it --rm --name mo-client --network docker-compose_monet arey/mysql-client -h ${HOST} -P ${PORT} -udump -p111
