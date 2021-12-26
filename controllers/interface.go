@@ -1,17 +1,22 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
+	"github.com/matrixorigin/matrixone-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type matrixoneEventReason string
+
+type MatrixoneNodeStatus string
 
 const (
 	rollingDeployWait          matrixoneEventReason = "matrixoneNodeRollingDeployWait"
@@ -59,6 +64,57 @@ type objectList interface {
 	metav1.ListInterface
 	runtime.Object
 }
+
+// Reader Interface
+type Reader interface {
+	List(ctx context.Context, sdk client.Client, drd *v1alpha1.MatrixoneCluster, selectorLabels map[string]string, emitEvent EventEmitter, emptyListObjFn func() objectList, ListObjFn func(obj runtime.Object) []object) ([]object, error)
+	Get(ctx context.Context, sdk client.Client, nodeSpecUniqueStr string, drd *v1alpha1.MatrixoneCluster, emptyObjFn func() object, emitEvent EventEmitter) (object, error)
+}
+
+// Writer Interface
+type Writer interface {
+	Delete(ctx context.Context, sdk client.Client, drd *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter, deleteOptions ...client.DeleteOption) error
+	Create(ctx context.Context, sdk client.Client, drd *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error)
+	Update(ctx context.Context, sdk client.Client, drd *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error)
+	Patch(ctx context.Context, sdk client.Client, drd *v1alpha1.MatrixoneCluster, obj object, status bool, patch client.Patch, emitEvent EventEmitter) error
+}
+
+// WriterFuncs struct
+type WriterFuncs struct{}
+
+// ReaderFuncs struct
+type ReaderFuncs struct{}
+
+// Initalizie Reader
+var readers Reader = ReaderFuncs{}
+
+func (f ReaderFuncs) List(ctx context.Context, sdk client.Client, drd *v1alpha1.MatrixoneCluster, selectorLabels map[string]string, emitEvent EventEmitter, emptyListObjFn func() objectList, ListObjFn func(obj runtime.Object) []object) ([]object, error) {
+	listOpts := []client.ListOption{
+		client.InNamespace(drd.Namespace),
+		client.MatchingLabels(selectorLabels),
+	}
+	listObj := emptyListObjFn()
+
+	if err := sdk.List(ctx, listObj, listOpts...); err != nil {
+		emitEvent.EmitEventOnList(drd, listObj, err)
+		return nil, err
+	}
+
+	return ListObjFn(listObj), nil
+}
+
+func (f ReaderFuncs) Get(ctx context.Context, sdk client.Client, nodeSpecUniqueStr string, drd *v1alpha1.MatrixoneCluster, emptyObjFn func() object, emitEvent EventEmitter) (object, error) {
+	obj := emptyObjFn()
+
+	if err := sdk.Get(ctx, *namespacedName(nodeSpecUniqueStr, drd.Namespace), obj); err != nil {
+		emitEvent.EmitEventOnGetError(drd, obj, err)
+		return nil, err
+	}
+	return obj, nil
+}
+
+// Initalize Writer
+var writers Writer = WriterFuncs{}
 
 // EmitEventGeneric shall emit a generic event
 func (e EmitEventFuncs) EmitEventGeneric(obj object, eventReason, msg string, err error) {
