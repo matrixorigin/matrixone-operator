@@ -1,10 +1,11 @@
 # Build the manager binary
 FROM golang:1.16 as builder
 
-ARG GOARCH=amd64
-
 WORKDIR /workspace
 # Copy the Go Modules manifests
+
+RUN go env -w GOPROXY=https://goproxy.cn,direct
+
 COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
@@ -17,13 +18,13 @@ COPY api/ api/
 COPY controllers/ controllers/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${GOARCH}} go build -a -o matrixone-manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM wanglei1995/static:nonroot
 WORKDIR /
-COPY --from=builder /workspace/matrixone-manager .
+COPY --from=builder /workspace/manager .
 USER 65532:65532
 
-ENTRYPOINT ["/matrixone-manager"]
+ENTRYPOINT ["/manager"]

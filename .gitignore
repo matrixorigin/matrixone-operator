@@ -1,2 +1,4 @@
 .DS_Store
 config
+vendor
+bin

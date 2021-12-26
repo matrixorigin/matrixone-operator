@@ -12,8 +12,8 @@ resources:
     namespaced: true
   controller: true
   domain: matrixorigin.cn
-  group: matrixorigin.cn
-  kind: Matrixone
+  group: matrixone
+  kind: MatrixoneCluster
   path: github.com/matrixorigin/matrixone-operator/api/v1alpha1
   version: v1alpha1
 version: "3"
