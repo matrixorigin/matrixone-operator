@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,11 +26,19 @@ import (
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of MatrixoneCluster. Edit matrixonecluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Size                 int                        `json:"size"`
+	StartScript          string                     `json:"startScripts"`
+	Image                string                     `json:"image,omitempty"`
+	ImagePullPolicy      v1.PullPolicy              `json:"imagePullPolicy,omitempty"`
+	Env                  []v1.EnvVar                `json:"env,omitempty"`
+	ImagePullSecrets     []v1.LocalObjectReference  `json:"imagePullSecrets,omitempty"`
+	VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
+	// PodAnnotations       map[string]string          `json:"podAnnotations,omitempty"`
+	// LivenessProbe        *v1.Probe                  `json:"livenessProbe,omitempty"`
+	// ReadinessProbe       *v1.Probe                  `json:"readinessProbe,omitempty"`
+	Services []v1.Service `json:"services,omitempty"`
+	// Affinity *v1.Affinity `json:"affinity,omitempty"`
+	// NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 // MatrixoneClusterStatus defines the observed state of MatrixoneCluster
