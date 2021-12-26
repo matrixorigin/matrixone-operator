@@ -21,8 +21,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type MatrixoneNodeConditionType string
+
+const (
+	MatrixoneClusterReady      MatrixoneNodeConditionType = "MatrixoneClusterReady"
+	MatrixoneNodeRollingUpdate MatrixoneNodeConditionType = "MatrixoneNodeRollingUpdate"
+	MatrixoneNodeErrorState    MatrixoneNodeConditionType = "MatrixoneNodeErrorState"
+)
+
+type MatrixoneNodeTypeStatus struct {
+	MatrixoneNode                string                     `json:"matrixoneNode,omitempty"`
+	MatrixoneNodeConditionStatus v1.ConditionStatus         `json:"matrixoneNodeConditionStatus,omitempty"`
+	MatrixoneNodeConditionType   MatrixoneNodeConditionType `json:"matrixoneNodeConditionType,omitempty"`
+	Reason                       string                     `json:"reason,omitempty"`
+}
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
