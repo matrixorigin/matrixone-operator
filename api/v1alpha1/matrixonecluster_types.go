@@ -55,8 +55,16 @@ type MatrixoneClusterSpec struct {
 
 // MatrixoneClusterStatus defines the observed state of MatrixoneCluster
 type MatrixoneClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	MatrixoneNodeStatus    MatrixoneNodeTypeStatus `json:"matrixoneNodeStatus,omitempty"`
+	Statefulset            []string                `json:"statefulset,omitempty"`
+	Deployment             []string                `json:"deployments,omitempty"`
+	Services               []string                `json:"services,omitempty"`
+	ConfigMaps             []string                `json:"configMaps,omitempty"`
+	PodDisruptionBudgets   []string                `json:"podDisruptionBudgets,omitempty"`
+	Ingress                []string                `json:"ingress,omitempty"`
+	HPAutoScalers          []string                `json:"hpAutoScalers,omitempty"`
+	Pods                   []string                `json:"pods,omitempty"`
+	PersistentVolumeClaims []string                `json:"persistentVolumeClaims,omitempty"`
 }
 
 //+kubebuilder:object:root=true
