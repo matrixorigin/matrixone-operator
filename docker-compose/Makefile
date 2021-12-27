@@ -5,6 +5,7 @@ PORT ?= 6001
 HOST ?= 172.19.0.2
 BRANCH ?= main
 PWD = $(shell pwd)
+REPO ?= git@github.com:matrixorigin/matrixone.git
 
 .PHONY: matrixone production start
 up:
@@ -30,7 +31,7 @@ all-clean:
  
 .PHONY: matrixone dev clone and build
 dev-pre:
-	git clone git@github.com:matrixorigin/matrixone.git -b ${BRANCH} && cp Dockerfile matrixone
+	git clone ${REPO} -b ${BRANCH} && cp Dockerfile matrixone
 	
 .PHONY: matrixone dev image build
 dev-build:
