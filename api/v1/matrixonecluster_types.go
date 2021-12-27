@@ -38,13 +38,13 @@ type MatrixoneNodeTypeStatus struct {
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
-	Size                 int                        `json:"size"`
-	StartScript          string                     `json:"startScripts"`
-	Image                string                     `json:"image,omitempty"`
-	ImagePullPolicy      v1.PullPolicy              `json:"imagePullPolicy,omitempty"`
-	Env                  []v1.EnvVar                `json:"env,omitempty"`
-	ImagePullSecrets     []v1.LocalObjectReference  `json:"imagePullSecrets,omitempty"`
-	VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
+	Size int `json:"size"`
+	// StartScript          string                     `json:"startScripts"`
+	// Image string `json:"image,omitempty"`
+	// ImagePullPolicy      v1.PullPolicy              `json:"imagePullPolicy,omitempty"`
+	// Env                  []v1.EnvVar                `json:"env,omitempty"`
+	// ImagePullSecrets     []v1.LocalObjectReference  `json:"imagePullSecrets,omitempty"`
+	// VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 	// PodAnnotations       map[string]string          `json:"podAnnotations,omitempty"`
 	// LivenessProbe        *v1.Probe                  `json:"livenessProbe,omitempty"`
 	// ReadinessProbe       *v1.Probe                  `json:"readinessProbe,omitempty"`
