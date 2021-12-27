@@ -2,7 +2,7 @@
 
 ## Build
 
-1. Make sure `Docker` is installed.
+1. Make sure `docker` and `docker compose` is installed.
 2. Use `make` to start/delete a 3-node MatrixOne cluster
 
 ## Usage
