@@ -1,4 +1,4 @@
-domain: github.com
+domain: matrixorigin.cn
 layout:
 - go.kubebuilder.io/v3
 projectName: matrixone-operator
@@ -8,7 +8,7 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: github.com
+  domain: matrixorigin.cn
   group: matrixone
   kind: MatrixoneCluster
   path: github.com/matrixorigin/matrixone-operator/api/v1

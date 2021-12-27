@@ -1,4 +1,4 @@
-apiVersion: matrixone.github.com/v1
+apiVersion: matrixone.matrixorigin.cn/v1
 kind: MatrixoneCluster
 metadata:
   name: matrixonecluster-sample
