@@ -8,4 +8,4 @@ webhook:
   port: 9443
 leaderElection:
   leaderElect: true
-  resourceName: 0c8ab548.matrixorigin.cn
+  resourceName: 0c8ab548.github.com

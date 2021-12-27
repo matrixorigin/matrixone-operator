@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/matrixorigin/matrixone-operator/api/v1alpha1"
-	matrixonev1alpha1 "github.com/matrixorigin/matrixone-operator/api/v1alpha1"
+	matrixonev1alpha1 "github.com/matrixorigin/matrixone-operator/api/v1"
+	v1alpha1 "github.com/matrixorigin/matrixone-operator/api/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"

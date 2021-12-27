@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
-  name: matrixoneclusters.matrixone.matrixorigin.cn
+  name: matrixoneclusters.matrixone.github.com
 spec:
-  group: matrixone.matrixorigin.cn
+  group: matrixone.github.com
   names:
     kind: MatrixoneCluster
     listKind: MatrixoneClusterList
@@ -16,7 +16,7 @@ spec:
     singular: matrixonecluster
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: MatrixoneCluster is the Schema for the matrixoneclusters API

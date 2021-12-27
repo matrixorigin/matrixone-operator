@@ -1,0 +1,6 @@
+apiVersion: matrixone.github.com/v1
+kind: MatrixoneCluster
+metadata:
+  name: matrixonecluster-sample
+spec:
+  # TODO(user): Add fields here
