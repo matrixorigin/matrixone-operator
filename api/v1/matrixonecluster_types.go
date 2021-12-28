@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,29 +27,35 @@ import (
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
-	Replicas             int                        `json:"replicas,omitempty"`
-	Image                string                     `json:"image,omitempty"`
-	Services             []v1.Service               `json:"services,omitempty"`
-	Env                  []v1.EnvVar                `json:"env,omitempty"`
-	VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
-	Resources            v1.ResourceRequirements    `json:"resources,omitempty"`
-	ImagePullSecrets     []v1.LocalObjectReference  `json:"imagePullSecrets,omitempty"`
-	ImagePullPolicy      v1.PullPolicy              `json:"imagePullPolicy,omitempty"`
-	NodeSelector         map[string]string          `json:"nodeSelector,omitempty"`
-	Tolerations          []v1.Toleration            `json:"tolerations,omitempty"`
-	Affinity             *v1.Affinity               `json:"affinity,omitempty"`
+	Replicas                      int32                             `json:"replicas,omitempty"`
+	Image                         string                            `json:"image,omitempty"`
+	Services                      []v1.Service                      `json:"services,omitempty"`
+	Env                           []v1.EnvVar                       `json:"env,omitempty"`
+	VolumeClaimTemplates          []v1.PersistentVolumeClaim        `json:"volumeClaimTemplates,omitempty"`
+	Resources                     v1.ResourceRequirements           `json:"resources,omitempty"`
+	ImagePullSecrets              []v1.LocalObjectReference         `json:"imagePullSecrets,omitempty"`
+	ImagePullPolicy               v1.PullPolicy                     `json:"imagePullPolicy,omitempty"`
+	PodAnnotations                map[string]string                 `json:"podAnnotations,omitempty"`
+	NodeSelector                  map[string]string                 `json:"nodeSelector,omitempty"`
+	Tolerations                   []v1.Toleration                   `json:"tolerations,omitempty"`
+	Affinity                      *v1.Affinity                      `json:"affinity,omitempty"`
+	PodLabels                     map[string]string                 `json:"podLabels,omitempty"`
+	UpdateStrategy                *appsv1.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
+	ServiceAccount                string                            `json:"serviceAccount,omitempty"`
+	TerminationGracePeriodSeconds *int64                            `json:"terminationGracePeriodSeconds,omitempty"`
 }
 
 // MatrixoneClusterStatus defines the observed state of MatrixoneCluster
 type MatrixoneClusterStatus struct {
-	Statefulset            []string `json:"statefulset,omitempty"`
-	Services               []string `json:"services,omitempty"`
-	ConfigMaps             []string `json:"configMaps,omitempty"`
-	PodDisruptionBudgets   []string `json:"podDisruptionBudgets,omitempty"`
-	Ingress                []string `json:"ingress,omitempty"`
-	HPAutoScalers          []string `json:"hpAutoScalers,omitempty"`
-	Pods                   []string `json:"pods,omitempty"`
-	PersistentVolumeClaims []string `json:"persistentVolumeClaims,omitempty"`
+	MatrixoneNodeStatus    MatrixoneNodeTypeStatus `json:"matrixoneNodeStatus,omitempty"`
+	Statefulset            []string                `json:"statefulset,omitempty"`
+	Services               []string                `json:"services,omitempty"`
+	ConfigMaps             []string                `json:"configMaps,omitempty"`
+	PodDisruptionBudgets   []string                `json:"podDisruptionBudgets,omitempty"`
+	Ingress                []string                `json:"ingress,omitempty"`
+	HPAutoScalers          []string                `json:"hpAutoScalers,omitempty"`
+	Pods                   []string                `json:"pods,omitempty"`
+	PersistentVolumeClaims []string                `json:"persistentVolumeClaims,omitempty"`
 }
 
 type MatrixoneNodeConditionType string
@@ -58,6 +65,13 @@ const (
 	MatrixoneNodeRollingUpdate MatrixoneNodeConditionType = "MatrixoneNodeRollingUpdate"
 	MatrixoneNodeErrorState    MatrixoneNodeConditionType = "MatrixoneNodeErrorState"
 )
+
+type MatrixoneNodeTypeStatus struct {
+	MatrixoneNode                string                     `json:"matrixoneNode,omitempty"`
+	MatrixoneNodeConditionStatus v1.ConditionStatus         `json:"matrixoneNodeConditionStatus,omitempty"`
+	MatrixoneNodeConditionType   MatrixoneNodeConditionType `json:"matrixoneNodeConditionType,omitempty"`
+	Reason                       string                     `json:"reason,omitempty"`
+}
 
 // Matrixone Log with promtail and loki
 type PromtailLokiSpec struct {
