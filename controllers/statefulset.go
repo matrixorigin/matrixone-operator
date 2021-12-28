@@ -48,3 +48,12 @@ func makeStatefulSetSpec(moc *matrixonev1alpha1.MatrixoneCluster, ls map[string]
 
 	return stsSpec
 }
+
+func makeStatefulSetEmptyObj() *appsv1.StatefulSet {
+	return &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "StatefulSet",
+		},
+	}
+}

@@ -39,3 +39,12 @@ func makePersistentVolumeClaim(pvc *v1.PersistentVolumeClaim, moc *matrixonev1al
 
 	return pvc, nil
 }
+
+func makePersistentVolumeClaimListEmptyObj() *v1.PersistentVolumeClaimList {
+	return &v1.PersistentVolumeClaimList{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "PersistentVolumeClaim",
+		},
+	}
+}

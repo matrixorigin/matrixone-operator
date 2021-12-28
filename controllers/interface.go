@@ -25,7 +25,7 @@ const (
 )
 
 const (
-	rollingDeployWait          matrixoneEventReason = "matrixoneNodeRollingDeployWait"
+	matrixonerollingDeployWait matrixoneEventReason = "matrixoneNodeRollingDeployWait"
 	matrixoneOjectGetFail      matrixoneEventReason = "matrixoneOperatorGetFail"
 	matrixoneNodeUpdateFail    matrixoneEventReason = "matrixoneOperatorUpdateFail"
 	matrixoneNodeUpdateSuccess matrixoneEventReason = "matrixoneOperatorUpdateSuccess"
@@ -251,10 +251,10 @@ func (e EmitEventFuncs) EmitEventOnUpdate(obj, updateObj object, err error) {
 func (e EmitEventFuncs) EmitEventRollingDeployWait(obj, k8sObj object, nodeSpecUniqueStr string) {
 	if detectType(k8sObj) == "*v1.StatefulSet" {
 		msg := fmt.Sprintf("StatefulSet[%s] roll out is in progress CurrentRevision[%s] != UpdateRevision[%s]", nodeSpecUniqueStr, k8sObj.(*appsv1.StatefulSet).Status.CurrentRevision, k8sObj.(*appsv1.StatefulSet).Status.UpdateRevision)
-		e.Event(obj, v1.EventTypeNormal, string(rollingDeployWait), msg)
+		e.Event(obj, v1.EventTypeNormal, string(matrixonerollingDeployWait), msg)
 	} else if detectType(k8sObj) == "*v1.Deployment" {
 		msg := fmt.Sprintf("Deployment[%s] roll out is in progress in namespace [%s], ReadyReplicas [%d] != Current Replicas [%d]", k8sObj.(*appsv1.Deployment).Name, k8sObj.GetNamespace(), k8sObj.(*appsv1.Deployment).Status.ReadyReplicas, k8sObj.(*appsv1.Deployment).Status.Replicas)
-		e.Event(obj, v1.EventTypeNormal, string(rollingDeployWait), msg)
+		e.Event(obj, v1.EventTypeNormal, string(matrixonerollingDeployWait), msg)
 	}
 }
 

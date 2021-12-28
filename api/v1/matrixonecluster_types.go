@@ -30,13 +30,16 @@ type MatrixoneClusterSpec struct {
 	Replicas                      int32                             `json:"replicas,omitempty"`
 	Image                         string                            `json:"image,omitempty"`
 	Services                      []v1.Service                      `json:"services,omitempty"`
+	MatrixonePort                 int32                             `json:"matrixonePort"`
 	Env                           []v1.EnvVar                       `json:"env,omitempty"`
 	VolumeClaimTemplates          []v1.PersistentVolumeClaim        `json:"volumeClaimTemplates,omitempty"`
 	Resources                     v1.ResourceRequirements           `json:"resources,omitempty"`
 	ImagePullSecrets              []v1.LocalObjectReference         `json:"imagePullSecrets,omitempty"`
+	DisablePVCDeletionFinalizer   bool                              `json:"disablePVCDeletionFinalizer,omitempty"`
 	ImagePullPolicy               v1.PullPolicy                     `json:"imagePullPolicy,omitempty"`
 	PodAnnotations                map[string]string                 `json:"podAnnotations,omitempty"`
 	NodeSelector                  map[string]string                 `json:"nodeSelector,omitempty"`
+	ScalePvcSts                   bool                              `json:"scalePvcSts,omitempty"`
 	Tolerations                   []v1.Toleration                   `json:"tolerations,omitempty"`
 	Affinity                      *v1.Affinity                      `json:"affinity,omitempty"`
 	PodLabels                     map[string]string                 `json:"podLabels,omitempty"`
