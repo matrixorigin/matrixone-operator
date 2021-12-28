@@ -186,7 +186,6 @@ func (e EmitEventFuncs) EmitEventGeneric(obj object, eventReason, msg string, er
 		e.Event(obj, v1.EventTypeWarning, eventReason, err.Error())
 	} else if msg != "" {
 		e.Event(obj, v1.EventTypeNormal, eventReason, msg)
-
 	}
 }
 

@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -66,9 +67,10 @@ func NewMatrixoneReconciler(mgr ctrl.Manager) *MatrixoneClusterReconciler {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *MatrixoneClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	// _ = r.Log.WithValues("matrixone", req.NamespacedName)
+	_ = logger.WithValues("matrixone", req.NamespacedName)
 
 	instance := &matrixonev1alpha1.MatrixoneCluster{}
+	klog.Info("instance")
 	err := r.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
