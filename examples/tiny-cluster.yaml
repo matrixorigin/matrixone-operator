@@ -3,3 +3,4 @@ kind: MatrixoneCluster
 metadata:
   name: matrixonecluster-sample
 spec:
+   image: matrixorigin/matrixone:nightly

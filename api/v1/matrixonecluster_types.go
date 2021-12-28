@@ -21,26 +21,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type MatrixoneNodeConditionType string
-
-const (
-	MatrixoneClusterReady      MatrixoneNodeConditionType = "MatrixoneClusterReady"
-	MatrixoneNodeRollingUpdate MatrixoneNodeConditionType = "MatrixoneNodeRollingUpdate"
-	MatrixoneNodeErrorState    MatrixoneNodeConditionType = "MatrixoneNodeErrorState"
-)
-
-type MatrixoneNodeTypeStatus struct {
-	MatrixoneNode                string                     `json:"matrixoneNode,omitempty"`
-	MatrixoneNodeConditionStatus v1.ConditionStatus         `json:"matrixoneNodeConditionStatus,omitempty"`
-	MatrixoneNodeConditionType   MatrixoneNodeConditionType `json:"matrixoneNodeConditionType,omitempty"`
-	Reason                       string                     `json:"reason,omitempty"`
-}
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
-	Size int `json:"size"`
+	// Size                 int                        `json:"size"`
 	// StartScript          string                     `json:"startScripts"`
-	// Image string `json:"image,omitempty"`
+	Image string `json:"image,omitempty"`
 	// ImagePullPolicy      v1.PullPolicy              `json:"imagePullPolicy,omitempty"`
 	// Env                  []v1.EnvVar                `json:"env,omitempty"`
 	// ImagePullSecrets     []v1.LocalObjectReference  `json:"imagePullSecrets,omitempty"`
@@ -65,6 +53,21 @@ type MatrixoneClusterStatus struct {
 	HPAutoScalers          []string                `json:"hpAutoScalers,omitempty"`
 	Pods                   []string                `json:"pods,omitempty"`
 	PersistentVolumeClaims []string                `json:"persistentVolumeClaims,omitempty"`
+}
+
+type MatrixoneNodeConditionType string
+
+const (
+	MatrixoneClusterReady      MatrixoneNodeConditionType = "MatrixoneClusterReady"
+	MatrixoneNodeRollingUpdate MatrixoneNodeConditionType = "MatrixoneNodeRollingUpdate"
+	MatrixoneNodeErrorState    MatrixoneNodeConditionType = "MatrixoneNodeErrorState"
+)
+
+type MatrixoneNodeTypeStatus struct {
+	MatrixoneNode                string                     `json:"matrixoneNode,omitempty"`
+	MatrixoneNodeConditionStatus v1.ConditionStatus         `json:"matrixoneNodeConditionStatus,omitempty"`
+	MatrixoneNodeConditionType   MatrixoneNodeConditionType `json:"matrixoneNodeConditionType,omitempty"`
+	Reason                       string                     `json:"reason,omitempty"`
 }
 
 //+kubebuilder:object:root=true
