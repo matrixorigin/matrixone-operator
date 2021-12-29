@@ -18,6 +18,7 @@ package v1
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,39 +28,20 @@ import (
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
-	Replicas                      int32                             `json:"replicas,omitempty"`
-	Image                         string                            `json:"image,omitempty"`
-	Services                      []v1.Service                      `json:"services,omitempty"`
-	MatrixonePort                 int32                             `json:"matrixonePort,omitempty"`
-	Env                           []v1.EnvVar                       `json:"env,omitempty"`
-	VolumeClaimTemplates          []v1.PersistentVolumeClaim        `json:"volumeClaimTemplates,omitempty"`
-	RollingDeploy                 bool                              `json:"rollingDeploy,omitempty"`
-	Resources                     v1.ResourceRequirements           `json:"resources,omitempty"`
-	ImagePullSecrets              []v1.LocalObjectReference         `json:"imagePullSecrets,omitempty"`
-	DisablePVCDeletionFinalizer   bool                              `json:"disablePVCDeletionFinalizer,omitempty"`
-	ImagePullPolicy               v1.PullPolicy                     `json:"imagePullPolicy,omitempty"`
-	PodAnnotations                map[string]string                 `json:"podAnnotations,omitempty"`
-	NodeSelector                  map[string]string                 `json:"nodeSelector,omitempty"`
-	ScalePvcSts                   bool                              `json:"scalePvcSts,omitempty"`
-	Tolerations                   []v1.Toleration                   `json:"tolerations,omitempty"`
-	Affinity                      *v1.Affinity                      `json:"affinity,omitempty"`
-	PodLabels                     map[string]string                 `json:"podLabels,omitempty"`
-	UpdateStrategy                *appsv1.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
-	ServiceAccount                string                            `json:"serviceAccount,omitempty"`
-	TerminationGracePeriodSeconds *int64                            `json:"terminationGracePeriodSeconds,omitempty"`
+	Replicas        int32                       `json:"replicas,omitempty"`
+	Image           string                      `json:"image,omitempty"`
+	MOPort          int32                       `json:"moPort,omitempty"`
+	Services        v1.Service                  `json:"services,omitempty"`
+	StorageClass    string                      `json:"storage-class,omitempty"`
+	LogVolResource  corev1.ResourceRequirements `json:"log-volume-resource,omitempty"`
+	DataVolResource corev1.ResourceRequirements `json:"data-volume-resource,omitempty"`
+	Env             []corev1.EnvVar             `json:"env,omitempty"`
 }
 
 // MatrixoneClusterStatus defines the observed state of MatrixoneCluster
 type MatrixoneClusterStatus struct {
-	MatrixoneNodeStatus    MatrixoneNodeTypeStatus `json:"matrixoneNodeStatus,omitempty"`
-	Statefulset            []string                `json:"statefulset,omitempty"`
-	Services               []string                `json:"services,omitempty"`
-	ConfigMaps             []string                `json:"configMaps,omitempty"`
-	PodDisruptionBudgets   []string                `json:"podDisruptionBudgets,omitempty"`
-	Ingress                []string                `json:"ingress,omitempty"`
-	HPAutoScalers          []string                `json:"hpAutoScalers,omitempty"`
-	Pods                   []string                `json:"pods,omitempty"`
-	PersistentVolumeClaims []string                `json:"persistentVolumeClaims,omitempty"`
+	SSStatus      appsv1.StatefulSetStatus `json:"statefulsetstatus,omitempty"`
+	ServiceStatus v1.ServiceStatus         `json:"servicvestatus,omitempty"`
 }
 
 type MatrixoneNodeConditionType string

@@ -21,12 +21,6 @@ rules:
 - apiGroups:
   - matrixone.matrixorigin.cn
   resources:
-  - matrixoneclusters/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - matrixone.matrixorigin.cn
-  resources:
   - matrixoneclusters/status
   verbs:
   - get

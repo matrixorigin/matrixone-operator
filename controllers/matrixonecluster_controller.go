@@ -22,9 +22,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -53,7 +54,6 @@ func NewMatrixoneReconciler(mgr ctrl.Manager) *MatrixoneClusterReconciler {
 
 //+kubebuilder:rbac:groups=matrixone.matrixorigin.cn,resources=matrixoneclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=matrixone.matrixorigin.cn,resources=matrixoneclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=matrixone.matrixorigin.cn,resources=matrixoneclusters/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -66,31 +66,67 @@ func NewMatrixoneReconciler(mgr ctrl.Manager) *MatrixoneClusterReconciler {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *MatrixoneClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = logger.WithValues("matrixone", req.NamespacedName)
+	// _ = r.Log.WithValues("matrixone", req.NamespacedName)
+	matrixone := &matrixonev1alpha1.MatrixoneCluster{}
+	ls := map[string]string{"matrixone": matrixone.Name}
+	klog.Info("matrixone...", matrixone.Name)
 
-	instance := &matrixonev1alpha1.MatrixoneCluster{}
-	err := r.Get(context.TODO(), req.NamespacedName, instance)
+	logger.Info("Starting recon")
+
+	// Get the matrixone resource
+	if err := r.Get(ctx, req.NamespacedName, matrixone); err != nil {
+		logger.Error(err, "unable to fetch matrixone")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	logger.Info("Create Service resource")
+	desiredSer, err := r.makeService(&matrixone.Spec.Services, matrixone, ls)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
+		logger.Error(err, "unable to make Service")
+	}
+	SerapplyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("matrixone-controller")}
+	err = r.Patch(ctx, desiredSer, client.Apply, SerapplyOpts...)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	var emitEvent EventEmitter = EmitEventFuncs{r.Recorder}
+	matrixone.Status.ServiceStatus = desiredSer.Status
 
-	if err := deployMatrixoneCluster(r.Client, instance, emitEvent); err != nil {
+	logger.Info("Create StatefulSet resource")
+	// Create StatefulSet
+	desiredSS, err := r.makeStatefulset(matrixone, ls)
+	if err != nil {
+		logger.Error(err, "unable to make Statefulset")
 		return ctrl.Result{}, err
-	} else {
-		return ctrl.Result{RequeueAfter: r.ReconcileWait}, nil
 	}
+
+	logger.Info("Server side apply of this spec")
+	// Patch the statefulSet
+	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("matrixone-controller")}
+	err = r.Patch(ctx, &desiredSS, client.Apply, applyOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("Update the matrixone status with the StatefulSet status")
+	// Update Status
+	matrixone.Status.SSStatus = desiredSS.Status
+
+	err = r.Status().Update(ctx, matrixone)
+	if err != nil {
+		logger.Info("Error while updating status", "Error", err)
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("Recon successful!")
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *MatrixoneClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&matrixonev1alpha1.MatrixoneCluster{}).
-		WithEventFilter(GenericPredicates{}).
+		Owns(&appsv1.StatefulSet{}).
 		Complete(r)
 }
 
