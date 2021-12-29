@@ -44,7 +44,7 @@ type ProphetSchedule struct {
 }
 
 type ProphetReplication struct {
-	MaxReplicas int `json:"max-replicas ,toml:"max-replicas"`
+	MaxReplicas int `json:"max-replicas" toml:"max-replicas"`
 }
 
 type Metric struct {
