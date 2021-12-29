@@ -24,12 +24,12 @@ FROM alpine
 
 RUN mkdir config
 
-COPY --from=builder /go/src/github.com/matrixorigin/matrixone/mo-server /mo-server
+COPY --from=builder /go/src/github.com/matrixorigin/matrixone/mo-server /opt/matrixone/mo-server
 COPY --from=builder /usr/local/bin/dumb-init /usr/local/bin/dumb-init
-COPY --from=builder /go/src/github.com/matrixorigin/matrixone/system_vars_config.toml /config/config.toml
+COPY --from=builder /go/src/github.com/matrixorigin/matrixone/system_vars_config.toml /opt/matrixone/system_vars_config.toml
 
-WORKDIR /
+WORKDIR /opt/matrixone
 
 EXPOSE 6001-6010
 
-ENTRYPOINT ["/usr/local/bin/dumb-init", "/mo-server", "/config/config.toml"]
+ENTRYPOINT ["/usr/local/bin/dumb-init", "./mo-server", "./system_vars_config.toml"]
