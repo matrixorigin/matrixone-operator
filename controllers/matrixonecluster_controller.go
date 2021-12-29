@@ -89,8 +89,18 @@ func (r *MatrixoneClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
 	matrixone.Status.ServiceStatus = desiredSer.Status
+
+	logger.Info("Create ConfigMap resource")
+	_, err = r.makeConfigMap(&matrixone.Spec.ConfigMap, matrixone, ls)
+	if err != nil {
+		logger.Error(err, "unable to make ConfigMap")
+	}
+	CMapplyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("matrixone-controller")}
+	err = r.Patch(ctx, desiredSer, client.Apply, CMapplyOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	logger.Info("Create StatefulSet resource")
 	// Create StatefulSet

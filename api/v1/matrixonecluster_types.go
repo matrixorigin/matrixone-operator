@@ -28,35 +28,28 @@ import (
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
-	Replicas        int32                       `json:"replicas,omitempty"`
-	Image           string                      `json:"image,omitempty"`
-	MOPort          int32                       `json:"moPort,omitempty"`
-	Services        v1.Service                  `json:"services,omitempty"`
-	StorageClass    string                      `json:"storage-class,omitempty"`
-	LogVolResource  corev1.ResourceRequirements `json:"log-volume-resource,omitempty"`
-	DataVolResource corev1.ResourceRequirements `json:"data-volume-resource,omitempty"`
-	Env             []corev1.EnvVar             `json:"env,omitempty"`
+	Replicas           int32                       `json:"replicas,omitempty"`
+	Image              string                      `json:"image,omitempty"`
+	MOPort             int32                       `json:"moPort,omitempty"`
+	Services           v1.Service                  `json:"services,omitempty"`
+	StorageClass       string                      `json:"storage-class,omitempty"`
+	LogVolResource     corev1.ResourceRequirements `json:"log-volume-resource,omitempty"`
+	DataVolResource    corev1.ResourceRequirements `json:"data-volume-resource,omitempty"`
+	ConfigMap          v1.ConfigMap                `json:"configmap,omitempty"`
+	MetircAddr         string                      `json:"metric-addr,omitemtpy"`
+	ShardCapacityBytes string                      `json:"shard-capacity-bytes"`
+	LowSpaceRatio      float32                     `json:"low-space-ratio"`
+	HighSpaceRation    float32                     `json:"high-space-ratio"`
+	MaxReplicas        int                         `json:"max-replicas"`
+	StorePath          string                      `json:"store-path"`
+	MaxEntryBytes      string                      `json:"max-entry-bytes"`
+	Env                []corev1.EnvVar             `json:"env,omitempty"`
 }
 
 // MatrixoneClusterStatus defines the observed state of MatrixoneCluster
 type MatrixoneClusterStatus struct {
 	SSStatus      appsv1.StatefulSetStatus `json:"statefulsetstatus,omitempty"`
 	ServiceStatus v1.ServiceStatus         `json:"servicvestatus,omitempty"`
-}
-
-type MatrixoneNodeConditionType string
-
-const (
-	MatrixoneClusterReady      MatrixoneNodeConditionType = "MatrixoneClusterReady"
-	MatrixoneNodeRollingUpdate MatrixoneNodeConditionType = "MatrixoneNodeRollingUpdate"
-	MatrixoneNodeErrorState    MatrixoneNodeConditionType = "MatrixoneNodeErrorState"
-)
-
-type MatrixoneNodeTypeStatus struct {
-	MatrixoneNode                string                     `json:"matrixoneNode,omitempty"`
-	MatrixoneNodeConditionStatus v1.ConditionStatus         `json:"matrixoneNodeConditionStatus,omitempty"`
-	MatrixoneNodeConditionType   MatrixoneNodeConditionType `json:"matrixoneNodeConditionType,omitempty"`
-	Reason                       string                     `json:"reason,omitempty"`
 }
 
 // Matrixone Log with promtail and loki
