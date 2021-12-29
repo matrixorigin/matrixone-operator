@@ -10,12 +10,13 @@ import (
 	matrixonev1alpha1 "github.com/matrixorigin/matrixone-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	storage "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/apis/storage"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -34,7 +35,7 @@ func deployMatrixoneCluster(sdk client.Client, moc *matrixonev1alpha1.MatrixoneC
 
 	statefulSetNames := make(map[string]bool)
 	serviceNames := make(map[string]bool)
-	pvcNames := make(map[string]bool)
+	// pvcNames := make(map[string]bool)
 	uniqueStr := "matrixone-cluster"
 
 	serviceName := ""
@@ -57,8 +58,8 @@ func deployMatrixoneCluster(sdk client.Client, moc *matrixonev1alpha1.MatrixoneC
 	//  Ignore for the first iteration ie cluster creation, else get sts shall unnecessary log errors.
 
 	if moc.Generation > 1 && moc.Spec.ScalePvcSts {
-		if isVolumeExpansionEnabled(sdk, m, &nodeSpec, emitEvents) {
-			err := scalePVCForSts(sdk, &nodeSpec, nodeSpecUniqueStr, m, emitEvents)
+		if isVolumeExpansionEnabled(sdk, moc, emitEvents) {
+			err := scalePVCForSts(sdk, uniqueStr, moc, emitEvents)
 			if err != nil {
 				return err
 			}
@@ -68,7 +69,7 @@ func deployMatrixoneCluster(sdk client.Client, moc *matrixonev1alpha1.MatrixoneC
 	// Create/Update StatefulSet
 	if stsCreateUpdateStatus, err := sdkCreateOrUpdateAsNeeded(sdk,
 		func() (object, error) {
-			return makeStatefulSet(moc, ls, uniqueStr, fmt.Sprintf("%s-%s"), serviceName)
+			return makeStatefulSet(moc, ls, serviceName, uniqueStr)
 		},
 		func() object { return makeStatefulSetEmptyObj() },
 		statefulSetIsEquals, noopUpdaterFn, moc, statefulSetNames, emitEvents); err != nil {
@@ -79,24 +80,25 @@ func deployMatrixoneCluster(sdk client.Client, moc *matrixonev1alpha1.MatrixoneC
 			// we just updated, give sts controller some time to update status of replicas after update
 			return nil
 		}
-
-		// Default is set to true
-		execCheckCrashStatus(sdk, &nodeSpec, m, emitEvents)
-
-		// Ignore isObjFullyDeployed() for the first iteration ie cluster creation
-		// will force cluster creation in parallel, post first iteration rolling updates
-		// will be sequential.
-		if m.Generation > 1 {
-			//Check StatefulSet rolling update status, if in-progress then stop here
-			done, err := isObjFullyDeployed(sdk, nodeSpec, nodeSpecUniqueStr, m, func() object { return makeStatefulSetEmptyObj() }, emitEvents)
-			if !done {
-				return err
-			}
-		}
 	}
 
 	// Default is set to true
-	execCheckCrashStatus(sdk, &nodeSpec, m, emitEvents)
+	// execCheckCrashStatus(sdk, &nodeSpec, m, emitEvents)
+
+	// Ignore isObjFullyDeployed() for the first iteration ie cluster creation
+	// will force cluster creation in parallel, post first iteration rolling updates
+	// will be sequential.
+	// 	if m.Generation > 1 {
+	// 		//Check StatefulSet rolling update status, if in-progress then stop here
+	// 		done, err := isObjFullyDeployed(sdk, nodeSpec, nodeSpecUniqueStr, m, func() object { return makeStatefulSetEmptyObj() }, emitEvents)
+	// 		if !done {
+	// 			return err
+	// 		}
+	// 	}
+	// }
+
+	// Default is set to true
+	// execCheckCrashStatus(sdk, &nodeSpec, m, emitEvents)
 
 	/*
 		Default Behavior: Finalizer shall be always executed resulting in deletion of pvc post deletion of Matrixone CR
@@ -348,7 +350,7 @@ func alwaysTrueIsEqualsFn(prev, curr object) bool {
 func isVolumeExpansionEnabled(sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, emitEvent EventEmitter) bool {
 
 	for _, nodeVCT := range moc.Spec.VolumeClaimTemplates {
-		sc, err := readers.Get(context.TODO(), sdk, *nodeVCT.Spec.StorageClassName, m, func() object { return makeStorageClassEmptyObj() }, emitEvent)
+		sc, err := readers.Get(context.TODO(), sdk, *nodeVCT.Spec.StorageClassName, moc, func() object { return makeStorageClassEmptyObj() }, emitEvent)
 		if err != nil {
 			return false
 		}
@@ -372,4 +374,8 @@ func makeStorageClassEmptyObj() *storage.StorageClass {
 func statefulSetIsEquals(obj1, obj2 object) bool {
 
 	return true
+}
+
+func noopUpdaterFn(prev, curr object) {
+	// do nothing
 }

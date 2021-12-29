@@ -33,6 +33,7 @@ type MatrixoneClusterSpec struct {
 	MatrixonePort                 int32                             `json:"matrixonePort"`
 	Env                           []v1.EnvVar                       `json:"env,omitempty"`
 	VolumeClaimTemplates          []v1.PersistentVolumeClaim        `json:"volumeClaimTemplates,omitempty"`
+	RollingDeploy                 bool                              `json:"rollingDeploy,omitempty"`
 	Resources                     v1.ResourceRequirements           `json:"resources,omitempty"`
 	ImagePullSecrets              []v1.LocalObjectReference         `json:"imagePullSecrets,omitempty"`
 	DisablePVCDeletionFinalizer   bool                              `json:"disablePVCDeletionFinalizer,omitempty"`
