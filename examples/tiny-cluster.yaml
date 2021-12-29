@@ -5,7 +5,7 @@ metadata:
 spec:
   image: matrixorigin/matrixone:nightly
   replicas: 3
-  storage-class: default
+  storage-class: standard
   log-volume-resource: 
     requests:
       storage: 500Mi

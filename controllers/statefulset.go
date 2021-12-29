@@ -21,8 +21,8 @@ const (
 )
 
 func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.MatrixoneCluster, ls map[string]string) (appsv1.StatefulSet, error) {
-	logVolName := moc.Name + "-log"
-	dataVolName := moc.Name + "-data"
+	logVolName := "log"
+	dataVolName := "data"
 
 	ss := appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -108,7 +108,7 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      logVolName,
+						Name:      dataVolName,
 						Namespace: moc.Namespace,
 						Labels:    ls,
 					},
