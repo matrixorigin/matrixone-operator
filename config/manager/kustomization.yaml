@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: wanglei1995/matrixone-operator
-  newTag: v0.0.2
+  newTag: v0.0.1

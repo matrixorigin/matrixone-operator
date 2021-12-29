@@ -4,3 +4,4 @@ metadata:
   name: matrixonecluster-sample
 spec:
    image: matrixorigin/matrixone:nightly
+   replicas: 0

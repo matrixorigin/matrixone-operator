@@ -66,7 +66,7 @@ func NewMatrixoneReconciler(mgr ctrl.Manager) *MatrixoneClusterReconciler {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *MatrixoneClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	// _ = r.Log.WithValues("matrixone", req.NamespacedName)
+	_ = logger.WithValues("matrixone", req.NamespacedName)
 
 	instance := &matrixonev1alpha1.MatrixoneCluster{}
 	err := r.Get(context.TODO(), req.NamespacedName, instance)
@@ -74,7 +74,6 @@ func (r *MatrixoneClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-
 		return ctrl.Result{}, err
 	}
 

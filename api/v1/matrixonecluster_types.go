@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,26 +27,32 @@ import (
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
-	// Size                 int                        `json:"size"`
-	// StartScript          string                     `json:"startScripts"`
-	Image string `json:"image,omitempty"`
-	// ImagePullPolicy      v1.PullPolicy              `json:"imagePullPolicy,omitempty"`
-	// Env                  []v1.EnvVar                `json:"env,omitempty"`
-	// ImagePullSecrets     []v1.LocalObjectReference  `json:"imagePullSecrets,omitempty"`
-	// VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
-	// PodAnnotations       map[string]string          `json:"podAnnotations,omitempty"`
-	// LivenessProbe        *v1.Probe                  `json:"livenessProbe,omitempty"`
-	// ReadinessProbe       *v1.Probe                  `json:"readinessProbe,omitempty"`
-	Services []v1.Service `json:"services,omitempty"`
-	// Affinity *v1.Affinity `json:"affinity,omitempty"`
-	// NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	Replicas                      int32                             `json:"replicas,omitempty"`
+	Image                         string                            `json:"image,omitempty"`
+	Services                      []v1.Service                      `json:"services,omitempty"`
+	MatrixonePort                 int32                             `json:"matrixonePort"`
+	Env                           []v1.EnvVar                       `json:"env,omitempty"`
+	VolumeClaimTemplates          []v1.PersistentVolumeClaim        `json:"volumeClaimTemplates,omitempty"`
+	RollingDeploy                 bool                              `json:"rollingDeploy,omitempty"`
+	Resources                     v1.ResourceRequirements           `json:"resources,omitempty"`
+	ImagePullSecrets              []v1.LocalObjectReference         `json:"imagePullSecrets,omitempty"`
+	DisablePVCDeletionFinalizer   bool                              `json:"disablePVCDeletionFinalizer,omitempty"`
+	ImagePullPolicy               v1.PullPolicy                     `json:"imagePullPolicy,omitempty"`
+	PodAnnotations                map[string]string                 `json:"podAnnotations,omitempty"`
+	NodeSelector                  map[string]string                 `json:"nodeSelector,omitempty"`
+	ScalePvcSts                   bool                              `json:"scalePvcSts,omitempty"`
+	Tolerations                   []v1.Toleration                   `json:"tolerations,omitempty"`
+	Affinity                      *v1.Affinity                      `json:"affinity,omitempty"`
+	PodLabels                     map[string]string                 `json:"podLabels,omitempty"`
+	UpdateStrategy                *appsv1.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
+	ServiceAccount                string                            `json:"serviceAccount,omitempty"`
+	TerminationGracePeriodSeconds *int64                            `json:"terminationGracePeriodSeconds,omitempty"`
 }
 
 // MatrixoneClusterStatus defines the observed state of MatrixoneCluster
 type MatrixoneClusterStatus struct {
 	MatrixoneNodeStatus    MatrixoneNodeTypeStatus `json:"matrixoneNodeStatus,omitempty"`
 	Statefulset            []string                `json:"statefulset,omitempty"`
-	Deployment             []string                `json:"deployments,omitempty"`
 	Services               []string                `json:"services,omitempty"`
 	ConfigMaps             []string                `json:"configMaps,omitempty"`
 	PodDisruptionBudgets   []string                `json:"podDisruptionBudgets,omitempty"`
@@ -68,6 +75,14 @@ type MatrixoneNodeTypeStatus struct {
 	MatrixoneNodeConditionStatus v1.ConditionStatus         `json:"matrixoneNodeConditionStatus,omitempty"`
 	MatrixoneNodeConditionType   MatrixoneNodeConditionType `json:"matrixoneNodeConditionType,omitempty"`
 	Reason                       string                     `json:"reason,omitempty"`
+}
+
+// Matrixone Log with promtail and loki
+type PromtailLokiSpec struct {
+}
+
+// Matrixone Monitor with prometus
+type PrometheusSpec struct {
 }
 
 //+kubebuilder:object:root=true
