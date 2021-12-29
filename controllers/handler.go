@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -243,6 +244,7 @@ func sdkCreateOrUpdateAsNeeded(
 				// resource does not exist, create it.
 				logger.Info("Create Resources")
 				create, err := writers.Create(context.TODO(), sdk, moc, obj, emitEvent)
+				klog.Info("Created resource")
 				if err != nil {
 					return "", err
 				} else {

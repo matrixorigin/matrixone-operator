@@ -3,5 +3,15 @@ kind: MatrixoneCluster
 metadata:
   name: matrixonecluster-sample
 spec:
-   image: matrixorigin/matrixone:nightly
-   replicas: 0
+  image: matrixorigin/matrixone:nightly
+  replicas: 3
+  matrixonePort: 6001
+  services:
+    - spec:
+        type: ClusterIP
+        clusterIP: None
+  podLabels:
+    environment: stage
+    release: alpha
+  podAnnotations:
+    dummykey: dummyval

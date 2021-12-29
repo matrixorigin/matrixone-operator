@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"reflect"
 
-	v1alpha1 "github.com/matrixorigin/matrixone-operator/api/v1"
+	matrixonev1alpha1 "github.com/matrixorigin/matrixone-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -73,16 +74,16 @@ type objectList interface {
 
 // Reader Interface
 type Reader interface {
-	List(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, selectorLabels map[string]string, emitEvent EventEmitter, emptyListObjFn func() objectList, ListObjFn func(obj runtime.Object) []object) ([]object, error)
-	Get(ctx context.Context, sdk client.Client, nodeSpecUniqueStr string, moc *v1alpha1.MatrixoneCluster, emptyObjFn func() object, emitEvent EventEmitter) (object, error)
+	List(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, selectorLabels map[string]string, emitEvent EventEmitter, emptyListObjFn func() objectList, ListObjFn func(obj runtime.Object) []object) ([]object, error)
+	Get(ctx context.Context, sdk client.Client, nodeSpecUniqueStr string, moc *matrixonev1alpha1.MatrixoneCluster, emptyObjFn func() object, emitEvent EventEmitter) (object, error)
 }
 
 // Writer Interface
 type Writer interface {
-	Delete(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter, deleteOptions ...client.DeleteOption) error
-	Create(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error)
-	Update(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error)
-	Patch(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, status bool, patch client.Patch, emitEvent EventEmitter) error
+	Delete(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter, deleteOptions ...client.DeleteOption) error
+	Create(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error)
+	Update(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error)
+	Patch(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, obj object, status bool, patch client.Patch, emitEvent EventEmitter) error
 }
 
 // WriterFuncs struct
@@ -94,7 +95,7 @@ type ReaderFuncs struct{}
 // Initalizie Reader
 var readers Reader = ReaderFuncs{}
 
-func (f ReaderFuncs) List(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, selectorLabels map[string]string, emitEvent EventEmitter, emptyListObjFn func() objectList, ListObjFn func(obj runtime.Object) []object) ([]object, error) {
+func (f ReaderFuncs) List(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, selectorLabels map[string]string, emitEvent EventEmitter, emptyListObjFn func() objectList, ListObjFn func(obj runtime.Object) []object) ([]object, error) {
 	listOpts := []client.ListOption{
 		client.InNamespace(moc.Namespace),
 		client.MatchingLabels(selectorLabels),
@@ -109,7 +110,7 @@ func (f ReaderFuncs) List(ctx context.Context, sdk client.Client, moc *v1alpha1.
 	return ListObjFn(listObj), nil
 }
 
-func (f ReaderFuncs) Get(ctx context.Context, sdk client.Client, nodeSpecUniqueStr string, moc *v1alpha1.MatrixoneCluster, emptyObjFn func() object, emitEvent EventEmitter) (object, error) {
+func (f ReaderFuncs) Get(ctx context.Context, sdk client.Client, nodeSpecUniqueStr string, moc *matrixonev1alpha1.MatrixoneCluster, emptyObjFn func() object, emitEvent EventEmitter) (object, error) {
 	obj := emptyObjFn()
 
 	if err := sdk.Get(ctx, *namespacedName(nodeSpecUniqueStr, moc.Namespace), obj); err != nil {
@@ -125,7 +126,7 @@ var writers Writer = WriterFuncs{}
 // Patch method shall patch the status of Obj or the status.
 // Pass status as true to patch the object status.
 // NOTE: Not logging on patch success, it shall keep logging on each reconcile
-func (f WriterFuncs) Patch(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, status bool, patch client.Patch, emitEvent EventEmitter) error {
+func (f WriterFuncs) Patch(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, obj object, status bool, patch client.Patch, emitEvent EventEmitter) error {
 
 	if !status {
 		if err := sdk.Patch(ctx, obj, patch); err != nil {
@@ -142,7 +143,7 @@ func (f WriterFuncs) Patch(ctx context.Context, sdk client.Client, moc *v1alpha1
 }
 
 // Update Func shall update the Object
-func (f WriterFuncs) Update(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error) {
+func (f WriterFuncs) Update(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error) {
 
 	if err := sdk.Update(ctx, obj); err != nil {
 		emitEvent.EmitEventOnUpdate(moc, obj, err)
@@ -155,8 +156,7 @@ func (f WriterFuncs) Update(ctx context.Context, sdk client.Client, moc *v1alpha
 }
 
 // Create methods shall create an object, and returns a string, error
-func (f WriterFuncs) Create(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error) {
-
+func (f WriterFuncs) Create(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneNodeStatus, error) {
 	if err := sdk.Create(ctx, obj); err != nil {
 		logger.Error(err, err.Error(), "object", stringifyForLogging(obj, moc), "name", moc.Name, "namespace", moc.Namespace, "errorType", apierrors.ReasonForError(err))
 		emitEvent.EmitEventOnCreate(moc, obj, err)
@@ -169,7 +169,7 @@ func (f WriterFuncs) Create(ctx context.Context, sdk client.Client, moc *v1alpha
 }
 
 // Delete methods shall delete the object, deleteOptions is a variadic parameter to support various delete options such as cascade deletion.
-func (f WriterFuncs) Delete(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter, deleteOptions ...client.DeleteOption) error {
+func (f WriterFuncs) Delete(ctx context.Context, sdk client.Client, moc *matrixonev1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter, deleteOptions ...client.DeleteOption) error {
 
 	if err := sdk.Delete(ctx, obj, deleteOptions...); err != nil {
 		emitEvent.EmitEventOnDelete(moc, obj, err)
@@ -193,10 +193,12 @@ func (e EmitEventFuncs) EmitEventGeneric(obj object, eventReason, msg string, er
 func (e EmitEventFuncs) EmitEventOnCreate(obj, createObj object, err error) {
 	if err != nil {
 		errMsg := fmt.Errorf("Error creating object [%s] in namespace [%s:%s] due to [%s]", createObj.GetName(), createObj.GetObjectKind().GroupVersionKind().Kind, createObj.GetNamespace(), err.Error())
+		klog.Info("EmitEventOnCreate errMsg:", errMsg)
 		e.Event(obj, v1.EventTypeWarning, string(matrixoneNodeCreateFail), errMsg.Error())
 	} else {
 		msg := fmt.Sprintf("Successfully created object [%s:%s] in namespace [%s]", createObj.GetName(), createObj.GetObjectKind().GroupVersionKind().Kind, createObj.GetNamespace())
-		e.Event(obj, v1.EventTypeNormal, string(matrixoneNodeCreateSuccess), msg)
+		klog.Info("EmitEventOnCreate msg:", msg)
+		// e.Event(obj, v1.EventTypeNormal, string(matrixoneNodeCreateSuccess), msg)
 	}
 }
 
@@ -240,9 +242,11 @@ func (e EmitEventFuncs) EmitEventOnPatch(obj, patchObj object, err error) {
 func (e EmitEventFuncs) EmitEventOnUpdate(obj, updateObj object, err error) {
 	if err != nil {
 		errMsg := fmt.Errorf("Failed to update [%s:%s] due to [%s].", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind, err.Error())
+		klog.Info("EmitEvnetOnUpdate errMsg:", errMsg)
 		e.Event(obj, v1.EventTypeWarning, string(matrixoneNodeUpdateFail), errMsg.Error())
 	} else {
 		msg := fmt.Sprintf("Updated [%s:%s].", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind)
+		klog.Info("EmitEvnetOnUpdate msg:", msg)
 		e.Event(obj, v1.EventTypeNormal, string(matrixoneNodeUpdateSuccess), msg)
 	}
 }

@@ -30,7 +30,7 @@ type MatrixoneClusterSpec struct {
 	Replicas                      int32                             `json:"replicas,omitempty"`
 	Image                         string                            `json:"image,omitempty"`
 	Services                      []v1.Service                      `json:"services,omitempty"`
-	MatrixonePort                 int32                             `json:"matrixonePort"`
+	MatrixonePort                 int32                             `json:"matrixonePort,omitempty"`
 	Env                           []v1.EnvVar                       `json:"env,omitempty"`
 	VolumeClaimTemplates          []v1.PersistentVolumeClaim        `json:"volumeClaimTemplates,omitempty"`
 	RollingDeploy                 bool                              `json:"rollingDeploy,omitempty"`

@@ -1851,8 +1851,6 @@ spec:
                       type: object
                   type: object
                 type: array
-            required:
-            - matrixonePort
             type: object
           status:
             description: MatrixoneClusterStatus defines the observed state of MatrixoneCluster
