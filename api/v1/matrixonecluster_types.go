@@ -38,8 +38,8 @@ type MatrixoneClusterSpec struct {
 	ConfigMap          v1.ConfigMap                `json:"configmap,omitempty"`
 	MetircAddr         string                      `json:"metric-addr,omitemtpy"`
 	ShardCapacityBytes string                      `json:"shard-capacity-bytes"`
-	LowSpaceRatio      float32                     `json:"low-space-ratio"`
-	HighSpaceRation    float32                     `json:"high-space-ratio"`
+	LowSpaceRatio      string                      `json:"low-space-ratio"`
+	HighSpaceRation    string                      `json:"high-space-ratio"`
 	MaxReplicas        int                         `json:"max-replicas"`
 	StorePath          string                      `json:"store-path"`
 	MaxEntryBytes      string                      `json:"max-entry-bytes"`

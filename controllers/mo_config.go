@@ -39,8 +39,8 @@ type ProphetEmbedEtcd struct {
 }
 
 type ProphetSchedule struct {
-	LowSpaceRatio   float32 `json:"low-space-ratio" toml:"low-space-ratio"`
-	HighSpaceRation float32 `json:"high-space-ratio" toml:"high-space-ratio"`
+	LowSpaceRatio   string `json:"low-space-ratio" toml:"low-space-ratio"`
+	HighSpaceRation string `json:"high-space-ratio" toml:"high-space-ratio"`
 }
 
 type ProphetReplication struct {

@@ -21,10 +21,11 @@ func (r *MatrixoneClusterReconciler) makeConfigMap(cm *v1.ConfigMap, moc *matrix
 	}
 
 	cm.ObjectMeta = metav1.ObjectMeta{
-		Name:      moc.Name,
+		Name:      moc.GetObjectMeta().GetName(),
 		Namespace: moc.Namespace,
-		Labels:    ls,
 	}
+
+	cm.Labels = ls
 
 	val, err := generateData(moc)
 	if err != nil {

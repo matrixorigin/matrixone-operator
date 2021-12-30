@@ -11,7 +11,6 @@ import (
 const (
 	dataPath       string = "/opt/matrixone/store"
 	logPath        string = "/opt/matrixone/log"
-	configPath     string = "opt/matrixone/system_vars_config.toml"
 	ServerPort     int32  = 6000
 	addrRaftPort   int32  = 10000
 	addrClientPort int32  = 20000
@@ -49,19 +48,17 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 						{
 							Name: configName,
 							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configName,
-									},
-								},
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 					},
 					Containers: []corev1.Container{
 						{
-							Name:  moc.Name,
-							Image: moc.Spec.Image,
-							Env:   moc.Spec.Env,
+							Name:            moc.Name,
+							Image:           moc.Spec.Image,
+							ImagePullPolicy: corev1.PullAlways,
+							Env:             moc.Spec.Env,
+
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "server",
@@ -100,10 +97,6 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 								{
 									Name:      dataVolName,
 									MountPath: dataPath,
-								},
-								{
-									Name:      configName,
-									MountPath: configPath,
 								},
 							},
 						},
