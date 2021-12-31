@@ -23,7 +23,7 @@ const (
 func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.MatrixoneCluster, ls map[string]string) (appsv1.StatefulSet, error) {
 	logVolName := "log"
 	dataVolName := "data"
-	configName := "config"
+	firstNode := moc.Name + "-0"
 
 	ss := appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -35,30 +35,46 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 			Namespace: moc.Namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: &moc.Spec.Replicas,
+			Replicas: &moc.Spec.Size,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
+			PodManagementPolicy: moc.Spec.PodManagementPolicy,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: ls,
+					Labels:    ls,
+					Namespace: moc.Namespace,
 				},
 				Spec: corev1.PodSpec{
-					Volumes: []corev1.Volume{
-						{
-							Name: configName,
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
-						},
-					},
+					// Volumes: []corev1.Volume{
+					// 	{
+					// 		Name: moc.Spec.PodName.Value,
+					// 		VolumeSource: corev1.VolumeSource{
+					// 			EmptyDir: &corev1.EmptyDirVolumeSource{},
+					// 		},
+					// 	},
+					// },
+					NodeSelector: moc.Spec.NodeSelector,
+					Affinity:     moc.Spec.Affinity,
+					Tolerations:  moc.Spec.Tolerations,
 					Containers: []corev1.Container{
 						{
 							Name:            moc.Name,
 							Image:           moc.Spec.Image,
 							ImagePullPolicy: corev1.PullAlways,
-							Env:             moc.Spec.Env,
-
+							Env: []corev1.EnvVar{
+								{
+									Name:  "FIRSTNODE",
+									Value: firstNode,
+								},
+								moc.Spec.PodName,
+								moc.Spec.PodIP,
+								moc.Spec.PodNameSpace,
+							},
+							Resources:      moc.Spec.Resources,
+							LivenessProbe:  moc.Spec.LivenessProbe,
+							ReadinessProbe: moc.Spec.ReadinessProbe,
+							Command:        moc.Spec.Command,
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "server",
@@ -134,6 +150,7 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 			},
 		},
 	}
+
 	if err := ctrl.SetControllerReference(moc, &ss, r.Scheme); err != nil {
 		return ss, err
 	}

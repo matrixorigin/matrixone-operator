@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	port int32 = 6000
+	port int32 = 6001
 )
 
 func (r *MatrixoneClusterReconciler) makeService(svc *v1.Service, moc *matrixonev1alpha1.MatrixoneCluster, ls map[string]string) (*v1.Service, error) {
@@ -25,6 +25,7 @@ func (r *MatrixoneClusterReconciler) makeService(svc *v1.Service, moc *matrixone
 	}
 
 	svc.Spec.Selector = ls
+	svc.Spec.Type = moc.Spec.ServiceType
 	svc.Spec.Ports = []v1.ServicePort{
 		{
 			Name:       "mo-port",

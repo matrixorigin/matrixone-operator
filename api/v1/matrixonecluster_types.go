@@ -28,22 +28,35 @@ import (
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
-	Replicas           int32                       `json:"replicas,omitempty"`
-	Image              string                      `json:"image,omitempty"`
-	MOPort             int32                       `json:"moPort,omitempty"`
-	Services           v1.Service                  `json:"services,omitempty"`
-	StorageClass       string                      `json:"storage-class,omitempty"`
-	LogVolResource     corev1.ResourceRequirements `json:"log-volume-resource,omitempty"`
-	DataVolResource    corev1.ResourceRequirements `json:"data-volume-resource,omitempty"`
-	ConfigMap          v1.ConfigMap                `json:"configmap,omitempty"`
-	MetircAddr         string                      `json:"metric-addr,omitemtpy"`
-	ShardCapacityBytes string                      `json:"shard-capacity-bytes"`
-	LowSpaceRatio      string                      `json:"low-space-ratio"`
-	HighSpaceRation    string                      `json:"high-space-ratio"`
-	MaxReplicas        int                         `json:"max-replicas"`
-	StorePath          string                      `json:"store-path"`
-	MaxEntryBytes      string                      `json:"max-entry-bytes"`
-	Env                []corev1.EnvVar             `json:"env,omitempty"`
+	Size                int32                             `json:"replicas,omitempty"`
+	Image               string                            `json:"image,omitempty"`
+	MOPort              int32                             `json:"moPort,omitempty"`
+	Services            v1.Service                        `json:"services,omitempty"`
+	Command             []string                          `json:"command,omitempty"`
+	StorageClass        string                            `json:"storage-class,omitempty"`
+	LogVolResource      corev1.ResourceRequirements       `json:"log-volume-resource,omitempty"`
+	DataVolResource     corev1.ResourceRequirements       `json:"data-volume-resource,omitempty"`
+	ConfigMap           v1.ConfigMap                      `json:"configmap,omitempty"`
+	MetircAddr          string                            `json:"metric-addr,omitempty"`
+	ShardCapacityBytes  string                            `json:"shard-capacity-bytes,omitempty"`
+	LowSpaceRatio       string                            `json:"low-space-ratio,omitempty"`
+	ServiceType         v1.ServiceType                    `json:"service-type,omitempty"`
+	HighSpaceRation     string                            `json:"high-space-ratio,omitempty"`
+	MaxReplicas         int                               `json:"max-replicas,omitempty"`
+	StorePath           string                            `json:"store-path,omitempty"`
+	MaxEntryBytes       string                            `json:"max-entry-bytes,omitempty"`
+	PodName             corev1.EnvVar                     `json:"pod-name,omitempty"`
+	PodIP               corev1.EnvVar                     `json:"pod-ip,omitempty"`
+	PodNameSpace        corev1.EnvVar                     `json:"pod-namespace,omitempty"`
+	Lifecycle           *v1.Lifecycle                     `json:"lifecycle,omitempty"`
+	LivenessProbe       *v1.Probe                         `json:"livenessProbe,omitempty"`
+	ReadinessProbe      *v1.Probe                         `json:"readinessProbe,omitempty"`
+	UpdateStrategy      *appsv1.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
+	Resources           v1.ResourceRequirements           `json:"resources,omitempty"`
+	Affinity            *v1.Affinity                      `json:"affinity,omitempty"`
+	NodeSelector        map[string]string                 `json:"nodeSelector,omitempty"`
+	Tolerations         []v1.Toleration                   `json:"tolerations,omitempty"`
+	PodManagementPolicy appsv1.PodManagementPolicyType    `json:"podManagementPolicy,omitempty"`
 }
 
 // MatrixoneClusterStatus defines the observed state of MatrixoneCluster

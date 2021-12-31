@@ -3,26 +3,21 @@ kind: MatrixoneCluster
 metadata:
   name: matrixonecluster-sample
 spec:
-  image: wanglei1995/matrixone:ct
+  image: matrixorigin/matrixone:nightly
   replicas: 3
   storage-class: standard
-  shard-capacity-bytes: "96MB"
-  low-space-ratio: "0.8"
-  high-space-ratio: "0.7"
-  max-replicas: 3
-  store-path: "./store"
-  metric-addr: "localhost:8081"
-  max-entry-bytes: "314572800"
-  env:
-  - name: POD_NAME
+  pod-name: 
+    name: POD_NAME
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  - name: POD_NAMESPACE
+  pod-namespace:
+    name: POD_NAMESPACE
     valueFrom:
       fieldRef:
         fieldPath: metadata.namespace
-  - name: POD_IP
+  pod-ip: 
+    name: POD_IP
     valueFrom:
       fieldRef:
         fieldPath: status.podIP

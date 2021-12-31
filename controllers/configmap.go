@@ -21,7 +21,7 @@ func (r *MatrixoneClusterReconciler) makeConfigMap(cm *v1.ConfigMap, moc *matrix
 	}
 
 	cm.ObjectMeta = metav1.ObjectMeta{
-		Name:      moc.GetObjectMeta().GetName(),
+		Name:      moc.Spec.PodName.Value,
 		Namespace: moc.Namespace,
 	}
 
@@ -45,26 +45,26 @@ func (r *MatrixoneClusterReconciler) makeConfigMap(cm *v1.ConfigMap, moc *matrix
 
 func generateData(moc *matrixonev1alpha1.MatrixoneCluster) (string, error) {
 	join := ""
-	adPrefix := moc.Name + moc.Namespace
+	host := moc.Spec.PodName.Value
 
 	addrRaft := "0.0.0.0:10000"
-	AddrAdvertiseRaft := adPrefix + ":10000"
+	AddrAdvertiseRaft := host + ":10000"
 	addrClient := "0.0.0.0:20000"
-	AddrAdvertiseClient := adPrefix + ":20000"
+	AddrAdvertiseClient := host + ":20000"
 	dirData := moc.Spec.StorePath
 	rpcAddr := "0.0.0.0:30000"
-	rpcAdertiseAddr := adPrefix + ":30000"
+	rpcAdertiseAddr := host + ":30000"
 	clientURLs := "http://0.0.0.0:40000"
-	advertiseClientURLs := "http://" + adPrefix + ":40000"
+	advertiseClientURLs := "http://" + host + ":40000"
 	peerURLs := "http://0.0.0.0:50000"
-	advertisePeerURLS := "http://" + adPrefix + ":50000"
+	advertisePeerURLS := "http://" + host + ":50000"
 
-	reg := regexp.MustCompile(moc.Name)
+	reg := regexp.MustCompile(moc.Spec.PodName.ValueFrom.FieldRef.FieldPath)
 
-	if reg.MatchString("0") {
+	if reg.MatchString("-0") {
 		join = ""
 	} else {
-		join = "http://" + adPrefix + ":4000"
+		join = "http://" + moc.Name + "-0" + ":40000"
 	}
 
 	mn := moc.Name + "-" + moc.Namespace

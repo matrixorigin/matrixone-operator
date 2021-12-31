@@ -22,6 +22,7 @@ limitations under the License.
 package v1
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -89,12 +90,53 @@ func (in *MatrixoneClusterList) DeepCopyObject() runtime.Object {
 func (in *MatrixoneClusterSpec) DeepCopyInto(out *MatrixoneClusterSpec) {
 	*out = *in
 	in.Services.DeepCopyInto(&out.Services)
+	if in.Command != nil {
+		in, out := &in.Command, &out.Command
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	in.LogVolResource.DeepCopyInto(&out.LogVolResource)
 	in.DataVolResource.DeepCopyInto(&out.DataVolResource)
 	in.ConfigMap.DeepCopyInto(&out.ConfigMap)
-	if in.Env != nil {
-		in, out := &in.Env, &out.Env
-		*out = make([]corev1.EnvVar, len(*in))
+	in.PodName.DeepCopyInto(&out.PodName)
+	in.PodIP.DeepCopyInto(&out.PodIP)
+	in.PodNameSpace.DeepCopyInto(&out.PodNameSpace)
+	if in.Lifecycle != nil {
+		in, out := &in.Lifecycle, &out.Lifecycle
+		*out = new(corev1.Lifecycle)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.LivenessProbe != nil {
+		in, out := &in.LivenessProbe, &out.LivenessProbe
+		*out = new(corev1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ReadinessProbe != nil {
+		in, out := &in.ReadinessProbe, &out.ReadinessProbe
+		*out = new(corev1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.UpdateStrategy != nil {
+		in, out := &in.UpdateStrategy, &out.UpdateStrategy
+		*out = new(appsv1.StatefulSetUpdateStrategy)
+		(*in).DeepCopyInto(*out)
+	}
+	in.Resources.DeepCopyInto(&out.Resources)
+	if in.Affinity != nil {
+		in, out := &in.Affinity, &out.Affinity
+		*out = new(corev1.Affinity)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.NodeSelector != nil {
+		in, out := &in.NodeSelector, &out.NodeSelector
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.Tolerations != nil {
+		in, out := &in.Tolerations, &out.Tolerations
+		*out = make([]corev1.Toleration, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
