@@ -16,7 +16,7 @@ Run your controller (this will run in the foreground, so switch to a new termina
 make run
 ```
 
-push image to hub
+push operator image to hub
 
 ```shell
 make docker-build docker-push IMG=<some-registry>/<project-name>:tag
