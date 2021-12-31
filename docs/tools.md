@@ -12,12 +12,6 @@ docker build docker build tools/mysql-client/ -t matrixorigin/client:0.0.1
 
 ### How to use
 
-kubernetes
-
-```shell
-kubectl run mysql-client --image=matrixorigin/client:0.0.1 -it --rm --restart=Never -- /bin/ash
-```
-
 docker
 
 ```shell
