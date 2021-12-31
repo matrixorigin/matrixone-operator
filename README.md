@@ -27,3 +27,7 @@ deploy operator
 ```shell
 make deploy IMG=<some-registry>/<project-name>:tag
 ```
+
+## Notice
+
+1. Files in the bin folder only apply to MacOS, Please refer to the Kubebuiler documentation if used on other systems

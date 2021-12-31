@@ -10,9 +10,16 @@ Mysql Client for connecting Matrixone Cluster
 docker build docker build tools/mysql-client/ -t matrixorigin/client:0.0.1
 ```
 
-**How to use**
+### How to use
 
 kubernetes
-```shell
 
+```shell
+kubectl run mysql-client --image=matrixorigin/client:0.0.1 -it --rm --restart=Never -- /bin/ash
+```
+
+docker
+
+```shell
+docker run -it --rm --name mo-client matrixoneorigin/client:0.0.1 -h ${HOST} -P ${PORT} -u${USER} -p${PWD}
 ```
