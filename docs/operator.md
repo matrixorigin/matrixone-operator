@@ -28,6 +28,11 @@ deploy operator
 make deploy IMG=<some-registry>/<project-name>:tag
 ```
 
-## Notice
+## Deploy a Matrixone Cluster
 
-1. Files in the bin folder only apply to MacOS, Please refer to the Kubebuiler documentation if used on other systems
+Deploy matrixone Cluster by operator
+
+```shell
+kubectl create ns matrixone
+kubectl apply -f example/tiny-cluster -n matrixone
+```
