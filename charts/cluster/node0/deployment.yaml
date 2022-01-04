@@ -15,7 +15,7 @@ spec:
       restartPolicy: Always
       containers:
       - name: mo0
-        image: wanglei1995/matrixone:test
+        image: matrixorigin/matrixone:nightly
         imagePullPolicy: Always
         resources:
           limits:
