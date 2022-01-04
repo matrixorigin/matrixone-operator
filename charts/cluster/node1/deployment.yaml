@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mo1
+  namespace: matrixone
+spec:
+  selector:
+    matchLabels:
+      app: mo1
+  template:
+    metadata:
+      labels:
+        app: mo1
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: mo1
+        image: wanglei1995/matrixone:test
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        volumeMounts:
+          - name: data
+            mountPath: /store
+          - name: config
+            mountPath:  /config
+          - name: log
+            mountPath: /log
+        ports:
+        - containerPort: 6001
+        - containerPort: 10000
+        - containerPort: 20000
+        - containerPort: 20100
+        - containerPort: 30000
+        - containerPort: 40000
+        - containerPort: 50000
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mo1-data-pvc
+        - name: log
+          persistentVolumeClaim:
+            claimName: mo1-log-pvc
+        - name: config
+          configMap:
+            name: mo1-cfg
