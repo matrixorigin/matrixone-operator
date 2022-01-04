@@ -1,0 +1,30 @@
+apiVersion: matrixone.matrixorigin.cn/v1
+kind: MatrixoneCluster
+metadata:
+  name: matrixonecluster-sample
+spec:
+  image: matrixorigin/matrixone:nightly
+  replicas: 3
+  storage-class: standard
+  pod-name: 
+    name: POD_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
+  pod-namespace:
+    name: POD_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+  pod-ip: 
+    name: POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  log-volume-resource: 
+    requests:
+      storage: 500Mi
+  data-volume-resource: 
+    requests:
+      storage: 500Mi
+  
