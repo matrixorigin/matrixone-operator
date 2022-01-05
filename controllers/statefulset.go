@@ -64,7 +64,7 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 							ImagePullPolicy: corev1.PullAlways,
 							Env: []corev1.EnvVar{
 								{
-									Name:  "FIRSTNODE",
+									Name:  "FIRST_NODE",
 									Value: firstNode,
 								},
 								moc.Spec.PodName,

@@ -3,7 +3,7 @@ kind: MatrixoneCluster
 metadata:
   name: matrixonecluster-sample
 spec:
-  image: matrixorigin/matrixone:nightly
+  image: wanglei1995/matrixone:kc
   replicas: 3
   storage-class: standard
   pod-name: 
