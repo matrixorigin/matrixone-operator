@@ -4,6 +4,7 @@ metadata:
   name: matrixonecluster-sample
 spec:
   image: wanglei1995/matrixone:kc
+  service-type: NodePort
   replicas: 3
   storage-class: standard
   pod-name: 

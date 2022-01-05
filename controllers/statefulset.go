@@ -11,7 +11,7 @@ import (
 const (
 	dataPath       string = "/opt/matrixone/store"
 	logPath        string = "/opt/matrixone/log"
-	ServerPort     int32  = 6000
+	ServerPort     int32  = 6001
 	addrRaftPort   int32  = 10000
 	addrClientPort int32  = 20000
 	rpcAddrPort    int32  = 30000
