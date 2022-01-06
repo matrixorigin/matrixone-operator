@@ -11,7 +11,7 @@ import (
 const (
 	dataPath       string = "/opt/matrixone/store"
 	logPath        string = "/opt/matrixone/log"
-	ServerPort     int32  = 6001
+	serverPort     int32  = 6001
 	addrRaftPort   int32  = 10000
 	addrClientPort int32  = 20000
 	rpcAddrPort    int32  = 30000
@@ -78,7 +78,7 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "server",
-									ContainerPort: ServerPort,
+									ContainerPort: serverPort,
 								},
 								{
 									Name:          "addr-raft",

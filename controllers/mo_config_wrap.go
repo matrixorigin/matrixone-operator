@@ -15,5 +15,5 @@ func MarshalTOML(config MatrixoneConfig) (string, error) {
 		return "", err
 	}
 
-	return string(buff.Bytes()), nil
+	return buff.String(), nil
 }

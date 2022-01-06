@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
@@ -79,17 +80,29 @@ func (r *MatrixoneClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger.Info("Create Service resource")
-	desiredSer, err := r.makeService(&matrixone.Spec.Services, matrixone, ls)
+	// logger.Info("Create Service resource")
+	// desiredSer, err := r.makeService(&v1.Service{}, matrixone, ls)
+	// if err != nil {
+	// 	logger.Error(err, "unable to make Service")
+	// }
+	// SerapplyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("matrixone-controller")}
+	// err = r.Patch(ctx, desiredSer, client.Apply, SerapplyOpts...)
+	// if err != nil {
+	// 	return ctrl.Result{}, err
+	// }
+	// matrixone.Status.ServiceStatus = desiredSer.Status
+
+	logger.Info("Create Headless Service resource")
+	desiredHeaSer, err := r.makeHeadlessService(&v1.Service{}, matrixone, ls)
 	if err != nil {
-		logger.Error(err, "unable to make Service")
+		logger.Error(err, "unable to make headless Service")
 	}
-	SerapplyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("matrixone-controller")}
-	err = r.Patch(ctx, desiredSer, client.Apply, SerapplyOpts...)
+	SerHeaapplyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("matrixone-controller")}
+	err = r.Patch(ctx, desiredHeaSer, client.Apply, SerHeaapplyOpts...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	matrixone.Status.ServiceStatus = desiredSer.Status
+	matrixone.Status.ServiceStatus = desiredHeaSer.Status
 
 	// logger.Info("Create ConfigMap resource")
 	// desiredCM, err := r.makeConfigMap(&matrixone.Spec.ConfigMap, matrixone, ls)
