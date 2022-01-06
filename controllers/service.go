@@ -14,36 +14,36 @@ var port = []v1.ServicePort{
 		Port:       serverPort,
 		TargetPort: intstr.FromInt(int(serverPort)),
 	},
-	// {
-	// 	Name:       "addr-raft",
-	// 	Port:       addrRaftPort,
-	// 	TargetPort: intstr.FromInt(int(addrRaftPort)),
-	// },
-	// {
-	// 	Name:       "addr-client",
-	// 	Port:       addrClientPort,
-	// 	TargetPort: intstr.FromInt(int(addrClientPort)),
-	// },
-	// {
-	// 	Name:       "rpc",
-	// 	Port:       rpcAddrPort,
-	// 	TargetPort: intstr.FromInt(int(rpcAddrPort)),
-	// },
-	// {
-	// 	Name:       "client",
-	// 	Port:       clientPort,
-	// 	TargetPort: intstr.FromInt(int(clientPort)),
-	// },
-	// {
-	// 	Name:       "peer",
-	// 	Port:       peerPort,
-	// 	TargetPort: intstr.FromInt(int(peerPort)),
-	// },
-	// {
-	// 	Name:       "raft",
-	// 	Port:       raftPort,
-	// 	TargetPort: intstr.FromInt(int(raftPort)),
-	// },
+	{
+		Name:       "addr-raft",
+		Port:       addrRaftPort,
+		TargetPort: intstr.FromInt(int(addrRaftPort)),
+	},
+	{
+		Name:       "addr-client",
+		Port:       addrClientPort,
+		TargetPort: intstr.FromInt(int(addrClientPort)),
+	},
+	{
+		Name:       "rpc",
+		Port:       rpcAddrPort,
+		TargetPort: intstr.FromInt(int(rpcAddrPort)),
+	},
+	{
+		Name:       "client",
+		Port:       clientPort,
+		TargetPort: intstr.FromInt(int(clientPort)),
+	},
+	{
+		Name:       "peer",
+		Port:       peerPort,
+		TargetPort: intstr.FromInt(int(peerPort)),
+	},
+	{
+		Name:       "raft",
+		Port:       raftPort,
+		TargetPort: intstr.FromInt(int(raftPort)),
+	},
 }
 
 func (r *MatrixoneClusterReconciler) makeService(svc *v1.Service, moc *matrixonev1alpha1.MatrixoneCluster, ls map[string]string) (*v1.Service, error) {

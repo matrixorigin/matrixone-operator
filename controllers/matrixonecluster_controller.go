@@ -26,7 +26,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -69,8 +68,7 @@ func (r *MatrixoneClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	_ = context.Background()
 	// _ = r.Log.WithValues("matrixone", req.NamespacedName)
 	matrixone := &matrixonev1alpha1.MatrixoneCluster{}
-	ls := map[string]string{"matrixone": matrixone.Name}
-	klog.Info("matrixone...", matrixone.Name)
+	ls := map[string]string{"app": "matrixone"}
 
 	logger.Info("Starting recon")
 
@@ -80,17 +78,17 @@ func (r *MatrixoneClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// logger.Info("Create Service resource")
-	// desiredSer, err := r.makeService(&v1.Service{}, matrixone, ls)
-	// if err != nil {
-	// 	logger.Error(err, "unable to make Service")
-	// }
-	// SerapplyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("matrixone-controller")}
-	// err = r.Patch(ctx, desiredSer, client.Apply, SerapplyOpts...)
-	// if err != nil {
-	// 	return ctrl.Result{}, err
-	// }
-	// matrixone.Status.ServiceStatus = desiredSer.Status
+	logger.Info("Create Service resource")
+	desiredSer, err := r.makeService(&v1.Service{}, matrixone, ls)
+	if err != nil {
+		logger.Error(err, "unable to make Service")
+	}
+	SerapplyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("matrixone-controller")}
+	err = r.Patch(ctx, desiredSer, client.Apply, SerapplyOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	matrixone.Status.ServiceStatus = desiredSer.Status
 
 	logger.Info("Create Headless Service resource")
 	desiredHeaSer, err := r.makeHeadlessService(&v1.Service{}, matrixone, ls)

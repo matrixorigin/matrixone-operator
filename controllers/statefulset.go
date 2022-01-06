@@ -9,21 +9,22 @@ import (
 )
 
 const (
-	dataPath       string = "/opt/matrixone/store"
-	logPath        string = "/opt/matrixone/log"
-	serverPort     int32  = 6001
-	addrRaftPort   int32  = 10000
-	addrClientPort int32  = 20000
-	rpcAddrPort    int32  = 30000
-	clientPort     int32  = 40000
-	peerPort       int32  = 50000
-	raftPort       int32  = 20100
+	dataPath string = "/store"
+	// logPath        string = "/opt/matrixone/log"
+	serverPort     int32 = 6001
+	addrRaftPort   int32 = 10000
+	addrClientPort int32 = 20000
+	rpcAddrPort    int32 = 30000
+	clientPort     int32 = 40000
+	peerPort       int32 = 50000
+	raftPort       int32 = 20100
 )
 
 func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.MatrixoneCluster, ls map[string]string) (appsv1.StatefulSet, error) {
-	logVolName := "log"
+	// logVolName := "log"
 	dataVolName := "data"
-	firstNode := moc.Name + "-0"
+	serviceName := moc.Name + "-headless"
+	firstNode := moc.Name + "-0" + "." + serviceName
 
 	ss := appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -39,6 +40,7 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
+			ServiceName:         serviceName,
 			PodManagementPolicy: moc.Spec.PodManagementPolicy,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -46,14 +48,6 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 					Namespace: moc.Namespace,
 				},
 				Spec: corev1.PodSpec{
-					// Volumes: []corev1.Volume{
-					// 	{
-					// 		Name: moc.Spec.PodName.Value,
-					// 		VolumeSource: corev1.VolumeSource{
-					// 			EmptyDir: &corev1.EmptyDirVolumeSource{},
-					// 		},
-					// 	},
-					// },
 					NodeSelector: moc.Spec.NodeSelector,
 					Affinity:     moc.Spec.Affinity,
 					Tolerations:  moc.Spec.Tolerations,
@@ -66,6 +60,10 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 								{
 									Name:  "FIRST_NODE",
 									Value: firstNode,
+								},
+								{
+									Name:  "SERVICE_NAME",
+									Value: serviceName,
 								},
 								moc.Spec.PodName,
 								moc.Spec.PodIP,
@@ -106,10 +104,10 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      logVolName,
-									MountPath: logPath,
-								},
+								// {
+								// 	Name:      logVolName,
+								// 	MountPath: logPath,
+								// },
 								{
 									Name:      dataVolName,
 									MountPath: dataPath,
@@ -120,19 +118,19 @@ func (r *MatrixoneClusterReconciler) makeStatefulset(moc *matrixonev1alpha1.Matr
 				},
 			},
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      logVolName,
-						Namespace: moc.Namespace,
-					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{
-							"ReadWriteOnce",
-						},
-						Resources:        moc.Spec.LogVolResource,
-						StorageClassName: &moc.Spec.StorageClass,
-					},
-				},
+				// {
+				// 	ObjectMeta: metav1.ObjectMeta{
+				// 		Name:      logVolName,
+				// 		Namespace: moc.Namespace,
+				// 	},
+				// 	Spec: corev1.PersistentVolumeClaimSpec{
+				// 		AccessModes: []corev1.PersistentVolumeAccessMode{
+				// 			"ReadWriteOnce",
+				// 		},
+				// 		Resources:        moc.Spec.LogVolResource,
+				// 		StorageClassName: &moc.Spec.StorageClass,
+				// 	},
+				// },
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dataVolName,
