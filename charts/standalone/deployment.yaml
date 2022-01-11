@@ -21,10 +21,20 @@ spec:
             cpu: "500m"
         volumeMounts:
           - name: data
-            mountPath: /cube0
+            mountPath: /cube
+          - name: config
+            mountPath:  /config
+          - name: log
+            mountPath: /log
         ports:
         - containerPort: 6001
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: mo-pvc
+        - name: log
+          persistentVolumeClaim:
+            claimName: mo-pvc
+        - name: config
+          configMap:
+            name: mo-cfg

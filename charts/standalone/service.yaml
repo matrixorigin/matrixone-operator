@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: mo
+  name: mo1
   namespace: matrixone
 spec:
   type: ClusterIP
   selector:
-    app: mo
+    app: mo1
   ports:
-  - port: 6001
-    targetPort: 6001
+  - port: 6000
+    targetPort: 6000
  
