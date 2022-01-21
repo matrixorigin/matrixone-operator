@@ -19,6 +19,5 @@ make run
 push operator image to hub
 
 ```shell
-make mo-build mo-push IMG=<some-registry>/<project-name>:tag
+make op-build op-push IMG=<some-registry>/<project-name>:tag
 ```
-
