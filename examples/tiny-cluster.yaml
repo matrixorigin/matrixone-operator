@@ -1,4 +1,4 @@
-apiVersion: matrixone.matrixorigin.cn/v1
+apiVersion: matrixone.matrixorigin.cn/v1alpha1
 kind: MatrixoneCluster
 metadata:
   name: mo
@@ -11,20 +11,12 @@ spec:
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  pod-namespace:
-    name: POD_NAMESPACE
-    valueFrom:
-      fieldRef:
-        fieldPath: metadata.namespace
-  pod-ip: 
-    name: POD_IP
-    valueFrom:
-      fieldRef:
-        fieldPath: status.podIP
   log-volume-resource: 
     requests:
       storage: 500Mi
   data-volume-resource:
     requests:
       storage: 500Mi
+  
+
   
