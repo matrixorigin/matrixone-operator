@@ -19,15 +19,6 @@ make run
 push operator image to hub
 
 ```shell
-make docker-build docker-push IMG=<some-registry>/<project-name>:tag
+make mo-build mo-push IMG=<some-registry>/<project-name>:tag
 ```
 
-deploy operator
-
-```shell
-make deploy IMG=<some-registry>/<project-name>:tag
-```
-
-## Notice
-
-1. Files in the bin folder only apply to MacOS, Please refer to the Kubebuiler documentation if used on other systems
