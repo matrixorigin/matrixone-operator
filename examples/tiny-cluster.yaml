@@ -18,5 +18,3 @@ spec:
     requests:
       storage: 500Mi
   
-
-  
