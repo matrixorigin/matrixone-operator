@@ -17,4 +17,3 @@ spec:
   data-volume-resource:
     requests:
       storage: 500Mi
-  

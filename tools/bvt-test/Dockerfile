@@ -28,6 +28,8 @@ RUN apk add --no-cache bash
 
 COPY --from=builder /go/src/github.com/matrixorigin/mysql-tester/mysql-tester /mysql-tester
 COPY --from=builder /usr/local/bin/dumb-init /usr/local/bin/dumb-init
+COPY --from=builder /go/src/github.com/matrixorigin/mysql-tester/r /r
+COPY --from=builder /go/src/github.com/matrixorigin/mysql-tester/t /t
 
 WORKDIR /
 
