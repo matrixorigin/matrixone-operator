@@ -21,3 +21,18 @@ push operator image to hub
 ```shell
 make op-build op-push IMG=<some-registry>/<project-name>:tag
 ```
+
+## Helm deploy Operator
+
+helm install see [website](https://helm.sh/docs/intro/install/)
+
+```shell
+kubectl create ns matrixone
+helm install mo-op charts/matrixone-operator -n matrixone
+```
+
+## Deploy Matrixone Cluster
+
+```shell
+kubectl apply -f examples/tiny-cluster.yaml -n matrixone
+```
