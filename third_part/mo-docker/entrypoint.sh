@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # reg="-[0]"
-host="${POD_NAME}.${SERVICE_NAME}"
+# host="${POD_NAME}.${SERVICE_NAME}"
 
 
 # if [[ $host =~ $reg ]];
