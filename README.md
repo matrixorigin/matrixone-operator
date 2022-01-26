@@ -1,6 +1,8 @@
 # Matrixone Operator
 
-Based on [kubebuilder](https://book.kubebuilder.io/)
+- Based on [kubebuilder](https://book.kubebuilder.io/)
+
+- [Create or Deploy a k8s cluster](./docs/cluster.md)
 
 ## Operator develop
 
