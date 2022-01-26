@@ -15,7 +15,7 @@ docker build docker build tools/mysql-client/ -t matrixorigin/client:0.0.1
 kubernetes
 
 ```shell
-kubectl run mysql-client --image=--image=matrixoneorigin/client:0.0.1 -it --rm --restart=Never -- /bin/bash
+kubectl run mysql-client --image=matrixoneorigin/client:0.0.1 -it --rm --restart=Never -- /bin/bash
 ```
 
 docker

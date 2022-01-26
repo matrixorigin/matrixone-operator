@@ -458,7 +458,7 @@ peer-urls = "http://0.0.0.0:50000"
 # For example, client-url = "http://0.0.0.0:40000", advertise-client-urls = "http://${HOST}:40000", The same to peer-urls.
 advertise-client-urls = "http://HOST:40000"
 advertise-peer-urls = "http://HOST:50000"
-initial-cluster = "PREFIX-0=http://PREFIX-0:50000,PREFIX-1=http://PREFIX-1:50000,PREFIX-2=http://PREFIX-2:50000"
+initial-cluster = "PREFIX-0=http://PREFIX-0.DOMAIN:50000,PREFIX-1=http://PREFIX-1.DOMAIN:50000,PREFIX-2=http://PREFIX-2.DOMAIN:50000"
 
 [prophet.schedule]
 max-snapshot-count =  1                        	# maximum snapshot a node that can be scheduled by prophet is handling
