@@ -1,6 +1,8 @@
 # Matrixone Operator
 
-Based on [kubebuilder](https://book.kubebuilder.io/)
+- Based on [kubebuilder](https://book.kubebuilder.io/)
+
+- [Create or Deploy a k8s cluster](./docs/cluster.md)
 
 ## Operator develop
 
@@ -19,15 +21,20 @@ make run
 push operator image to hub
 
 ```shell
-make docker-build docker-push IMG=<some-registry>/<project-name>:tag
+make op-build op-push IMG=<some-registry>/<project-name>:tag
 ```
 
-deploy operator
+## Helm deploy Operator
+
+helm install see [website](https://helm.sh/docs/intro/install/)
 
 ```shell
-make deploy IMG=<some-registry>/<project-name>:tag
+kubectl create ns matrixone
+helm install mo-op charts/matrixone-operator -n matrixone
 ```
 
-## Notice
+## Deploy Matrixone Cluster
 
-1. Files in the bin folder only apply to MacOS, Please refer to the Kubebuiler documentation if used on other systems
+```shell
+kubectl apply -f examples/tiny-cluster.yaml -n matrixone
+```

@@ -1,6 +1,0 @@
-apiVersion: matrixone.matrixorigin.cn/v1
-kind: MatrixoneCluster
-metadata:
-  name: matrixonecluster-sample
-spec:
-  # TODO(user): Add fields here
