@@ -3,8 +3,9 @@ kind: MatrixoneCluster
 metadata:
   name: mo
 spec:
-  image: wanglei1995/matrixone:kc
+  image: wanglei1995/matrixone:kct
   replicas: 3
+  image-pull-policy: Always
   storage-class: standard
   pod-name: 
     name: POD_NAME
@@ -17,6 +18,3 @@ spec:
   data-volume-resource:
     requests:
       storage: 500Mi
-  
-
-  

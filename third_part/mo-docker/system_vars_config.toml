@@ -445,7 +445,7 @@ external-etcd = ["", "", ""]
 # For the genesis node in the three prophet, the join value should remain a empty string.
 # For the other two nodes in the prophet group, the join value should set to the genesis node's peer-urls.
 # see more: https://etcd.io/docs/v3.5/op-guide/clustering/
-join = "JOIN"
+# join = "JOIN"
 # In a distributed setting, change the localhost to the machine ip to expose the client-urls to other nodes in the cluster.
 # When you deploy a cluster, you must specify the IP address of the current host as client-urls (for example, "http://192.168.100.214:40000").
 # If the cluster runs on Docker, specify the IP address of Docker as "http://0.0.0.0:40000"
@@ -458,10 +458,10 @@ peer-urls = "http://0.0.0.0:50000"
 # For example, client-url = "http://0.0.0.0:40000", advertise-client-urls = "http://${HOST}:40000", The same to peer-urls.
 advertise-client-urls = "http://HOST:40000"
 advertise-peer-urls = "http://HOST:50000"
-# initial-cluster = "mo-0=http://HOST:50000,mo-1=http://HOST:50000,mo-2=http://HOST:5000"
+initial-cluster = "PREFIX-0=http://PREFIX-0.DOMAIN:50000,PREFIX-1=http://PREFIX-1.DOMAIN:50000,PREFIX-2=http://PREFIX-2.DOMAIN:50000"
 
 [prophet.schedule]
-max-snapshot-count =  2                         	# maximum snapshot a node that can be scheduled by prophet is handling
+max-snapshot-count =  3                        	# maximum snapshot a node that can be scheduled by prophet is handling
 max-pending-peer-count = 16                         # maximum pending peers a node that can be scheduled can have
 patrol-resource-interval = "100ms"                  # the period of cube leader patrol
 max-container-down-time = "30m"                     # the maximum time a node is allowed to leave
@@ -472,7 +472,8 @@ low-space-ratio = 0.8                               # space ratio to decide whet
 high-space-ratio = 0.7                              # space ratio to decide whether this node's storage is high
 
 [prophet.replication]
-max-replicas = 2                             # max number of replica in a prophet group
+max-replicas = 3                             # max number of replica in a prophet group
+
 [location-labels]
 zone = "rack"                                       # label information of this prophet node
 enable-placement-rules = true                       # enable scheduling based on rule
