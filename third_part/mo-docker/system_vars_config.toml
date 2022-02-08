@@ -473,6 +473,7 @@ high-space-ratio = 0.7                              # space ratio to decide whet
 
 [prophet.replication]
 max-replicas = 3                             # max number of replica in a prophet group
+
 [location-labels]
 zone = "rack"                                       # label information of this prophet node
 enable-placement-rules = true                       # enable scheduling based on rule
