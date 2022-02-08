@@ -74,6 +74,7 @@ func makePodTemplate(moc *v1alpha1.MatrixoneCluster, ls map[string]string, hServ
 
 func makePodSpec(moc *v1alpha1.MatrixoneCluster, hServiceName string) corev1.PodSpec {
 	domain := ".svc.cluster.local"
+
 	// firstNode := moc.Name + "-0" + "." + hServiceName + "." + moc.Namespace + domain
 	hServiceName = hServiceName + "." + moc.Namespace + domain
 	prefix := moc.Name

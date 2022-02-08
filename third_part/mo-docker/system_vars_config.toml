@@ -375,7 +375,7 @@ pre-allocated-group-num = 20
 max-group-num           = 0
 
 # Logger Configs
-level = "debug" # debug, info, warn, error, fatal.
+level = "info" # debug, info, warn, error, fatal.
 format = "console" # json, console.
 
 # log file config
