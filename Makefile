@@ -46,7 +46,16 @@ deploy: manifests
 	kubectl apply -f deploy/service_account.yaml
 	kubectl apply -f deploy/role.yaml
 	kubectl apply -f deploy/role_binding.yaml
+	kubectl apply -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
 	kustomize build deploy/ | kubectl apply -f -
+
+# Destroy controller in the configured Kubernetes cluster in ~/.kube/config
+undeploy: manifests
+	kustomize build deploy/ | kubectl delete -f -
+	kubectl delete -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
+	kubectl delete -f deploy/service_account.yaml
+	kubectl delete -f deploy/role.yaml
+	kubectl delete -f deploy/role_binding.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
