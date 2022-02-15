@@ -1,10 +1,8 @@
-# MO K8S Cluster
+# Create a Kubernetes cluster
 
-matrixone cluster deployment document.
+Kubernetes cluster deployment document.
 
-## k8s cluster
-
-### kind
+## Kind
 
 ```shell
 # Install kind on MacOS
@@ -16,14 +14,14 @@ mv kind-linux-amd64 kind
 chmod +x kind
 mv kind /usr/local/bin
 
-# start a cluster which named mo
-kind create cluster --name mo --config ./kind_config/config.yaml
+# start a cluster with default configuration
+kind create cluster --name mo
 
 # delete a cluster 
 kind delete cluster --name mo
 ```
 
-### minikube
+## Minikube
 
 ```shell
 # MacOS
@@ -43,7 +41,7 @@ minikube stop
 minikube dashboard
 ```
 
-### AWS EKS
+## AWS EKS
 
 EKS command tools
 
@@ -85,4 +83,7 @@ start a eks cluster with tree nodes
 ```shell
 # create eks cluster
 eksctl create cluster --name mo --version 1.21 --region cn-northwest-1 --nodes 3 --node-type t3.medium --managed
+
+# detroy eks cluster
+eksctl delete cluster --name mo
 ```
