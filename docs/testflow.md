@@ -29,7 +29,8 @@ E2E tests in a nutshell
   - Verify it eventually has the expected spec
   - Continuously ensure no down time nor date loss during the mutation
 
- **The weight of various tests**
+### The weight of various tests
+
  ![proportion](./img/test_proportion.png)
 
 - Unit/integration tests for the entire reconciliation are hard
