@@ -5,7 +5,7 @@ metadata:
 spec:
   image: wanglei1995/matrixone:kc
   replicas: 3
-  storage-class: standard
+  storage-class: default
   pod-name: 
     name: POD_NAME
     valueFrom:
