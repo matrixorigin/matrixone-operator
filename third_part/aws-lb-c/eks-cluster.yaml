@@ -1,0 +1,25 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: mo-alb
+  region: cn-northwest-1
+  version: "1.18"
+nodeGroups:
+  - name: nodegroup-0
+    minSize: 1
+    maxSize: 3
+    desiredCapacity: 1
+managedNodeGroups:
+  - name: managed-nodegroup0
+    minSize: 1
+    maxSize: 3
+    desiredCapacity: 1
+    labels: {role: worker}
+    tags:
+      nodegroup-role: worker
+    iam:
+      withAddonPolicies:
+        externalDNS: true
+        certManager: true
+        albIngress: true
+        autoScaler: true
