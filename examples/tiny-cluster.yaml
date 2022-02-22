@@ -5,7 +5,7 @@ metadata:
 spec:
   image: wanglei1995/matrixone:kcl
   replicas: 3
-  storage-class: default
+  storage-class: gp2
   pod-name: 
     name: POD_NAME
     valueFrom:
@@ -13,10 +13,10 @@ spec:
         fieldPath: metadata.name
   log-volume-resource: 
     requests:
-      storage: 1Gi
+      storage: 500Mi
   data-volume-resource:
     requests:
-      storage: 1Gi
+      storage: 500Mi
   
 
   
