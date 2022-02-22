@@ -4,6 +4,7 @@ metadata:
   name: mo
 spec:
   image: wanglei1995/matrixone:kcl
+  image-pull-policy: Always
   replicas: 3
   storage-class: gp2
   pod-name: 
@@ -13,10 +14,10 @@ spec:
         fieldPath: metadata.name
   log-volume-resource: 
     requests:
-      storage: 500Mi
+      storage: 1Gi
   data-volume-resource:
     requests:
-      storage: 500Mi
+      storage: 1Gi
   
 
   
