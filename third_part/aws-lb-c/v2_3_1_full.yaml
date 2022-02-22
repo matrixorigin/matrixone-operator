@@ -736,7 +736,7 @@ spec:
     spec:
       containers:
       - args:
-        - --cluster-name=mo-alb
+        - --cluster-name=mo-develop
         - --ingress-class=alb
         image: amazon/aws-alb-ingress-controller:v2.3.1
         livenessProbe:
