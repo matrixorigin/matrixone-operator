@@ -3,7 +3,7 @@ kind: MatrixoneCluster
 metadata:
   name: mo
 spec:
-  image: wanglei1995/matrixone:kc
+  image: wanglei1995/matrixone:kcl
   replicas: 3
   storage-class: default
   pod-name: 
@@ -13,10 +13,10 @@ spec:
         fieldPath: metadata.name
   log-volume-resource: 
     requests:
-      storage: 500Mi
+      storage: 1Gi
   data-volume-resource:
     requests:
-      storage: 500Mi
+      storage: 1Gi
   
 
   
