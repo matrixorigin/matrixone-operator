@@ -376,13 +376,13 @@ max-group-num           = 0
 
 # Logger Configs
 level = "info" # debug, info, warn, error, fatal.
-format = "console" # json, console.
+format = "json" # json, console.
 
 # log file config
-filename = "" # log file.
+filename = "./log" # log file.
 max-size = 512 # maximum log file size.
-max-days = 0 # maximum log file days kept.
-max-backups = 0 # maximum numbers of old log files to retain.
+max-days = 1 # maximum log file days kept.
+max-backups = 1 # maximum numbers of old log files to retain.
 
 # Cube Configs
 # In a distributed setting, the ip of addr-raft and addr-client should set to the ip address of the machine that mo-server runs on.
