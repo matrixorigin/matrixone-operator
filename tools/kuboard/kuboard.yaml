@@ -6,7 +6,7 @@ metadata:
   annotations:
     k8s.kuboard.cn/displayName: kuboard
     k8s.kuboard.cn/ingress: "true"
-    k8s.kuboard.cn/service: LoadBalancer
+    k8s.kuboard.cn/service: ClusterIP
     k8s.kuboard.cn/workload: kuboard
   labels:
     k8s.kuboard.cn/layer: monitor
@@ -38,17 +38,12 @@ kind: Service
 metadata:
   name: kuboard
   namespace: kube-system
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "external"
-    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
-    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 spec:
-  type: LoadBalancer 
+  type: ClusterIP
   ports:
   - name: http
     port: 80
     targetPort: 80
-    nodePort: 32567
   selector:
     k8s.kuboard.cn/layer: monitor
     k8s.kuboard.cn/name: kuboard
@@ -106,12 +101,13 @@ metadata:
     k8s.kuboard.cn/workload: kuboard
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 8081}]'
     alb.ingress.kubernetes.io/target-type: ip
 spec:
   rules:
   -  http:
       paths:
-      - path: /
+      - path: /*
         backend:
           serviceName: kuboard
           servicePort: http
