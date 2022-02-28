@@ -1,14 +1,14 @@
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
-  name: mo-develop
+  name: mo-ssb
   region: cn-northwest-1
   version: "1.18"
 
 managedNodeGroups:
   - name: managed-ng-1
-    instanceType: c5.xlarge
-    volumeSize: 100
+    instanceType: c5.9xlarge
+    volumeSize: 1200
     minSize: 1
     maxSize: 5
     desiredCapacity: 1
@@ -26,8 +26,8 @@ managedNodeGroups:
         autoScaler: true
 
   - name: managed-ng-2
-    instanceType: c5.xlarge
-    volumeSize: 100
+    instanceType: c5.9xlarge
+    volumeSize: 1200
     minSize: 1
     maxSize: 5
     desiredCapacity: 1
@@ -45,8 +45,8 @@ managedNodeGroups:
         autoScaler: true
         
   - name: managed-ng-3
-    instanceType: c5.xlarge
-    volumeSize: 100
+    instanceType: c5.9xlarge
+    volumeSize: 1200
     minSize: 1
     maxSize: 5
     desiredCapacity: 1
@@ -59,7 +59,7 @@ managedNodeGroups:
     iam:
       withAddonPolicies:
         externalDNS: true
-        certManzsager: true
+        certManager: true
         albIngress: true
         autoScaler: true
     

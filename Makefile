@@ -16,7 +16,7 @@ all: manager
 # Build matrixone docker image
 mo-build:
 	cd third_part/mo-docker && docker build . -t $(MIMG)
-
+	
 # push matrixone docker image
 mo-push:
 	docker push $(MIMG)

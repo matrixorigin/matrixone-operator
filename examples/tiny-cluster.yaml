@@ -3,21 +3,25 @@ kind: MatrixoneCluster
 metadata:
   name: mo
 spec:
-  image: wanglei1995/matrixone:kcl
+  image: wanglei1995/matrixone:kcs
   image-pull-policy: Always
   replicas: 3
   storage-class: gp2
+  resources:
+    limits:
+      cpu: "16"
+      memory: "32Gi"
+    requests:
+      cpu: "16"
+      memory: "32Gi"
   pod-name: 
     name: POD_NAME
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  log-volume-resource: 
+  log-volume-resource:
     requests:
-      storage: 1Gi
+      storage: 20Gi
   data-volume-resource:
     requests:
-      storage: 1Gi
-  
-
-  
+      storage: 1024Gi
