@@ -26,6 +26,8 @@ kind create cluster --name mo
 
 ## Deploy Matrixone Operator
 
+[Matrixone Operator helm repository](https://artifacthub.io/packages/helm/matrixone-operator/matrixone-operator)
+
 ### Using helm charts
 
 - Install cluster scope operator into the `matrixone-operator` namespace
