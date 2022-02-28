@@ -4,8 +4,16 @@ metadata:
   name: mo
 spec:
   image: wanglei1995/matrixone:kc
+  image-pull-policy: Always
   replicas: 3
   storage-class: standard
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "500Mi"
+    requests:
+      cpu: "500m"
+      memory: "500Mi"
   pod-name: 
     name: POD_NAME
     valueFrom:
