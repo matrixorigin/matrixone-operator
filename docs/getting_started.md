@@ -5,9 +5,9 @@ Prerequisites
 - [Docker](https://docs.docker.com/get-docker/)
 - [Helm](https://helm.sh/)
 
-## Create a testing Kubernetes cluster
+## Create a sample Kubernetes cluster
 
-This section describes two ways to create a simple Kubernetes cluster. After creating a Kubernetes cluster, you can use it to test Matrixone clusters managed by Matrixone Operator. Choose whichever best matches your environment.
+This section describes two ways to create a simple Kubernetes cluster. After creating a Kubernetes cluster, you can use it to test Matrixone cluster managed by Matrixone Operator. Choose whichever best matches your environment.
 
 - Use [kind](https://kind.sigs.k8s.io/) to deploy a Kubernetes cluster in Docker. It is a common and recommended way.
 - Use [minikube](https://minikube.sigs.k8s.io/)  to deploy a Kubernetes cluster running locally in a VM.
@@ -60,7 +60,7 @@ NAME                                              READY   STATUS    RESTARTS   A
 mo-operator-matrixone-operator-5dd548755f-b7p64   1/1     Running   0          55sx
 ```
 
-## Deploy a sample Matrixone Cluster
+## Deploy a sample Matrixone cluster
 
 - An example spec to deploy a tiny matrixone cluster is included. Install cluster into `matrixone` namespace
 
@@ -72,13 +72,13 @@ kubectl create ns matrixone
 kubectl apply -f examples/tiny-cluster.yaml -n matrixone
 ```
 
-- Check Matrixone Cluster status
+- Check Matrixone cluster status
 
 ```shell
 kubectl get po -n matrixone
 ```
 
-Matrixone Cluster is ready:
+Matrixone cluster is ready:
 
 ```txt
 NAME   READY   STATUS    RESTARTS   AGE
@@ -87,7 +87,7 @@ mo-1   1/1     Running   0          26s
 mo-2   1/1     Running   0          26s
 ```
 
-## Connect to a Matrixone Cluster
+## Connect to a Matrixone cluster
 
 - Connect cluster by `port-forward`
 
@@ -101,14 +101,24 @@ mysql -h 127.0.0.1 -P 6001 -udump -p111
 
 - Connect cluster by [tools](./tools.md)
 
-## Uninstall Matrixone Resouces
+## Uninstall Matrixone resouces
 
-- Uninstall Matrixone
+- Uninstall Matrixone cluster
 
 ```shell
 kubectl delete -f examples/tiny-cluster.yaml -n matrixone
+```
 
+The Matrixone cluster should display the state when the cluster is deleted:
 
+```txt
+kubectl get po -n matrixone
+> No resources found in matrixone namespace.
+```
+
+Then delete namespace:
+
+```shell
 # Delete the namespace after all matrixone pods are deleted
 kubectl delete ns matrixone
 ```
@@ -117,13 +127,18 @@ kubectl delete ns matrixone
 
 ```shell
 helm uninstall mo-operator -n matrixone-operator
+```
 
+The Matrixone Operator should display the state when the cluster is deleted:
 
+```txt
+kubectl get po -n matrixone-operator
+> No resources found in matrixone-operator namespace.
+```
+
+Then delete namespace:
+
+```shell
 # Delete the namespace after matrixone operator pod are deleted
 kubectl delete ns matrixone-operator
 ```
-
-## Destroy the Matrixone cluster and the Kubernets cluster
-
-- Destroy Matrixone cluster by `helm` or using `make undeploy`
-- [Destroy Kubernetes cluster](./cluster.md)
