@@ -4,7 +4,6 @@ Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Helm](https://helm.sh/)
-- [kustomize](https://kustomize.io/)
 
 ## Create a testing Kubernetes cluster
 
@@ -27,20 +26,6 @@ kind create cluster --name mo
 
 ## Deploy Matrixone Operator
 
-### Pure install
-
-- Register the Matrixone custom resource definition (CRD). Deploy on default namespace
-
-```shell
-make deploy
-```
-
-- Destroy the Matrixone custom resource definition (CRD).
-
-```shell
-make undeploy
-```
-
 ### Using helm charts
 
 - Install cluster scope operator into the `matrixone-operator` namespace
@@ -49,14 +34,30 @@ make undeploy
 # Create namespace
 kubectl create ns matrixone-operator
 
-# Install Matrixone Operator using Helm
-helm install mo-op charts/matrixone-operator -n matrixone-operator
+# Add helm repository
+helm repo add matrixone https://matrixorigin.github.io/matrixone-operator
+
+# Update repo
+helm repo update
+
+# Show helm values about Matrixone Operator
+helm show values matrixone/matrixone-operator
+
+# Deploy matrixone operator into matrixone-operator namespace
+helm install mo-operator matrixone/matrixone-operator -n matrixone-operator
 ```
 
-- Uninstall Operator
+- Check Operator Status
 
 ```shell
-helm uninstall mo-op -n matrixone-operator
+kubectl get po -n matrixone-operator
+```
+
+Matrixone Operator is ready:
+
+```txt
+NAME                                              READY   STATUS    RESTARTS   AGE
+mo-operator-matrixone-operator-5dd548755f-b7p64   1/1     Running   0          55sx
 ```
 
 ## Deploy a sample Matrixone Cluster
@@ -68,7 +69,22 @@ helm uninstall mo-op -n matrixone-operator
 kubectl create ns matrixone
 
 # Deploy a sample cluster
-kubectl apply -f example/tiny-cluster -n matrixone
+kubectl apply -f examples/tiny-cluster.yaml -n matrixone
+```
+
+- Check Matrixone Cluster status
+
+```shell
+kubectl get po -n matrixone
+```
+
+Matrixone Cluster is ready:
+
+```txt
+NAME   READY   STATUS    RESTARTS   AGE
+mo-0   1/1     Running   0          26s
+mo-1   1/1     Running   0          26s
+mo-2   1/1     Running   0          26s
 ```
 
 ## Connect to a Matrixone Cluster
@@ -84,6 +100,28 @@ mysql -h 127.0.0.1 -P 6001 -udump -p111
 ```
 
 - Connect cluster by [tools](./tools.md)
+
+## Uninstall Matrixone Resouces
+
+- Uninstall Matrixone
+
+```shell
+kubectl delete -f examples/tiny-cluster.yaml -n matrixone
+
+
+# Delete the namespace after all matrixone pods are deleted
+kubectl delete ns matrixone
+```
+
+- Uninstall Matrixone Operator
+
+```shell
+helm uninstall mo-operator -n matrixone-operator
+
+
+# Delete the namespace after matrixone operator pod are deleted
+kubectl delete ns matrixone-operator
+```
 
 ## Destroy the Matrixone cluster and the Kubernets cluster
 
