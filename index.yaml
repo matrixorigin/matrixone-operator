@@ -9,6 +9,6 @@ entries:
     name: matrixone-operator
     type: application
     urls:
-    - https://github.com/wanglei4687/matrixone-operator/tree/helm//packages/matrixone-operator-0.1.0.tgz
+    - https://github.com/wanglei4687/matrixone-operator/tree/helm/packages/matrixone-operator-0.1.0.tgz
     version: 0.1.0
 generated: "2022-02-28T14:53:57.683604+08:00"
