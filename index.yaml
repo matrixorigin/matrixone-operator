@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  matrixone-operator:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2022-02-28T14:53:57.68626+08:00"
+    description: Matrixone Kubernetes Operator
+    digest: 3abb69c09678e24a70e8c5f18c68855607bdc641e5e2ee16c6d0eca89a2a0e33
+    name: matrixone-operator
+    type: application
+    urls:
+    - https://matrixorigin.github.io/matrix-operator/packages/matrixone-operator-0.1.0.tgz
+    version: 0.1.0
+generated: "2022-02-28T14:53:57.683604+08:00"
