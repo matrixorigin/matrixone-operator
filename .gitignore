@@ -2,3 +2,4 @@
 cover.out
 bin
 .vscode
+*.log
