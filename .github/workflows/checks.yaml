@@ -15,6 +15,9 @@ jobs:
     name: Check License
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Check license
         id: chl
         run : | 
@@ -83,6 +86,3 @@ jobs:
       with:
         go-version: '${{ env.golang-version }}'
     - run: make operator
-
-
-    
