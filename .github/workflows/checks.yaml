@@ -1,0 +1,36 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    name: Generate and Format
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name:  Import environment variables from file
+        run: cat ".github/env" > $GITHUB_ENV
+      
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '${{ env.golang-version }}'
+      
+      - name: Lint and Diff
+        id: lnd
+        run: |
+          make --always-make format generate manifests && git diff --exit-code
+
+
+
+    
