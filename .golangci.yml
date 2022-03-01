@@ -5,10 +5,8 @@ linters:
   enable:
     - revive
     - asciicheck
-    - bidichk
     - nilerr
     - gosec
-    - contextcheck
 
 issues:
   exclude-rules:
