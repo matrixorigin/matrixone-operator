@@ -4,13 +4,17 @@ run:
 linters:
   enable:
     - revive
+    - asciicheck
+    - bidichk
+    - nilerr
+    - gosec
+    - contextcheck
 
 issues:
   exclude-rules:
   - path: _test\.go
     linters:
       - errcheck
-      - gosec
   - linters:
     - lll
     source: "^//go:generate "
