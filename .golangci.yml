@@ -1,6 +1,10 @@
 run: 
   deadline: 10m
 
+output:
+   format: json
+   sort-results: true
+
 linters:
   enable:
     - revive
