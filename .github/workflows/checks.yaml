@@ -5,12 +5,18 @@ on:
   push:
     branches:
       - main
+      - kind-e2e
     tags:
       - "*"
 
 jobs:
   generate:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
     name: Generate and Format
     timeout-minutes: 60
 
@@ -31,6 +37,40 @@ jobs:
         run: |
           make --always-make format generate manifests && git diff --exit-code
 
+
+  check-golang:
+    runs-on: ubuntu-latest
+    name: Golang linter
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.40.1
+          args: --timeout 10m0s
+
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+    name: Build operator binary
+    timeout-minutes: 60
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Import environment variables from file
+      run: cat ".github/env" >> $GITHUB_ENV
+
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '${{ env.golang-version }}'
+    - run: make operator
 
 
     
