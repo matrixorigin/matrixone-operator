@@ -144,11 +144,6 @@ shellcheck: $(SHELLCHECK_BINARY)
 check-golang: $(GOLANGCILINTER_BINARY)
 	$(GOLANGCILINTER_BINARY) run
 
-# Run go vet against code
-.PHONY: vet
-vet:
-	go vet ./...
-
 # Generate code
 .PHONY: generate
 generate: controller-gen
