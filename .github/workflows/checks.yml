@@ -1,0 +1,19 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  check-license:
+    runs-on: ubuntu-latest
+    name: Check License
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Check license
+        id: chl
+        run : | 
+          chmod 755 scripts/check_license.sh && /usr/bin/bash scripts/check_license.sh
