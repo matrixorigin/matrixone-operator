@@ -71,7 +71,7 @@ mo-operator-matrixone-operator-5dd548755f-b7p64   1/1     Running   0          5
 kubectl create ns matrixone
 
 # Deploy a sample cluster
-kubectl apply -f examples/tiny-cluster.yaml -n matrixone
+kubectl apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/tiny-cluster.yaml -n matrixone
 ```
 
 - Check Matrixone cluster status
