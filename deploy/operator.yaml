@@ -19,7 +19,7 @@ spec:
           image: wanglei1995/matrixone-operator:latest
           command:
           - /manager
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
