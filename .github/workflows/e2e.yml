@@ -24,6 +24,7 @@ jobs:
         run:   |
           export SHELL=/bin/bash
           docker build -f  ./images/operator/Dockerfile . -t matrixorigin/matrixone-operator:latest
+          docker pull matrixorigin/matrixone:kc-0.3.0
           
       - name: start KinD
         uses: engineerd/setup-kind@v0.5.0
@@ -41,6 +42,7 @@ jobs:
       - name: Load images
         run: |
           kind load docker-image matrixorigin/matrixone-operator:latest
+          kind load docker-image matrixorign/matrixone:kc-0.3.0
           kubectl apply -f test/kind-rbac.yml
           
       - name: Deploy Operator
