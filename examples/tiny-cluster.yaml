@@ -3,7 +3,7 @@ kind: MatrixoneCluster
 metadata:
   name: mo
 spec:
-  image: matrixorign/matrixone:kc-0.3.0
+  image: matrixorigin/matrixone:kc-0.3.0
   image-pull-policy: IfNotPresent
   replicas: 3
   storage-class: standard
