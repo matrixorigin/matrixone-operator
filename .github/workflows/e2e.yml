@@ -42,7 +42,7 @@ jobs:
       - name: Load images
         run: |
           kind load docker-image matrixorigin/matrixone-operator:latest
-          kind load docker-image matrixorign/matrixone:kc-0.3.0
+          kind load docker-image matrixorigin/matrixone:kc-0.3.0
           kubectl apply -f test/kind-rbac.yml
           
       - name: Deploy Operator
