@@ -27,7 +27,6 @@ import (
 type MatrixoneClusterSpec struct {
 	Replicas                      int32                         `json:"replicas,omitempty"`
 	Image                         string                        `json:"image,omitempty"`
-	Services                      corev1.Service                `json:"services,omitempty"`
 	Command                       []string                      `json:"command,omitempty"`
 	ImagePullSecrets              []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	TerminationGracePeriodSeconds *int64                        `json:"terminationGracePeriodSeconds,omitempty"`
