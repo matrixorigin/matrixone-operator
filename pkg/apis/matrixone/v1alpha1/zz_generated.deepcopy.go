@@ -119,10 +119,7 @@ func (in *MatrixoneClusterSpec) DeepCopyInto(out *MatrixoneClusterSpec) {
 	}
 	in.LogVolResource.DeepCopyInto(&out.LogVolResource)
 	in.DataVolResource.DeepCopyInto(&out.DataVolResource)
-	in.ConfigMap.DeepCopyInto(&out.ConfigMap)
 	in.PodName.DeepCopyInto(&out.PodName)
-	in.PodIP.DeepCopyInto(&out.PodIP)
-	in.PodNameSpace.DeepCopyInto(&out.PodNameSpace)
 	if in.Lifecycle != nil {
 		in, out := &in.Lifecycle, &out.Lifecycle
 		*out = new(v1.Lifecycle)
