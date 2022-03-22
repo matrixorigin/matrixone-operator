@@ -44,10 +44,10 @@ type MatrixoneClusterSpec struct {
 	DisablePVCDeletionFinalizer bool `json:"disablePVCDeletionFinalizer,omitempty"`
 
 	// Optional: dns policy
-	DNSPolicy corev1.DNSPolicy `json:"dns-policy,omitempty"`
+	DNSPolicy corev1.DNSPolicy `json:"dnsPolicy,omitempty"`
 
 	// Optional: dns config
-	DNSConfig *corev1.PodDNSConfig `json:"dns-config,omitempty"`
+	DNSConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
 
 	RollingDeploy       bool                              `json:"rollingDeploy,omitempty"`
 	ImagePullPolicy     corev1.PullPolicy                 `json:"imagePullPolicy,omitempty"`
@@ -57,7 +57,6 @@ type MatrixoneClusterSpec struct {
 	DataVolResource     corev1.ResourceRequirements       `json:"dataVolumeResource,omitempty"`
 	ServiceType         corev1.ServiceType                `json:"serviceType,omitempty"`
 	PodName             corev1.EnvVar                     `json:"podName,omitempty"`
-	Lifecycle           *corev1.Lifecycle                 `json:"lifecycle,omitempty"`
 	LivenessProbe       *corev1.Probe                     `json:"livenessProbe,omitempty"`
 	ReadinessProbe      *corev1.Probe                     `json:"readinessProbe,omitempty"`
 	UpdateStrategy      *appsv1.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
