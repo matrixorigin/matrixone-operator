@@ -51,19 +51,13 @@ type MatrixoneClusterSpec struct {
 	DNSConfig *corev1.PodDNSConfig `json:"dns-config,omitempty"`
 
 	RollingDeploy       bool                              `json:"rollingDeploy,omitempty"`
-	ImagePullPolicy     corev1.PullPolicy                 `json:"image-pull-policy,omitempty"`
-	StorageClass        string                            `json:"storage-class,omitempty"`
+	ImagePullPolicy     corev1.PullPolicy                 `json:"imagePullPolicy,omitempty"`
+	StorageClass        string                            `json:"storageClass,omitempty"`
 	PodAnnotations      map[string]string                 `json:"podAnnotations,omitempty"`
-	LogVolResource      corev1.ResourceRequirements       `json:"log-volume-resource,omitempty"`
-	DataVolResource     corev1.ResourceRequirements       `json:"data-volume-resource,omitempty"`
-	ConfigMap           corev1.ConfigMap                  `json:"configmap,omitempty"`
-	MetircAddr          string                            `json:"metric-addr,omitempty"`
-	ShardCapacityBytes  string                            `json:"shard-capacity-bytes,omitempty"`
-	LowSpaceRatio       string                            `json:"low-space-ratio,omitempty"`
-	ServiceType         corev1.ServiceType                `json:"service-type,omitempty"`
-	PodName             corev1.EnvVar                     `json:"pod-name,omitempty"`
-	PodIP               corev1.EnvVar                     `json:"pod-ip,omitempty"`
-	PodNameSpace        corev1.EnvVar                     `json:"pod-namespace,omitempty"`
+	LogVolResource      corev1.ResourceRequirements       `json:"logVolumeResource,omitempty"`
+	DataVolResource     corev1.ResourceRequirements       `json:"dataVolumeResource,omitempty"`
+	ServiceType         corev1.ServiceType                `json:"serviceType,omitempty"`
+	PodName             corev1.EnvVar                     `json:"podName,omitempty"`
 	Lifecycle           *corev1.Lifecycle                 `json:"lifecycle,omitempty"`
 	LivenessProbe       *corev1.Probe                     `json:"livenessProbe,omitempty"`
 	ReadinessProbe      *corev1.Probe                     `json:"readinessProbe,omitempty"`
