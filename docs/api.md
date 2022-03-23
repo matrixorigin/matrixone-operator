@@ -31,7 +31,7 @@ Default is set to false, pvc shall be deleted on deletion of CR
 
 ## dnsPolicy
 
-[pod-specific DNS policies]](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy)
+pod specific [DNS policies](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy)
 
 ## dnsConfig
 

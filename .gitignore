@@ -1,3 +1,7 @@
-.DS_Storevendor
+.DS_Store
+vendor
 cover.out
 bin
+
+# emacs backupfiles
+*~
