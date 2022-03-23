@@ -2,6 +2,5 @@
 vendor
 cover.out
 bin
-
-# emacs backupfiles
 *~
+*.html
