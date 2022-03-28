@@ -108,7 +108,7 @@ TODO
 
 ## State management
 
-TDDO
+TODO
 
 ## Stateful service management
 
