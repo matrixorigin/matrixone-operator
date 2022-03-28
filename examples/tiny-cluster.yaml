@@ -3,10 +3,10 @@ kind: MatrixoneCluster
 metadata:
   name: mo
 spec:
-  image: matrixorigin/matrixone:kc-0.3.0
+  image: wanglei1995/matrixone:kc
   imagePullPolicy: Always
   replicas: 3
-  storageClass: standard
+  storageClass: gp2
   podName: 
     name: POD_NAME
     valueFrom:
@@ -14,10 +14,10 @@ spec:
         fieldPath: metadata.name
   logVolumeResource: 
     requests:
-      storage: 500Mi
+      storage: 300Mi
   dataVolumeResource:
     requests:
-      storage: 500Mi
+      storage: 300Mi
   
 
   
