@@ -17,7 +17,7 @@ RUN git clone https://github.com/matrixorigin/matrixone.git /go/src/github.com/m
 
 WORKDIR /go/src/github.com/matrixorigin/matrixone
 
-RUN go env -w GOPROXY=https://goproxy.cn,direct && go env -w GO111MODULE=on
+RUN go mod download
 
 RUN make config && make build
 
