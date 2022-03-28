@@ -75,14 +75,6 @@ type MatrixoneClusterStatus struct {
 	PersistentVolumeClaim []string `json:"persistentVolumeClaims,omitempty"`
 }
 
-// Matrixone Log with promtail and loki
-type PromtailLokiSpec struct {
-}
-
-// Matrixone Monitor with prometus
-type MonitorSpec struct {
-}
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
