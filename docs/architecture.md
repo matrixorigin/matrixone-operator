@@ -3,13 +3,13 @@
 ## Overview
 
 ```mermaid
-graph LR 
+graph LR
     l1(matrixone)
     l3(matrix monitor)
     l2(matrixcube)
 
-    l1 -- metrics/log --> l3
-    l2 -- metrics/log --> l3
+    l1 -- metrics/log/tracing --> l3
+    l2 -- metrics/log/tracing --> l3
     l1 -- schedule --> l2
 
 ```
