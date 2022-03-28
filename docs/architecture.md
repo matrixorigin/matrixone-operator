@@ -1,6 +1,6 @@
 # Architecture
 
-## overview
+## Overview
 
 ```mermaid
 graph LR 
@@ -14,7 +14,7 @@ graph LR
 
 ```
 
-## matrixone
+## Matrixone
 
 - matrixone as a compute layer
 - default tree node for sechduler matrixcube
@@ -26,7 +26,7 @@ flowchart LR
     mo-2 --raft --> mo-0
 ```
 
-## matrixcube
+## Matrixcube
 
 matrixone scheduler matrixcube
 
@@ -48,7 +48,7 @@ cube-1 -- raft --> cube-2
 cube-2 -- raft --> cube-0
 ```
 
-## matrix monitor
+## Mmatrix monitor
 
 ```mermaid
 flowchart LR
@@ -93,11 +93,11 @@ thanos as  prometheus sidecar
 - highly available
 - multi-tenant
 
-## metadata mangement
+## Metadata mangement
 
 TODO
 
-## state management
+## State management
 
 TDDO
 
