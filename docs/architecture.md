@@ -16,7 +16,7 @@ graph LR
 
 ## Matrixone
 
-- matrixone as a compute layer
+- matrixone as  compute layer
 - default tree node for sechduler matrixcube
 
 ```mermaid
@@ -27,6 +27,8 @@ flowchart LR
 ```
 
 ## Matrixcube
+
+- matrixcube as storage layer
 
 matrixone scheduler matrixcube
 
