@@ -114,7 +114,7 @@ TDDO
 
 TODO
 
-## Backup
+## Backup && Recovery
 
 TODO
 
@@ -127,3 +127,4 @@ TODO
 - [Jaeger vs Tempo - key features, differences, and alternatives](https://signoz.io/blog/jaeger-vs-tempo#:~:text=Both%20Grafana%20Tempo%20and%20Jaeger%20are%20tools%20aimed,as%20a%20project%20from%20Cloud%20Native%20Computing%20Foundation.)
 - [Metrics, tracing, and logging](https://peter.bourgon.org/blog/2017/02/21/metrics-tracing-and-logging.html)
 - [利用Opentelemetry+Loki+Temp+Granafa构建端到端的可观测平台](https://juejin.cn/post/7050134410229710884)
+- [Support receiving logs in Loki using OpenTelemetry OTLP](https://github.com/grafana/loki/pull/5363)
