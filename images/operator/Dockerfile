@@ -4,9 +4,6 @@ FROM golang:1.16 as builder
 WORKDIR /workspace
 # Copy the Go Modules manifests
 
-# Config go proxy 
-RUN go env -w GOPROXY=https://goproxy.cn,direct
-
 COPY go.mod go.mod
 COPY go.sum go.sum
 
