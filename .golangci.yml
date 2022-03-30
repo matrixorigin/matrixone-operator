@@ -3,14 +3,14 @@ run:
   skip-files:
     - "^zz_generated.*"
 
-output:
-  format: json
-  sort-results: true
+#output:
+#  format: json
+#  sort-results: true
 
 linters:
   disable-all: true
   enable:
-    - ineffassign
+#    - ineffassign
     - staticcheck
     - unused
 
@@ -22,10 +22,9 @@ issues:
       linters:
         - errcheck
 
-    - path: conversiion\.go
-      linters:
-        - ineffassign
-        
+#    - path: conversiion\.go
+#      linters:
+#        - ineffassign
 
   
 linters-settings:
