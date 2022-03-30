@@ -1,11 +1,11 @@
 run:
   timeout: 30m
+  go: 1.18
   skip-files:
     - "^zz_generated.*"
 
-#output:
-#  format: json
-#  sort-results: true
+output:
+  sort-results: true
 
 linters:
   disable-all: true
