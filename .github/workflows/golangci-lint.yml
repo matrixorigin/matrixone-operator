@@ -6,23 +6,18 @@ on:
       - main
 
 jobs :
-  check-golang:
+   check-golang:
     runs-on: ubuntu-latest
-    name: lint
-
+    name: Golang linter
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Import environment variables
+      - uses: actions/checkout@v3
+      - name: Import environment variables from file
         run: cat ".github/env" >> $GITHUB_ENV
-
       - uses: actions/setup-go@v2
         with:
-          go-version: '${{ env.golang-version  }}'
-
+          go-version: '${{ env.golang-version }}'
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3.1.0
         with:
-          version: 1.44.2
+          version: v1.44.2
           args: --timeout 10m0s
