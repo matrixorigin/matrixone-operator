@@ -5,7 +5,7 @@ on:
     branches:
       - main
 
-job:
+jobs :
   golangci-lint:
     runs-on: ubuntu-latest
     name: lint
