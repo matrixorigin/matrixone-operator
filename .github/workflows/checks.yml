@@ -6,7 +6,24 @@ on:
       - main
 
 jobs :
-   check-golang:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+    name: Build operator binary
+    steps:
+    - uses: actions/checkout@v3
+    - name: Import environment variables from file
+      run: cat ".github/env" >> $GITHUB_ENV
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '${{ env.golang-version }}'
+    - run: make manager
+    
+  check-golang:
     runs-on: ubuntu-latest
     name: Golang linter
     steps:
