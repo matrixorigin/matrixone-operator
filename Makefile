@@ -1,8 +1,16 @@
+SHELL=/usr/bin/env bash -o pipefail
+
 # Image URL to use all building/pushing image targets
 IMG ?= "matrixone-operator:latest"
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:maxDescLen=0,trivialVersions=true,generateEmbeddedObjectMeta=true"
 MIMG ?= "matrixone:latest"
+
+TOOLING=$(CONTROLLER_GEN_BINARY) $(GOLANGCILINTER_BINARY)
+TOOLS_BIN_DIR ?= $(shell pwd)/tmp/bin
+export PATH := $(TOOLS_BIN_DIR):$(PATH)
+
+GOLANGCILINTER_BINARY=$(TOOLS_BIN_DIR)/golangci-lint
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -11,7 +19,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager
+all: manager 
 
 # Build matrixone docker image
 mo-build:
@@ -26,7 +34,8 @@ test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
 # Build manager binary
-manager: generate fmt vet
+.PHONY: manager
+manager: manifests generate fmt vet
 	go build -o bin/manager cmd/operator/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
@@ -77,6 +86,10 @@ generate: controller-gen
 # helm lint
 lint: 
 	helm lint charts/matrixone-operator
+
+.PHONY: check-golang
+check-golang: $(GOLANGCILINTER_BINARY)
+	$(GOLANGCILINTER_BINARY) run
 
 # Build the docker image
 op-build: generate manifests
