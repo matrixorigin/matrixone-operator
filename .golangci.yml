@@ -10,10 +10,7 @@ output:
 linters:
   disable-all: true
   enable:
-#    - ineffassign
-    - staticcheck
-    - unused
-
+    - revive
 
 issues:
   max-same-issues: 0
@@ -21,11 +18,6 @@ issues:
     - path: _test\.go
       linters:
         - errcheck
-
-#    - path: conversiion\.go
-#      linters:
-#        - ineffassign
-
   
 linters-settings:
   staticcheck:
