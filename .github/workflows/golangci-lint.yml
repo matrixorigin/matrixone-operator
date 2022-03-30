@@ -1,4 +1,4 @@
-name: golangci-lint
+name: checks
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs :
-  golangci-lint:
+  check-golang:
     runs-on: ubuntu-latest
     name: lint
 
