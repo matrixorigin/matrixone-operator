@@ -1,0 +1,68 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: mo-ssb
+  region: cn-northwest-1
+  version: "1.18"
+
+managedNodeGroups:
+  - name: managed-ng-1
+    instanceType: c5.9xlarge
+    volumeSize: 1200
+    minSize: 1
+    maxSize: 5
+    desiredCapacity: 1
+    availabilityZones: ["cn-northwest-1a"]
+    labels: {role: worker}
+    tags:
+      nodegroup-role: worker
+    ssh:
+      allow: true
+    iam:
+      withAddonPolicies:
+        externalDNS: true
+        certManager: true
+        albIngress: true
+        autoScaler: true
+
+  - name: managed-ng-2
+    instanceType: c5.9xlarge
+    volumeSize: 1200
+    minSize: 1
+    maxSize: 5
+    desiredCapacity: 1
+    availabilityZones: ["cn-northwest-1b"]
+    labels: {role: worker}
+    tags:
+      nodegroup-role: worker
+    ssh:
+      allow: true
+    iam:
+      withAddonPolicies:
+        externalDNS: true
+        certManager: true
+        albIngress: true
+        autoScaler: true
+        
+  - name: managed-ng-3
+    instanceType: c5.9xlarge
+    volumeSize: 1200
+    minSize: 1
+    maxSize: 5
+    desiredCapacity: 1
+    availabilityZones: ["cn-northwest-1c"]
+    labels: {role: worker}
+    tags:
+      nodegroup-role: worker
+    ssh:
+      allow: true
+    iam:
+      withAddonPolicies:
+        externalDNS: true
+        certManager: true
+        albIngress: true
+        autoScaler: true
+    
+cloudWatch:
+  clusterLogging:
+    enableTypes: ["all"]
