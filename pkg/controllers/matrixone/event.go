@@ -77,10 +77,10 @@ func (e EmitEventFuncs) EmitEventGeneric(obj object, eventReason, msg string, er
 
 func (e EmitEventFuncs) EmitEventRollingDeployWait(obj, k8sObj object) {
 	if detectType(k8sObj) == "*v1.StatefulSet" {
-		msg := fmt.Sprintf("StatefulSet roll out is in progress CurrentRevision[%s] != UpdateRevision[%s]", k8sObj.(*appsv1.StatefulSet).Status.CurrentRevision, k8sObj.(*appsv1.StatefulSet).Status.UpdateRevision)
+		msg := fmt.Sprintf("statefulSet roll out is in progress CurrentRevision[%s] != UpdateRevision[%s]", k8sObj.(*appsv1.StatefulSet).Status.CurrentRevision, k8sObj.(*appsv1.StatefulSet).Status.UpdateRevision)
 		e.Event(obj, v1.EventTypeNormal, string(rollingDeployWait), msg)
 	} else if detectType(k8sObj) == "*v1.Deployment" {
-		msg := fmt.Sprintf("Deployment[%s] roll out is in progress in namespace [%s], ReadyReplicas [%d] != Current Replicas [%d]", k8sObj.(*appsv1.Deployment).Name, k8sObj.GetNamespace(), k8sObj.(*appsv1.Deployment).Status.ReadyReplicas, k8sObj.(*appsv1.Deployment).Status.Replicas)
+		msg := fmt.Sprintf("deployment[%s] roll out is in progress in namespace [%s], ReadyReplicas [%d] != Current Replicas [%d]", k8sObj.(*appsv1.Deployment).Name, k8sObj.GetNamespace(), k8sObj.(*appsv1.Deployment).Status.ReadyReplicas, k8sObj.(*appsv1.Deployment).Status.Replicas)
 		e.Event(obj, v1.EventTypeNormal, string(rollingDeployWait), msg)
 	}
 }
@@ -88,10 +88,10 @@ func (e EmitEventFuncs) EmitEventRollingDeployWait(obj, k8sObj object) {
 // EmitEventOnCreate shall emit event on CREATE operation
 func (e EmitEventFuncs) EmitEventOnCreate(obj, createObj object, err error) {
 	if err != nil {
-		errMsg := fmt.Errorf("Error creating object [%s] in namespace [%s:%s] due to [%s]", createObj.GetName(), createObj.GetObjectKind().GroupVersionKind().Kind, createObj.GetNamespace(), err.Error())
+		errMsg := fmt.Errorf("error creating object [%s] in namespace [%s:%s] due to [%s]", createObj.GetName(), createObj.GetObjectKind().GroupVersionKind().Kind, createObj.GetNamespace(), err.Error())
 		e.Event(obj, corev1.EventTypeWarning, string(matrixoneCreateFail), errMsg.Error())
 	} else {
-		msg := fmt.Sprintf("Successfully created object [%s:%s] in namespace [%s]", createObj.GetName(), createObj.GetObjectKind().GroupVersionKind().Kind, createObj.GetNamespace())
+		msg := fmt.Sprintf("successfully created object [%s:%s] in namespace [%s]", createObj.GetName(), createObj.GetObjectKind().GroupVersionKind().Kind, createObj.GetNamespace())
 		e.Event(obj, corev1.EventTypeNormal, string(matrixoneCreateSuccess), msg)
 	}
 }
@@ -99,10 +99,10 @@ func (e EmitEventFuncs) EmitEventOnCreate(obj, createObj object, err error) {
 // EmitEventOnPatch shall emit event on PATCH operation
 func (e EmitEventFuncs) EmitEventOnPatch(obj, patchObj object, err error) {
 	if err != nil {
-		errMsg := fmt.Errorf("Error patching object [%s:%s] in namespace [%s] due to [%s]", patchObj.GetName(), patchObj.GetObjectKind().GroupVersionKind().Kind, patchObj.GetNamespace(), err.Error())
+		errMsg := fmt.Errorf("error patching object [%s:%s] in namespace [%s] due to [%s]", patchObj.GetName(), patchObj.GetObjectKind().GroupVersionKind().Kind, patchObj.GetNamespace(), err.Error())
 		e.Event(obj, v1.EventTypeWarning, string(matrixonePatchFail), errMsg.Error())
 	} else {
-		msg := fmt.Sprintf("Successfully patched object [%s:%s] in namespace [%s]", patchObj.GetName(), patchObj.GetObjectKind().GroupVersionKind().Kind, patchObj.GetNamespace())
+		msg := fmt.Sprintf("successfully patched object [%s:%s] in namespace [%s]", patchObj.GetName(), patchObj.GetObjectKind().GroupVersionKind().Kind, patchObj.GetNamespace())
 		e.Event(obj, v1.EventTypeNormal, string(matrixonePatchSuccess), msg)
 	}
 }
@@ -110,10 +110,10 @@ func (e EmitEventFuncs) EmitEventOnPatch(obj, patchObj object, err error) {
 // EmitEventOnUpdate shall emit event on UPDATE operation
 func (e EmitEventFuncs) EmitEventOnUpdate(obj, updateObj object, err error) {
 	if err != nil {
-		errMsg := fmt.Errorf("Failed to update [%s:%s] due to [%s].", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind, err.Error())
+		errMsg := fmt.Errorf("failed to update [%s:%s] due to [%s].", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind, err.Error())
 		e.Event(obj, v1.EventTypeWarning, string(matrixoneUpdateFail), errMsg.Error())
 	} else {
-		msg := fmt.Sprintf("Updated [%s:%s].", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind)
+		msg := fmt.Sprintf("updated [%s:%s].", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind)
 		e.Event(obj, v1.EventTypeNormal, string(matrixoneUpdateSuccess), msg)
 	}
 }

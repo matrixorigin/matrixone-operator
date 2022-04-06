@@ -183,44 +183,45 @@ func sdkCreateOrUpdateAsNeeded(
 	names map[string]bool,
 	emitEvent EventEmitter,
 ) (MatrixoneClusterStatus, error) {
-	if obj, err := objFn(); err != nil {
+	obj, err := objFn()
+	if err != nil {
 		return "", nil
-	} else {
-		names[obj.GetName()] = true
+	}
+	names[obj.GetName()] = true
 
-		addOwnerRefToObject(obj, asOwner(moc))
-		addHashToObject(obj)
-		prevObj := emptyObjFn()
-		if err := sdk.Get(context.TODO(), *namespacedName(obj.GetName(), obj.GetNamespace()), prevObj); err != nil {
-			if apierrors.IsNotFound(err) {
-				// resource dose not exist, create it.
-				create, err := writers.Create(context.TODO(), sdk, moc, obj, emitEvent)
-				if err != nil {
-					return "", err
-				} else {
-					return create, nil
-				}
-			} else {
-				e := fmt.Errorf("Failed to get [%s:%s] due to [%s].", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err.Error())
-				logger.Error(e, e.Error(), "Prev object", stringifyForLogging(prevObj, moc), "name", moc.Name, "namespace", moc.Namespace)
-				emitEvent.EmitEventGeneric(moc, string(matrixoneObjectGetFail), "", err)
+	addOwnerRefToObject(obj, asOwner(moc))
+	addHashToObject(obj)
+	prevObj := emptyObjFn()
+	if err := sdk.Get(context.TODO(), *namespacedName(obj.GetName(), obj.GetNamespace()), prevObj); err != nil {
+		if apierrors.IsNotFound(err) {
+			// resource dose not exist, create it.
+			create, err := writers.Create(context.TODO(), sdk, moc, obj, emitEvent)
+			if err != nil {
 				return "", err
-			}
+			} 
+			return create, nil
+				
 		} else {
-			if obj.GetAnnotations()[matrixoneOpResourceHash] != prevObj.GetAnnotations()[matrixoneOpResourceHash] || !isEqualFn(prevObj, obj) {
-				obj.SetResourceVersion(prevObj.GetResourceVersion())
-				updaterFn(prevObj, obj)
-				update, err := writers.Update(context.TODO(), sdk, moc, obj, emitEvent)
-				if err != nil {
-					return "", err
-				} else {
-					return update, err
-				}
-			} else {
-				return "", nil
-			}
+			e := fmt.Errorf("failed to get [%s:%s] due to [%s].", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err.Error())
+			logger.Error(e, e.Error(), "prev object", stringifyForLogging(prevObj, moc), "name", moc.Name, "namespace", moc.Namespace)
+			emitEvent.EmitEventGeneric(moc, string(matrixoneObjectGetFail), "", err)
+			return "", err
+		}
+	} else {
+		if obj.GetAnnotations()[matrixoneOpResourceHash] != prevObj.GetAnnotations()[matrixoneOpResourceHash] || !isEqualFn(prevObj, obj) {
+			obj.SetResourceVersion(prevObj.GetResourceVersion())
+			updaterFn(prevObj, obj)
+			update, err := writers.Update(context.TODO(), sdk, moc, obj, emitEvent)
+			if err != nil {
+				return "", err
+			} 
+			return update, err
+		
+		} else {
+			return "", nil
 		}
 	}
+	
 }
 
 func isObjFullyDeployed(
@@ -277,26 +278,27 @@ func asOwner(moc *v1alpha1.MatrixoneCluster) metav1.OwnerReference {
 }
 
 func addHashToObject(obj object) error {
-	if sha, err := getObjectHash(obj); err != nil {
+	sha, err := getObjectHash(obj)
+	if err != nil {
 		return err
-	} else {
-		annotations := obj.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-			obj.SetAnnotations(annotations)
-		}
-		annotations[matrixoneOpResourceHash] = sha
-		return nil
+	} 
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+		obj.SetAnnotations(annotations)
 	}
+	annotations[matrixoneOpResourceHash] = sha
+	return nil
 }
 
 func getObjectHash(obj object) (string, error) {
-	if bytes, err := json.Marshal(obj); err != nil {
+	bytes, err := json.Marshal(obj)
+	if err != nil {
 		return "", err
-	} else {
-		sha1Bytes := sha1.Sum(bytes)
-		return base64.StdEncoding.EncodeToString(sha1Bytes[:]), nil
-	}
+	} 
+	sha1Bytes := sha1.Sum(bytes)
+	return base64.StdEncoding.EncodeToString(sha1Bytes[:]), nil
+
 }
 
 func namespacedName(name, namespace string) *types.NamespacedName {
@@ -309,7 +311,7 @@ func alwaysTrueIsEqualsFn(prev, curr object) bool {
 
 func stringifyForLogging(obj object, moc *v1alpha1.MatrixoneCluster) string {
 	if bytes, err := json.Marshal(obj); err != nil {
-		logger.Error(err, err.Error(), fmt.Sprintf("Failed to serialize [%s:%s]", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName()), "name", moc.Name, "namespace", moc.Namespace)
+		logger.Error(err, err.Error(), fmt.Sprintf("failed to serialize [%s:%s]", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName()), "name", moc.Name, "namespace", moc.Namespace)
 		return fmt.Sprintf("%v", obj)
 	} else {
 		return string(bytes)
@@ -325,12 +327,12 @@ func statefulSetIsEquals(obj1, obj2 object) bool {
 func updateFn(prev, curr object) {}
 
 func execCheckCrashStatus(sdk client.Client, moc *v1alpha1.MatrixoneCluster, event EventEmitter) {
+	
 	if moc.Spec.ForceDeleteStsPodOnError == false {
 		return
-	} else {
-		if moc.Spec.PodManagementPolicy == "OrderedReady" {
-			checkCrashStatus(sdk, moc, event)
-		}
+	} 
+	if moc.Spec.PodManagementPolicy == "OrderedReady" {
+		checkCrashStatus(sdk, moc, event)
 	}
 }
 
@@ -365,10 +367,10 @@ func checkCrashStatus(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEve
 						err := writers.Delete(context.TODO(), sdk, moc, p, emitEvents, &client.DeleteOptions{})
 						if err != nil {
 							return err
-						} else {
-							msg := fmt.Sprintf("Deleted pod [%s] in namespace [%s], since it was in crashloopback state.", p.GetName(), p.GetNamespace())
-							logger.Info(msg, "Object", stringifyForLogging(p, moc), "name", moc.Name, "namespace", moc.Namespace)
-						}
+						} 
+						msg := fmt.Sprintf("deleted pod [%s] in namespace [%s], since it was in crashloopback state.", p.GetName(), p.GetNamespace())
+						logger.Info(msg, "object", stringifyForLogging(p, moc), "name", moc.Name, "namespace", moc.Namespace)
+
 					}
 				}
 			}
