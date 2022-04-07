@@ -5,8 +5,6 @@ WORKDIR /workspace
 # Copy the Go Modules manifests
 
 # Config go proxy 
-RUN go env -w GOPROXY=https://goproxy.cn,direct
-
 COPY go.mod go.mod
 COPY go.sum go.sum
 
@@ -21,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager cmd/operator/ma
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM wanglei1995/static:nonroot
+FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
