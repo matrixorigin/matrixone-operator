@@ -12,12 +12,10 @@ spec:
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  log-volume-resource: 
+  logVolumeResource: 
     requests:
       storage: 500Mi
-  data-volume-resource:
+  dataVolumeResource:
     requests:
       storage: 500Mi
-  
-
   
