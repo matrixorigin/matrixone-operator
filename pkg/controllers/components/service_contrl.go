@@ -29,6 +29,7 @@ func MakeService(svc *corev1.Service, moc *v1alpha1.MatrixoneCluster, ls map[str
 
 	if !isHeadless {
 		svc.ObjectMeta.Name = moc.Name
+		svc.Spec.Type = moc.Spec.ServiceType
 		svc.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       "server",

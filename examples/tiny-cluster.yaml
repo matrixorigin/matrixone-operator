@@ -3,7 +3,7 @@ kind: MatrixoneCluster
 metadata:
   name: mo
 spec:
-  image: wanglei1995/matrixone:kc
+  image: matrixorigin/matrixone:kc-0.3.0
   imagePullPolicy: Always
   replicas: 3
   storageClass: gp2
@@ -18,6 +18,3 @@ spec:
   dataVolumeResource:
     requests:
       storage: 300Mi
-  
-
-  

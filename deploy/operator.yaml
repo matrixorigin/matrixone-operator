@@ -19,7 +19,7 @@ spec:
           image: matrixorigin/matrixone-operator:0.1.0
           command:
           - /manager
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
