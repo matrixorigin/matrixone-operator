@@ -1,0 +1,46 @@
+queue_rules:
+  - name: shared_queue
+    conditions:
+      - "#approved-reviews-by>=1"
+      # https://docs.mergify.com/conditions/#validating-all-status-checks
+      - check-success=e2e_tests
+      
+
+pull_request_rules:
+  - name: bug fix pr to queue
+    conditions:
+      - "#approved-reviews-by>=1"
+      - check-success=check
+      - label=bugfix
+
+    actions:
+      queue:
+        name: shared_queue
+
+  - name: other pr to queue
+    conditions:
+      - "#approved-reviews-by>=1"
+      - check-success=check
+      - label!=bugfix
+
+    actions:
+      queue:
+        name: shared_queue
+
+  - name: ping author on conflicts
+    conditions:
+      - conflict
+      - "#approved-reviews-by>=1"
+    actions:
+      comment:
+        message: |
+          This pr has merge conflicts that must be resolved before it can be merged. @{{ author }} please update it.
+          Try `@mergify update` or update manually.
+
+  - name: Welcome new contributor
+    conditions:
+      - author!=Mergify
+    actions:
+      comment:
+        message: |
+          Thanks for ${{ author }}'s contributor!

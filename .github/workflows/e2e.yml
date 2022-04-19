@@ -7,7 +7,7 @@ on:
 
 jobs:
   e2e-tests:
-    name: E2E tests
+    name: e2e_tests
     runs-on: ubuntu-latest
     
     steps:
@@ -74,7 +74,7 @@ jobs:
   
     # Added to summarize the matrix and allow easy branch protection rules setup
   e2e-tests-results:
-    name: End-to-End Test Results
+    name: e2e_test_results
     if: always()
     needs:
       - e2e-tests
