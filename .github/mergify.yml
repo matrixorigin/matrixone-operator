@@ -1,0 +1,118 @@
+queue_rules:
+  - name: shared_queue
+    conditions:
+      - "#approved-reviews-by>=1"
+
+      # Must write expected checks explicitly
+      # Reference: https://docs.mergify.com/conditions/#validating-all-status-checks
+      # - check-success=analyze
+      # - check-success=check_license
+      # - check-success=golangci_lint
+
+
+pull_request_rules:
+  - name: put bug fix pr to queue with high priority
+    conditions:
+      - "#approved-reviews-by>=1"
+      # - check-success=analyze
+      # - check-success=check_license
+      # - check-success=golangci_lint
+      - label=bugfix
+    actions:
+      queue:
+        name: shared_queue
+
+  - name: put other pr to queue
+    conditions:
+      - "#approved-reviews-by>=1"
+      - check-success=analyze
+      - check-success=check_license
+      - check-success=golangci_lint
+      - label!=bugfix
+    actions:
+      queue:
+        name: shared_queue
+
+  # if there is a conflict in a approved PR, ping the author.
+  - name: ping author on conflicts
+    conditions:
+      - conflict
+      - "#approved-reviews-by>=1"
+    actions:
+      comment:
+        message: |
+          This pull request has merge conflicts that must be resolved before it can be merged. @{{author}} please update it 🙏.
+          Try `@mergify update` or update manually.
+
+  - name: Welcome new contributor
+    conditions:
+      - author!=Mergify
+    actions:
+      comment:
+        message: |
+          Thanks for the contribution!
+          Please review the labels and make any necessary changes.
+
+  - name: ask owner to review  PR
+    conditions:
+      - author!=Mergify
+    actions:
+      request_reviews:
+        users:
+          - wanglei4687
+
+  - name: label on Feature
+    conditions:
+      - body~=- Feature
+    actions:
+      label:
+        add:
+          - feature
+
+  - name: label on Bug Fix
+    conditions:
+      - body~=- BUG
+    actions:
+      label:
+        add:
+          - bug
+
+  - name: label on Improvement
+    conditions:
+      - body~=- Improvement
+    actions:
+      label:
+        add:
+          - improvement
+
+  - name: label on CI
+    conditions:
+      - body~=- Test and CI
+    actions:
+      label:
+        add:
+          - test-ci
+
+  - name: label on code refactoring
+    conditions:
+      - body~=- Test
+    actions:
+      label:
+        add:
+          - refactoring
+
+  - name: label on Documentation
+    conditions:
+      - body~=- Documentation
+    actions:
+      label:
+        add:
+          - doc
+
+  - name: label on api change
+    conditions:
+      - body~=- API-change
+    actions:
+      label:
+        add:
+         - api-change
