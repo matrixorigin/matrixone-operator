@@ -17,7 +17,7 @@ pull_request_rules:
       # - check-success=analyze
       # - check-success=check_license
       # - check-success=golangci_lint
-      - label=bugfix
+      - label=bug
     actions:
       queue:
         name: shared_queue
@@ -25,10 +25,10 @@ pull_request_rules:
   - name: put other pr to queue
     conditions:
       - "#approved-reviews-by>=1"
-      - check-success=analyze
-      - check-success=check_license
-      - check-success=golangci_lint
-      - label!=bugfix
+      # - check-success=analyze
+      # - check-success=check_license
+      # - check-success=golangci_lint
+      - label!=bug
     actions:
       queue:
         name: shared_queue
@@ -60,10 +60,11 @@ pull_request_rules:
       request_reviews:
         users:
           - wanglei4687
+          - sukki37
 
   - name: label on Feature
     conditions:
-      - body~=- Feature
+      - body~=- [x] Feature
     actions:
       label:
         add:
@@ -71,7 +72,7 @@ pull_request_rules:
 
   - name: label on Bug Fix
     conditions:
-      - body~=- BUG
+      - body~=- [x] BUG
     actions:
       label:
         add:
@@ -79,7 +80,7 @@ pull_request_rules:
 
   - name: label on Improvement
     conditions:
-      - body~=- Improvement
+      - body~=-[x] Improvement
     actions:
       label:
         add:
@@ -87,7 +88,7 @@ pull_request_rules:
 
   - name: label on CI
     conditions:
-      - body~=- Test and CI
+      - body~=- [x] Test and CI
     actions:
       label:
         add:
@@ -95,7 +96,7 @@ pull_request_rules:
 
   - name: label on code refactoring
     conditions:
-      - body~=- Test
+      - body~=- [x] Code Refactoring
     actions:
       label:
         add:
@@ -103,7 +104,7 @@ pull_request_rules:
 
   - name: label on Documentation
     conditions:
-      - body~=- Documentation
+      - body~=- [x] Documentation
     actions:
       label:
         add:
@@ -111,7 +112,7 @@ pull_request_rules:
 
   - name: label on api change
     conditions:
-      - body~=- API-change
+      - body~=- [x] API-change
     actions:
       label:
         add:
