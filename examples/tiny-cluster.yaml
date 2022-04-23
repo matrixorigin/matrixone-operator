@@ -6,14 +6,13 @@ spec:
   image: matrixorigin/matrixone:kc-0.3.0
   imagePullPolicy: IfNotPresent
   replicas: 3
-  resources:
-    limits:
-      cpu: "500m"
-      memory: 1Gi
-    requests:
-      cpu: "500m"
-      memory: 1Gi
   storageClass: standard
+  requests:
+    cpu: 500m
+    memory: 500Mi
+  limits:
+    cpu: 500m
+    memory: 500Mi
   podName:
     name: POD_NAME
     valueFrom:

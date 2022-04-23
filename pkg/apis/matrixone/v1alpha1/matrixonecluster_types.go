@@ -25,7 +25,7 @@ import (
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
 type MatrixoneClusterSpec struct {
-	Replicas                      int32                         `json:"replicas,omitempty"`
+	Replicas                      *int32                        `json:"replicas,omitempty"`
 	Image                         string                        `json:"image,omitempty"`
 	Command                       []string                      `json:"command,omitempty"`
 	ImagePullSecrets              []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
@@ -60,7 +60,8 @@ type MatrixoneClusterSpec struct {
 	LivenessProbe       *corev1.Probe                     `json:"livenessProbe,omitempty"`
 	ReadinessProbe      *corev1.Probe                     `json:"readinessProbe,omitempty"`
 	UpdateStrategy      *appsv1.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
-	Resources           corev1.ResourceRequirements       `json:"resources,omitempty"`
+	Requests            corev1.ResourceList               `json:"requests,omitempty"`
+	Limits              corev1.ResourceList               `json:"limits,omitempty"`
 	Affinity            *corev1.Affinity                  `json:"affinity,omitempty"`
 	NodeSelector        map[string]string                 `json:"nodeSelector,omitempty"`
 	Tolerations         []corev1.Toleration               `json:"tolerations,omitempty"`
@@ -73,14 +74,6 @@ type MatrixoneClusterStatus struct {
 	Services              []string `json:"service,omitempty"`
 	Pods                  []string `json:"pods,omitempty"`
 	PersistentVolumeClaim []string `json:"persistentVolumeClaims,omitempty"`
-}
-
-// Matrixone Log with promtail and loki
-type PromtailLokiSpec struct {
-}
-
-// Matrixone Monitor with prometus
-type MonitorSpec struct {
 }
 
 //+kubebuilder:object:root=true
