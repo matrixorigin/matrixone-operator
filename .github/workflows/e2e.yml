@@ -65,7 +65,7 @@ jobs:
           kubectl apply -f examples/tiny-cluster.yaml
 
       - name: Wait for mo cluster to finish bootstraping
-        RUN: |
+        run: |
             kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout 300s
             kubectl cluster-info
             kubectl get pods -A
