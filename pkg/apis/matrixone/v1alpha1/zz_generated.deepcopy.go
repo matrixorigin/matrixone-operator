@@ -116,8 +116,6 @@ func (in *MatrixoneClusterSpec) DeepCopyInto(out *MatrixoneClusterSpec) {
 			(*out)[key] = val
 		}
 	}
-	in.LogVolResource.DeepCopyInto(&out.LogVolResource)
-	in.DataVolResource.DeepCopyInto(&out.DataVolResource)
 	in.PodName.DeepCopyInto(&out.PodName)
 	if in.LivenessProbe != nil {
 		in, out := &in.LivenessProbe, &out.LivenessProbe

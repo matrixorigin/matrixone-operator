@@ -20,6 +20,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -56,7 +57,6 @@ func MakeSts(moc *v1alpha1.MatrixoneCluster, ls map[string]string) (*appsv1.Stat
 
 // hServiceName headless service name
 func makeStsSpec(moc *v1alpha1.MatrixoneCluster, ls map[string]string, hServiceName string) appsv1.StatefulSetSpec {
-
 	updateStrategy := utils.FirstNonNilValue(moc.Spec.UpdateStrategy, &appsv1.StatefulSetUpdateStrategy{}).(*appsv1.StatefulSetUpdateStrategy)
 
 	stsSpec := appsv1.StatefulSetSpec{
@@ -184,7 +184,11 @@ func getPersistentVolumeClaim(moc *v1alpha1.MatrixoneCluster, ls map[string]stri
 				AccessModes: []corev1.PersistentVolumeAccessMode{
 					"ReadWriteOnce",
 				},
-				Resources:        moc.Spec.DataVolResource,
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceEphemeralStorage: resource.MustParse("500Mi"),
+					},
+				},
 				StorageClassName: &moc.Spec.StorageClass,
 			},
 		},
@@ -198,7 +202,11 @@ func getPersistentVolumeClaim(moc *v1alpha1.MatrixoneCluster, ls map[string]stri
 				AccessModes: []corev1.PersistentVolumeAccessMode{
 					"ReadWriteOnce",
 				},
-				Resources:        moc.Spec.LogVolResource,
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceEphemeralStorage: resource.MustParse("500Mi"),
+					},
+				},
 				StorageClassName: &moc.Spec.StorageClass,
 			},
 		},

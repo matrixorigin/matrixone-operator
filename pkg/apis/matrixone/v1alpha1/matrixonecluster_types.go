@@ -53,8 +53,8 @@ type MatrixoneClusterSpec struct {
 	ImagePullPolicy     corev1.PullPolicy                 `json:"imagePullPolicy,omitempty"`
 	StorageClass        string                            `json:"storageClass,omitempty"`
 	PodAnnotations      map[string]string                 `json:"podAnnotations,omitempty"`
-	LogVolResource      corev1.ResourceRequirements       `json:"logVolumeResource,omitempty"`
-	DataVolResource     corev1.ResourceRequirements       `json:"dataVolumeResource,omitempty"`
+	LogVolCap           string                            `json:"logVolumeCap,omitempty"`
+	DataVolCap          string                            `json:"dataVolumeCap,omitempty"`
 	ServiceType         corev1.ServiceType                `json:"serviceType,omitempty"`
 	PodName             corev1.EnvVar                     `json:"podName,omitempty"`
 	LivenessProbe       *corev1.Probe                     `json:"livenessProbe,omitempty"`

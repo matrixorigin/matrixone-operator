@@ -4,18 +4,20 @@ metadata:
   name: mo
 spec:
   image: matrixorigin/matrixone:kc-0.3.0
-  image-pull-policy: IfNotPresent
+  imagePullPolicy: IfNotPresent
   replicas: 3
-  storage-class: standard
-  pod-name: 
+  resources:
+    limits:
+      cpu: "500m"
+      memory: 1Gi
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+  storageClass: standard
+  podName:
     name: POD_NAME
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  logVolumeResource: 
-    requests:
-      storage: 500Mi
-  dataVolumeResource:
-    requests:
-      storage: 500Mi
-  
+  logVolumeCap: 500Mi
+  dataVolumeCap: 500Mi
