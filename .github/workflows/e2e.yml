@@ -7,21 +7,23 @@ on:
 
 jobs:
   e2e-tests:
-    name: E2E tests
+    name: e2e_tests
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
+
       - name: Import environment variables from file
-        run:  |
+        run: |
           cat ".github/env" >> $GITHUB_ENV
+
       - name: Install Go
         uses: actions/setup-go@v2
         with:
           go-version: '${{ env.golang-version }}'
 
       - name: Build images
-        run:   |
+        run: |
           export SHELL=/bin/bash
           docker build -f  ./images/operator/Dockerfile . -t matrixorigin/matrixone-operator:latest
           docker pull matrixorigin/matrixone:kc-0.3.0
@@ -39,6 +41,7 @@ jobs:
           kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
           kubectl cluster-info
           kubectl get pods -A
+
       - name: Load images
         run: |
           kind load docker-image matrixorigin/matrixone-operator:latest
@@ -49,10 +52,10 @@ jobs:
         run: |
           make deploy
 
-     - name: Wati for pv
-       uses: juliangruber/sleep-action@v1
-       with:
-         time: 120s
+      - name: Wait for pv
+        uses: juliangruber/sleep-action@v1
+        with:
+          time: 120s
 
       - name: Wait for operator to finish bootstraping
         run: |
