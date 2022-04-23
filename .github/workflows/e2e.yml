@@ -51,12 +51,13 @@ jobs:
 
       - name: Wait for operator to finish bootstraping
         uses: nick-fields/retry@v2
-        timeout_minutes: 5
-        max_attempts: 3
-        command:  |
-          kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout 300s
-          kubectl cluster-info
-          kubectl get pods -A
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command:  |
+            kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout 300s
+            kubectl cluster-info
+            kubectl get pods -A
 
       - name: Deploy cluster
         run: |
@@ -64,12 +65,13 @@ jobs:
 
       - name: Wait for mo cluster to finish bootstraping
         uses: nick-fields/retry@v2
-        timeout_minutes: 5
-        max_attempts: 3
-        command: |
-          kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout 300s
-          kubectl cluster-info
-          kubectl get pods -A
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout 300s
+            kubectl cluster-info
+            kubectl get pods -A
 
       - name: Run test
         run:  |
