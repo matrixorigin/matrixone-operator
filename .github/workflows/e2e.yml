@@ -52,11 +52,6 @@ jobs:
         run: |
           make deploy
 
-      - name: Wait for pv
-        uses: juliangruber/sleep-action@v1
-        with:
-          time: 120s
-
       - name: Wait for operator to finish bootstraping
         run: |
             kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout 300s
@@ -66,6 +61,11 @@ jobs:
       - name: Deploy cluster
         run: |
           kubectl apply -f examples/tiny-cluster.yaml
+
+      - name: Wait for pv
+        uses: juliangruber/sleep-action@v1
+        with:
+          time: 120s
 
       - name: Wait for mo cluster to finish bootstraping
         run: |
