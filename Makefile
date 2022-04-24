@@ -78,7 +78,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # helm lint
-lint: 
+lint:
 	helm lint charts/matrixone-operator
 
 # Build the docker image
@@ -96,9 +96,10 @@ kind:
 	kubectl apply -f test/kind-rbac.yml
 
 
-# kind load image
-kind-load:
-	kind load docker-image matrixorigin/matrixone-operator:latest
+# helm package
+helm-pkg:
+	helm package charts/matrixone-operator
+	mv matrixone-operator-0.1.0.tgz packages
 
 # find or download controller-gen
 # download controller-gen if necessary
