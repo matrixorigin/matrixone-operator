@@ -75,7 +75,7 @@ jobs:
 
       - name: Run test
         run:  |
-          kubectl run bvt-tester --image=wanglei1995/mysql-tester -i --rm --restart=Never -- -host mo.default.svc.cluster.local -port  6001 -user dump -passwd 111
+          kubectl run bvt-tester --image=matrixorigin/mysql-tester -i --rm --restart=Never -- -host mo.default.svc.cluster.local -port  6001 -user dump -passwd 111
 
     # Added to summarize the matrix and allow easy branch protection rules setup
   e2e-tests-results:
