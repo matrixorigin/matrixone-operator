@@ -30,7 +30,7 @@ test: generate fmt vet manifests
 
 # Build manager binary
 operator: generate fmt vet
-	CGO_ENABLED=0 go build -o bin/manager /cmd/operator/main.go
+	CGO_ENABLED=0 go build -o operator cmd/operator/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests

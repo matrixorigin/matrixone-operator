@@ -145,7 +145,9 @@ func (f WriterFuncs) Update(ctx context.Context, sdk client.Client, moc *v1alpha
 
 func (f WriterFuncs) Delete(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter, deleteOptions ...client.DeleteOption) error {
 
-	if err := sdk.Delete(ctx, obj, deleteOptions...); err != nil {
+	err := sdk.Delete(ctx, obj, deleteOptions...)
+
+	if err != nil {
 		emitEvent.EmitEventOnDelete(moc, obj, err)
 		return err
 	}
