@@ -1,8 +1,11 @@
 # Image URL to use all building/pushing image targets
-IMG ?= "matrixone-operator:latest"
+IMG ?= "matrixorigin/matrixone-operator:latest"
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:maxDescLen=0,trivialVersions=true,generateEmbeddedObjectMeta=true"
-MIMG ?= "matrixone:latest"
+MIMG ?= "matrixorigin/matrixone:latest"
+PROXY ?= https://goproxy.cn,direct
+BRANCH ?= 0.3.0
+
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -15,7 +18,7 @@ all: manager
 
 # Build matrixone docker image
 mo-build:
-	cd third_part/mo-docker && docker build . -t $(MIMG)
+	cd third_part/mo-docker && docker build . -t $(MIMG) --build-arg PROXY=$(PROXY) --build-arg BRANCH=$(BRANCH)
 
 # push matrixone docker image
 mo-push:
@@ -75,16 +78,28 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # helm lint
-lint: 
+lint:
 	helm lint charts/matrixone-operator
 
 # Build the docker image
 op-build: generate manifests
-	docker build -f images/operator/Dockerfile . -t ${IMG}
+	docker build -f images/operator/Dockerfile . -t ${IMG} --build-arg PROXY=$(PROXY)
 
 # Push the docker image
 op-push:
 	docker push ${IMG}
+
+
+# start a kind clsuter
+kind:
+	kind create cluster --config third_part/kind-config/config.yaml
+	kubectl apply -f test/kind-rbac.yml
+
+
+# helm package
+helm-pkg:
+	helm package charts/matrixone-operator
+	mv matrixone-operator-0.1.0.tgz packages
 
 # find or download controller-gen
 # download controller-gen if necessary

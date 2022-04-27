@@ -16,7 +16,7 @@ spec:
       containers:
         - name: matrixone-operator
           # Replace this with the built image name
-          image: wanglei1995/matrixone-operator:latest
+          image: matrixorigin/matrixone-operator:latest
           command:
           - /manager
           imagePullPolicy: IfNotPresent
