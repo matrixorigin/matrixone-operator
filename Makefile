@@ -3,6 +3,7 @@ IMG ?= "matrixorigin/matrixone-operator:latest"
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:maxDescLen=0,trivialVersions=true,generateEmbeddedObjectMeta=true"
 MIMG ?= "matrixorigin/matrixone:latest"
+BIMG ?= "matrixorigin/mysql-tester:latest"
 PROXY ?= https://goproxy.cn,direct
 BRANCH ?= 0.3.0
 
@@ -14,7 +15,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager
+all: manager test
 
 # Build matrixone docker image
 mo-build:
@@ -27,6 +28,11 @@ mo-push:
 # Run tests
 test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
+
+# build mysql-tester image
+# repo: https://github.com/matrixorigin/mysql-tester
+bvt-build:
+	docker build -f tools/bvt-test/Dockerfile . -t $(BIMG)
 
 # Build manager binary
 manager: generate fmt vet
