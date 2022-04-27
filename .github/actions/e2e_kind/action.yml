@@ -5,39 +5,8 @@ runs:
   using: "composite"
 
   steps:
-    - name: pre_env
-      uses: ./.github/actions/dev_env
-
-    - name: Build images
-      shell: bash
-      run: |
-        export SHELL=/bin/bash
-        export DOCKER_BUILDKIT=1
-        make op-build mo-build bvt-build
-
-
-    - name: start KinD
-      uses: engineerd/setup-kind@v0.5.0
-      with:
-        version: ${{ env.kind-version }}
-        image: ${{ env.kind-image }}
-        wait: 300s
-        config: /test/kind-config.yml
-
-    - name:  Wait for cluster to finish bootstraping
-      shell: bash
-      run: |
-        kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
-        kubectl cluster-info
-        kubectl get pods -A
-
-    - name: Load images
-      shell: bash
-      run: |
-        kind load docker-image matrixorigin/matrixone-operator:latest
-        kind load docker-image matrixorigin/matrixone:kc
-        kind load docker-image matrixorigin/mysql-tester:latest
-        kubectl apply -f test/kind-rbac.yml
+    - name: prepare_cluster
+      uses: ./.github/actions/cluster
 
     - name: Deploy Operator
       shell: bash
