@@ -24,11 +24,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type MatrixoneClusterStatus string
+type ClusterStatus string
 
 const (
-	resourceCreated MatrixoneClusterStatus = "CREATED"
-	resourceUpdated MatrixoneClusterStatus = "UPDATED"
+	resourceCreated ClusterStatus = "CREATED"
+	resourceUpdated ClusterStatus = "UPDATED"
 )
 
 // Object Interface : Wrapper interface includes metav1 object and runtime object interface.
@@ -89,10 +89,10 @@ func (f ReaderFuncs) List(
 }
 
 type Writer interface {
-	Create(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneClusterStatus, error)
+	Create(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (ClusterStatus, error)
 	Delete(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter, deleteOptions ...client.DeleteOption) error
 	Patch(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, status bool, patch client.Patch, emitEvent EventEmitter) error
-	Update(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneClusterStatus, error)
+	Update(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (ClusterStatus, error)
 }
 
 // WriterFuncs struct
@@ -110,39 +110,36 @@ func (f WriterFuncs) Patch(ctx context.Context, sdk client.Client, moc *v1alpha1
 		if err := sdk.Patch(ctx, obj, patch); err != nil {
 			emitEvent.EmitEventOnPatch(moc, obj, err)
 			return err
-		} else {
-			if err := sdk.Status().Patch(ctx, obj, patch); err != nil {
-				emitEvent.EmitEventOnPatch(moc, obj, err)
-				return err
-			}
+		}
+		if err := sdk.Status().Patch(ctx, obj, patch); err != nil {
+			emitEvent.EmitEventOnPatch(moc, obj, err)
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (f WriterFuncs) Create(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneClusterStatus, error) {
+func (f WriterFuncs) Create(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (ClusterStatus, error) {
 
 	if err := sdk.Create(ctx, obj); err != nil {
 		logger.Error(err, err.Error(), "object", stringifyForLogging(obj, moc), "name", moc.Name, "namespace", moc.Namespace, "errorType", apierrors.ReasonForError(err))
 		emitEvent.EmitEventOnCreate(moc, obj, err)
 		return "", err
-	} else {
-		emitEvent.EmitEventOnCreate(moc, obj, nil)
-		return resourceCreated, nil
 	}
+	emitEvent.EmitEventOnCreate(moc, obj, nil)
+	return resourceCreated, nil
 }
 
 // Update Func shall update the Object
-func (f WriterFuncs) Update(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (MatrixoneClusterStatus, error) {
+func (f WriterFuncs) Update(ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj object, emitEvent EventEmitter) (ClusterStatus, error) {
 
 	if err := sdk.Update(ctx, obj); err != nil {
 		emitEvent.EmitEventOnUpdate(moc, obj, err)
 		return "", err
-	} else {
-		emitEvent.EmitEventOnUpdate(moc, obj, nil)
-		return resourceUpdated, nil
 	}
+	emitEvent.EmitEventOnUpdate(moc, obj, nil)
+	return resourceUpdated, nil
 
 }
 
@@ -151,8 +148,7 @@ func (f WriterFuncs) Delete(ctx context.Context, sdk client.Client, moc *v1alpha
 	if err := sdk.Delete(ctx, obj, deleteOptions...); err != nil {
 		emitEvent.EmitEventOnDelete(moc, obj, err)
 		return err
-	} else {
-		emitEvent.EmitEventOnDelete(moc, obj, err)
-		return nil
 	}
+	emitEvent.EmitEventOnDelete(moc, obj, err)
+	return nil
 }
