@@ -7,6 +7,7 @@ header:
     - 'examples/'
     - '.golangci.yml'
     - '.gitatrributes'
+    - '.gitigore'
     - '.codeenv.yml'
     - '.github/'
     - '**/*.md'
