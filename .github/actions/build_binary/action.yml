@@ -10,4 +10,4 @@ runs:
 
     - name: build binary
       shell: bash
-      run: make operator
+      run: make manager
