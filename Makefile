@@ -4,7 +4,7 @@ IMG ?= "matrixorigin/matrixone-operator:latest"
 CRD_OPTIONS ?= "crd:maxDescLen=0,trivialVersions=true,generateEmbeddedObjectMeta=true"
 MIMG ?= "matrixorigin/matrixone:latest"
 PROXY ?= https://goproxy.cn,direct
-BRANCH ?= 0.3.0
+BRANCH ?= main
 
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -14,7 +14,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager
+all: operator
 
 # Build matrixone docker image
 mo-build:
@@ -29,8 +29,8 @@ test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
 # Build manager binary
-manager: generate fmt vet
-	go build -o bin/manager /cmd/operator/main.go
+operator: generate fmt vet
+	CGO_ENABLED=0 go build -o bin/manager /cmd/operator/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests

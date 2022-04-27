@@ -1,6 +1,6 @@
 module github.com/matrixorigin/matrixone-operator
 
-go 1.16
+go 1.18
 
 require (
 	github.com/go-logr/logr v0.4.0

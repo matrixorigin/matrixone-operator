@@ -16,7 +16,7 @@ jobs:
     name: checks
     runs-on: ubuntu-latest
     steps:
-      - uses: github/actions/checks
+      - uses: ./.github/actions/checks
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: build_binary
-        uses: .github/actions/build_binary
+        uses: ./.github/actions/build_binary
 
 
   build_image:
@@ -40,4 +40,4 @@ jobs:
 
     steps:
       - name: build_image
-        uses: .github/actions/build_image
+        uses: ./.github/actions/build_image
