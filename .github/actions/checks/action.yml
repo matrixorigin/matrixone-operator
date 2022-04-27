@@ -6,7 +6,7 @@ inputs:
     required: true
 
 runs:
-  using: "compoosite"
+  using: "composite"
 
   steps:
     - name: pre_env
