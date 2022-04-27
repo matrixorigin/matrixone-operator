@@ -1,0 +1,18 @@
+name: pre_env
+description: "prepare actions env"
+
+runs:
+  using: "compsite"
+
+  steps:
+    - uses: actions/checkout@v3
+
+    - name: import env variables
+      shell: bash
+      run: cat ".github/env" >> $GITHUB_ENV
+
+    - name: setup go version
+      uses: actions/setup-go@v3
+      with:
+        go-version:
+          ${{ env.golang_version }}

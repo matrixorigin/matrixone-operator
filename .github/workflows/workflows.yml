@@ -1,0 +1,43 @@
+name: workflows
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event-name }}
+
+jobs:
+  checks:
+    name: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: github/actions/checks
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  build_binary:
+    runs-on: ${{ matrix.os }}
+    name: build_binary_test
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+
+    steps:
+      - name: build_binary
+        uses: .github/actions/build_binary
+
+
+  build_image:
+    name: build_image_test
+    runs: ubuntu-latest
+
+    steps:
+      - name: build_image
+        uses: .github/actions/build_image

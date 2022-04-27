@@ -1,0 +1,13 @@
+name: build_binary
+description: "test multi platform build binary"
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: setup env
+      uses: .github/actions/dev_env
+
+    - name: build binary
+      shell: bash
+      run: make operator
