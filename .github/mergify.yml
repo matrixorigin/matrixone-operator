@@ -1,0 +1,162 @@
+queue_rules:
+  - name: shared_queue
+    conditions:
+      - "#approved-reviews-by>=1"
+
+      # Must write expected checks explicitly
+      # Reference: https://docs.mergify.com/conditions/#validating-all-status-checks
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
+
+pull_request_rules:
+  - name: put bug fix pr to queue with high priority
+    conditions:
+      - "#approved-reviews-by>=1"
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
+      - label=bug
+    actions:
+      queue:
+        name: shared_queue
+
+  - name: put other pr to queue
+    conditions:
+      - "#approved-reviews-by>=1"
+      - check-success=Docker Image CI/build
+      - check-success=e2e/e2e-tests-results
+      - label!=bug
+    actions:
+      queue:
+        name: shared_queue
+
+  # if there is a conflict in a approved PR, ping the author.
+  - name: ping author on conflicts
+    conditions:
+      - conflict
+      - "#approved-reviews-by>=1"
+    actions:
+      comment:
+        message: |
+          This pull request has merge conflicts that must be resolved before it can be merged. @{{author}} please update it.
+          Try `@mergify update` or update manually.
+
+  - name: Welcome new contributor
+    conditions:
+      - author!=Mergify
+    actions:
+      comment:
+        message: |
+          Thanks for the contribution!
+          Please review the labels and make any necessary changes.
+
+  - name: ask for reviewing  PR
+    conditions:
+      - author!=Mergify
+    actions:
+      request_reviews:
+        users:
+          - wanglei4687
+          - sukki37
+
+  - name: merge when all requests reviews are valid
+    conditions:
+      - "#approved-reviews-by>=2"
+      - "#review-requested=0"
+      - "#changes-requested-reviews-by=0"
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
+    actions:
+      merge:
+        method: merge
+
+  - name: PR label to need-review
+    conditions:
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
+      - label!=reviwed
+    actions:
+      label:
+        add:
+          - need-review
+
+  - name: label on reviewed
+    conditions:
+      - "approved-reviews-by>=1"
+      - "review-requested=0"
+    actions:
+      comment:
+        message: "@{{ author }} this pull request is reviewed"
+      label:
+        remove:
+          - need-review
+      label:
+        add:
+          - reviwed
+
+  - name: label on ready to mergy
+    conditions:
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
+      - label=reviewd
+    actions:
+      comment:
+        message: "@{{ author }} this pull request is ready to merge"
+      label:
+        add:
+          - ready-to-mergy
+
+  - name: label on Feature
+    conditions:
+      - body~=(?m)- \[(?i)x\] Feature
+    actions:
+      label:
+        add:
+          - feature
+
+  - name: label on Bug Fix
+    conditions:
+      - body~=(?m)- \[(?i)x\] Bug
+    actions:
+      label:
+        add:
+          - bug
+
+  - name: label on Improvement
+    conditions:
+      - body~=(?m)^- \[(?i)x\] Improvement
+    actions:
+      label:
+        add:
+          - improvement
+
+  - name: label on Test and CI
+    conditions:
+      - body~=(?m)^- \[(?i)x\] Test and CI
+    actions:
+      label:
+        add:
+          - test-ci
+
+  - name: label on Code Refactoring
+    conditions:
+      - body~=(?m)^- \[(?i)x\] Code Refactoring
+    actions:
+      label:
+        add:
+          - code-refactoring
+
+  - name: label on Documentation
+    conditions:
+      - body~=(?m)^- \[(?i)x\] Documentation
+    actions:
+      label:
+        add:
+          - doc
+
+  - name: label on API-change
+    conditions:
+      - body~=(?m)- \[(?i)x\] API-change
+    actions:
+      label:
+        add:
+          - api-change
