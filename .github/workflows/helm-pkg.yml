@@ -1,0 +1,80 @@
+name: helm
+
+on:
+  pull_requests:
+    branches:
+      - main
+
+
+jobs:
+  helm-test:
+    name: helm_test
+    runs-on: ubuntu
+
+    steps:
+      - uses: action/checkout@v3
+      - name: Import environment variables from file
+        run: |
+          cat ".github/env" >> ${{ GITHUB_ENV }}
+
+      - name: Install go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '${{ env.golang-version }}'
+
+      - name: Build images
+        run: |
+          export SHELL=/bin/bash
+          docker build -f ./images/operator/Dockerfile . -t matrixorigin/matrixone-operator:latest
+          docker pull matrixorigin/matrixone:kc-0.3.0
+
+     - name: start KinD
+       uses: engineerd/setup-kind@v0.5.0
+       with:
+         version: ${{ env.kind-version }}
+         image: ${{ env.kind-image }}
+         wait: 300s
+         config: /test/kind-config.yml
+
+    - name: Wait for cluster to finish bootstrap
+      run: |
+        kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
+        kubectl cluster-info
+        kubectl get pods -A
+
+    - name: Load images
+      run: |
+        kind load docker-image matrixorigin/matrixone-operator:latest
+        kind load docker-image matrixorigin/matrixone:kc-0.3.0
+        kubectl apply -f test/kind-rbac.yml
+
+    - name: Helm package install
+      uses: WyriHaximus/github-action-helm3@v2
+      with:
+        exec: helm install mo-op charts/matrixone-operator
+
+    - name: Wait for operator to finish bootstraping
+      run: |
+        kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
+        kubectl cluster-info
+        kubectl get pods -A
+
+    - name: Deploy cluster
+      run: |
+        kubectl apply -f examples/tiny-cluster.yml
+
+    - name: Wait for pv
+      uses: juliangruber/sleep-action@v1
+      with:
+        time: 60s
+
+    - name: Wait for mo cluster to finish bootstraping
+      run: |
+        kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
+        kubectl cluster-info
+        kubectl get pods -A
+
+    - name: Run bvt test
+      run: |
+        kubectl run bvt-tester --image=matixorigin/mysql-tester -i --rm --restart=Never -- \
+        -host mo.default.svc.cluster.local port 6001 -user dump -passwd 111
