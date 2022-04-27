@@ -25,6 +25,7 @@ jobs:
       - name: Build images
         run: |
           export SHELL=/bin/bash
+          export DOCKER_BUILDKIT=1
           make op-build mo-build bvt-build
 
 
