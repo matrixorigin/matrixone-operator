@@ -23,4 +23,6 @@ header:
     - '**/go.mod'
     - '**/go.sum'
     - 'deploy/'
+    - 'third_part/'
+    - '**/Dockerfile'
   comment: on-failure
