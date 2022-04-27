@@ -5,15 +5,19 @@ queue_rules:
 
       # Must write expected checks explicitly
       # Reference: https://docs.mergify.com/conditions/#validating-all-status-checks
-      - check-success=docker-image/build
-      - check-success=e2e/e2e-tests-results
+      - check-success=workflows/checks
+      - check-success=workflow/build_binary_test
+      - check-success=workflow/build_image_test
+      - check-success=workflow/e2e_kind_test
 
 pull_request_rules:
   - name: put bug fix pr to queue with high priority
     conditions:
       - "#approved-reviews-by>=1"
-      - check-success=docker-image/build
-      - check-success=e2e/e2e-tests-results
+      - check-success=workflows/checks
+      - check-success=workflow/build_binary_test
+      - check-success=workflow/build_image_test
+      - check-success=workflow/e2e_kind_test
       - label=bug
     actions:
       queue:
@@ -22,8 +26,10 @@ pull_request_rules:
   - name: put other pr to queue
     conditions:
       - "#approved-reviews-by>=1"
-      - check-success=Docker Image CI/build
-      - check-success=e2e/e2e-tests-results
+      - check-success=workflows/checks
+      - check-success=workflow/build_binary_test
+      - check-success=workflow/build_image_test
+      - check-success=workflow/e2e_kind_test
       - label!=bug
     actions:
       queue:
@@ -63,16 +69,20 @@ pull_request_rules:
       - "#approved-reviews-by>=2"
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
-      - check-success=docker-image/build
-      - check-success=e2e/e2e-tests-results
+      - check-success=workflows/checks
+      - check-success=workflow/build_binary_test
+      - check-success=workflow/build_image_test
+      - check-success=workflow/e2e_kind_test
     actions:
       merge:
         method: merge
 
   - name: PR label to need-review
     conditions:
-      - check-success=docker-image/build
-      - check-success=e2e/e2e-tests-results
+      - check-success=workflows/checks
+      - check-success=workflow/build_binary_test
+      - check-success=workflow/build_image_test
+      - check-success=workflow/e2e_kind_test
       - label!=reviwed
     actions:
       label:
@@ -95,8 +105,10 @@ pull_request_rules:
 
   - name: label on ready to mergy
     conditions:
-      - check-success=docker-image/build
-      - check-success=e2e/e2e-tests-results
+      - check-success=workflows/checks
+      - check-success=workflow/build_binary_test
+      - check-success=workflow/build_image_test
+      - check-success=workflow/e2e_kind_test
       - label=reviewd
     actions:
       comment:

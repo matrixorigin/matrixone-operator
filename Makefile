@@ -2,7 +2,7 @@
 IMG ?= "matrixorigin/matrixone-operator:latest"
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:maxDescLen=0,trivialVersions=true,generateEmbeddedObjectMeta=true"
-MIMG ?= "matrixorigin/matrixone:latest"
+MIMG ?= "matrixorigin/matrixone:kc"
 BIMG ?= "matrixorigin/mysql-tester:latest"
 PROXY ?= https://goproxy.cn,direct
 BRANCH ?= main

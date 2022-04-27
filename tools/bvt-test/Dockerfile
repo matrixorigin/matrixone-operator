@@ -1,15 +1,4 @@
-FROM golang:1.17.3-alpine3.14 as builder
-
-RUN apk add --no-cache \
-    wget \
-    make \
-    git \
-    gcc \
-    binutils-gold \
-    musl-dev
-
-RUN wget -O /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 \
- && chmod +x /usr/local/bin/dumb-init
+FROM golang:1.17 as builder
 
 RUN mkdir -p /go/src/github.com/matrixorigin/mysql-tester
 
@@ -21,10 +10,7 @@ RUN go env -w GOPROXY=https://goproxy.cn,direct && go env -w GO111MODULE=on
 
 RUN make build
 
-
-FROM alpine
-
-RUN apk add --no-cache bash
+FROM ubuntu
 
 COPY --from=builder /go/src/github.com/matrixorigin/mysql-tester/mysql-tester /mysql-tester
 COPY --from=builder /usr/local/bin/dumb-init /usr/local/bin/dumb-init
@@ -33,4 +19,4 @@ COPY --from=builder /go/src/github.com/matrixorigin/mysql-tester/t /t
 
 WORKDIR /
 
-ENTRYPOINT ["/usr/local/bin/dumb-init", "/mysql-tester"]
+ENTRYPOINT ["/mysql-tester"]
