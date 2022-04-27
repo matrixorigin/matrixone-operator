@@ -1,6 +1,6 @@
-ARG PROXY="https://proxy.golang.org,driect"
-
 FROM golang:1.18 as builder
+
+ARG PROXY="https://proxy.golang.org,driect"
 
 WORKDIR /workspace
 

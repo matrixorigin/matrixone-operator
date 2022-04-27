@@ -33,7 +33,7 @@ test: generate fmt vet manifests
 # build mysql-tester image
 # repo: https://github.com/matrixorigin/mysql-tester
 bvt-build:
-	docker build -f tools/bvt-test/Dockerfile . -t $(BIMG)
+	docker build -f tools/bvt-test/Dockerfile . -t $(BIMG) --build-arg PROXY=$(PROXY)
 
 # Build manager binary
 manager: generate fmt vet
@@ -102,6 +102,11 @@ kind:
 	kind create cluster --config third_part/kind-config/config.yaml
 	kubectl apply -f test/kind-rbac.yml
 
+# kind load images
+load:
+	kind load docker-image matrixorigin/matrixone:kc
+	kind load docker-image matrixorigin/matrixone-operator:latest
+	kind load docker-image matrixorigin/mysql-tester:latest
 
 # helm package
 helm-pkg:
