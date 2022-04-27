@@ -5,15 +5,15 @@ queue_rules:
 
       # Must write expected checks explicitly
       # Reference: https://docs.mergify.com/conditions/#validating-all-status-checks
-      - check-success=Docker Image CI/build
-      - check-success=e2e/End-to-End Test Results
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
 
 pull_request_rules:
   - name: put bug fix pr to queue with high priority
     conditions:
       - "#approved-reviews-by>=1"
-      - check-success=Docker Image CI/build
-      - check-success=e2e/End-to-End Test Results
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
       - label=bug
     actions:
       queue:
@@ -23,7 +23,7 @@ pull_request_rules:
     conditions:
       - "#approved-reviews-by>=1"
       - check-success=Docker Image CI/build
-      - check-success=e2e/End-to-End Test Results
+      - check-success=e2e/e2e-tests-results
       - label!=bug
     actions:
       queue:
@@ -37,8 +37,9 @@ pull_request_rules:
     actions:
       comment:
         message: |
-          This pull request has merge conflicts that must be resolved before it can be merged. @{{author}} please update it 🙏.
+          This pull request has merge conflicts that must be resolved before it can be merged. @{{author}} please update it.
           Try `@mergify update` or update manually.
+
   - name: Welcome new contributor
     conditions:
       - author!=Mergify
@@ -47,6 +48,7 @@ pull_request_rules:
         message: |
           Thanks for the contribution!
           Please review the labels and make any necessary changes.
+
   - name: ask for reviewing  PR
     conditions:
       - author!=Mergify
@@ -61,16 +63,16 @@ pull_request_rules:
       - "#approved-reviews-by>=2"
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
-      - check-success=Docker Image CI/build
-      - check-success=e2e/End-to-End Test Results
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
     actions:
       merge:
         method: merge
 
   - name: PR label to need-review
     conditions:
-      - check-success=Docker Image CI/build
-      - check-success=e2e/End-to-End Test Results
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
       - label!=reviwed
     actions:
       label:
@@ -93,8 +95,8 @@ pull_request_rules:
 
   - name: label on ready to mergy
     conditions:
-      - check-success=Docker Image CI/build
-      - check-success=e2e/End-to-End Test Results
+      - check-success=docker-image/build
+      - check-success=e2e/e2e-tests-results
       - label=reviewd
     actions:
       comment:

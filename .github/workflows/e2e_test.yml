@@ -7,7 +7,7 @@ on:
 
 jobs:
   e2e-tests:
-    name: e2e_tests
+    name: e2e-kind
     runs-on: ubuntu-latest
 
     steps:
@@ -80,7 +80,7 @@ jobs:
 
     # Added to summarize the matrix and allow easy branch protection rules setup
   e2e-tests-results:
-    name: e2e_tests_results
+    name: e2e-tests-results
     if: always()
     needs:
       - e2e-tests
