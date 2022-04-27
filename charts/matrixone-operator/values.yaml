@@ -9,7 +9,7 @@ env:
 replicaCount: 1
 
 image:
-  repository: wanglei1995/matrixone-operator
+  repository: matrixorigin/matrixone-operator
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"

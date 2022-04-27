@@ -12,15 +12,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: action/checkout@v3
       - name: Import environment variables from file
         run: |
-          cat ".github/env" >> $GITHUB_ENV
+          cat ".github/env" >> $GITHUB_ENV }}
 
       - name: Install go
         uses: actions/setup-go@v2
         with:
           go-version: '${{ env.golang-version }}'
+
+      - name: Set up helm
+        uses: azure/setup-helm@v1
+        with:
+          version: '${{ env.helm-version }}'
 
       - name: Build images
         run: |
@@ -48,10 +53,10 @@ jobs:
           kind load docker-image matrixorigin/matrixone:kc-0.3.0
           kubectl apply -f test/kind-rbac.yml
 
-      - name: Helm package install
-        uses: WyriHaximus/github-action-helm3@v2
-        with:
-          exec: helm install mo-op charts/matrixone-operator
+      - name: Install mo cluster with helm
+        run: |
+          helm install mo-op charts/matrixone-operator
+
 
       - name: Wait for operator to finish bootstraping
         run: |
