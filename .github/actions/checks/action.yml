@@ -20,7 +20,7 @@ runs:
         log: info
         config: .github/licenserc.yml
 
-    - name: golangcli_lient
+    - name: golangci_lint
       uses: golangci/golangci-lint-action@v3.1.0
       with:
         version: v1.45.2

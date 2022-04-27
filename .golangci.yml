@@ -1,3 +1,4 @@
+run:
   timeout: 30m
   go: 1.18
   skip-files:
