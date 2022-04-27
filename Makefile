@@ -16,7 +16,7 @@ GOBIN=$(shell go env GOBIN)
 endif
 
 
-all: operator
+all: manager
 
 # Build matrixone docker image
 mo-build:
@@ -36,8 +36,8 @@ bvt-build:
 	docker build -f tools/bvt-test/Dockerfile . -t $(BIMG)
 
 # Build manager binary
-operator: generate fmt vet
-	CGO_ENABLED=0 go build -o operator cmd/operator/main.go
+manager: generate fmt vet
+	CGO_ENABLED=0 go build -o manager cmd/operator/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
