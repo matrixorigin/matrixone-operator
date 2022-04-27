@@ -15,7 +15,7 @@ jobs:
       - uses: action/checkout@v3
       - name: Import environment variables from file
         run: |
-          cat ".github/env" >> ${{ GITHUB_ENV }}
+          cat ".github/env" >> $GITHUB_ENV
 
       - name: Install go
         uses: actions/setup-go@v2
