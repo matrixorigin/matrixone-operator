@@ -14,16 +14,19 @@ runs:
         version: '${{ env.helm-version }}'
 
     - name: install mo cluster with helm
+      shell: bash
       run: |
         helm install mo-op charts/matrixone-operator
 
     - name: wait for operator to finish bootstraping
+      shell: bash
       run: |
         kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
         kubectl cluster-info
         kubectl get pods -A
 
     - name: deploy cluster
+      shell: bash
       run: |
         kubectl apply -f examples/tiny-cluster.yml
 
@@ -33,12 +36,14 @@ runs:
         time: 60s
 
     - name: wait for mo cluster to finish bootstraping
+      shell: bash
       run: |
         kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
         kubectl cluster-info
         kubectl get pods -A
 
     - name: run bvt test
+      shell: bash
       run: |
          kubectl run bvt-tester --image=matixorigin/mysql-tester -i --rm --restart=Never -- \
           -host mo.default.svc.cluster.local port 6001 -user dump -passwd 111
