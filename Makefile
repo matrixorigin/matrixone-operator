@@ -5,7 +5,7 @@ CRD_OPTIONS ?= "crd:maxDescLen=0,trivialVersions=true,generateEmbeddedObjectMeta
 MIMG ?= "matrixorigin/matrixone:latest"
 BIMG ?= "matrixorigin/mysql-tester:latest"
 PROXY ?= https://goproxy.cn,direct
-BRANCH ?= 0.3.0
+BRANCH ?= main
 
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
