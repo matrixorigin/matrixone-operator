@@ -36,7 +36,7 @@ jobs:
 
   build_image:
     name: build_image_test
-    runs: ubuntu-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: build_image
