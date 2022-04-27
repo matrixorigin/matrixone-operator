@@ -10,7 +10,7 @@ runs:
 
   steps:
     - name: pre_env
-      uses: .github/actions/dev_env
+      uses: ./.github/actions/dev_env
 
     - name: check_license_header
       uses: apache/skywalking-eyes@main

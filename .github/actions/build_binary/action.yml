@@ -6,7 +6,7 @@ runs:
 
   steps:
     - name: setup env
-      uses: .github/actions/dev_env
+      uses: ./.github/actions/dev_env
 
     - name: build binary
       shell: bash
