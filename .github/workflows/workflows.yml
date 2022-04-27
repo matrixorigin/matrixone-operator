@@ -10,6 +10,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event-name }}
+  cancel-in-progress: true
 
 jobs:
   checks:

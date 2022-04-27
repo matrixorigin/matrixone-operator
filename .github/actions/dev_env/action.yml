@@ -2,7 +2,7 @@ name: pre_env
 description: "prepare actions env"
 
 runs:
-  using: "compsite"
+  using: "composite"
 
   steps:
     - name: import env variables
