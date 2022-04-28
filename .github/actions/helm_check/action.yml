@@ -30,15 +30,10 @@ runs:
       run: |
         kubectl apply -f examples/tiny-cluster.yaml
 
-    - name: wait for pv
-      uses: juliangruber/sleep-action@v1
-      with:
-        time: 200s
-
     - name: wait for mo cluster to finish bootstraping
       shell: bash
       run: |
-        kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
+        kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=600s
         kubectl cluster-info
         kubectl get pods -A
 
