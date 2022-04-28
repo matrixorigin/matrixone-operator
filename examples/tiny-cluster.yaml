@@ -6,7 +6,7 @@ spec:
   image: matrixorigin/matrixone:kc-0.3.0
   imagePullPolicy: IfNotPresent
   replicas: 3
-  storageClass: standard
+  storageClass: default
   podName:
     name: POD_NAME
     valueFrom:
