@@ -12,9 +12,13 @@
 
 2. Choosing cluster, then create new cluster (also you can choose default template to create cluster)
 ![create cluster](./img/tencent_2.png)
+**Also can create elastic cluster**
+![elastic cluster](./img/elastic_f.png)
 
 3. Config your cluster (follow the step)
 ![config](./img/tencent_3.png)
+**Config a elastic cluster**
+![elastic config](./img/elastic_c.png)
 
 4. Finish configuration
 ![finish](./img/tencent_4.png)
@@ -29,6 +33,7 @@ Example on Lens
 ![lens](./img/lens.png)
 
 ## Deploy matrixone operator
+
 Follow the step on [docs/getting_started/Deploy Matrixone Operator](https://github.com/matrixorigin/matrixone-operator/blob/main/docs/getting_started.md#deploy-matrixone-operator)
 
 For example on Lens:
