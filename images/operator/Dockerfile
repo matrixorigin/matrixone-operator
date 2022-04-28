@@ -8,7 +8,7 @@ WORKDIR /workspace
 
 RUN go env -w GOPROXY=${PROXY}
 
-# Config go proxy 
+# Config go proxy
 COPY go.mod go.mod
 COPY go.sum go.sum
 
@@ -16,7 +16,7 @@ COPY go.sum go.sum
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
 
-COPY . . 
+COPY . .
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager cmd/operator/main.go

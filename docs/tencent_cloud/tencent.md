@@ -43,29 +43,7 @@ For example on Lens:
 kubectl create ns matrixone
 
 # Deploy a sample cluster
-kubectl apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/tencent/cluster.yaml -n matrixone
-```
-
-For example config:
-
-```yaml
-apiVersion: matrixone.matrixorigin.cn/v1alpha1
-kind: MatrixoneCluster
-metadata:
-  name: mo
-spec:
-  image: matrixorigin/matrixone:kc-0.3.0
-  imagePullPolicy: IfNotPresent
-  replicas: 3
-  storageClass: cbs
-  podName:
-    name: POD_NAME
-    valueFrom:
-      fieldRef:
-        fieldPath: metadata.name
-  logVolumeCap: 500Mi
-  dataVolumeCap: 500Mi
-
+kubectl apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/tiny-cluster.yaml -n matrixone
 ```
 
 - Check Matrixone cluster status
@@ -85,4 +63,4 @@ mo-2   1/1     Running   0          26s
 
 ## Connect to cluster
 
-Follow steps on [docs/getting_started/connect to a matrixone cluster](https://github.com/matrixorigin/matrixone-operator/blob/main/docs/getting_started.md#Connect-to-a-matrixone-cluster)
+Follow steps on [docs/getting_started/Connect to a matrixone cluster](https://github.com/matrixorigin/matrixone-operator/blob/main/docs/getting_started.md#Connect-to-a-matrixone-cluster)
