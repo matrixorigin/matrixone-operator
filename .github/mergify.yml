@@ -6,18 +6,20 @@ queue_rules:
       # Must write expected checks explicitly
       # Reference: https://docs.mergify.com/conditions/#validating-all-status-checks
       - check-success=workflows/checks
-      - check-success=workflow/build_binary_test
-      - check-success=workflow/build_image_test
-      - check-success=workflow/e2e_kind_test
+      - check-success=workflows/build_binary_test
+      - check-success=workflows/build_image_test
+      - check-success=workflows/e2e_kind_test
+      - check-success=workflows/helm_pkg_check
 
 pull_request_rules:
   - name: put bug fix pr to queue with high priority
     conditions:
       - "#approved-reviews-by>=1"
       - check-success=workflows/checks
-      - check-success=workflow/build_binary_test
-      - check-success=workflow/build_image_test
-      - check-success=workflow/e2e_kind_test
+      - check-success=workflows/build_binary_test
+      - check-success=workflows/build_image_test
+      - check-success=workflows/e2e_kind_test
+      - check-success=workflows/helm_pkg_check
       - label=bug
     actions:
       queue:
@@ -27,9 +29,10 @@ pull_request_rules:
     conditions:
       - "#approved-reviews-by>=1"
       - check-success=workflows/checks
-      - check-success=workflow/build_binary_test
-      - check-success=workflow/build_image_test
-      - check-success=workflow/e2e_kind_test
+      - check-success=workflows/build_binary_test
+      - check-success=workflows/build_image_test
+      - check-success=workflows/e2e_kind_test
+      - check-success=workflows/helm_pkg_check
       - label!=bug
     actions:
       queue:
@@ -70,9 +73,10 @@ pull_request_rules:
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
       - check-success=workflows/checks
-      - check-success=workflow/build_binary_test
-      - check-success=workflow/build_image_test
-      - check-success=workflow/e2e_kind_test
+      - check-success=workflows/build_binary_test
+      - check-success=workflows/build_image_test
+      - check-success=workflows/e2e_kind_test
+      - check-success=workflows/helm_pkg_check
     actions:
       merge:
         method: merge
@@ -80,9 +84,10 @@ pull_request_rules:
   - name: PR label to need-review
     conditions:
       - check-success=workflows/checks
-      - check-success=workflow/build_binary_test
-      - check-success=workflow/build_image_test
-      - check-success=workflow/e2e_kind_test
+      - check-success=workflows/build_binary_test
+      - check-success=workflows/build_image_test
+      - check-success=workflows/e2e_kind_test
+      - check-success=workflows/helm_pkg_check
       - label!=reviwed
     actions:
       label:
@@ -99,16 +104,16 @@ pull_request_rules:
       label:
         remove:
           - need-review
-      label:
         add:
           - reviwed
 
   - name: label on ready to mergy
     conditions:
       - check-success=workflows/checks
-      - check-success=workflow/build_binary_test
-      - check-success=workflow/build_image_test
-      - check-success=workflow/e2e_kind_test
+      - check-success=workflows/build_binary_test
+      - check-success=workflows/build_image_test
+      - check-success=workflows/e2e_kind_test
+      - check-success=workflows/helm_pkg_check
       - label=reviewd
     actions:
       comment:
