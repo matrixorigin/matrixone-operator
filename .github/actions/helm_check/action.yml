@@ -45,5 +45,5 @@ runs:
     - name: run bvt test
       shell: bash
       run: |
-         kubectl run bvt-tester --image=matixorigin/mysql-tester -i --rm --restart=Never -- \
+         kubectl run bvt-tester --image=matrixorigin/mysql-tester -i --rm --restart=Never -- \
           -host mo.default.svc.cluster.local port 6001 -user dump -passwd 111
