@@ -5,7 +5,7 @@ runs:
   using: "composite"
 
   steps:
-    - name: prepare_cluster
+    - name: prepare cluster
       uses: ./.github/actions/cluster
 
     - name: Deploy Operator
