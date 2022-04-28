@@ -28,7 +28,7 @@ runs:
     - name: deploy cluster
       shell: bash
       run: |
-        kubectl apply -f examples/tiny-cluster.yml
+        kubectl apply -f examples/tiny-cluster.yaml
 
     - name: wait for pv
       uses: juliangruber/sleep-action@v1
