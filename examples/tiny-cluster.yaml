@@ -7,6 +7,12 @@ spec:
   imagePullPolicy: IfNotPresent
   replicas: 3
   storageClass: standard
+  requests:
+    cpu: 200m
+    memory: 500Mi
+  limits:
+    cpu: 200m
+    memory: 500Mi
   podName:
     name: POD_NAME
     valueFrom:
