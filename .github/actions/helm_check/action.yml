@@ -31,6 +31,11 @@ runs:
         kubectl apply -f examples/tiny-cluster.yaml
 
 
+    - name: wait for pv
+      uses: juliangruber/sleep-action@v1
+      with:
+        time: 60s
+
     - name: wait for mo cluster to finish bootstraping
       shell: bash
       run: |
