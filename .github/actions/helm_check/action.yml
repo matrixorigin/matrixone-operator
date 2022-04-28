@@ -33,7 +33,7 @@ runs:
     - name: wait for pv
       uses: juliangruber/sleep-action@v1
       with:
-        time: 60s
+        time: 150s
 
     - name: wait for mo cluster to finish bootstraping
       shell: bash

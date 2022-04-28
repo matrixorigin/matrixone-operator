@@ -59,7 +59,7 @@ deploy: manifests
 	kubectl apply -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
 	kustomize build deploy/ | kubectl apply -f -
 
-# Destroy controller in the configured Kubernetes cluster in ~/.kube/config
+# Destroyo Controller the configured Kubernetes cluster in ~/.kube/config
 undeploy: manifests
 	kustomize build deploy/ | kubectl delete -f -
 	kubectl delete -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
@@ -104,7 +104,6 @@ kind:
 
 # kind load images
 load:
-	kind load docker-image matrixorigin/matrixone:kc
 	kind load docker-image matrixorigin/matrixone-operator:latest
 	kind load docker-image matrixorigin/mysql-tester:latest
 
