@@ -20,6 +20,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,6 +36,10 @@ const (
 	clientPort     int32  = 40000
 	peerPort       int32  = 50000
 	raftPort       int32  = 20100
+)
+
+var (
+	minReplicas int32 = 1
 )
 
 func MakeSts(moc *v1alpha1.MatrixoneCluster, ls map[string]string) (*appsv1.StatefulSet, error) {
@@ -56,15 +61,23 @@ func MakeSts(moc *v1alpha1.MatrixoneCluster, ls map[string]string) (*appsv1.Stat
 
 // hServiceName headless service name
 func makeStsSpec(moc *v1alpha1.MatrixoneCluster, ls map[string]string, hServiceName string) appsv1.StatefulSetSpec {
-
 	updateStrategy := utils.FirstNonNilValue(moc.Spec.UpdateStrategy, &appsv1.StatefulSetUpdateStrategy{}).(*appsv1.StatefulSetUpdateStrategy)
+
+	initZero := int32(0)
+	if moc.Spec.Replicas == nil {
+		moc.Spec.Replicas = &minReplicas
+	}
+
+	if moc.Spec.Replicas != nil && *moc.Spec.Replicas < 0 {
+		moc.Spec.Replicas = &initZero
+	}
 
 	stsSpec := appsv1.StatefulSetSpec{
 		ServiceName: hServiceName,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: ls,
 		},
-		Replicas: &moc.Spec.Replicas,
+		Replicas: moc.Spec.Replicas,
 		PodManagementPolicy: appsv1.PodManagementPolicyType(
 			utils.FirstNonEmptyStr(utils.FirstNonEmptyStr(string(moc.Spec.PodManagementPolicy), string(moc.Spec.PodManagementPolicy)), string(appsv1.ParallelPodManagement))),
 		UpdateStrategy:       *updateStrategy,
@@ -114,7 +127,7 @@ func makePodSpec(moc *v1alpha1.MatrixoneCluster, hServiceName string) corev1.Pod
 					},
 					moc.Spec.PodName,
 				},
-				Resources:      moc.Spec.Resources,
+				Resources:      getResources(moc),
 				LivenessProbe:  moc.Spec.LivenessProbe,
 				ReadinessProbe: moc.Spec.ReadinessProbe,
 				Command:        moc.Spec.Command,
@@ -157,6 +170,21 @@ func makePodSpec(moc *v1alpha1.MatrixoneCluster, hServiceName string) corev1.Pod
 	return spec
 }
 
+func getResources(moc *v1alpha1.MatrixoneCluster) corev1.ResourceRequirements {
+	if moc.Spec.Requests == nil {
+		moc.Spec.Requests = corev1.ResourceList{}
+	}
+
+	if moc.Spec.Limits == nil {
+		moc.Spec.Limits = corev1.ResourceList{}
+	}
+
+	return corev1.ResourceRequirements{
+		Requests: moc.Spec.Requests,
+		Limits:   moc.Spec.Limits,
+	}
+}
+
 func getVolumeMounts(moc *v1alpha1.MatrixoneCluster) []corev1.VolumeMount {
 	volumeMount := []corev1.VolumeMount{
 		{
@@ -184,7 +212,11 @@ func getPersistentVolumeClaim(moc *v1alpha1.MatrixoneCluster, ls map[string]stri
 				AccessModes: []corev1.PersistentVolumeAccessMode{
 					"ReadWriteOnce",
 				},
-				Resources:        moc.Spec.DataVolResource,
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse(moc.Spec.DataVolCap),
+					},
+				},
 				StorageClassName: &moc.Spec.StorageClass,
 			},
 		},
@@ -198,7 +230,11 @@ func getPersistentVolumeClaim(moc *v1alpha1.MatrixoneCluster, ls map[string]stri
 				AccessModes: []corev1.PersistentVolumeAccessMode{
 					"ReadWriteOnce",
 				},
-				Resources:        moc.Spec.LogVolResource,
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse(moc.Spec.LogVolCap),
+					},
+				},
 				StorageClassName: &moc.Spec.StorageClass,
 			},
 		},

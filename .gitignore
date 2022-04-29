@@ -1,3 +1,9 @@
-.DS_Storevendor
+.DS_Store
+vendor/
 cover.out
-bin
+bin/
+
+# Emacs save files
+*~
+\#*\#
+.\#*

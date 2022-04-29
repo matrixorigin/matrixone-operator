@@ -3,28 +3,14 @@ kind: MatrixoneCluster
 metadata:
   name: mo
 spec:
-  image: wanglei1995/matrixone:kc
-  image-pull-policy: Always
+  image: matrixorigin/matrixone:kc-0.3.0
+  imagePullPolicy: IfNotPresent
   replicas: 3
-  storage-class: standard
-  resources:
-    limits:
-      cpu: "500m"
-      memory: "500Mi"
-    requests:
-      cpu: "500m"
-      memory: "500Mi"
-  pod-name: 
+  storageClass: standard
+  podName:
     name: POD_NAME
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  log-volume-resource: 
-    requests:
-      storage: 500Mi
-  data-volume-resource:
-    requests:
-      storage: 500Mi
-  
-
-  
+  logVolumeCap: 500Mi
+  dataVolumeCap: 500Mi
