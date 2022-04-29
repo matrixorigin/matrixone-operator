@@ -48,7 +48,7 @@ For example on Lens:
 kubectl create ns matrixone
 
 # Deploy a sample cluster
-kubectl apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/tiny-cluster.yaml -n matrixone
+kubectl apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/tencent-cluster.yaml -n matrixone
 ```
 
 - Check Matrixone cluster status
