@@ -7,10 +7,16 @@ spec:
   imagePullPolicy: IfNotPresent
   replicas: 3
   storageClass: standard
+  requests:
+    cpu: 200m
+    memory: 300Mi
+  limits:
+    cpu: 200m
+    memory: 300Mi
   podName:
     name: POD_NAME
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  logVolumeCap: 500Mi
-  dataVolumeCap: 500Mi
+  logVolumeCap: 200Mi
+  dataVolumeCap: 200Mi

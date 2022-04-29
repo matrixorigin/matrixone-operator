@@ -1,5 +1,4 @@
-# Build the manager binary
-FROM golang:1.16 as builder
+FROM golang:1.18 as builder
 
 ARG PROXY="https://proxy.golang.org,direct"
 
@@ -7,7 +6,6 @@ WORKDIR /workspace
 
 RUN go env -w GOPROXY=${PROXY}
 
-# Config go proxy 
 COPY go.mod go.mod
 COPY go.sum go.sum
 
@@ -15,10 +13,10 @@ COPY go.sum go.sum
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
 
-COPY . . 
+COPY . .
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager cmd/operator/main.go
+RUN CGO_ENABLED=0 go build -a -o manager cmd/operator/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
