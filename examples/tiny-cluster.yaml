@@ -6,11 +6,10 @@ spec:
   image: matrixorigin/matrixone:kc-0.3.0
   imagePullPolicy: IfNotPresent
   replicas: 3
-  storageClass: standard
   podName:
     name: POD_NAME
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  logVolumeCap: 500Mi
-  dataVolumeCap: 500Mi
+  logVolumeCap: 10Gi
+  dataVolumeCap: 10Gi
