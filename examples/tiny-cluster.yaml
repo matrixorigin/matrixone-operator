@@ -6,7 +6,6 @@ spec:
   image: matrixorigin/matrixone:kc-0.3.0
   imagePullPolicy: IfNotPresent
   replicas: 3
-  storageClass: standard
   requests:
     cpu: 200m
     memory: 300Mi
@@ -18,5 +17,5 @@ spec:
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  logVolumeCap: 200Mi
-  dataVolumeCap: 200Mi
+  logVolumeCap: 10Gi
+  dataVolumeCap: 10Gi
