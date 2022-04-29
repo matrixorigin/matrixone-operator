@@ -99,10 +99,10 @@ func (e EmitEventFuncs) EmitEventOnCreate(obj, createObj object, err error) {
 // EmitEventOnPatch shall emit event on PATCH operation
 func (e EmitEventFuncs) EmitEventOnPatch(obj, patchObj object, err error) {
 	if err != nil {
-		errMsg := fmt.Errorf("Error patching object [%s:%s] in namespace [%s] due to [%s]", patchObj.GetName(), patchObj.GetObjectKind().GroupVersionKind().Kind, patchObj.GetNamespace(), err.Error())
+		errMsg := fmt.Errorf("error patching object [%s:%s] in namespace [%s] due to [%s]", patchObj.GetName(), patchObj.GetObjectKind().GroupVersionKind().Kind, patchObj.GetNamespace(), err.Error())
 		e.Event(obj, v1.EventTypeWarning, string(matrixonePatchFail), errMsg.Error())
 	} else {
-		msg := fmt.Sprintf("Successfully patched object [%s:%s] in namespace [%s]", patchObj.GetName(), patchObj.GetObjectKind().GroupVersionKind().Kind, patchObj.GetNamespace())
+		msg := fmt.Sprintf("successfully patched object [%s:%s] in namespace [%s]", patchObj.GetName(), patchObj.GetObjectKind().GroupVersionKind().Kind, patchObj.GetNamespace())
 		e.Event(obj, v1.EventTypeNormal, string(matrixonePatchSuccess), msg)
 	}
 }
@@ -110,24 +110,24 @@ func (e EmitEventFuncs) EmitEventOnPatch(obj, patchObj object, err error) {
 // EmitEventOnUpdate shall emit event on UPDATE operation
 func (e EmitEventFuncs) EmitEventOnUpdate(obj, updateObj object, err error) {
 	if err != nil {
-		errMsg := fmt.Errorf("Failed to update [%s:%s] due to [%s].", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind, err.Error())
+		errMsg := fmt.Errorf("failed to update [%s:%s] due to [%s]", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind, err.Error())
 		e.Event(obj, v1.EventTypeWarning, string(matrixoneUpdateFail), errMsg.Error())
 	} else {
-		msg := fmt.Sprintf("Updated [%s:%s].", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind)
+		msg := fmt.Sprintf("updated [%s:%s].", updateObj.GetName(), updateObj.GetObjectKind().GroupVersionKind().Kind)
 		e.Event(obj, v1.EventTypeNormal, string(matrixoneUpdateSuccess), msg)
 	}
 }
 
 // EmitEventOnGetError shall emit event on GET err operation
 func (e EmitEventFuncs) EmitEventOnGetError(obj, getObj object, err error) {
-	getErr := fmt.Errorf("Failed to get [Object:%s] due to [%s]", getObj.GetName(), err.Error())
+	getErr := fmt.Errorf("failed to get [Object:%s] due to [%s]", getObj.GetName(), err.Error())
 	e.Event(obj, v1.EventTypeWarning, string(matrixoneObjectGetFail), getErr.Error())
 }
 
 //  EmitEventOnList shall emit event on LIST err operation
 func (e EmitEventFuncs) EmitEventOnList(obj object, listObj objectList, err error) {
 	if err != nil {
-		errMsg := fmt.Errorf("Error listing object [%s] in namespace [%s] due to [%s]", listObj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), err.Error())
+		errMsg := fmt.Errorf("error listing object [%s] in namespace [%s] due to [%s]", listObj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), err.Error())
 		e.Event(obj, v1.EventTypeWarning, string(matrixoneObjectListFail), errMsg.Error())
 	}
 }
