@@ -34,7 +34,7 @@ Example on Lens
 
 ## Deploy matrixone operator
 
-Follow the step on [docs/getting_started/Deploy Matrixone Operator](https://github.com/matrixorigin/matrixone-operator/blob/main/docs/getting_started.md#deploy-matrixone-operator)
+Follow the step on [docs/getting_started.md#Deploy Matrixone Operator](../getting_started.md#deploy-matrixone-operator)
 
 For example on Lens:
 ![deploy op](./img/t_deploy_op.png)
@@ -68,4 +68,4 @@ mo-2   1/1     Running   0          26s
 
 ## Connect to cluster
 
-Follow steps on [docs/getting_started/Connect to a matrixone cluster](https://github.com/matrixorigin/matrixone-operator/blob/main/docs/getting_started.md#Connect-to-a-matrixone-cluster)
+Follow steps on [docs/getting_started.md#Connect to a matrixone cluster](../getting_started.md#Connect-to-a-matrixone-cluster)
