@@ -2,7 +2,7 @@
 IMG ?= "matrixorigin/matrixone-operator:latest"
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:maxDescLen=0,trivialVersions=true,generateEmbeddedObjectMeta=true"
-MIMG ?= "matrixorigin/matrixone:latest"
+MIMG ?= "matrixorigin/matrixone:kc"
 BIMG ?= "matrixorigin/mysql-tester:latest"
 PROXY ?= https://goproxy.cn,direct
 BRANCH ?= main
@@ -15,7 +15,8 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager test
+
+all: manager
 
 # Build matrixone docker image
 mo-build:
@@ -32,11 +33,11 @@ test: generate fmt vet manifests
 # build mysql-tester image
 # repo: https://github.com/matrixorigin/mysql-tester
 bvt-build:
-	docker build -f tools/bvt-test/Dockerfile . -t $(BIMG)
+	docker build -f tools/bvt-test/Dockerfile . -t $(BIMG) --build-arg PROXY=$(PROXY)
 
 # Build manager binary
 manager: generate fmt vet
-	go build -o bin/manager /cmd/operator/main.go
+	CGO_ENABLED=0 go build -o manager cmd/operator/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
@@ -58,7 +59,7 @@ deploy: manifests
 	kubectl apply -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
 	kustomize build deploy/ | kubectl apply -f -
 
-# Destroy controller in the configured Kubernetes cluster in ~/.kube/config
+# Destroyo Controller the configured Kubernetes cluster in ~/.kube/config
 undeploy: manifests
 	kustomize build deploy/ | kubectl delete -f -
 	kubectl delete -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
@@ -101,6 +102,10 @@ kind:
 	kind create cluster --config third_part/kind-config/config.yaml
 	kubectl apply -f test/kind-rbac.yml
 
+# kind load images
+load:
+	kind load docker-image matrixorigin/matrixone-operator:latest
+	kind load docker-image matrixorigin/mysql-tester:latest
 
 # helm package
 helm-pkg:
