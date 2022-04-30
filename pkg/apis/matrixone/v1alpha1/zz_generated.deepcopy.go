@@ -24,6 +24,7 @@ package v1alpha1
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -139,14 +140,14 @@ func (in *MatrixoneClusterSpec) DeepCopyInto(out *MatrixoneClusterSpec) {
 	}
 	if in.Requests != nil {
 		in, out := &in.Requests, &out.Requests
-		*out = make(v1.ResourceList, len(*in))
+		*out = make(map[v1.ResourceName]resource.Quantity, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val.DeepCopy()
 		}
 	}
 	if in.Limits != nil {
 		in, out := &in.Limits, &out.Limits
-		*out = make(v1.ResourceList, len(*in))
+		*out = make(map[v1.ResourceName]resource.Quantity, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val.DeepCopy()
 		}

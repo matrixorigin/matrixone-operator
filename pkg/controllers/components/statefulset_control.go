@@ -171,13 +171,6 @@ func makePodSpec(moc *v1alpha1.MatrixoneCluster, hServiceName string) corev1.Pod
 }
 
 func getResources(moc *v1alpha1.MatrixoneCluster) corev1.ResourceRequirements {
-	if moc.Spec.Requests == nil {
-		moc.Spec.Requests = corev1.ResourceList{}
-	}
-
-	if moc.Spec.Limits == nil {
-		moc.Spec.Limits = corev1.ResourceList{}
-	}
 
 	return corev1.ResourceRequirements{
 		Requests: moc.Spec.Requests,

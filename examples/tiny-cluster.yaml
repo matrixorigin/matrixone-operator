@@ -9,10 +9,6 @@ spec:
   storageClass: standard
   requests:
     cpu: 200m
-    memory: 300Mi
-  limits:
-    cpu: 200m
-    memory: 300Mi
   podName:
     name: POD_NAME
     valueFrom:
