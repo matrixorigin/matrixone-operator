@@ -3,6 +3,9 @@ vendor/
 cover.out
 bin/
 
+# generate kubeconfig
+kubeconfig.yml
+
 # Emacs save files
 *~
 \#*\#

@@ -207,7 +207,7 @@ func EKSDeploy(ctx *pulumi.Context) error {
 
 	var nodeGroups []*eks.NodeGroup
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < zoneNumber; i++ {
 		ng, err := eks.NewNodeGroup(ctx, "mo-pulumi-ng-"+strconv.Itoa(i), &eks.NodeGroupArgs{
 			ClusterName:   eksCluster.Name,
 			NodeGroupName: pulumi.String("mo-pulumi-ng" + strconv.Itoa(i)),
@@ -215,6 +215,7 @@ func EKSDeploy(ctx *pulumi.Context) error {
 			SubnetIds: pulumi.StringArray{
 				subnets[0].ID(),
 				subnets[1].ID(),
+				subnets[2].ID(),
 			},
 			ScalingConfig: eks.NodeGroupScalingConfigArgs{
 				DesiredSize: pulumi.Int(1),
