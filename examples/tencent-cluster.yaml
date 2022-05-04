@@ -1,16 +1,16 @@
 apiVersion: matrixone.matrixorigin.cn/v1alpha1
 kind: MatrixoneCluster
 metadata:
-  name: mo
+  name:  mo
 spec:
   image: matrixorigin/matrixone:kc-0.3.0
   imagePullPolicy: IfNotPresent
+  storageClass: cbs
   replicas: 3
-  storageClass: standard
   podName:
     name: POD_NAME
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  logVolumeCap: 200Mi
-  dataVolumeCap: 200Mi
+  logVolumeCap: 10Gi
+  dataVolumeCap: 10Gi
