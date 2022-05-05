@@ -77,8 +77,8 @@ undeploy: manifests
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: $(CONTROLLER_GEN_BINARY)
-	$(CONTROLLER_GEN_BINARY) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds/
-	$(CONTROLLER_GEN_BINARY) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=charts/matrixone-operator/templates/crds/
+	$(CONTROLLER_GEN_BINARY) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=deploy/crds/
+	$(CONTROLLER_GEN_BINARY) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=charts/matrixone-operator/templates/crds/
 
 # Run go fmt against code
 fmt:
