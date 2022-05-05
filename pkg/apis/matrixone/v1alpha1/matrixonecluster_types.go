@@ -52,7 +52,7 @@ type MatrixoneClusterSpec struct {
 
 	RollingDeploy       bool                                      `json:"rollingDeploy,omitempty"`
 	ImagePullPolicy     corev1.PullPolicy                         `json:"imagePullPolicy,omitempty"`
-	StorageClass        string                                    `json:"storageClass,omitempty"`
+	StorageClass        *string                                   `json:"storageClass,omitempty"`
 	PodAnnotations      map[string]string                         `json:"podAnnotations,omitempty"`
 	LogVolCap           string                                    `json:"logVolumeCap,omitempty"`
 	DataVolCap          string                                    `json:"dataVolumeCap,omitempty"`
