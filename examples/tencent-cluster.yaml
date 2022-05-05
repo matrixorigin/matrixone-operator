@@ -1,17 +1,12 @@
 apiVersion: matrixone.matrixorigin.cn/v1alpha1
 kind: MatrixoneCluster
 metadata:
-  name: mo
+  name:  mo
 spec:
   image: matrixorigin/matrixone:kc-0.3.0
   imagePullPolicy: IfNotPresent
+  storageClass: cbs
   replicas: 3
-  requests:
-    cpu: 200m
-    memory: 300Mi
-  limits:
-    cpu: 200m
-    memory: 300Mi
   podName:
     name: POD_NAME
     valueFrom:
