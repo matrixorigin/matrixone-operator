@@ -54,7 +54,7 @@ jobs:
 
   helm_pkg_check:
     name: helm_pkg_check
-    needs: e2e_kind
+    needs: ["build_binary", "build_image"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
