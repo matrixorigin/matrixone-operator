@@ -217,7 +217,7 @@ func getPersistentVolumeClaim(moc *v1alpha1.MatrixoneCluster, ls map[string]stri
 						corev1.ResourceStorage: resource.MustParse(moc.Spec.DataVolCap),
 					},
 				},
-				StorageClassName: &moc.Spec.StorageClass,
+				StorageClassName: moc.Spec.StorageClass,
 			},
 		},
 		{
@@ -235,7 +235,7 @@ func getPersistentVolumeClaim(moc *v1alpha1.MatrixoneCluster, ls map[string]stri
 						corev1.ResourceStorage: resource.MustParse(moc.Spec.LogVolCap),
 					},
 				},
-				StorageClassName: &moc.Spec.StorageClass,
+				StorageClassName: moc.Spec.StorageClass,
 			},
 		},
 	}
