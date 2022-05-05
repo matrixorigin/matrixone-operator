@@ -76,9 +76,9 @@ undeploy: manifests
 	kubectl delete -f deploy/role_binding.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds/
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=charts/matrixone-operator/templates/crds/
+manifests: $(CONTROLLER_GEN_BINARY)
+	$(CONTROLLER_GEN_BINARY) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds/
+	$(CONTROLLER_GEN_BINARY) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=charts/matrixone-operator/templates/crds/
 
 # Run go fmt against code
 fmt:
