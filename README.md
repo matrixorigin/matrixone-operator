@@ -2,6 +2,7 @@
 
 [![LICENSE](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Language](https://img.shields.io/badge/Language-Go-blue.svg)](https://golang.org/)
+[![Build Status](https://github.com/matrixorigin/matrixone-operator/actions/workflows/docker-image.yml/badge.svg)](https://github.com/matrixorigin/matrixone-operator/actions/workflows/docker-image.yml)
 
 - It is built using the [kubebuilder](https://book.kubebuilder.io/)
 - Matrixone Operator provisions and manages [Matrixone](https://github.com/matrixorigin/matrixone) on [Kubernetes](https://kubernetes.io/)
