@@ -108,7 +108,7 @@ mysql -h 127.0.0.1 -P 6001 -udump -p111
 - Uninstall Matrixone cluster
 
 ```shell
-kubectl delete -f examples/tiny-cluster.yaml -n matrixone
+kubectl delete -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/tiny-cluster.yaml -n matrixone
 ```
 
 The Matrixone cluster should display the state when the cluster is deleted:
