@@ -3,8 +3,8 @@ kind: MatrixoneCluster
 metadata:
   name: mo
 spec:
-  image: matrixorigin/matrixone:kc
-  imagePullPolicy: IfNotPresent
+  image: matrixorigin/matrixone:0.4.0
+  imagePullPolicy: Always
   replicas: 1
   requests:
     cpu: 200m
