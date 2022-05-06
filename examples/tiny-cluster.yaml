@@ -5,7 +5,7 @@ metadata:
 spec:
   image: matrixorigin/matrixone:kc-0.3.0
   imagePullPolicy: IfNotPresent
-  replicas: 3
+  replicas: 1
   requests:
     cpu: 200m
     memory: 300Mi
