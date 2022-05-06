@@ -1,44 +1,43 @@
 queue_rules:
   - name: shared_queue
     conditions:
-      - "#approved-reviews-by>=1"
-
       # Must write expected checks explicitly
       # Reference: https://docs.mergify.com/conditions/#validating-all-status-checks
       - check-success=e2e_kind_test
       - check-success=helm_pkg_check
 
 pull_request_rules:
-  - name: put bug fix pr to queue with high priority
+  - name: put pr to queue
     conditions:
       - "#approved-reviews-by>=1"
-      - check-success=e2e_kind_test
-      - check-success=helm_pkg_check
-      - label=bug
+      - "#review-requested=0"
+      - "#changes-requested-reviews-by=0"
     actions:
       queue:
         name: shared_queue
+        method: squash
 
-  - name: put other pr to queue
-    conditions:
-      - "#approved-reviews-by>=1"
-      - check-success=e2e_kind_test
-      - check-success=helm_pkg_check
-      - label!=bug
-    actions:
-      queue:
-        name: shared_queue
-
-  # if there is a conflict in a approved PR, ping the author.
   - name: ping author on conflicts
     conditions:
       - conflict
-      - "#approved-reviews-by>=1"
     actions:
       comment:
         message: |
           This pull request has merge conflicts that must be resolved before it can be merged. @{{author}} please update it.
           Try `@mergify update` or update manually.
+
+  - name: Notify author on queue failure
+    conditions:
+      - 'check-failure=Queue: Embarked in merge train'
+    actions:
+      comment:
+        message: >
+          Hey @{{ author }}, this pull request failed to merge and has been
+          dequeued from the merge train.  If you believe your PR failed in
+          the merge train because of a flaky test, requeue it by commenting
+          with `@mergifyio requeue`.
+          More details can be found on the `Queue: Embarked in merge train`
+          check-run.
 
   - name: Welcome new contributor
     conditions:
@@ -58,17 +57,6 @@ pull_request_rules:
           - wanglei4687
           - sukki37
 
-  - name: merge when all requests reviews are valid
-    conditions:
-      - "#approved-reviews-by>=2"
-      - "#review-requested=0"
-      - "#changes-requested-reviews-by=0"
-      - check-success=e2e_kind_test
-      - check-success=helm_pkg_check
-    actions:
-      merge:
-        method: merge
-
   - name: PR label to need-review
     conditions:
       - check-success=e2e_kind_test
@@ -82,27 +70,16 @@ pull_request_rules:
   - name: label on reviewed
     conditions:
       - "approved-reviews-by>=1"
-      - "review-requested=0"
+      - "#review-requested=0"
+      - "#changes-requested-reviews-by=0"
     actions:
       comment:
         message: "@{{ author }} this pull request is reviewed"
       label:
+        add:
+          - reviewed
         remove:
           - need-review
-        add:
-          - reviwed
-
-  - name: label on ready to mergy
-    conditions:
-      - check-success=e2e_kind_test
-      - check-success=helm_pkg_check
-      - label=reviewd
-    actions:
-      comment:
-        message: "@{{ author }} this pull request is ready to merge"
-      label:
-        add:
-          - ready-to-mergy
 
   - name: label on Feature
     conditions:
