@@ -72,6 +72,7 @@ pull_request_rules:
       - "approved-reviews-by>=1"
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
+      - label=need-review
     actions:
       comment:
         message: "@{{ author }} this pull request is reviewed"
