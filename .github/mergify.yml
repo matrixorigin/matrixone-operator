@@ -61,7 +61,7 @@ pull_request_rules:
     conditions:
       - check-success=e2e_kind_test
       - check-success=helm_pkg_check
-      - label!=reviwed
+      - label!=reviewed
     actions:
       label:
         add:
