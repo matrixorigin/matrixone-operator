@@ -25,13 +25,12 @@ runs:
       shell: bash
       run: |
         export DOCKER_BUILDKIT=1
-        make op-build bvt-build
+        make op-build
 
     - name: load images to cluster
       shell: bash
       run: |
         kind load docker-image matrixorigin/matrixone-operator:latest
-        kind load docker-image matrixorigin/mysql-tester:latest
 
     - name: wait for cluster to finish bootstraping
       shell: bash
