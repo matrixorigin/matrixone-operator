@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -49,23 +50,23 @@ type MatrixoneClusterSpec struct {
 	// Optional: dns config
 	DNSConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
 
-	RollingDeploy       bool                              `json:"rollingDeploy,omitempty"`
-	ImagePullPolicy     corev1.PullPolicy                 `json:"imagePullPolicy,omitempty"`
-	StorageClass        *string                           `json:"storageClass,omitempty"`
-	PodAnnotations      map[string]string                 `json:"podAnnotations,omitempty"`
-	LogVolCap           string                            `json:"logVolumeCap,omitempty"`
-	DataVolCap          string                            `json:"dataVolumeCap,omitempty"`
-	ServiceType         corev1.ServiceType                `json:"serviceType,omitempty"`
-	PodName             corev1.EnvVar                     `json:"podName,omitempty"`
-	LivenessProbe       *corev1.Probe                     `json:"livenessProbe,omitempty"`
-	ReadinessProbe      *corev1.Probe                     `json:"readinessProbe,omitempty"`
-	UpdateStrategy      *appsv1.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
-	Requests            corev1.ResourceList               `json:"requests,omitempty"`
-	Limits              corev1.ResourceList               `json:"limits,omitempty"`
-	Affinity            *corev1.Affinity                  `json:"affinity,omitempty"`
-	NodeSelector        map[string]string                 `json:"nodeSelector,omitempty"`
-	Tolerations         []corev1.Toleration               `json:"tolerations,omitempty"`
-	PodManagementPolicy appsv1.PodManagementPolicyType    `json:"podManagementPolicy,omitempty"`
+	RollingDeploy       bool                                      `json:"rollingDeploy,omitempty"`
+	ImagePullPolicy     corev1.PullPolicy                         `json:"imagePullPolicy,omitempty"`
+	StorageClass        *string                                   `json:"storageClass,omitempty"`
+	PodAnnotations      map[string]string                         `json:"podAnnotations,omitempty"`
+	LogVolCap           string                                    `json:"logVolumeCap,omitempty"`
+	DataVolCap          string                                    `json:"dataVolumeCap,omitempty"`
+	ServiceType         corev1.ServiceType                        `json:"serviceType,omitempty"`
+	PodName             corev1.EnvVar                             `json:"podName,omitempty"`
+	LivenessProbe       *corev1.Probe                             `json:"livenessProbe,omitempty"`
+	ReadinessProbe      *corev1.Probe                             `json:"readinessProbe,omitempty"`
+	UpdateStrategy      *appsv1.StatefulSetUpdateStrategy         `json:"updateStrategy,omitempty"`
+	Requests            map[corev1.ResourceName]resource.Quantity `json:"requests,omitempty"`
+	Limits              map[corev1.ResourceName]resource.Quantity `json:"limits,omitempty"`
+	Affinity            *corev1.Affinity                          `json:"affinity,omitempty"`
+	NodeSelector        map[string]string                         `json:"nodeSelector,omitempty"`
+	Tolerations         []corev1.Toleration                       `json:"tolerations,omitempty"`
+	PodManagementPolicy appsv1.PodManagementPolicyType            `json:"podManagementPolicy,omitempty"`
 }
 
 // MatrixoneClusterStatus defines the observed state of MatrixoneCluster
