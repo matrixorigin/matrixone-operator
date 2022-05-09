@@ -3,6 +3,12 @@ vendor/
 cover.out
 bin/
 
+# tools binary files
+tmp/
+
+# go workspace
+go.work
+
 # Emacs save files
 *~
 \#*\#
