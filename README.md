@@ -12,7 +12,7 @@ You can follow our [Get Started](./docs/getting_started.md) guilde to quick star
 
 ## Contributing
 
-Contributions are welcome and greatly appreciated. See [develop guide](./docs/develop_guide.md) for details about Matrixone Operator develop story ideas.
+Contributions are welcome and greatly appreciated. See [develop guide](./docs/dev_guide.md) for details about Matrixone Operator develop story ideas.
 
 ## Notice
 - The Operator currently runs on TKE/EKS. GKE, AKC, and other Managed Public Cloud k8s have not been tested (but We provide the deployment method of helm). Welcome to try on other cloud platform and give a hand to make matrixone operator take a step forward. 
