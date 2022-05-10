@@ -1,9 +1,9 @@
 # Matrixone Operator develop guide
 
-Welcome to give us a hand to promote matrixone operator forward.
+Welcome to give us a hand to push matrixone operator forward.
 
-Matrixone operator Based on [kubebuilder](https://book.kubebuilder.io/),
-and Event handling method reference from [druid-operator](https://github.com/druid-io/druid-operator)
+Matrixone operator based on [kubebuilder](https://book.kubebuilder.io/),
+and event handling method reference from [druid-operator](https://github.com/druid-io/druid-operator)
 
 ## Prepare
 
@@ -106,7 +106,7 @@ type MatrixoneClusterSpec struct {
 }
 ```
 
-this like some configuration in [k8s statefulsets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) configuration options
+this like some configuration in [k8s statefulsets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) 
 
 ## Controller develop
 
