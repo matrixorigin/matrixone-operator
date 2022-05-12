@@ -12,5 +12,6 @@ runs:
     - name: setup go version
       uses: actions/setup-go@v3
       with:
+        # https://github.com/actions/go-versions/blob/main/versions-manifest.json
         go-version:
           ${{ env.golang-version }}
