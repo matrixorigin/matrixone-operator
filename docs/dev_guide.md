@@ -2,8 +2,7 @@
 
 Welcome to give us a hand to push matrixone operator forward.
 
-Matrixone operator based on [kubebuilder](https://book.kubebuilder.io/),
-and event handling method reference from [druid-operator](https://github.com/druid-io/druid-operator)
+Matrixone operator based on [kubebuilder](https://book.kubebuilder.io/)
 
 ## Prepare
 
@@ -199,7 +198,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 ## Install some command line tools 
 
-we use go install for install command line tools, this way reference from [prometheus-operator](https://github.com/prometheus-operator/prometheus-operator). Tools will install at tmp/bin folder.
+Install command line tools using go install
+
 
 For exmpale
 
