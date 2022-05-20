@@ -17,7 +17,7 @@ Contributions are welcome and greatly appreciated. See [develop guide](./docs/de
 ## Notice
 - The Operator currently runs on TKE/EKS. GKE, AKC, and other Managed Public Cloud k8s have not been tested.
 - multi-region is not supported yet.
-- The Operator only supported 1 nodes cluster.
+- The default cluster size is set to 1 node temporarily, the multi-nodes cluster has not been fully tested.
 - The Operator does not yet include monitor, istio, etc. 
 
 ## License
