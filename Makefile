@@ -8,6 +8,12 @@ MIMG ?= "matrixorigin/matrixone:kc"
 BIMG ?= "matrixorigin/mysql-tester:latest"
 PROXY ?= https://goproxy.cn,direct
 BRANCH ?= main
+TOOLS_BIN_DIR ?= $(shell pwd)/tmp/bin
+CONTROLLER_GEN_BINARY := $(TOOLS_BIN_DIR)/controller-gen
+GOLANGCILINTER_BINARY=$(TOOLS_BIN_DIR)/golangci-lint
+TOOLING=$(CONTROLLER_GEN_BINARY)  $(GOLANGCILINTER_BINARY)
+
+export PATH := $(TOOLS_BIN_DIR):$(PATH)
 
 TOOLS_BIN_DIR ?= $(shell pwd)/tmp/bin
 export PATH := $(TOOLS_BIN_DIR):$(PATH)
@@ -77,8 +83,8 @@ undeploy: manifests
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: $(CONTROLLER_GEN_BINARY)
-	$(CONTROLLER_GEN_BINARY) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=deploy/crds/
-	$(CONTROLLER_GEN_BINARY) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=charts/matrixone-operator/templates/crds/
+	$(CONTROLLER_GEN_BINARY)  crd webhook paths="./..." output:crd:artifacts:config=deploy/crds/
+	$(CONTROLLER_GEN_BINARY) crd webhook paths="./..." output:crd:artifacts:config=charts/matrixone-operator/templates/crds/
 
 # Run go fmt against code
 fmt:
@@ -96,9 +102,8 @@ generate: $(CONTROLLER_GEN_BINARY)
 lint:
 	helm lint charts/matrixone-operator
 
-# golang check
-.PHONY: check-golang
-check-golang: $(GOLANGCILINTER_BINARY)
+# golangci-lint
+go-lint: $(GOLANGCILINTER_BINARY)
 	$(GOLANGCILINTER_BINARY) run
 
 # Build the docker image
@@ -129,7 +134,6 @@ helm-pkg:
 ############
 # Binaries #
 ############
-
 $(TOOLS_BIN_DIR):
 	mkdir -p $(TOOLS_BIN_DIR)
 

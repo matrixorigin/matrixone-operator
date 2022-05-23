@@ -2,6 +2,13 @@
 vendor/
 cover.out
 bin/
+.vscode
+
+# tools binary files
+tmp/
+
+# go workspace
+go.work
 
 # generate kubeconfig
 kubeconfig.yml
