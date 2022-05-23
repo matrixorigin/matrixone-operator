@@ -15,12 +15,6 @@ TOOLING=$(CONTROLLER_GEN_BINARY)  $(GOLANGCILINTER_BINARY)
 
 export PATH := $(TOOLS_BIN_DIR):$(PATH)
 
-TOOLS_BIN_DIR ?= $(shell pwd)/tmp/bin
-export PATH := $(TOOLS_BIN_DIR):$(PATH)
-
-CONTROLLER_GEN_BINARY := $(TOOLS_BIN_DIR)/controller-gen
-GOLANGCILINTER_BINARY=$(TOOLS_BIN_DIR)/golangci-lint
-TOOLING=$(CONTROLLER_GEN_BINARY)  $(GOLANGCILINTER_BINARY)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -129,7 +123,6 @@ load:
 helm-pkg:
 	helm package charts/matrixone-operator
 	mv matrixone-operator-0.1.0.tgz packages
-
 
 ############
 # Binaries #

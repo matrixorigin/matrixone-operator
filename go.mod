@@ -7,6 +7,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	github.com/pulumi/pulumi-aws/sdk/v5 v5.3.0
+	github.com/pulumi/pulumi-kubernetes/sdk/v3 v3.19.1
 	github.com/pulumi/pulumi/sdk/v3 v3.25.0
 	k8s.io/api v0.22.1
 	k8s.io/apimachinery v0.22.1

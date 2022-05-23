@@ -1,3 +1,4 @@
 name: operator
 runtime: go
 description: Matrixone infrastructure
+main: cmd/infra

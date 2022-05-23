@@ -17,3 +17,6 @@ kubeconfig.yml
 *~
 \#*\#
 .\#*
+
+# pulumi config
+Pulumi.dev.yaml

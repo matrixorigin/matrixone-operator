@@ -12,28 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package utils
 
-import (
-	"log"
+import "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
-	"github.com/matrixorigin/matrixone-operator/pkg/infra/aws"
-	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
-	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
-)
+func ToPulumiStringArray(a []string) pulumi.StringArrayInput {
+	var res []pulumi.StringInput
 
-func main() {
-	pulumi.Run(func(ctx *pulumi.Context) error {
-		cfg := config.New(ctx, "")
-		pf := cfg.Get("installPlatform")
+	for _, s := range a {
+		res = append(res, pulumi.String(s))
+	}
 
-		switch pf {
-		case "eks":
-			aws.EKSDeploy(ctx, cfg)
-		default:
-			log.Fatal("Please config your install platform!!!")
-		}
-
-		return nil
-	})
+	return pulumi.StringArray(res)
 }

@@ -10,6 +10,8 @@
 
 You can follow our [Get Started](./docs/getting_started.md) guilde to quick start a testing cluster and play with Matrixone Operator on your own machine.
 
+- AWS EKS [quick start](./docs/mo_pulumi.md) with pulumi
+
 ## Contributing
 
 Contributions are welcome and greatly appreciated. See [develop guide](./docs/dev_guide.md) for details about Matrixone Operator develop story ideas.
@@ -18,7 +20,7 @@ Contributions are welcome and greatly appreciated. See [develop guide](./docs/de
 - The Operator currently runs on TKE/EKS. GKE, AKC, and other Managed Public Cloud k8s have not been tested.
 - multi-region is not supported yet.
 - The default cluster size is set to 1 node temporarily, the multi-nodes cluster has not been fully tested.
-- The Operator does not yet include monitor, istio, etc. 
+- The Operator does not yet include monitor, istio, etc.
 
 ## License
 
