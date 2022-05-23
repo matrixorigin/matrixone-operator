@@ -2,6 +2,7 @@
 vendor/
 cover.out
 bin/
+.vscode
 
 # Emacs save files
 *~
