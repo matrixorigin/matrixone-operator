@@ -1,5 +1,8 @@
 run:
   timeout: 30m
+  concurrency: 2
+  modules-download-mode: readonly
+  go: '1.18'
   skip-files:
     - "^zz_generated.*"
 
@@ -25,12 +28,12 @@ linters-settings:
     go: "1.18"
     # https://staticcheck.io/docs/configuration/options/#checks
     checks: [
-    "all",
-    "-S1*",
-    "-ST1*",
-    "-SA5011",
-    "-SA1019",
-    "-SA2002"
+      "all",
+      "-S1*",
+      "-ST1*",
+      "-SA5011",
+      "-SA1019",
+      "-SA2002"
     ]
 
   unused:
