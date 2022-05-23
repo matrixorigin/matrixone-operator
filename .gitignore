@@ -4,6 +4,12 @@ cover.out
 bin/
 .vscode
 
+# tools binary files
+tmp/
+
+# go workspace
+go.work
+
 # Emacs save files
 *~
 \#*\#

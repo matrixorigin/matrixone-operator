@@ -25,7 +25,6 @@ issues:
 
 linters-settings:
   staticcheck:
-    go: "1.18"
     # https://staticcheck.io/docs/configuration/options/#checks
     checks: [
       "all",
@@ -35,6 +34,3 @@ linters-settings:
       "-SA1019",
       "-SA2002"
     ]
-
-  unused:
-    go: "1.18"
