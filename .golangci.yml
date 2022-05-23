@@ -1,6 +1,6 @@
 run:
   timeout: 30m
-  go: 1.18
+  go: '1.18'
   skip-files:
     - "^zz_generated.*"
 
@@ -13,7 +13,6 @@ linters:
     - revive
 
 issues:
-  max-same-issues: 0
   exclude-rules:
     - path: _test\.go
       linters:
@@ -23,13 +22,13 @@ linters-settings:
   staticcheck:
     go: "1.18"
     checks: [
-    "all",
-    "-S1*",
-    "-ST1*",
-    "-SA5011",
-    "-SA1019",
-    "-SA2002"
+      "all",
+      "-S1*",
+      "-ST1*",
+      "-SA5011",
+      "-SA1019",
+      "-SA2002"
     ]
 
-    unused:
-      go: "1.18"
+  unused:
+    go: "1.18"
