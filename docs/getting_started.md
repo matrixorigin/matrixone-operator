@@ -85,8 +85,6 @@ Matrixone cluster is ready:
 ```txt
 NAME   READY   STATUS    RESTARTS   AGE
 mo-0   1/1     Running   0          26s
-mo-1   1/1     Running   0          26s
-mo-2   1/1     Running   0          26s
 ```
 
 ## Connect to a Matrixone cluster
