@@ -5,6 +5,12 @@
 
 ## [Configuration](https://www.pulumi.com/docs/intro/concepts/config/)
 
+- Config aws region
+
+```shell
+pulumi config set aws:region cn-north-1
+```
+
 - Config install platform
 
 Support eks now
