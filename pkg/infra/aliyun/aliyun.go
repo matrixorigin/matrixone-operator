@@ -15,8 +15,6 @@
 package aliyun
 
 import (
-	"fmt"
-
 	"github.com/pulumi/pulumi-alicloud/sdk/v3/go/alicloud"
 	"github.com/pulumi/pulumi-alicloud/sdk/v3/go/alicloud/cs"
 	"github.com/pulumi/pulumi-alicloud/sdk/v3/go/alicloud/ecs"
@@ -28,17 +26,15 @@ import (
 
 func AliyunCSDeploy(ctx *pulumi.Context, cfg *config.Config) error {
 
-	fmt.Println("deploy to aliyun")
-
 	aliZones, err := alicloud.GetZones(ctx, &alicloud.GetZonesArgs{
 		AvailableResourceCreation: pulumi.StringRef("VSwitch"),
-	}, nil)
+	})
 	if err != nil {
 		return err
 	}
 
 	aliNetwork, err := vpc.NewNetwork(ctx, "mo-vpc", &vpc.NetworkArgs{
-		CidrBlock: pulumi.String("172.16.0.0./24"),
+		CidrBlock: pulumi.String("10.0.0.0/16"),
 	}, nil)
 	if err != nil {
 		return err
@@ -71,7 +67,7 @@ func AliyunCSDeploy(ctx *pulumi.Context, cfg *config.Config) error {
 	aliDisk, err := ecs.NewDisk(ctx, "mo-disk", &ecs.DiskArgs{
 		AvailabilityZone: pulumi.String(aliZones.Zones[0].Id),
 		Size:             pulumi.Int(50),
-	}, nil)
+	}, pulumi.DependsOn([]pulumi.Resource{aliNetwork}))
 	if err != nil {
 		return err
 	}
@@ -79,7 +75,7 @@ func AliyunCSDeploy(ctx *pulumi.Context, cfg *config.Config) error {
 	_, err = ecs.NewDiskAttachment(ctx, "mo-instance-disk", &ecs.DiskAttachmentArgs{
 		DiskId:     aliDisk.ID(),
 		InstanceId: aliInstanceType.ID(),
-	}, pulumi.DependsOn([]pulumi.Resource{aliInstanceType}))
+	}, pulumi.DependsOn([]pulumi.Resource{aliInstanceType, aliDisk}))
 	if err != nil {
 		return err
 	}
@@ -117,7 +113,7 @@ func AliyunCSDeploy(ctx *pulumi.Context, cfg *config.Config) error {
 
 	_, err = cs.NewKubernetesAutoscaler(ctx, "mo-kubernetes-autoscaler", &cs.KubernetesAutoscalerArgs{
 		ClusterId: aliManagedKubernetesCluster.ID(),
-		NodePools: cs.KubernetesAutoscalerNodepoolArray{
+		Nodepools: cs.KubernetesAutoscalerNodepoolArray{
 			&cs.KubernetesAutoscalerNodepoolArgs{
 				Id:     aliScalingGroup.ID(),
 				Labels: pulumi.String("app=mo"),

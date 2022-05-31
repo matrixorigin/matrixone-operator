@@ -31,7 +31,7 @@ func main() {
 		switch pf {
 		case "eks":
 			aws.EKSDeploy(ctx, cfg)
-		case "alics":
+		case "acs":
 			aliyun.AliyunCSDeploy(ctx, cfg)
 		default:
 			log.Fatal("Please config your install platform!!!")
