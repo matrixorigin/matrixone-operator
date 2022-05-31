@@ -16,14 +16,17 @@ package aliyun
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/pulumi/pulumi-alicloud/sdk/v3/go/alicloud"
+	"github.com/pulumi/pulumi-alicloud/sdk/v3/go/alicloud/cs"
+	"github.com/pulumi/pulumi-alicloud/sdk/v3/go/alicloud/ecs"
+	"github.com/pulumi/pulumi-alicloud/sdk/v3/go/alicloud/ess"
 	"github.com/pulumi/pulumi-alicloud/sdk/v3/go/alicloud/vpc"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
-func AliyunCSDeploy(ctx *pulumi.Context) error {
+func AliyunCSDeploy(ctx *pulumi.Context, cfg *config.Config) error {
 
 	fmt.Println("deploy to aliyun")
 
@@ -31,29 +34,98 @@ func AliyunCSDeploy(ctx *pulumi.Context) error {
 		AvailableResourceCreation: pulumi.StringRef("VSwitch"),
 	}, nil)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	aliNetwork, err := vpc.NewNetwork(ctx, "mo-vpc", &vpc.NetworkArgs{
 		CidrBlock: pulumi.String("172.16.0.0./24"),
 	}, nil)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	var switchGroup []*vpc.Switch
-	for k := range aliZones.Zones {
-		dSwitch, err := vpc.NewSwitch(ctx, "mo-switch-"+strconv.Itoa(k), &vpc.SwitchArgs{
-			VpcId:       aliNetwork.ID(),
-			CidrBlock:   pulumi.String("172.16.0.0/24"),
-			ZoneId:      pulumi.String(aliZones.Zones[k].Id),
-			VswitchName: pulumi.String("mo-switch-" + strconv.Itoa(k)),
-		}, nil)
-		if err != nil {
-			return nil
-		}
+	aliSecurityGroup, err := ecs.NewSecurityGroup(ctx, "mo-securitygroup", &ecs.SecurityGroupArgs{
+		VpcId:       aliNetwork.ID(),
+		Description: pulumi.String("mo-securitygroup"),
+	}, pulumi.DependsOn([]pulumi.Resource{aliNetwork}))
+	if err != nil {
+		return err
+	}
 
-		switchGroup = append(switchGroup, dSwitch)
+	aliInstanceType, err := ecs.NewInstance(ctx, "mo-instance-type", &ecs.InstanceArgs{
+		InstanceName:     pulumi.String("mo-instance-type"),
+		InstanceType:     pulumi.String("ecs.n4.small"),
+		AvailabilityZone: pulumi.String(aliZones.Zones[0].Id),
+		SecurityGroups: pulumi.StringArray{
+			aliSecurityGroup.ID(),
+		},
+		InternetChargeType: pulumi.String("PayByBandwidth"),
+		Tags: pulumi.StringMap{
+			"Name": pulumi.String("mo-instance-type"),
+		},
+	}, nil)
+	if err != nil {
+		return err
+	}
+
+	aliDisk, err := ecs.NewDisk(ctx, "mo-disk", &ecs.DiskArgs{
+		AvailabilityZone: pulumi.String(aliZones.Zones[0].Id),
+		Size:             pulumi.Int(50),
+	}, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = ecs.NewDiskAttachment(ctx, "mo-instance-disk", &ecs.DiskAttachmentArgs{
+		DiskId:     aliDisk.ID(),
+		InstanceId: aliInstanceType.ID(),
+	}, pulumi.DependsOn([]pulumi.Resource{aliInstanceType}))
+	if err != nil {
+		return err
+	}
+
+	aliScalingGroup, err := ess.NewScalingGroup(ctx, "mo-scalingGroup", &ess.ScalingGroupArgs{
+		ScalingGroupName: pulumi.String("mo-scalinggroup"),
+		MinSize:          pulumi.Int(1),
+		MaxSize:          pulumi.Int(5),
+		RemovalPolicies: pulumi.StringArray{
+			pulumi.String("OldestInstance"),
+			pulumi.String("NewestInstance"),
+		},
+	}, nil)
+	if err != nil {
+		return err
+	}
+
+	aliScalingConfiguration, err := ess.NewScalingConfiguration(ctx, "defaultScalingConfiguration", &ess.ScalingConfigurationArgs{
+		SecurityGroupId:    aliSecurityGroup.ID(),
+		ScalingGroupId:     aliScalingGroup.ID(),
+		InstanceType:       aliInstanceType.ID(),
+		InternetChargeType: pulumi.String("PayByTraffic"),
+		ForceDelete:        pulumi.Bool(true),
+		Enable:             pulumi.Bool(true),
+		Active:             pulumi.Bool(true),
+	}, pulumi.DependsOn([]pulumi.Resource{aliScalingGroup}))
+	if err != nil {
+		return err
+	}
+
+	aliManagedKubernetesCluster, err := cs.NewManagedKubernetes(ctx, "mo-managed-kubernetes-cluster", &cs.ManagedKubernetesArgs{}, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = cs.NewKubernetesAutoscaler(ctx, "mo-kubernetes-autoscaler", &cs.KubernetesAutoscalerArgs{
+		ClusterId: aliManagedKubernetesCluster.ID(),
+		NodePools: cs.KubernetesAutoscalerNodepoolArray{
+			&cs.KubernetesAutoscalerNodepoolArgs{
+				Id:     aliScalingGroup.ID(),
+				Labels: pulumi.String("app=mo"),
+			},
+		},
+	}, pulumi.DependsOn([]pulumi.Resource{aliScalingConfiguration, aliScalingGroup}))
+	if err != nil {
+		return err
 	}
 
 	return nil

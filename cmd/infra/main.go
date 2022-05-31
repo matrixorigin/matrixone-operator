@@ -17,6 +17,7 @@ package main
 import (
 	"log"
 
+	"github.com/matrixorigin/matrixone-operator/pkg/infra/aliyun"
 	"github.com/matrixorigin/matrixone-operator/pkg/infra/aws"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
@@ -30,6 +31,8 @@ func main() {
 		switch pf {
 		case "eks":
 			aws.EKSDeploy(ctx, cfg)
+		case "alics":
+			aliyun.AliyunCSDeploy(ctx, cfg)
 		default:
 			log.Fatal("Please config your install platform!!!")
 		}
