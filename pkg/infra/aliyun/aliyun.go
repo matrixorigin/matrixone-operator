@@ -24,7 +24,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
-func AliyunCSDeploy(ctx *pulumi.Context, cfg *config.Config) error {
+func ACSDeploy(ctx *pulumi.Context, cfg *config.Config) error {
 
 	aliZones, err := alicloud.GetZones(ctx, &alicloud.GetZonesArgs{
 		AvailableResourceCreation: pulumi.StringRef("VSwitch"),
