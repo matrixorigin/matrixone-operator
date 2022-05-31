@@ -1,5 +1,5 @@
 golang-version=1.18.2
-golangci-lint-version=v1.46.1
+golangci-lint-version=v1.46.2
 kind-version=v0.11.1
 kind-image=kindest/node:v1.23.0
 helm-version=v3.8.1
