@@ -158,15 +158,15 @@ func V(level int) klog.Verbose {
 	return klog.V(klog.Level(level))
 }
 
-type LogWithFormat struct {
+type MLogWithFormat struct {
 	logr.Logger
 }
 
-func WithInfo(l logr.Logger) *LogWithFormat {
-	return &LogWithFormat{l}
+func WithInfo(l logr.Logger) *MLogWithFormat {
+	return &MLogWithFormat{l}
 }
 
 // Infof logs message with the given format and arguments.
-func (l *LogWithFormat) Infof(format string, a ...interface{}) {
+func (l *MLogWithFormat) Infof(format string, a ...interface{}) {
 	l.Info(fmt.Sprintf(format, a...))
 }
