@@ -84,10 +84,10 @@ start a eks cluster with tree nodes
 # create eks cluster
 eksctl create cluster --name mo --version 1.21 --region cn-northwest-1 --nodes 3 --node-type t3.medium --managed
 
-# detroy eks cluster
+# destroy eks cluster
 eksctl delete cluster --name mo
 ```
 
 ## Tencent cloud
 
-see more on [document](./tencent_cloud/tencent.md)
+see more on [document](./tencentcloud/tencent.md)

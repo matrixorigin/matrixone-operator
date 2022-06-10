@@ -77,7 +77,7 @@ undeploy: manifests
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: $(CONTROLLER_GEN_BINARY)
-	$(CONTROLLER_GEN_BINARY)  crd webhook paths="./..." output:crd:artifacts:config=deploy/crds/
+	$(CONTROLLER_GEN_BINARY) crd webhook paths="./..." output:crd:artifacts:config=deploy/crds/
 	$(CONTROLLER_GEN_BINARY) crd webhook paths="./..." output:crd:artifacts:config=charts/matrixone-operator/templates/crds/
 
 # Run go fmt against code
@@ -88,7 +88,6 @@ fmt:
 vet:
 	go vet ./...
 
-# Generate code
 # Generate code
 generate: $(CONTROLLER_GEN_BINARY)
 	$(CONTROLLER_GEN_BINARY) object:headerFile="hack/boilerplate.go.txt" paths="./..."
