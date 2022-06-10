@@ -5,7 +5,7 @@
 - Tencent account (or sub account with [cam policy](https://cloud.tencent.com/document/product/598/10599))
 - [Helm](https://helm.sh/)
 
-## Create a tencnt cluster
+## Create a tencent cluster
 
 1. Choosing  container image service:
 ![tencent container image service](./img/tencent_1.png)
