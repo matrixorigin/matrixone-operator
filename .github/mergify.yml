@@ -48,15 +48,6 @@ pull_request_rules:
           Thanks for the contribution!
           Please review the labels and make any necessary changes.
 
-  - name: ask for reviewing  PR
-    conditions:
-      - author!=Mergify
-    actions:
-      request_reviews:
-        users:
-          - wanglei4687
-          - sukki37
-
   - name: PR label to need-review
     conditions:
       - check-success=e2e_kind_test
