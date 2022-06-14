@@ -17,7 +17,7 @@ graph LR
 ## Matrixone
 
 - matrixone as  compute layer
-- default tree node for sechduler matrixcube
+- default tree node for scheduler matrixcube
 
 ```mermaid
 flowchart LR
@@ -50,7 +50,7 @@ cube-1 -- raft --> cube-2
 cube-2 -- raft --> cube-0
 ```
 
-## Mmatrix monitor
+## Matrix monitor
 
 ```mermaid
 flowchart LR
@@ -60,7 +60,7 @@ l3(loki)
 l4(prometheus)
 l5(grafana)
 l6(S3)
-l7(thanso )
+l7(thanos)
 l8(mo-promtail)
 l9(cube-promtail)
 d1(Tempo)
@@ -69,7 +69,7 @@ d3(OPenTelemetry-cube)
     subgraph matrix monitor
     l3 -- storage --> l6
     l7 -- storage --> l6
-    d1 -- stotage --> l6
+    d1 -- storage --> l6
     l3 -- observation --> l5
     d1 -- observation --> l5
     l4 --> l7 -- observation --> l5
@@ -102,7 +102,7 @@ thanos as  prometheus sidecar
 - highly available
 - multi-tenant
 
-## Metadata mangement
+## Metadata management
 
 TODO
 
