@@ -36,9 +36,12 @@ var localSchemeBuilder = runtime.SchemeBuilder{
 	mocv1alpha1.AddToScheme,
 }
 
+// AddToScheme adds the types in this group-version to the given scheme.
 var AddToScheme = localSchemeBuilder.AddToScheme
 
 func init() {
-	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
+	// GroupVersion is group version used to register these objects
+	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Group: "matrixone.matrixorigin.cn", Version: "v1alpha1"})
+
 	utilruntime.Must(AddToScheme(Scheme))
 }

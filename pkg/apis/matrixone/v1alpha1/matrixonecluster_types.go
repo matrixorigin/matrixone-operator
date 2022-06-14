@@ -97,7 +97,3 @@ type MatrixoneClusterList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []MatrixoneCluster `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&MatrixoneCluster{}, &MatrixoneClusterList{})
-}
