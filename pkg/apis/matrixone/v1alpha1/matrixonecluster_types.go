@@ -77,6 +77,7 @@ type MatrixoneClusterStatus struct {
 	PersistentVolumeClaim []string `json:"persistentVolumeClaims,omitempty"`
 }
 
+// +genclient
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 

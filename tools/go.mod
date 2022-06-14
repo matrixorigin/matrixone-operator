@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/golangci/golangci-lint v1.46.1
 	github.com/pulumi/pulumi/pkg v1.14.1
+	k8s.io/code-generator v0.23.0
 	sigs.k8s.io/controller-tools v0.8.0
 )
 
@@ -266,6 +267,7 @@ require (
 	k8s.io/api v0.23.0 // indirect
 	k8s.io/apiextensions-apiserver v0.23.0 // indirect
 	k8s.io/apimachinery v0.23.0 // indirect
+	k8s.io/gengo v0.0.0-20210813121822-485abfe95c7c // indirect
 	k8s.io/klog/v2 v2.30.0 // indirect
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
 	mvdan.cc/gofumpt v0.3.1 // indirect
