@@ -9,7 +9,7 @@ queue_rules:
 pull_request_rules:
   - name: put pr to queue
     conditions:
-      - "#approved-reviews-by>=1"
+      - "#approved-reviews-by>=2"
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
     actions:
@@ -47,15 +47,6 @@ pull_request_rules:
         message: |
           Thanks for the contribution!
           Please review the labels and make any necessary changes.
-
-  - name: ask for reviewing  PR
-    conditions:
-      - author!=Mergify
-    actions:
-      request_reviews:
-        users:
-          - wanglei4687
-          - sukki37
 
   - name: PR label to need-review
     conditions:
