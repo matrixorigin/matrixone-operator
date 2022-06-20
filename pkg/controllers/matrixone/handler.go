@@ -126,7 +126,7 @@ func deployMatrixoneCluster(sdk client.Client, moc *v1alpha1.MatrixoneCluster, e
 		execCheckCrashStatus(sdk, moc, emitEvents)
 
 		if moc.Generation > 1 {
-			done, err := isStatefulsetFullyDeployed(sdk, moc, emitEvents)
+			done, err := isObjectFullyDeployed[*appsv1.StatefulSet](sdk, moc, emitEvents)
 			if !done {
 				return err
 			}
@@ -201,11 +201,21 @@ func sdkCreateOrUpdateAsNeeded[T object](
 	return "", nil
 }
 
-func isStatefulsetFullyDeployed(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEvent EventEmitter) (bool, error) {
-	sts, err := Get[*appsv1.StatefulSet](context.TODO(), sdk, moc, emitEvent)
+func isObjectFullyDeployed[T object](sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEvent EventEmitter) (bool, error) {
+	obj, err := Get[T](context.TODO(), sdk, moc, emitEvent)
 	if err != nil {
 		return false, err
 	}
+	switch v := (any(obj)).(type) {
+	case *appsv1.StatefulSet:
+		return isStatefulsetFullyDeployed(v)
+	case *appsv1.Deployment:
+		return isDeploymentFullyDeployed(v)
+	}
+	return false, nil
+}
+
+func isStatefulsetFullyDeployed(sts *appsv1.StatefulSet) (bool, error) {
 	if sts.Status.CurrentRevision != sts.Status.UpdateRevision {
 		return false, nil
 	} else if sts.Status.CurrentReplicas != sts.Status.ReadyReplicas {
@@ -215,11 +225,7 @@ func isStatefulsetFullyDeployed(sdk client.Client, moc *v1alpha1.MatrixoneCluste
 	}
 }
 
-func isDeploymentFullyDeployed(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEvent EventEmitter) (bool, error) {
-	obj, err := Get[*appsv1.Deployment](context.TODO(), sdk, moc, emitEvent)
-	if err != nil {
-		return false, err
-	}
+func isDeploymentFullyDeployed(obj *appsv1.Deployment) (bool, error) {
 	for _, condition := range obj.Status.Conditions {
 		// This detects a failure condition, operator should send a rolling deployment failed event
 		if condition.Type == appsv1.DeploymentReplicaFailure {
