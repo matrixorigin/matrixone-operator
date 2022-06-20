@@ -493,8 +493,8 @@ func executeFinalizers(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEv
 
 func deleteSTSAndPVC(sdk client.Client, moc *v1alpha1.MatrixoneCluster, stsList []*appsv1.StatefulSet, pvcList []*v1.PersistentVolumeClaim, emitEvents EventEmitter) error {
 
-	for _, sts := range stsList {
-		err := Delete(context.TODO(), sdk, moc, sts, emitEvents, &client.DeleteAllOfOptions{})
+	for i := range stsList {
+		err := Delete(context.TODO(), sdk, moc, stsList[i], emitEvents, &client.DeleteAllOfOptions{})
 		if err != nil {
 			return err
 		}

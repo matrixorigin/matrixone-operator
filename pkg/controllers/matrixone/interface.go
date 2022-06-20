@@ -17,9 +17,9 @@ package matrixone
 import (
 	"context"
 	"reflect"
-	"unsafe"
 
 	"github.com/matrixorigin/matrixone-operator/pkg/apis/matrixone/v1alpha1"
+	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,7 +76,7 @@ func List[T object, TList objectList](
 		client.InNamespace(moc.Namespace),
 		client.MatchingLabels(selectorLabels),
 	}
-	listObj := newObject[objectList]()
+	listObj := newObject[TList]()
 
 	if err := sdk.List(ctx, listObj, listOpts...); err != nil {
 		emitEvent.EmitEventOnList(moc, listObj, err)
@@ -89,7 +89,7 @@ func List[T object, TList objectList](
 // extractList extract the items from an objectList interface.
 // ideally, we should have a type constraint between Object and ObjectList:
 //     type ObjectList[T] interface {
-//         GetItems() []T 
+//         GetItems() []T
 //     }
 // so that the conversion can be type-safe. But the generated code of client-go
 // does not have such constraint yet.
@@ -99,7 +99,15 @@ func extractList[T object](listObj objectList) ([]T, error) {
 	if err != nil {
 		return nil, err
 	}
-	return *(*[]T)(unsafe.Pointer(&items)), nil
+	var res []T
+	for _, item := range items {
+		if obj, ok := item.(T); ok {
+			res = append(res, obj)
+		} else {
+			return nil, errors.Errorf("unexpected type: %T", items[0])
+		}
+	}
+	return res, nil
 }
 
 // Patch method shall patch the status of Obj or the status.
@@ -152,6 +160,6 @@ func Delete[T object](ctx context.Context, sdk client.Client, moc *v1alpha1.Matr
 		emitEvent.EmitEventOnDelete(moc, obj, err)
 		return err
 	}
-	emitEvent.EmitEventOnDelete(moc, obj, err)
+	emitEvent.EmitEventOnDelete(moc, obj, nil)
 	return nil
 }
