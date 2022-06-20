@@ -9,7 +9,9 @@ runs:
   using: "composite"
 
   steps:
+    # TODO(aylei): use native runner for arm64 when multi-arch is not required
     - name: setup QEMU
+      if: ${{ inputs.platforms != 'linux/amd64' }}
       uses: docker/setup-qemu-action@master
       with:
         image: tonistiigi/binfmt:latest

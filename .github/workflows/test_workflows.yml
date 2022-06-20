@@ -34,6 +34,19 @@ jobs:
       - name: build_binary
         uses: ./.github/actions/build_binary
 
+  # FIXME(aylei): disable arm64 build temporarily since build using QUME is extremely slow
+  # ref: https://github.com/actions/virtual-environments/issues/2536#issuecomment-769027088
+  # build_image_arm64:
+  #   name: build_image_arm64
+  #   needs: checks
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: build_image
+  #       uses: ./.github/actions/build_image
+  #       with:
+  #         platforms: linux/arm64
+
   build_image_amd64:
     name: build_image_amd64
     needs: checks
@@ -44,19 +57,6 @@ jobs:
         uses: ./.github/actions/build_image
         with:
           platforms: linux/amd64
-
-  # run arm64 build in parallel since it is time-consuming, multi-arch image
-  # will be built in release workflow instead
-  build_image_arm64:
-    name: build_image_arm64
-    needs: checks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: build_image
-        uses: ./.github/actions/build_image
-        with:
-          platforms: linux/arm64
 
   e2e_kind:
     name: e2e_kind_test
