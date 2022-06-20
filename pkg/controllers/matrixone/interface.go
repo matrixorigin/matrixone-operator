@@ -50,9 +50,8 @@ func newObject[T any]() T {
 	var obj T
 	if typ := reflect.TypeOf(obj); typ.Kind() == reflect.Ptr {
 		return reflect.New(typ.Elem()).Interface().(T)
-	} else {
-		return obj
 	}
+	return obj
 }
 
 // Get methods shall the get the object.
@@ -87,7 +86,15 @@ func List[T object, TList objectList](
 	return extractList[T](listObj)
 }
 
+// extractList extract the items from an objectList interface.
+// ideally, we should have a type constraint between Object and ObjectList:
+//     type ObjectList[T] interface {
+//         GetItems() []T 
+//     }
+// so that the conversion can be type-safe. But the generated code of client-go
+// does not have such constraint yet.
 func extractList[T object](listObj objectList) ([]T, error) {
+
 	items, err := meta.ExtractList(listObj)
 	if err != nil {
 		return nil, err
