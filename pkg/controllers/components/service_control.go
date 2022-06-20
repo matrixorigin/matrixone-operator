@@ -21,7 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func MakeService(svc *corev1.Service, moc *v1alpha1.MatrixoneCluster, ls map[string]string, isHeadless bool) (*corev1.Service, error) {
+func MakeService(moc *v1alpha1.MatrixoneCluster, ls map[string]string, isHeadless bool) (*corev1.Service, error) {
+	svc := &corev1.Service{}
 	svc.TypeMeta = metav1.TypeMeta{
 		APIVersion: "v1",
 		Kind:       "Service",
@@ -101,20 +102,6 @@ func MakeService(svc *corev1.Service, moc *v1alpha1.MatrixoneCluster, ls map[str
 	return svc, nil
 }
 
-func MakeServiceEmptyObj() *corev1.Service {
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-	}
-}
-
-func MakeServiceListEmptyObj() *corev1.ServiceList {
-	return &corev1.ServiceList{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-	}
+func RetainClusterIP(prev, curr *corev1.Service) {
+	curr.Spec.ClusterIP = prev.Spec.ClusterIP
 }
