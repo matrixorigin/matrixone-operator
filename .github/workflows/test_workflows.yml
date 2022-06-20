@@ -30,22 +30,37 @@ jobs:
           - ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: build_binary
         uses: ./.github/actions/build_binary
 
-
-  build_image:
-    name: build_image_test
+  build_image_amd64:
+    name: build_image_amd64
     needs: checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: build_image
         uses: ./.github/actions/build_image
+        with:
+          platforms: linux/amd64
+
+  # run arm64 build in parallel since it is time-consuming, multi-arch image
+  # will be built in release workflow instead
+  build_image_arm64:
+    name: build_image_arm64
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: build_image
+        uses: ./.github/actions/build_image
+        with:
+          platforms: linux/arm64
 
   e2e_kind:
     name: e2e_kind_test
-    needs: ["build_binary", "build_image"]
+    needs: ["build_image_amd64"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -54,7 +69,7 @@ jobs:
 
   helm_pkg_check:
     name: helm_pkg_check
-    needs: ["build_binary", "build_image"]
+    needs: ["build_image_amd64"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
