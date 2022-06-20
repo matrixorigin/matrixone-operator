@@ -32,7 +32,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -53,24 +52,35 @@ func deployMatrixoneCluster(sdk client.Client, moc *v1alpha1.MatrixoneCluster, e
 
 	// Create Service
 	// see more: https://kubernetes.io/docs/concepts/services-networking/service/
-	if _, err := sdkCreateOrUpdateAsNeeded(sdk,
-		func() (object, error) { return com.MakeService(&corev1.Service{}, moc, ls, false) },
-		func() object { return com.MakeServiceEmptyObj() }, alwaysTrueIsEqualsFn,
-		func(prev, curr object) {
-			(curr.(*corev1.Service)).Spec.ClusterIP = (prev.(*corev1.Service)).Spec.ClusterIP
-		},
-		moc, serviceNames, emitEvents); err != nil {
+
+	svc, err := com.MakeService(moc, ls, false)
+	if err != nil {
+		return err
+	}
+	if _, err := sdkCreateOrUpdateAsNeeded(
+		sdk,
+		svc,
+		alwaysTrueIsEqualsFn[*corev1.Service],
+		com.RetainClusterIP,
+		moc,
+		serviceNames,
+		emitEvents); err != nil {
 		return err
 	}
 
+	headlessSvc, err := com.MakeService(moc, ls, true)
+	if err != nil {
+		return err
+	}
 	// Create Headless Service
-	if _, err := sdkCreateOrUpdateAsNeeded(sdk,
-		func() (object, error) { return com.MakeService(&corev1.Service{}, moc, ls, true) },
-		func() object { return com.MakeServiceEmptyObj() }, alwaysTrueIsEqualsFn,
-		func(prev, curr object) {
-			(curr.(*corev1.Service)).Spec.ClusterIP = (prev.(*corev1.Service)).Spec.ClusterIP
-		},
-		moc, serviceNames, emitEvents); err != nil {
+	if _, err := sdkCreateOrUpdateAsNeeded(
+		sdk,
+		headlessSvc,
+		alwaysTrueIsEqualsFn[*corev1.Service],
+		com.RetainClusterIP,
+		moc,
+		serviceNames,
+		emitEvents); err != nil {
 		return err
 	}
 
@@ -87,21 +97,23 @@ func deployMatrixoneCluster(sdk client.Client, moc *v1alpha1.MatrixoneCluster, e
 		if cr {
 			if !utils.ContainsString(moc.ObjectMeta.Finalizers, finalizerName) {
 				moc.SetFinalizers(append(moc.GetFinalizers(), finalizerName))
-				_, err := writers.Update(context.Background(), sdk, moc, moc, emitEvents)
+				_, err := Update(context.Background(), sdk, moc, moc, emitEvents)
 				if err != nil {
 					return err
 				}
 			}
 		}
 	}
-
+	sts, err := com.MakeSts(moc, ls)
+	if err != nil {
+		return err
+	}
 	// Create/Update Statefulset
 	if stsCreateUpdateStatus, err := sdkCreateOrUpdateAsNeeded(
 		sdk,
-		func() (object, error) { return com.MakeSts(moc, ls) },
-		func() object { return com.MakeStatefulSetEmptyObj() },
-		statefulSetIsEquals,
-		updateFn,
+		sts,
+		alwaysTrueIsEqualsFn[*appsv1.StatefulSet],
+		updateFn[*appsv1.StatefulSet],
 		moc,
 		statefulSetNames,
 		emitEvents); err != nil {
@@ -114,7 +126,7 @@ func deployMatrixoneCluster(sdk client.Client, moc *v1alpha1.MatrixoneCluster, e
 		execCheckCrashStatus(sdk, moc, emitEvents)
 
 		if moc.Generation > 1 {
-			done, err := isObjFullyDeployed(sdk, moc, func() object { return com.MakeServiceEmptyObj() }, emitEvents)
+			done, err := isStatefulsetFullyDeployed(sdk, moc, emitEvents)
 			if !done {
 				return err
 			}
@@ -129,43 +141,17 @@ func deployMatrixoneCluster(sdk client.Client, moc *v1alpha1.MatrixoneCluster, e
 	}
 
 	updatedStatus := v1alpha1.MatrixoneClusterStatus{}
-	updatedStatus.StatefulSets = deleteUnusedResources(sdk, moc, statefulSetNames, ls,
-		func() objectList { return com.MakeStatefulSetListEmptyObj() },
-		func(listObj runtime.Object) []object {
-			items := listObj.(*appsv1.StatefulSetList).Items
-			result := make([]object, len(items))
-			for i := 0; i < len(items); i++ {
-				result[i] = &items[i]
-			}
-			return result
-		}, emitEvents)
+	updatedStatus.StatefulSets = deleteUnusedResources[*appsv1.StatefulSetList](sdk, moc, statefulSetNames, ls, emitEvents)
 	sort.Strings(updatedStatus.StatefulSets)
 
-	updatedStatus.Services = deleteUnusedResources(sdk, moc, serviceNames, ls,
-		func() objectList { return com.MakeServiceListEmptyObj() },
-		func(listObj runtime.Object) []object {
-			items := listObj.(*v1.ServiceList).Items
-			result := make([]object, len(items))
-			for i := 0; i < len(items); i++ {
-				result[i] = &items[i]
-			}
-			return result
-		}, emitEvents)
+	updatedStatus.Services = deleteUnusedResources[*v1.ServiceList](sdk, moc, serviceNames, ls, emitEvents)
 	sort.Strings(updatedStatus.Services)
 
-	podList, _ := readers.List(context.TODO(), sdk, moc, makeLabelsForMatrixone(moc.Name), emitEvents, func() objectList { return com.MakePodList() }, func(listObj runtime.Object) []object {
-		items := listObj.(*v1.PodList).Items
-		result := make([]object, len(items))
-		for i := 0; i < len(items); i++ {
-			result[i] = &items[i]
-		}
-		return result
-	})
-
-	updatedStatus.Pods = getPodNames(podList)
+	podList, _ := List[*v1.Pod, *v1.PodList](context.TODO(), sdk, moc, makeLabelsForMatrixone(moc.Name), emitEvents)
+	updatedStatus.Pods = getObjectNames(podList)
 	sort.Strings(updatedStatus.Pods)
 
-	err := matrixnoeClusterStatusPatcher(sdk, updatedStatus, moc, emitEvents)
+	err = matrixnoeClusterStatusPatcher(sdk, updatedStatus, moc, emitEvents)
 	if err != nil {
 		return err
 	}
@@ -173,29 +159,24 @@ func deployMatrixoneCluster(sdk client.Client, moc *v1alpha1.MatrixoneCluster, e
 	return nil
 }
 
-func sdkCreateOrUpdateAsNeeded(
+func sdkCreateOrUpdateAsNeeded[T object](
 	sdk client.Client,
-	objFn func() (object, error),
-	emptyObjFn func() object,
-	isEqualFn func(prev, curr object) bool,
-	updaterFn func(prev, curr object),
+	obj T,
+	isEqualFn func(prev, curr T) bool,
+	updaterFn func(prev, curr T),
 	moc *v1alpha1.MatrixoneCluster,
 	names map[string]bool,
 	emitEvent EventEmitter,
 ) (ClusterStatus, error) {
-	obj, err := objFn()
-	if err != nil {
-		return "", nil
-	}
 	names[obj.GetName()] = true
 
 	addOwnerRefToObject(obj, asOwner(moc))
 	addHashToObject(obj)
-	prevObj := emptyObjFn()
+	prevObj := newObject[T]()
 	if err := sdk.Get(context.TODO(), *namespacedName(obj.GetName(), obj.GetNamespace()), prevObj); err != nil {
 		if apierrors.IsNotFound(err) {
 			// resource dose not exist, create it.
-			create, err := writers.Create(context.TODO(), sdk, moc, obj, emitEvent)
+			create, err := Create(context.TODO(), sdk, moc, obj, emitEvent)
 			if err != nil {
 				return "", err
 			}
@@ -210,7 +191,7 @@ func sdkCreateOrUpdateAsNeeded(
 	if obj.GetAnnotations()[matrixoneOpResourceHash] != prevObj.GetAnnotations()[matrixoneOpResourceHash] || !isEqualFn(prevObj, obj) {
 		obj.SetResourceVersion(prevObj.GetResourceVersion())
 		updaterFn(prevObj, obj)
-		update, err := writers.Update(context.TODO(), sdk, moc, obj, emitEvent)
+		update, err := Update(context.TODO(), sdk, moc, obj, emitEvent)
 		if err != nil {
 			return "", err
 		}
@@ -218,40 +199,35 @@ func sdkCreateOrUpdateAsNeeded(
 
 	}
 	return "", nil
-
 }
 
-func isObjFullyDeployed(
-	sdk client.Client,
-	moc *v1alpha1.MatrixoneCluster,
-	emptyObjFn func() object,
-	emitEvent EventEmitter) (bool, error) {
-
-	// Get Object
-	obj, err := readers.Get(context.TODO(), sdk, moc, emptyObjFn, emitEvent)
+func isStatefulsetFullyDeployed(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEvent EventEmitter) (bool, error) {
+	sts, err := Get[*appsv1.StatefulSet](context.TODO(), sdk, moc, emitEvent)
 	if err != nil {
 		return false, err
 	}
+	if sts.Status.CurrentRevision != sts.Status.UpdateRevision {
+		return false, nil
+	} else if sts.Status.CurrentReplicas != sts.Status.ReadyReplicas {
+		return false, nil
+	} else {
+		return sts.Status.CurrentRevision == sts.Status.UpdateRevision, nil
+	}
+}
 
-	// In case obj is a statefulset or deployment, make sure the sts/deployment has successfully reconciled to desired state
-	if detectType(obj) == "*corev1.StatefulSet" {
-		if obj.(*appsv1.StatefulSet).Status.CurrentRevision != obj.(*appsv1.StatefulSet).Status.UpdateRevision {
-			return false, nil
-		} else if obj.(*appsv1.StatefulSet).Status.CurrentReplicas != obj.(*appsv1.StatefulSet).Status.ReadyReplicas {
+func isDeploymentFullyDeployed(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEvent EventEmitter) (bool, error) {
+	obj, err := Get[*appsv1.Deployment](context.TODO(), sdk, moc, emitEvent)
+	if err != nil {
+		return false, err
+	}
+	for _, condition := range obj.Status.Conditions {
+		// This detects a failure condition, operator should send a rolling deployment failed event
+		if condition.Type == appsv1.DeploymentReplicaFailure {
+			return false, errors.New(condition.Reason)
+		} else if condition.Type == appsv1.DeploymentProgressing && condition.Status != corev1.ConditionTrue || obj.Status.ReadyReplicas != obj.Status.Replicas {
 			return false, nil
 		} else {
-			return obj.(*appsv1.StatefulSet).Status.CurrentRevision == obj.(*appsv1.StatefulSet).Status.UpdateRevision, nil
-		}
-	} else if detectType(obj) == "*corev1.Deployment" {
-		for _, condition := range obj.(*appsv1.Deployment).Status.Conditions {
-			// This detects a failure condition, operator should send a rolling deployment failed event
-			if condition.Type == appsv1.DeploymentReplicaFailure {
-				return false, errors.New(condition.Reason)
-			} else if condition.Type == appsv1.DeploymentProgressing && condition.Status != corev1.ConditionTrue || obj.(*appsv1.Deployment).Status.ReadyReplicas != obj.(*appsv1.Deployment).Status.Replicas {
-				return false, nil
-			} else {
-				return obj.(*appsv1.Deployment).Status.ReadyReplicas == obj.(*appsv1.Deployment).Status.Replicas, nil
-			}
+			return obj.Status.ReadyReplicas == obj.Status.Replicas, nil
 		}
 	}
 	return false, nil
@@ -302,7 +278,7 @@ func namespacedName(name, namespace string) *types.NamespacedName {
 	return &types.NamespacedName{Name: name, Namespace: namespace}
 }
 
-func alwaysTrueIsEqualsFn(prev, curr object) bool {
+func alwaysTrueIsEqualsFn[T object](prev, curr T) bool {
 	return true
 }
 
@@ -316,11 +292,7 @@ func stringifyForLogging(obj object, moc *v1alpha1.MatrixoneCluster) string {
 
 }
 
-func statefulSetIsEquals(obj1, obj2 object) bool {
-	return true
-}
-
-func updateFn(prev, curr object) {}
+func updateFn[T object](prev, curr T) {}
 
 func execCheckCrashStatus(sdk client.Client, moc *v1alpha1.MatrixoneCluster, event EventEmitter) {
 	if moc.Spec.ForceDeleteStsPodOnError == false {
@@ -337,29 +309,22 @@ func makeLabelsForMatrixone(name string) map[string]string {
 
 func checkCrashStatus(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEvents EventEmitter) error {
 
-	podList, err := readers.List(context.TODO(), sdk, moc, makeLabelsForMatrixone(moc.Name), emitEvents, func() objectList { return com.MakePodList() }, func(listObj runtime.Object) []object {
-		items := listObj.(*corev1.PodList).Items
-		result := make([]object, len(items))
-		for i := 0; i < len(items); i++ {
-			result[i] = &items[i]
-		}
-		return result
-	})
+	podList, err := List[*v1.Pod, *v1.PodList](context.TODO(), sdk, moc, makeLabelsForMatrixone(moc.Name), emitEvents)
 	if err != nil {
 		return err
 	}
 
 	for _, p := range podList {
-		if p.(*corev1.Pod).Status.ContainerStatuses[0].RestartCount > 1 {
-			for _, condition := range p.(*corev1.Pod).Status.Conditions {
+		if p.Status.ContainerStatuses[0].RestartCount > 1 {
+			for _, condition := range p.Status.Conditions {
 				// condition.type Ready means the pod is able to service requests
 				if condition.Type == corev1.ContainersReady {
 					// the below condition evalutes if a pod is in
 					// 1. pending state 2. failed state 3. unknown state
 					// OR condtion.status is false which evalutes if neither of these conditions are met
 					// 1. ContainersReady 2. PodInitialized 3. PodReady 4. PodScheduled
-					if p.(*corev1.Pod).Status.Phase != corev1.PodRunning || condition.Status == corev1.ConditionFalse {
-						err := writers.Delete(context.TODO(), sdk, moc, p, emitEvents, &client.DeleteOptions{})
+					if p.Status.Phase != corev1.PodRunning || condition.Status == corev1.ConditionFalse {
+						err := Delete(context.TODO(), sdk, moc, p, emitEvents, &client.DeleteOptions{})
 						if err != nil {
 							return err
 						}
@@ -374,8 +339,8 @@ func checkCrashStatus(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEve
 	return nil
 }
 
-func deleteUnusedResources(sdk client.Client, moc *v1alpha1.MatrixoneCluster,
-	names map[string]bool, selectorLabels map[string]string, emptyListObjFn func() objectList, itemsExtractorFn func(obj runtime.Object) []object, emitEvents EventEmitter) []string {
+func deleteUnusedResources[TList objectList](sdk client.Client, moc *v1alpha1.MatrixoneCluster,
+	names map[string]bool, selectorLabels map[string]string, emitEvents EventEmitter) []string {
 
 	listOpts := []client.ListOption{
 		client.InNamespace(moc.Namespace),
@@ -384,15 +349,19 @@ func deleteUnusedResources(sdk client.Client, moc *v1alpha1.MatrixoneCluster,
 
 	survivorNames := make([]string, 0, len(names))
 
-	listObj := emptyListObjFn()
+	listObj := newObject[TList]()
 
 	if err := sdk.List(context.TODO(), listObj, listOpts...); err != nil {
 		e := fmt.Errorf("failed to list [%s] due to [%s]", listObj.GetObjectKind().GroupVersionKind().Kind, err.Error())
 		logger.Error(e, e.Error(), "name", moc.Name, "namespace", moc.Namespace)
 	} else {
-		for _, s := range itemsExtractorFn(listObj) {
+		items, err := extractList[object](listObj)
+		if err != nil {
+			logger.Error(err, err.Error(), "name", moc.Name, "namespace", moc.Namespace)
+		}
+		for _, s := range items {
 			if names[s.GetName()] == false {
-				err := writers.Delete(context.TODO(), sdk, moc, s, emitEvents, &client.DeleteOptions{})
+				err := Delete(context.TODO(), sdk, moc, s, emitEvents, &client.DeleteOptions{})
 				if err != nil {
 					survivorNames = append(survivorNames, s.GetName())
 				}
@@ -407,14 +376,7 @@ func deleteUnusedResources(sdk client.Client, moc *v1alpha1.MatrixoneCluster,
 
 func deleteOrphanPVC(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEvents EventEmitter) error {
 
-	podList, err := readers.List(context.TODO(), sdk, moc, makeLabelsForMatrixone(moc.Name), emitEvents, func() objectList { return com.MakePodList() }, func(listObj runtime.Object) []object {
-		items := listObj.(*corev1.PodList).Items
-		result := make([]object, len(items))
-		for i := 0; i < len(items); i++ {
-			result[i] = &items[i]
-		}
-		return result
-	})
+	podList, err := List[*v1.Pod, *v1.PodList](context.TODO(), sdk, moc, makeLabelsForMatrixone(moc.Name), emitEvents)
 	if err != nil {
 		return err
 	}
@@ -423,23 +385,16 @@ func deleteOrphanPVC(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEven
 		"matrixone_cr": moc.Name,
 	}
 
-	pvcList, err := readers.List(context.TODO(), sdk, moc, pvcLabels, emitEvents, func() objectList { return com.MakePersistentVolumeClaimListEmptyObj() }, func(listObj runtime.Object) []object {
-		items := listObj.(*corev1.PersistentVolumeClaimList).Items
-		result := make([]object, len(items))
-		for i := 0; i < len(items); i++ {
-			result[i] = &items[i]
-		}
-		return result
-	})
+	pvcList, err := List[*v1.PersistentVolumeClaim, *v1.PersistentVolumeClaimList](context.TODO(), sdk, moc, pvcLabels, emitEvents)
 	if err != nil {
 		return err
 	}
 
 	for _, pod := range podList {
-		if pod.(*corev1.Pod).Status.Phase != corev1.PodRunning {
+		if pod.Status.Phase != corev1.PodRunning {
 			return nil
 		}
-		for _, status := range pod.(*corev1.Pod).Status.Conditions {
+		for _, status := range pod.Status.Conditions {
 			if status.Status != corev1.ConditionTrue {
 				return nil
 			}
@@ -448,8 +403,8 @@ func deleteOrphanPVC(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEven
 
 	mountedPVC := make([]string, len(podList))
 	for _, pod := range podList {
-		if pod.(*corev1.Pod).Spec.Volumes != nil {
-			for _, vol := range pod.(*corev1.Pod).Spec.Volumes {
+		if pod.Spec.Volumes != nil {
+			for _, vol := range pod.Spec.Volumes {
 				if vol.PersistentVolumeClaim != nil {
 					if !utils.ContainsString(mountedPVC, vol.PersistentVolumeClaim.ClaimName) {
 						mountedPVC = append(mountedPVC, vol.PersistentVolumeClaim.ClaimName)
@@ -462,9 +417,8 @@ func deleteOrphanPVC(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEven
 
 	if mountedPVC != nil {
 		for i, pvc := range pvcList {
-
 			if !utils.ContainsString(mountedPVC, pvc.GetName()) {
-				err := writers.Delete(context.TODO(), sdk, moc, pvcList[i], emitEvents, &client.DeleteAllOfOptions{})
+				err := Delete(context.TODO(), sdk, moc, pvcList[i], emitEvents, &client.DeleteAllOfOptions{})
 				if err != nil {
 					return err
 				}
@@ -476,12 +430,12 @@ func deleteOrphanPVC(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEven
 	return nil
 }
 
-func getPodNames(pods []object) []string {
-	var podNames []string
-	for _, pod := range pods {
-		podNames = append(podNames, pod.(*corev1.Pod).Name)
+func getObjectNames[T object](objList []T) []string {
+	var names []string
+	for _, obj := range objList {
+		names = append(names, obj.GetName())
 	}
-	return podNames
+	return names
 }
 
 // wrapper to patch matrixone cluster status
@@ -492,7 +446,7 @@ func matrixnoeClusterStatusPatcher(sdk client.Client, updatedStatus v1alpha1.Mat
 		if err != nil {
 			return fmt.Errorf("failed to serialize status patch to bytes: %v", err)
 		}
-		_ = writers.Patch(context.TODO(), sdk, moc, moc, true, client.RawPatch(types.MergePatchType, patchBytes), emitEvent)
+		_ = Patch(context.TODO(), sdk, moc, moc, true, client.RawPatch(types.MergePatchType, patchBytes), emitEvent)
 	}
 	return nil
 }
@@ -504,26 +458,12 @@ func executeFinalizers(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEv
 			"matrixone_cr": moc.Name,
 		}
 
-		pvcList, err := readers.List(context.TODO(), sdk, moc, pvcLabels, emitEvents, func() objectList { return com.MakePersistentVolumeClaimListEmptyObj() }, func(listObj runtime.Object) []object {
-			items := listObj.(*v1.PersistentVolumeClaimList).Items
-			result := make([]object, len(items))
-			for i := 0; i < len(items); i++ {
-				result[i] = &items[i]
-			}
-			return result
-		})
+		pvcList, err := List[*v1.PersistentVolumeClaim, *v1.PersistentVolumeClaimList](context.TODO(), sdk, moc, pvcLabels, emitEvents)
 		if err != nil {
 			return err
 		}
 
-		stsList, err := readers.List(context.TODO(), sdk, moc, makeLabelsForMatrixone(moc.Name), emitEvents, func() objectList { return com.MakeStatefulSetListEmptyObj() }, func(listObj runtime.Object) []object {
-			items := listObj.(*appsv1.StatefulSetList).Items
-			result := make([]object, len(items))
-			for i := 0; i < len(items); i++ {
-				result[i] = &items[i]
-			}
-			return result
-		})
+		stsList, err := List[*appsv1.StatefulSet, *appsv1.StatefulSetList](context.TODO(), sdk, moc, makeLabelsForMatrixone(moc.Name), emitEvents)
 		if err != nil {
 			return err
 		}
@@ -541,7 +481,7 @@ func executeFinalizers(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEv
 		// remove our finalizer from the list and update it.
 		moc.ObjectMeta.Finalizers = utils.RemoveString(moc.ObjectMeta.Finalizers, finalizerName)
 
-		_, err = writers.Update(context.TODO(), sdk, moc, moc, emitEvents)
+		_, err = Update(context.TODO(), sdk, moc, moc, emitEvents)
 		if err != nil {
 			return err
 		}
@@ -551,17 +491,17 @@ func executeFinalizers(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEv
 
 }
 
-func deleteSTSAndPVC(sdk client.Client, moc *v1alpha1.MatrixoneCluster, stsList, pvcList []object, emitEvents EventEmitter) error {
+func deleteSTSAndPVC(sdk client.Client, moc *v1alpha1.MatrixoneCluster, stsList []*appsv1.StatefulSet, pvcList []*v1.PersistentVolumeClaim, emitEvents EventEmitter) error {
 
 	for _, sts := range stsList {
-		err := writers.Delete(context.TODO(), sdk, moc, sts, emitEvents, &client.DeleteAllOfOptions{})
+		err := Delete(context.TODO(), sdk, moc, sts, emitEvents, &client.DeleteAllOfOptions{})
 		if err != nil {
 			return err
 		}
 	}
 
 	for i := range pvcList {
-		err := writers.Delete(context.TODO(), sdk, moc, pvcList[i], emitEvents, &client.DeleteAllOfOptions{})
+		err := Delete(context.TODO(), sdk, moc, pvcList[i], emitEvents, &client.DeleteAllOfOptions{})
 		if err != nil {
 			return err
 		}
@@ -571,18 +511,9 @@ func deleteSTSAndPVC(sdk client.Client, moc *v1alpha1.MatrixoneCluster, stsList,
 }
 
 func checkIfCRExists(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEvents EventEmitter) bool {
-	_, err := readers.Get(context.TODO(), sdk, moc, func() object { return makeMatrixoneEmptyObj() }, emitEvents)
+	_, err := Get[*v1alpha1.MatrixoneCluster](context.TODO(), sdk, moc, emitEvents)
 	if err != nil {
 		return false
 	}
 	return true
-}
-
-func makeMatrixoneEmptyObj() *v1alpha1.MatrixoneCluster {
-	return &v1alpha1.MatrixoneCluster{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "MatrixoneCluster",
-			APIVersion: "v1alpha1",
-		},
-	}
 }

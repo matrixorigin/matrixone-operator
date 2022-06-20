@@ -236,21 +236,3 @@ func getPersistentVolumeClaim(moc *v1alpha1.MatrixoneCluster, ls map[string]stri
 	return pvc
 
 }
-
-func MakeStatefulSetEmptyObj() *appsv1.StatefulSet {
-	return &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "StatefulSet",
-		},
-	}
-}
-
-func MakeStatefulSetListEmptyObj() *appsv1.StatefulSetList {
-	return &appsv1.StatefulSetList{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "StatefulSet",
-			APIVersion: "apps/v1",
-		},
-	}
-}
