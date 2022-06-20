@@ -88,7 +88,7 @@ func (e EmitEventFuncs) EmitEventRollingDeployWait(obj, k8sObj object) {
 // EmitEventOnCreate shall emit event on CREATE operation
 func (e EmitEventFuncs) EmitEventOnCreate(obj, createObj object, err error) {
 	if err != nil {
-		errMsg := fmt.Errorf("Error creating object [%s] in namespace [%s:%s] due to [%s]", createObj.GetName(), createObj.GetObjectKind().GroupVersionKind().Kind, createObj.GetNamespace(), err.Error())
+		errMsg := fmt.Errorf("Error creating object [%s:%s] in namespace [%s] due to [%s]", createObj.GetName(), createObj.GetObjectKind().GroupVersionKind().Kind, createObj.GetNamespace(), err.Error())
 		e.Event(obj, corev1.EventTypeWarning, string(matrixoneCreateFail), errMsg.Error())
 	} else {
 		msg := fmt.Sprintf("Successfully created object [%s:%s] in namespace [%s]", createObj.GetName(), createObj.GetObjectKind().GroupVersionKind().Kind, createObj.GetNamespace())
