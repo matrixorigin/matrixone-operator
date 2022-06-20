@@ -104,7 +104,7 @@ func extractList[T object](listObj objectList) ([]T, error) {
 		if obj, ok := item.(T); ok {
 			res = append(res, obj)
 		} else {
-			return nil, errors.Errorf("unexpected type: %T", items[0])
+			return nil, errors.Errorf("unexpected type: %T", item)
 		}
 	}
 	return res, nil
