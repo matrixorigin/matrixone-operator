@@ -101,7 +101,7 @@ mysql -h 127.0.0.1 -P 6001 -udump -p111
 
 - Connect cluster by [tools](./tools.md)
 
-## Uninstall Matrixone resouces
+## Uninstall Matrixone resources
 
 - Uninstall Matrixone cluster
 
