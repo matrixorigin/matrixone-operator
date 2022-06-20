@@ -6,7 +6,7 @@ Matrixone operator based on [kubebuilder](https://book.kubebuilder.io/)
 
 ## Prepare
 
-First you should create a test cluster by minikube or kind in your local develop environment.
+First you should create a test cluster by [minikube](https://minikube.sigs.k8s.io/docs/start/) or [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) in your local develop environment.
 
 By kind
 
@@ -20,7 +20,7 @@ By minikube
 minikube start
 ```
 
-## Operator bootstrap 
+## Operator bootstrap
 
 Install the CRDs into the cluster
 
@@ -111,7 +111,7 @@ this like some configuration in [k8s statefulsets](https://kubernetes.io/docs/co
 
 Consider that how k8s statefulsets configuration, the operator controller is same to statefulsets in some ways.
 
-For example in [matrixonecluster](https://github.com/matrixorigin/matrixone-operator/blob/main/pkg/controllers/components/statefulset_control.go#L62)
+For example in [matrixonecluster](https://github.com/matrixorigin/matrixone-operator/blob/3b841b4b977c67d7e0a39543556ba9b742e1a36b/pkg/controllers/components/statefulset_control.go#L63)
 
 ```go
 func makeStsSpec(moc *v1alpha1.MatrixoneCluster, ls map[string]string, hServiceName string) appsv1.StatefulSetSpec {
@@ -195,11 +195,9 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 ```
 
-
-## Install some command line tools 
+## Install some command line tools
 
 Install command line tools using go install
-
 
 For exmpale
 

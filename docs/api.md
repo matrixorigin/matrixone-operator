@@ -1,4 +1,4 @@
-#  Full Configuration
+# Full Configuration
 
 ## replicas
 
@@ -70,7 +70,6 @@ Inject podName parameter when pod is created
 ## updateStrategy
 
 [updateStrategy](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies) allows you to configure and disable automated rolling updates for containers, labels, resource request/limits, and annotations for the Pods in a StatefulSet.
-
 
 ## limits
 
