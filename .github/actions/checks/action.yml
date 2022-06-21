@@ -19,7 +19,13 @@ runs:
       with:
         log: info
         config: .github/licenserc.yml
-    
+
+    - uses: actions/cache@v3
+      with:
+        path: |
+          **/tmp/bin
+        key: ${{ runner.os }}-tools-${{ hashFiles('**/tools/go.sum') }}
+
     - name: verify
       shell: bash
       run: make verify

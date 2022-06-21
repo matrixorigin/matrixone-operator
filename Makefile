@@ -34,14 +34,14 @@ mo-build:
 mo-push:
 	docker push $(MIMG)
 
-# Check whether the pull request is reviewable
-reviewable: lint test go-lint
+# Make sure the generated files are up to date before open PR
+reviewable: generate manifests
 	go mod tidy
 
-# Ensure the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action 
-verify: lint test
+# Check whether the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action 
+verify: reviewable
 	echo "checking that branch is clean"
-	test -z "$$(git status --porcelain)" || (echo 'unclean working tree, did you forget to run "make reviewable"?' && exit 1)
+	test -z "$$(git status --porcelain)" || (echo "unclean working tree, did you forget to run `make reviewable`?" && exit 1)
 	echo "branch is clean
 
 # Run tests
