@@ -185,7 +185,7 @@ func sdkCreateOrUpdateAsNeeded[T object](
 		e := fmt.Errorf("failed to get [%s:%s] due to [%s]",
 			obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err.Error())
 		logger.Error(e, e.Error(), "prev object", stringifyForLogging(prevObj, moc), "name", moc.Name, "namespace", moc.Namespace)
-		emitEvent.EmitEventGeneric(moc, string(matrixoneObjectGetFail), "", err)
+		emitEvent.EmitEventGeneric(moc, matrixoneObjectGet, "failed", err)
 		return "", err
 	}
 	if obj.GetAnnotations()[matrixoneOpResourceHash] != prevObj.GetAnnotations()[matrixoneOpResourceHash] || !isEqualFn(prevObj, obj) {

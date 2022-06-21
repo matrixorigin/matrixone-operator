@@ -58,7 +58,7 @@ func newObject[T any]() T {
 func Get[T object](ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEvent EventEmitter) (T, error) {
 	obj := newObject[T]()
 	if err := sdk.Get(ctx, *namespacedName(moc.Name, moc.Namespace), obj); err != nil {
-		emitEvent.EmitEventOnGetError(moc, obj, err)
+		emitEvent.EmitEventHandler(moc, obj, matrixoneCreate, err)
 		return obj, err
 	}
 	return obj, nil
@@ -117,11 +117,11 @@ func Patch[T object](ctx context.Context, sdk client.Client, moc *v1alpha1.Matri
 
 	if !status {
 		if err := sdk.Patch(ctx, obj, patch); err != nil {
-			emitEvent.EmitEventOnPatch(moc, obj, err)
+			emitEvent.EmitEventHandler(moc, obj, matrixonePatch, err)
 			return err
 		}
 		if err := sdk.Status().Patch(ctx, obj, patch); err != nil {
-			emitEvent.EmitEventOnPatch(moc, obj, err)
+			emitEvent.EmitEventHandler(moc, obj, matrixonePatch, err)
 			return err
 		}
 	}
@@ -133,10 +133,10 @@ func Create[T object](ctx context.Context, sdk client.Client, moc *v1alpha1.Matr
 
 	if err := sdk.Create(ctx, obj); err != nil {
 		logger.Error(err, err.Error(), "object", stringifyForLogging(obj, moc), "name", moc.Name, "namespace", moc.Namespace, "errorType", apierrors.ReasonForError(err))
-		emitEvent.EmitEventOnCreate(moc, obj, err)
+		emitEvent.EmitEventHandler(moc, obj, matrixoneCreate, err)
 		return "", err
 	}
-	emitEvent.EmitEventOnCreate(moc, obj, nil)
+	emitEvent.EmitEventHandler(moc, obj, matrixoneCreate, nil)
 	return resourceCreated, nil
 }
 
@@ -144,10 +144,10 @@ func Create[T object](ctx context.Context, sdk client.Client, moc *v1alpha1.Matr
 func Update[T object](ctx context.Context, sdk client.Client, moc *v1alpha1.MatrixoneCluster, obj T, emitEvent EventEmitter) (ClusterStatus, error) {
 
 	if err := sdk.Update(ctx, obj); err != nil {
-		emitEvent.EmitEventOnUpdate(moc, obj, err)
+		emitEvent.EmitEventHandler(moc, obj, matrixoneUpdate, err)
 		return "", err
 	}
-	emitEvent.EmitEventOnUpdate(moc, obj, nil)
+	emitEvent.EmitEventHandler(moc, obj, matrixoneUpdate, nil)
 	return resourceUpdated, nil
 
 }
@@ -157,9 +157,9 @@ func Delete[T object](ctx context.Context, sdk client.Client, moc *v1alpha1.Matr
 	err := sdk.Delete(ctx, obj, deleteOptions...)
 
 	if err != nil {
-		emitEvent.EmitEventOnDelete(moc, obj, err)
+		emitEvent.EmitEventHandler(moc, obj, matrixoneDelete, err)
 		return err
 	}
-	emitEvent.EmitEventOnDelete(moc, obj, nil)
+	emitEvent.EmitEventHandler(moc, obj, matrixoneDelete, nil)
 	return nil
 }
