@@ -79,7 +79,6 @@ func (e EmitEventFuncs) EmitEventHandler(
 	sObj, tObj object,
 	actionType matrixoneActionType,
 	err error) {
-	fmt.Println(string(actionType))
 	if err != nil {
 		fmsg := fmt.Errorf("[%s:%s] for object [%s:%s:%s] in namespace [%s]",
 			actionType,
