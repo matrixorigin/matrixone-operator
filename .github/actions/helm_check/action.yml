@@ -21,4 +21,4 @@ runs:
     - name: Run test
       shell: bash
       run:  |
-        ./hack/e2e.sh
+        MYSQL_TEST_IMAGE=matrixorigin/mysql-tester:0.4.0 ./hack/e2e.sh
