@@ -23,7 +23,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/apis/matrixone/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policy "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -80,7 +79,6 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&v1alpha1.MatrixoneCluster{}).
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.StatefulSet{}).
-		Owns(&policy.PodDisruptionBudget{}).
 		WithEventFilter(GenericPredicates{}).
 		Complete(r)
 }
