@@ -4,7 +4,7 @@ set -euo pipefail
 
 function e2e::kubectl_wait_appear() {
     local WAIT_N=0
-    local MAX_WAIT=5
+    local MAX_WAIT=10
     while true; do
         kubectl get $@ 2>/dev/null | grep NAME && break
         if [[ ${WAIT_N} -lt ${MAX_WAIT} ]]; then
