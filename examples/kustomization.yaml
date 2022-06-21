@@ -1,0 +1,8 @@
+resources:
+  - tiny-cluster.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+  - name: REPLACE_ME
+    newName: matrixone-operator
+    newTag: latest

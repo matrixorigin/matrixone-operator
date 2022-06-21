@@ -34,6 +34,16 @@ mo-build:
 mo-push:
 	docker push $(MIMG)
 
+# Check whether the pull request is reviewable
+reviewable: lint test go-lint
+	go mod tidy
+
+# Ensure the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action 
+verify: lint test
+	@echo "checking that branch is clean"
+	@test -z "$$(git status --porcelain)" || (echo 'unclean working tree, did you forget to run "make reviewable"?' && exit 1)
+	@echo "branch is clean
+
 # Run tests
 test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
@@ -101,26 +111,28 @@ go-lint: $(GOLANGCILINTER_BINARY)
 	$(GOLANGCILINTER_BINARY) run
 
 # Build the docker image
-op-build: generate manifests
+op-build: generate manifests pkg
 	docker build -f images/operator/Dockerfile . -t ${IMG} --build-arg PROXY=$(PROXY)
 
 # Push the docker image
 op-push:
 	docker push ${IMG}
 
+# local e2e test on kind
+e2e:
+	./hack/kind-e2e.sh
 
 # start a kind clsuter
 kind:
-	kind create cluster --config third_part/kind-config/config.yaml
+	kind create cluster --config test/kind-config.yml
 	kubectl apply -f test/kind-rbac.yml
 
 # kind load images
 load:
-	kind load docker-image matrixorigin/matrixone-operator:latest
-	kind load docker-image matrixorigin/mysql-tester:latest
+	kind load docker-image --name mo matrixorigin/matrixone-operator:latest
 
 # helm package
-helm-pkg:
+helm-pkg: charts
 	helm package charts/matrixone-operator
 	mv matrixone-operator-0.1.0.tgz packages
 
