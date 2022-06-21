@@ -17,6 +17,7 @@ package matrixone
 import (
 	"fmt"
 
+	"github.com/matrixorigin/matrixone-operator/pkg/actor"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
@@ -49,6 +50,7 @@ type EventEmitter interface {
 
 type EmitEventFuncs struct {
 	record.EventRecorder
+	actor.EventActor
 }
 
 type K8sEventEmitter interface {

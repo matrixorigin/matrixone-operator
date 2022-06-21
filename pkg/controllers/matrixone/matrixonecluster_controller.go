@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/matrixorigin/matrixone-operator/pkg/actor"
 	"github.com/matrixorigin/matrixone-operator/pkg/apis/matrixone/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +38,7 @@ type ClusterReconciler struct {
 	Log           logr.Logger
 	ReconcileWait time.Duration
 	Recorder      record.EventRecorder
+	Actor         actor.EventActor
 }
 
 func NewMatrixoneReconciler(mgr ctrl.Manager) *ClusterReconciler {
@@ -65,7 +67,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Intialize Emit Events
-	var emitEvent EventEmitter = EmitEventFuncs{r.Recorder}
+	var emitEvent EventEmitter = EmitEventFuncs{r.Recorder, r.Actor}
 
 	if err := deployMatrixoneCluster(r.Client, instance, emitEvent); err != nil {
 		return ctrl.Result{}, nil
