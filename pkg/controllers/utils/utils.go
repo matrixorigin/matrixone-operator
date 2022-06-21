@@ -28,7 +28,7 @@ func FirstNonEmptyStr(s1 string, s2 string) string {
 }
 
 // Note that all the arguments passed to this function must have zero value of Nil.
-func FirstNonNilValue(v1, v2 interface{}) interface{} {
+func FirstNonNilValue(v1, v2 any) any {
 	if !reflect.ValueOf(v1).IsNil() {
 		return v1
 	}

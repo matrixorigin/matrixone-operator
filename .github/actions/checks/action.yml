@@ -2,7 +2,7 @@ name: checks
 description: "check license header"
 inputs:
   github_token:
-    descirption: "Github Token"
+    description: "Github Token"
     required: true
 
 runs:

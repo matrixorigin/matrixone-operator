@@ -20,17 +20,12 @@ runs:
       shell: bash
       run: |
         kubectl apply -f test/kind-rbac.yml
-
-    - name: prepare images
-      shell: bash
-      run: |
-        export DOCKER_BUILDKIT=1
-        make op-build
-
+    
+    - uses: actions/download-artifact@v2
     - name: load images to cluster
       shell: bash
       run: |
-        kind load docker-image matrixorigin/matrixone-operator:latest
+        kind load image-archive matrixorigin/matrixone-operator.tar
 
     - name: wait for cluster to finish bootstraping
       shell: bash
