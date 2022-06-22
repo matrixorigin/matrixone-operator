@@ -14,4 +14,4 @@
 
 package state
 
-type StateTransFunc interface{}
+type ObjStateTransFunc interface{}

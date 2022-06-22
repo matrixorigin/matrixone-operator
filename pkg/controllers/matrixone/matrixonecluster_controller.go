@@ -39,8 +39,8 @@ type ClusterReconciler struct {
 	Log           logr.Logger
 	ReconcileWait time.Duration
 	Recorder      record.EventRecorder
-	Actor         actor.ActorFunc
-	StateHandler  state.StateTransFunc
+	Actor         actor.ObjActorFunc
+	StateHandler  state.ObjStateTransFunc
 }
 
 func NewMatrixoneReconciler(mgr ctrl.Manager) *ClusterReconciler {

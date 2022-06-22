@@ -14,4 +14,4 @@
 
 package actor
 
-type ActorFunc interface{}
+type ObjActorFunc interface{}
