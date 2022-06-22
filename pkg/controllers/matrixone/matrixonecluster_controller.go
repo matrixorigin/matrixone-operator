@@ -40,7 +40,7 @@ type ClusterReconciler struct {
 	ReconcileWait time.Duration
 	Recorder      record.EventRecorder
 	Actor         actor.EventActor
-	StateTurn     state.StateTurnHandler
+	StateTurn     state.StateTransHandler
 }
 
 func NewMatrixoneReconciler(mgr ctrl.Manager) *ClusterReconciler {

@@ -14,4 +14,4 @@
 
 package state
 
-type StateTurnHandler interface{}
+type StateTransHandler interface{}
