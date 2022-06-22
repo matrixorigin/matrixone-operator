@@ -21,4 +21,4 @@ runs:
     - name: Run test
       shell: bash
       run:  |
-        MYSQL_TEST_IMAGE=matrixorigin/mysql-tester:0.4.0 ./hack/e2e.sh
+        MYSQL_TEST_IMAGE=matrixorigin/mysql-tester:0.4.0 SKIP_OPERATOR=y ./hack/e2e.sh

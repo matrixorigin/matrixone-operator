@@ -30,8 +30,6 @@ echo "> Prepare e2e images"
 e2e::prepare_image ${CLUSTER} matrixorigin/matrixone:${MO_VERSION}
 e2e::prepare_image ${CLUSTER} matrixorigin/mysql-tester:${MO_VERSION}
 
-echo "> Deploy operator"
-make deploy
 
 echo "> Run e2e test"
 MYSQL_TEST_IMAGE=matrixorigin/mysql-tester:${MO_VERSION} ./hack/e2e.sh

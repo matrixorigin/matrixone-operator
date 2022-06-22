@@ -4,7 +4,7 @@ set -euo pipefail
 
 function e2e::kubectl_wait_appear() {
     local WAIT_N=0
-    local MAX_WAIT=10
+    local MAX_WAIT=5
     while true; do
         kubectl get $@ 2>/dev/null | grep NAME && break
         if [[ ${WAIT_N} -lt ${MAX_WAIT} ]]; then
@@ -31,13 +31,20 @@ NAMESPACE=${NAMESPACE:-default}
 
 trap e2e::diagnosis EXIT 
 
-echo "> Wait for kind cluster bootstrapping"
+echo "> Ensure k8s cluster is ready"
 kubectl cluster-info
 kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=30s
 
-echo "> Check operator deployment"
-e2e::kubectl_wait_appear -n ${NAMESPACE} pod -l name=matrixone-operator
-kubectl wait --for=condition=Ready -n ${NAMESPACE} pod -l name=matrixone-operator --timeout=30s
+
+# for helm e2e, we want deploy the operator externally
+if [[ -z "${SKIP_OPERATOR+guard}" ]]; then
+    echo "> Deploy operator"
+    make deploy
+
+    echo "> Check operator deployment"
+    e2e::kubectl_wait_appear -n ${NAMESPACE} pod -l name=matrixone-operator
+    kubectl wait --for=condition=Ready -n ${NAMESPACE} pod -l name=matrixone-operator --timeout=30s
+fi
 
 echo "> Deploy cluster"
 kubectl apply -f examples/tiny-cluster.yaml

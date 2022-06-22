@@ -8,11 +8,6 @@ runs:
     - name: prepare cluster
       uses: ./.github/actions/cluster
 
-    - name: Deploy Operator
-      shell: bash
-      run: |
-        make deploy
-
     - name: Run test
       shell: bash
       run:  |
