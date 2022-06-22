@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/matrixorigin/matrixone-operator/pkg/actor"
+	"github.com/matrixorigin/matrixone-operator/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
@@ -31,6 +32,7 @@ type EventEmitter interface {
 type EmitEventFuncs struct {
 	record.EventRecorder
 	actor.EventActor
+	state.StateTurnHandler
 }
 
 type K8sEventEmitter interface {
