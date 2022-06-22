@@ -23,26 +23,6 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-type matrixoneResourceType string
-type matrixoneActionType string
-type matrixoneActionRes string
-
-const (
-	matrixoneDeployment        matrixoneResourceType = "MatrixoneDeployment"
-	matrixoneStatefulset       matrixoneResourceType = "MatrixoneStatefulset"
-	matrixoneService           matrixoneResourceType = "MatrixoneService"
-	matrixoneCreate            matrixoneActionType   = "MatrixoneCreate"
-	matrixonePatch             matrixoneActionType   = "MatrixonePatch"
-	matrixoneUpdate            matrixoneActionType   = "MatrixoneUpdate"
-	matrixoneDelete            matrixoneActionType   = "MatrixoneDelete"
-	matrixoneRollingDeployWait matrixoneActionType   = "MatrixoneRollydeployWait"
-	matrixoneObjectGet         matrixoneActionType   = "MatrixoneObjectGet"
-	matrixoneList              matrixoneActionType   = "matrixoneList"
-
-	matrixoneActionFailed    matrixoneActionRes = "MatrixoneActionFailed"
-	matrixoneActionSuccessed matrixoneActionRes = "MatrixoneActionSuccessed"
-)
-
 type EventEmitter interface {
 	K8sEventEmitter
 	GenericEventEmitter
@@ -104,7 +84,10 @@ func (e EmitEventFuncs) EmitEventHandler(
 //  EmitEventOnList shall emit event on LIST err operation
 func (e EmitEventFuncs) EmitEventOnList(obj object, listObj objectList, err error) {
 	if err != nil {
-		errMsg := fmt.Errorf("error listing object [%s] in namespace [%s] due to [%s]", listObj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), err.Error())
+		errMsg := fmt.Errorf("error listing object [%s] in namespace [%s] due to [%s]",
+			listObj.GetObjectKind().GroupVersionKind().Kind,
+			obj.GetNamespace(),
+			err.Error())
 		e.Event(obj, v1.EventTypeWarning, string(matrixoneList), errMsg.Error())
 	}
 }
