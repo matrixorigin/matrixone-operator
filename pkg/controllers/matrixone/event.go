@@ -31,8 +31,8 @@ type EventEmitter interface {
 
 type EmitEventFuncs struct {
 	record.EventRecorder
-	actor.EventActor
-	state.ObjStateTransFunc
+	actor.ActorFunc
+	state.StateTransFunc
 }
 
 type K8sEventEmitter interface {

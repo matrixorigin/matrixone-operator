@@ -14,4 +14,4 @@
 
 package actor
 
-type EventActor interface{}
+type ActorFunc interface{}
