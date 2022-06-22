@@ -14,4 +14,4 @@
 
 package state
 
-type StateTransHandler interface{}
+type StateHandler interface{}

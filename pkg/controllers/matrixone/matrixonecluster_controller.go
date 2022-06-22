@@ -40,7 +40,7 @@ type ClusterReconciler struct {
 	ReconcileWait time.Duration
 	Recorder      record.EventRecorder
 	Actor         actor.EventActor
-	StateTurn     state.StateTransHandler
+	StateHandler  state.StateHandler
 }
 
 func NewMatrixoneReconciler(mgr ctrl.Manager) *ClusterReconciler {
@@ -69,7 +69,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Intialize Emit Events
-	var emitEvent EventEmitter = EmitEventFuncs{r.Recorder, r.Actor, r.StateTurn}
+	var emitEvent EventEmitter = EmitEventFuncs{r.Recorder, r.Actor, r.StateHandler}
 
 	if err := deployMatrixoneCluster(r.Client, instance, emitEvent); err != nil {
 		return ctrl.Result{}, nil
