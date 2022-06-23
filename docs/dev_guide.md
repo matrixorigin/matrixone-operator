@@ -152,17 +152,19 @@ Think about the important of event driven on cloud native.
 Some status code like
 ```go
 const (
-	rollingDeployWait       matrixoneEventReason = "MatrixoneRollingDeployWait"
-	matrixoneCreateSuccess  matrixoneEventReason = "MatrixoneOperatorCreateSuccess"
-	matrixoneCreateFail     matrixoneEventReason = "MatrixoneOperatorCreateFail"
-	matrixonePatchFail      matrixoneEventReason = "MatrixoneOperatorPatchFail"
-	matrixonePatchSuccess   matrixoneEventReason = "MatrixoneOperatorPatchSuccess"
-	matrixoneObjectGetFail  matrixoneEventReason = "MatrixoneObjectGetFail"
-	matrixoneUpdateFail     matrixoneEventReason = "MatrixoneUpdateFail"
-	matrixoneUpdateSuccess  matrixoneEventReason = "MatrixoneUpdateSuccess"
-	matrixoneObjectListFail matrixoneEventReason = "MatrixoneObjectListFail"
-	matrixoneDeleteFail     matrixoneEventReason = "MatrixoneDeleteFail"
-	matrixoneDeleteSuccess  matrixoneEventReason = "MatrixoneDeleteSuccess"
+	matrixoneDeployment        matrixoneResourceType = "MatrixoneDeployment"
+	matrixoneStatefulset       matrixoneResourceType = "MatrixoneStatefulset"
+	matrixoneService           matrixoneResourceType = "MatrixoneService"
+	matrixoneCreate            matrixoneActionType   = "MatrixoneCreate"
+	matrixonePatch             matrixoneActionType   = "MatrixonePatch"
+	matrixoneUpdate            matrixoneActionType   = "MatrixoneUpdate"
+	matrixoneDelete            matrixoneActionType   = "MatrixoneDelete"
+	matrixoneRollingDeployWait matrixoneActionType   = "MatrixoneRollydeployWait"
+	matrixoneObjectGet         matrixoneActionType   = "MatrixoneObjectGet"
+	matrixoneList              matrixoneActionType   = "matrixoneList"
+
+	matrixoneActionFailed    matrixoneActionRes = "MatrixoneActionFailed"
+	matrixoneActionSuccessed matrixoneActionRes = "MatrixoneActionSuccessed"
 )
 ```
 
