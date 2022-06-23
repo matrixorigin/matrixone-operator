@@ -18,33 +18,7 @@ runs:
       run: |
         helm install mo-op charts/matrixone-operator
 
-    - name: wait for operator to finish bootstraping
+    - name: Run test
       shell: bash
-      run: |
-        kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
-        kubectl cluster-info
-        kubectl get pods -A
-
-    - name: deploy cluster
-      shell: bash
-      run: |
-        kubectl apply -f examples/tiny-cluster.yaml
-
-
-    - name: wait for pv
-      uses: juliangruber/sleep-action@v1
-      with:
-        time: 60s
-
-    - name: wait for mo cluster to finish bootstraping
-      shell: bash
-      run: |
-        kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=600s
-        kubectl cluster-info
-        kubectl get pods -A
-
-    - name: run bvt test
-      shell: bash
-      run: |
-         kubectl run bvt-tester --image=matrixorigin/mysql-tester:0.4.0 -i --rm --restart=Never -- \
-          -host mo.default.svc.cluster.local -port 6001 -user dump -passwd 111
+      run:  |
+        MYSQL_TEST_IMAGE=matrixorigin/mysql-tester:0.4.0 SKIP_OPERATOR=y ./hack/e2e.sh
