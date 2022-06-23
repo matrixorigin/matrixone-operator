@@ -14,4 +14,5 @@
 
 package actor
 
+// ObjActorFunc interface for hanle event: create / update / delete
 type ObjActorFunc interface{}

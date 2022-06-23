@@ -14,4 +14,6 @@
 
 package state
 
+//ObjStateTransFunc interface for handle state transfer
+// like pod / cluster_infra.
 type ObjStateTransFunc interface{}
