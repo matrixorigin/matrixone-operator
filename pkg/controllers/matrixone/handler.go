@@ -327,7 +327,7 @@ func checkCrashStatus(sdk client.Client, moc *v1alpha1.MatrixoneCluster, emitEve
 				if condition.Type == corev1.ContainersReady {
 					// the below condition evalutes if a pod is in
 					// 1. pending state 2. failed state 3. unknown state
-					// OR condtion.status is false which evalutes if neither of these conditions are met
+					// OR condition.status is false which evalutes if neither of these conditions are met
 					// 1. ContainersReady 2. PodInitialized 3. PodReady 4. PodScheduled
 					if p.Status.Phase != corev1.PodRunning || condition.Status == corev1.ConditionFalse {
 						err := Delete(context.TODO(), sdk, moc, p, emitEvents, &client.DeleteOptions{})
