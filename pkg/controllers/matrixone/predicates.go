@@ -44,7 +44,7 @@ func IgnoreNamespacePredicate(obj object) bool {
 
 	for _, namespace := range namespaces {
 		if obj.GetNamespace() == namespace {
-			msg := fmt.Sprintf("matrixone operator will not re-concile namespace [%s], alter DENY_LIST to re-concile", obj.GetNamespace())
+			msg := fmt.Sprintf("matrixone operator will not reconcile namespace [%s], alter DENY_LIST to reconcile", obj.GetNamespace())
 			logger.Info(msg)
 			return false
 		}
