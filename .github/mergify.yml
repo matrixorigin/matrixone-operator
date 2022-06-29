@@ -9,9 +9,10 @@ queue_rules:
 pull_request_rules:
   - name: put pr to queue
     conditions:
-      - "#approved-reviews-by>=2"
+      - "#approved-reviews-by>=1"
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
+      - "label=can-merge"
     actions:
       queue:
         name: shared_queue
