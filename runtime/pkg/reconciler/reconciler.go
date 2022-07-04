@@ -27,9 +27,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	recon "sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/go-logr/logr"
+	"github.com/cockroachdb/errors"
+	mlogs "github.com/matrixorigin/matrixone-operator/runtime/pkg/logs"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -37,10 +37,6 @@ const (
 	finalizeFail     = "FinalizeFail"
 	reconcileFail    = "ReconcileFail"
 	reconcileSuccess = "ReconcileSuccess"
-)
-
-const (
-	debug = 4
 )
 
 var (
@@ -62,7 +58,7 @@ type Reconciler[T client.Object] struct {
 
 type options struct {
 	recorder record.EventRecorder
-	logger   logr.Logger
+	logger   mlogs.Mlog
 	buildFn  func(*builder.Builder)
 	ctrlOpts controller.Options
 }
@@ -75,9 +71,9 @@ func WithEventRecorder(recorder record.EventRecorder) ApplyOption {
 }
 
 // WithEventRecorder set the logger of the reconciler
-func WithLogger(logger logr.Logger) ApplyOption {
-	return func(o *options) { o.logger = logger }
-}
+// func WithLogger(logger logr.Logger) ApplyOption {
+// 	return func(o *options) { o.logger = logger }
+// }
 
 // WithEventRecorder set the controller options of the reconciler
 func WithControllerOptions(opts controller.Options) ApplyOption {
@@ -97,7 +93,6 @@ func Setup[T client.Object](tpl T, name string, mgr ctrl.Manager, actor Actor[T]
 	// 1. build reconciler
 	options := &options{
 		recorder: mgr.GetEventRecorderFor(name),
-		logger:   mgr.GetLogger(),
 	}
 	for _, applyOpt := range applyOpts {
 		applyOpt(options)
@@ -129,8 +124,8 @@ func Setup[T client.Object](tpl T, name string, mgr ctrl.Manager, actor Actor[T]
 }
 
 func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (recon.Result, error) {
-	log := r.logger.WithValues("namespace", req.Namespace, "name", req.Name)
-	log.V(debug).Info("start reconciling")
+	log := r.logger
+	log.V(mlogs.DebugLevel).Info("start reconciling")
 
 	// get the latest spec and status from apiserver and build the action context
 	obj := r.newT()
@@ -149,7 +144,7 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 
 	// optionally transit to deleting state
 	if util.WasDeleted(obj) {
-		log.V(debug).Info("finalize deleting object")
+		log.V(mlogs.DebugLevel).Info("finalize deleting object")
 		return r.finalize(ctx)
 	}
 
@@ -170,7 +165,7 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 		ctx.Event.EmitEventGeneric(reconcileSuccess, "object is synced", nil)
 		return forget, nil
 	}
-	log.V(debug).Info("execute reconcile action", "action", action)
+	log.V(mlogs.DebugLevel).Info("execute reconcile action", "action", action)
 	if err := action(ctx); err != nil {
 		ctx.Event.EmitEventGeneric(reconcileFail, fmt.Sprintf("failed to execute action %s", action), err)
 		return none, errors.Wrap(err, "error executing reconcile action")
@@ -191,7 +186,7 @@ func (r *Reconciler[T]) finalize(ctx *Context[T]) (recon.Result, error) {
 		return none, errors.Wrap(err, "error finalizing object")
 	}
 	if !done {
-		ctx.Log.V(debug).Info("does not complete finalizing, requeue")
+		ctx.Log.V(4).Info("does not complete finalizing, requeue")
 		return requeue, nil
 	}
 	ctx.Log.Info("resource finalizing complete, remove finalizer")

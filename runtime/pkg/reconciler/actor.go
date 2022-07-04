@@ -19,7 +19,7 @@ import (
 	"reflect"
 	"runtime"
 
-	"github.com/go-logr/logr"
+	mlogs "github.com/matrixorigin/matrixone-operator/runtime/pkg/logs"
 	"golang.org/x/exp/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -43,7 +43,7 @@ type Context[T client.Object] struct {
 	Client client.Client
 	// TODO(aylei): add tracing
 	Event EventEmitter
-	Log   logr.Logger
+	Log   mlogs.Mlog
 
 	reconciler *Reconciler[T]
 }
