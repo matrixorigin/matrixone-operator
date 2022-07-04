@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	kerr "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -78,7 +79,7 @@ func WithBuildFn(buildFn func(*builder.Builder)) ApplyOption {
 // Name is the name of the reconciler, which should be unique across a cluster.
 // Manager represents the kubernetes cluster.
 // Actor implements the logic of the reconciliation.
-func Setup[T client.Object](name string, mgr ctrl.Manager, actor Actor[T], applyOpts ...ApplyOption) error {
+func Setup[T client.Object](tpl T, name string, mgr ctrl.Manager, actor Actor[T], applyOpts ...ApplyOption) error {
 	// 1. build reconciler
 	options := &options{
 		recorder: mgr.GetEventRecorderFor(name),
@@ -96,30 +97,9 @@ func Setup[T client.Object](name string, mgr ctrl.Manager, actor Actor[T], apply
 	}
 
 	// 2. resolve go type to GVK and build the factory of T
-	var typ T
-	// type T must be registered in the scheme with only one certain GVK
-	gvks, _, err := mgr.GetScheme().ObjectKinds(typ)
-	if err != nil {
+	if err := r.setupObjectFactory(mgr.GetScheme(), tpl); err != nil {
 		return err
 	}
-	if len(gvks) != 1 {
-		return fmt.Errorf("expected 1 object kind for %T, got %d", typ, len(gvks))
-	}
-	gvk := gvks[0]
-	// check whether newT() can succeed and return error early to avoid panic
-	_, err = mgr.GetScheme().New(gvk)
-	if err != nil {
-		return err
-	}
-	r.newT = func() T {
-		v, err := mgr.GetScheme().New(gvk)
-		// newT() must not return error with guard check above, so panic here
-		if err != nil {
-			panic(err)
-		}
-		return v.(T)
-	}
-	r.Client = mgr.GetClient()
 
 	// 3. register reconciler to the target kubernetes cluster
 	// TODO(aylei): figure out what sub-resources should be owned here
@@ -207,6 +187,32 @@ func (r *Reconciler[T]) finalize(ctx *Context[T]) (recon.Result, error) {
 	}
 	// object finalized and there is no more work for current reconciler, forget it
 	return forget, nil
+}
+
+func (r *Reconciler[T]) setupObjectFactory(scheme *runtime.Scheme, tpl T) error {
+	// type T must be registered in the scheme with only one certain GVK
+	gvks, _, err := scheme.ObjectKinds(tpl)
+	if err != nil {
+		return err
+	}
+	if len(gvks) != 1 {
+		return fmt.Errorf("expected 1 object kind for %T, got %d", tpl, len(gvks))
+	}
+	gvk := gvks[0]
+	// check whether newT() can succeed and return error early to avoid panic
+	_, err = scheme.New(gvk)
+	if err != nil {
+		return err
+	}
+	r.newT = func() T {
+		v, err := scheme.New(gvk)
+		// newT() must not return error with guard check above, so panic here
+		if err != nil {
+			panic(err)
+		}
+		return v.(T)
+	}
+	return nil
 }
 
 func (r *Reconciler[T]) finalizer() string {
