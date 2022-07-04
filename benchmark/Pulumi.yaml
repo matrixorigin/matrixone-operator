@@ -1,0 +1,3 @@
+name: aws-fs-test
+runtime: go
+description: aws ebs local-ssd test

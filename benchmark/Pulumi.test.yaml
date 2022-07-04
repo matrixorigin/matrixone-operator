@@ -1,0 +1,11 @@
+encryptionsalt: v1:qYBYvNfWdsA=:v1:tG8bAq1DbvihCruZ:LXePQz/Vpt10GPXBBbTiTD6mSj8cVA==
+config:
+  aws-fs-test:config:
+    ec2Type:
+    - t2.micro
+    region: us-east-1
+    volume:
+    - volumeCap: 40
+      volumeIops: 2000
+      volumeType: gp2
+  aws:region: us-east-1

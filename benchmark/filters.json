@@ -1,0 +1,7 @@
+[
+  {
+    "Type": "TERM_MATCH",
+    "Field": "ServiceCode",
+    "Value": "AmazonEC2"
+  }
+]
