@@ -79,14 +79,13 @@ func main() {
 			deviceNameList = append(deviceNameList, deviceName)
 		}
 
-		// ec2 user data scripts
-		userScript := fmt.Sprintf("#!/bin/bash./fsyncperf --path %v \n > index.html \n  nohup python -m SimpleHTTPServer 80 &", deviceNameList)
-
 		// create instance and attach volume
 		var ec2List []*ec2.Instance
 		for ek, ec2T := range tConfig.EC2Type {
 			iname := proName + strconv.Itoa(ek)
 
+			// ec2 user data scripts, http service for getting result
+			userScript := fmt.Sprintf("#!/bin/bash \n echo %v > index.html ./fsyncperf --path %v \n > index.html \n  nohup python -m SimpleHTTPServer 80 &", ec2T, deviceNameList)
 			instance, err := ec2.NewInstance(ctx, iname, &ec2.InstanceArgs{
 				Tags:                pulumi.StringMap{"Name": pulumi.String(proName)},
 				InstanceType:        pulumi.String(ec2T),
