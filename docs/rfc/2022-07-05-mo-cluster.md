@@ -25,7 +25,7 @@ mo-operator should:
 
 ### Overview
 
-With [mo-operator deployed](#operator-deployment), end users can manage mo-clusters on k8s via `kubectl` or programatic client, e.g.
+With [mo-operator deployed](#operator-deployment), end users can manage mo-clusters on k8s via `kubectl` or programmatic client, e.g.
 
 ```shell
 > cat>mo.yaml<<EOF
@@ -82,14 +82,14 @@ graph TD
 
 Physically, all the CRs are served by the kubernetes apiserver and all the controllers are running in goroutines of the operator process concurrently.
 
-Is is worth noting that `MatrixOneCluster` object is not necessary to create a mo-cluster, one can create `LogSet`, `CNSet` and `DNSet` separately to form a fully functional cluster. Such decoupling enables the following capabilities without losing the simplicity for end user:
+It is worth noting that `MatrixOneCluster` object is not necessary to create a mo-cluster, one can create `LogSet`, `CNSet` and `DNSet` separately to form a fully functional cluster. Such decoupling enables the following capabilities without losing the simplicity for end user:
 
 - advanced user can ignore `MatrixOneCluster` object perform fine-grained control over `*Set` directly;
 - it is trivial to support heterogenous cluster: one simply deploy several `*Set` objects with different Pod specification;
 
 ### Cluster Deployment
 
-Once a `MatrixOneCluster` object is created in k8s-apiserver, it would be watched by the operator and the operator start reconciling.
+Once a `MatrixOneCluster` object is created in k8s-apiserver, it is watched by the operator and the operator starts reconciling.
 
 The `MatrixOneCluster` controller simply:
 
@@ -97,7 +97,7 @@ The `MatrixOneCluster` controller simply:
 - wait them become ready;
 - update the status of the `MatrixOneCluster` object to indicate the cluster is ready;
 
-Component-specific controllers will take care of the management of each components.
+Component-specific controllers will take care of the management of each component.
 The detailed design of `LogSet` controller has been elaborated in [LogSet](./2022-07-04-logset.md),
 `DNSet` and `CNSet` controllers have similar but simpler behaviors so we omit the common details here and only discuss specific scenarios in the following sections.
 
@@ -132,7 +132,7 @@ sequenceDiagram
 ### Object Storage
 
 The Operator is not going to manage object storage for users in the first version.
-Documentations will be provided to guide user to setup a S3 compatible object storage (e.g. S3, minio) for the mo-cluster.
+Documentations will be provided to guide users to setup a S3 compatible object storage (e.g. S3, minio) for the mo-cluster.
 
 ### Cluster Validation
 
@@ -144,8 +144,8 @@ Therefore, the Operator will also act as a Kubernetes webhook to perform custom 
 
 Cluster rolling-update happens when any of the configuration files, cluster version, environment variables, container resources or command-line arguments changed.
 
-In current design, cluster controller will blindly sync all changes to the spec of `LogSet`, `DNSet` and `CNSet`.
-This implies that we assume each component take care of it is own availability during an rolling-update and there is no guarantee of the upgrading order between different components.
+In current design, the cluster controller will blindly sync all changes to the spec of `LogSet`, `DNSet` and `CNSet`.
+This implies that we assume each component takes care of its own availability during a rolling-update and there is no guarantee of the upgrading order between different components.
 The rolling-update handling of `LogSet` is elaborated [here](2022-07-04-logset.md), `DNSet` and `CNSet` have similar behavior.
 
 If the upgrade of mo-cluster requires certain ordering, e.g. upgrade LogService first, then DN and finally CN, cluster controller can be extended to support such policy in the future.
@@ -159,7 +159,7 @@ An operator deployment consists of:
   - multiple operator replicas would perform leader-election via k8s apiserver (backed by ETCD) and only one replica is working at a time;
 - RBAC policies that allows the operator to manage other k8s resources and cloud resource;
 
-These resources and policies will ba packaged into an all-in-one YAML file as well as an Helm chart, end users can deploy the operator with either of the following commands:
+These resources and policies will be packaged into an all-in-one YAML file as well as an Helm chart, end users can deploy the operator with either of the following commands:
 
 ```shell
 # install with kubectl, it is safe to assume every kubernetes users have kubectl installed
@@ -176,23 +176,23 @@ helm install mo-operator matrixorigin/matrixone-operator --values operator.repli
 Upgrade operator will apply new reconciliation logic to all clusters once the replica in new version is elected as the reconcile leader.
 This is dangerous for production-grade ochestration since erroneous operations applied to the alive clusters might cause large-scale failure and hard (if not impossible) to be undone.
 
-Canary release of operator is introduced to tackle down this problem. The webhook will add current operator version to the label of the resources on the creation of resources and an Operator will filter resources by labels and only reconcile the resources that have same version label with it. After a new version of Operator is rolled out, the old version will be kept, then:
+Canary release of operators is introduced to tackle this problem. The webhook will add the current operator version to the label of the resources on the creation of resources and an Operator will filter resources by labels and only reconcile the resources that have the same version label with it. After a new version of Operator is rolled out, the old version will be kept, then:
 
 1. All new resources will be labeled by the new version on creation;
 2. The version label of existing resources should be updated to the new version proactively, either by a human operator or another automation process;
-3. Once there is no resources with the old version label in the cluster, the Operator of old version could be safely terminated.
+3. Once there are no resources with the old version label in the cluster, the Operator of the old version could be safely terminated.
 
 ### Observability
 
 Operator observability:
 
-1. the status of each resources can be retrieved via `kubectl` or programtic k8s client;
+1. the status of each resources can be retrieved via `kubectl` or programmatic k8s client;
 2. the history status of each resources can be queried from Prometheus metrics, as designed in [mo-runtime](./2022-07-04-runtime.md);
 3. the reconciliation details will be traced, as designed in [mo-runtime](./2022-07-04-runtime.md)
 
 Cluster observability is provided by each mo-cluster natively.
 
-We may provide out-of-box Grafana and Prometheus deployment and integration in the future, but for now this proposal decides to just provide documents to users to guide them setup the observability stack and focus on the cluster ochestration first.
+We may provide out-of-box Grafana and Prometheus deployment and integration in the future, but for now this proposal decides to just provide documents to users to guide them setup the observability stack and focus on the cluster orchestration first.
 
 ### Local Evaluation
 
