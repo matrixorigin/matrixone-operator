@@ -87,6 +87,44 @@ It is worth noting that `MatrixOneCluster` object is not necessary to create a m
 - advanced user can ignore `MatrixOneCluster` object perform fine-grained control over `*Set` directly;
 - it is trivial to support heterogenous cluster: one simply deploy several `*Set` objects with different Pod specification;
 
+An overview of the deployment topology:
+
+```mermaid
+flowchart TD
+  subgraph k8s
+    subgraph Cluster
+    direction TB
+    LoadBalancer
+    subgraph CN
+      direction LR
+      CN-0 --o CN-1
+      CN-1 --> |scale-out| CN-2
+      style CN-2 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
+    end
+    subgraph DN
+      direction RL
+      DN-1 --> |standby| DN-0
+      style DN-1 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
+    end
+    subgraph LogService
+      direction LR
+      LogStore-0 <--> LogStore-1
+      LogStore-1 <--> LogStore-2
+      LogStore-2 <--> LogStore-0
+    end
+    end
+      Grafana --> |Query Metrics| Cluster
+      API(k8s apiserver) --> |Watched by| OP
+      OP(mo-operator) --> |Manage| Cluster
+      OP --> |Manage| cc(Other Clusters)
+  end
+  User --> |Run Query| Client
+  User --> |View Dashboards| Grafana
+  User --> |CRUD MO Clusters| API
+  Client(SQL Client) -->|SQL Query| LoadBalancer --> CN --> DN --> LogService
+  Cluster --> OS(Object Storage, e.g. S3)
+```
+
 ### Cluster Deployment
 
 Once a `MatrixOneCluster` object is created in k8s-apiserver, it is watched by the operator and the operator starts reconciling.
