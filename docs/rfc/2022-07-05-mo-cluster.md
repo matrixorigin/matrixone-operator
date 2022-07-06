@@ -177,11 +177,11 @@ Documentations will be provided to guide users to setup a S3 compatible object s
 Credentials for the application process to access S3 will be injected by the Operator. Official AWS SDK defines a well-known priority order to discover different credential source from the environment, e.g. EC2 instance, indentity federation, environment variables and credential configs.
 The Operator will allow users to specify the following credential sources:
 
-1. EC2 instance meta: no credential for application, the application will automatically discover whether it is running in an AWS EC2 instance and use the role of the instance to access the bucket. Only applicable for AWS S3.
-2. Web identity: inject a identity token file to the container of the application and expose the file path of the token through environment variable, the application will automatically discover the token file, exchange temporary AWS credentials with this token and periodically refresh the credentials in memory. Only applicable for AWS S3;
-3. Access key: user create a k8s secret contains a pair of static access key and secret key then reference that secret when creating the mo-cluster. The access key and secret key will be injected to the environment variables of application containers by the Operator. Applicable for all S3 compatible storage system including AWS S3 and minio.
+1. EC2 instance meta: no credential for DB process, the DB process will automatically discover whether it is running in an AWS EC2 instance and use the role of the instance to access the bucket. Only applicable for AWS S3.
+2. Web identity: inject a identity token file to the container of the DB process and expose the file path of the token through environment variable, the DB process will automatically discover the token file, exchange temporary AWS credentials with this token and periodically refresh the credentials in memory. Only applicable for AWS S3;
+3. Access key: user create a k8s secret contains a pair of static access key and secret key then reference that secret when creating the mo-cluster. The access key and secret key will be injected to the environment variables of DB containers by the Operator. Applicable for all S3 compatible storage system including AWS S3 and minio.
 
-The 1 and 2 sources are perferred since eliminating static credentials greatly improve security. But sometimes option 3 is unavoidable, e.g. neither the application runs on the EC2 nor there is a trusted issuer to issue secure identity token. In such case, the user is responsible to ensure the security of the static AK/SK, e.g. rotate it periodically.
+The 1 and 2 sources are perferred since eliminating static credentials greatly improve security. But sometimes option 3 is unavoidable, e.g. neither the DB runs on EC2 nor there is a trusted issuer to issue secure identity token. In such case, the user is responsible to ensure the security of the static AK/SK, e.g. rotate it periodically.
 
 ### Auto Healing
 
