@@ -1,4 +1,4 @@
-# Contributing to MatrixOne
+# Contributing to MatrixOne Operator
 
 MatrixOne is an open source project, and you can make contributions in lots of ways. You can help with ideas, code, or documentation, any contributions are welcome.
 
