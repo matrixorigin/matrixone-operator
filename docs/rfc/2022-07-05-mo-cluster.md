@@ -113,13 +113,13 @@ flowchart TD
       LogStore-2 <--> LogStore-0
     end
     end
-      Grafana --> |Query Metrics| Cluster
+      WebUI --> |Query Metrics| Cluster
       API(k8s apiserver) --> |Watched by| OP
       OP(mo-operator) --> |Manage| Cluster
       OP --> |Manage| cc(Other Clusters)
   end
   User --> |Run Query| Client
-  User --> |View Dashboards| Grafana
+  User --> |View Dashboards| WebUI
   User --> |CRUD MO Clusters| API
   Client(SQL Client) -->|SQL Query| LoadBalancer --> CN --> DN --> LogService
   Cluster --> OS(Object Storage, e.g. S3)
