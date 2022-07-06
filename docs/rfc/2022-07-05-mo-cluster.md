@@ -97,14 +97,16 @@ flowchart TD
     LoadBalancer
     subgraph CN
       direction LR
-      CN-0 --o CN-1
+      CN-0 o--o|MPP| CN-1
       CN-1 --> |scale-out| CN-2
       style CN-2 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
     end
     subgraph DN
       direction RL
-      DN-1 --> |standby| DN-0
-      style DN-1 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
+      DN-1 o--o |RPC| DN-0
+						DN-2 --> |standby| DN-0
+						DN-2 --> |standby| DN-1
+      style DN-2 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
     end
     subgraph LogService
       direction LR
