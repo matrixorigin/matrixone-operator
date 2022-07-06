@@ -47,6 +47,12 @@ pull_request_rules:
   - name: Welcome new contributor
     conditions:
       - author!=Mergify
+      # mergify only support check whether the author is in specific team,
+      # list all maintainers before we have team configured.
+      # https://github.com/Mergifyio/mergify-engine/issues/2469
+      - author!=sukki37
+      - author!=aylei
+      - author!=wanglei4687
     actions:
       comment:
         message: |
