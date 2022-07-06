@@ -174,6 +174,37 @@ sequenceDiagram
 The Operator is not going to manage object storage for users in the first version.
 Documentations will be provided to guide users to setup a S3 compatible object storage (e.g. S3, minio) for the mo-cluster.
 
+Credentials for the application process to access S3 will be injected by the Operator. Official AWS SDK defines a well-known priority order to discover different credential source from the environment, e.g. EC2 instance, indentity federation, environment variables and credential configs.
+The Operator will allow users to specify the following credential sources:
+
+1. EC2 instance meta: no credential for application, the application will automatically discover whether it is running in an AWS EC2 instance and use the role of the instance to access the bucket. Only applicable for AWS S3.
+2. Web identity: inject a identity token file to the container of the application and expose the file path of the token through environment variable, the application will automatically discover the token file, exchange temporary AWS credentials with this token and periodically refresh the credentials in memory. Only applicable for AWS S3;
+3. Access key: user create a k8s secret contains a pair of static access key and secret key then reference that secret when creating the mo-cluster. The access key and secret key will be injected to the environment variables of application containers by the Operator. Applicable for all S3 compatible storage system including AWS S3 and minio.
+
+The 1 and 2 sources are perferred since eliminating static credentials greatly improve security. But sometimes option 3 is unavoidable, e.g. neither the application runs on the EC2 nor there is a trusted issuer to issue secure identity token. In such case, the user is responsible to ensure the security of the static AK/SK, e.g. rotate it periodically.
+
+### Auto Healing
+
+The key benefits provided by Operator and k8s is auto healing failures.
+Operator will provide the following automations:
+
+- When a container fails, it will be automatically restarted;
+- There are probes that periodically detect the liveness of containers and if the probing continuously fail for N times, the container is considered unhealthy and will be restarted automatically;
+- When a stateless Pod is `Unready`, a new equivalent Pod will be created to keep the number of `Ready` replicas above a certain number;
+- When a stateful Pod is `Unready`, a new Pod with a new UID and new persistent storage will be added to keep the number of `Ready` replicas above the certain number;
+- Periodically GC unneeded Pods gracefully, including `Unready` stateless Pods and `Unready` stateful Pods that will not be useful even if it is recovered (which usually means all the states managed by this Pod has already been migrated to other Pods at application level).
+
+> Define `Unready`?
+>
+> Besides the status of Pod reported by k8s, the Operator will also collect application level status like store liveness from HAKeeper to determine whether the application process runs in the Pod is functioning properly. So a Pod will considered `Unready` in the Operator even if Kubernetes claims it is `Ready`.
+
+The combination of these automations can heal most of the minority failure scenarios automatically, for example:
+
+1. If a process is OOM killed, it will be automatically restarted;
+2. If the process continuously fails after restart (maybe OOM again), the Pod will eventually be recognized as unready and new Pod will be added to failover.
+
+For application level knowledge, the detailed design of LogService can be found [here](./2022-07-04-logset.md). DN and CN is considered as generic stateless application in the first version of operator and the advanced ochestration knowledge like RO standby of DN and cache-awareness of DN/CN are left as future work.
+
 ### Cluster Validation
 
 The cluster spec might have errors that cannot be validated by OpenAPI v3 schema, for example, the replica number of HAKeeper must be less or equal to the replicas of LogService since place more than 1 HAKeeper replicas in one Pod is meaningless and should be avoided.
@@ -240,5 +271,5 @@ Amateur users may not have a k8s cluster to evaluate the distributed mo-cluster 
 
 ## Future Work
 
-1. Security: mTLS, encryption at rest and cluster authorization (e.g. authorize the cluster to access an S3 bucket) is not considered in this design and will be discussed separately;
+1. Security: mTLS, encryption at rest and cluster authorization (e.g. authorize the cluster to access general cloud resources) is not considered in this design and will be discussed separately;
 2. Operator dryrun: automated operation can be risky in some cases like [Operator Upgrade](#operator-upgrade), it would be helpful if we can dryrun an operation before real apply it and have an human operator preview the execution plan;
