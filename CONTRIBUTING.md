@@ -1,6 +1,6 @@
 # Contributing to MatrixOne Operator
 
-MatrixOne is an open source project, and you can make contributions in lots of ways. You can help with ideas, code, or documentation, any contributions are welcome.
+MatrixOne Operator is an open source project, and you can make contributions in lots of ways. You can help with ideas, code, or documentation, any contributions are welcome.
 
 Thanks for understanding that English is used as a shared language in this repository. Maintainers do not use machine translation to avoid miscommunication due to error in translation. If description of issue / PR are written in non-English languages, those may be closed. If English is not your native language and you aren't sure about any of these, don't hesitate to ask for help in your pull request!
 
@@ -15,7 +15,7 @@ Contributions to MatrixOne fall into the following categories.
 
 ### Contribution workflow
 
-1. First, read the [dev_guide.md](https://github.com/matrixorigin/matrixone-operator/blob/main/docs/dev_guide.md) entirely for environment setup and build instructions.
+1. First, read the [develop guide](https://github.com/matrixorigin/matrixone-operator/blob/main/docs/dev_guide.md) entirely for environment setup and build instructions.
 2. Fork the repository on GitHub.
 3. Clone your fork to your local machine with `git clone git@github.com:<yourname>/matrixone.git`.
 4. Create a branch with `git checkout -b topic-branch`, the branch name is up to you.
@@ -44,9 +44,9 @@ The coding style suggested by the Golang community is used in MatrixOne. See the
 
 Please follow this style to make MatrixOne easy to review, maintain and develop.
 
-###  PR style
+### PR style
 
-Pull Request title
+**Pull Request title**
 
 As described in [here](https://github.com/commitizen/conventional-commit-types/blob/master/index.json), A PR title prefix should be
 
@@ -66,3 +66,7 @@ For example:
 
 - `feat: init mo controller runtime framework`
 - `chore(runtime): update CN reconcile logic`, where`runtime`means that this PR mainly focuses on the runtime component.
+
+**Pull Request description**
+
+It's better to write more details.
