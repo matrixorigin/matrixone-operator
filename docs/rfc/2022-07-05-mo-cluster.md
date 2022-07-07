@@ -104,8 +104,8 @@ flowchart TD
     subgraph DN
       direction RL
       DN-1 o--o |RPC| DN-0
-						DN-2 --> |standby| DN-0
-						DN-2 --> |standby| DN-1
+      DN-2 --> |standby| DN-0
+      DN-2 --> |standby| DN-1
       style DN-2 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
     end
     subgraph LogService
@@ -174,18 +174,19 @@ sequenceDiagram
 The Operator is not going to manage object storage for users in the first version.
 Documentations will be provided to guide users to setup a S3 compatible object storage (e.g. S3, minio) for the mo-cluster.
 
-Credentials for the application process to access S3 will be injected by the Operator. Official AWS SDK defines a well-known priority order to discover different credential source from the environment, e.g. EC2 instance, indentity federation, environment variables and credential configs.
+Credentials for the application process to access S3 will be injected by the Operator.
+Official AWS SDK defines a well-known priority order to discover different credential sources from the environment, e.g. EC2 instance, identity federation, environment variables and credential configs.
 The Operator will allow users to specify the following credential sources:
 
 1. EC2 instance meta: no credential for DB process, the DB process will automatically discover whether it is running in an AWS EC2 instance and use the role of the instance to access the bucket. Only applicable for AWS S3.
-2. Web identity: inject a identity token file to the container of the DB process and expose the file path of the token through environment variable, the DB process will automatically discover the token file, exchange temporary AWS credentials with this token and periodically refresh the credentials in memory. Only applicable for AWS S3;
+2. Web identity: inject an identity token file to the container of the DB process and expose the file path of the token through environment variable, the DB process will automatically discover the token file, exchange temporary AWS credentials with this token and periodically refresh the credentials in memory. Only applicable for AWS S3;
 3. Access key: user create a k8s secret contains a pair of static access key and secret key then reference that secret when creating the mo-cluster. The access key and secret key will be injected to the environment variables of DB containers by the Operator. Applicable for all S3 compatible storage system including AWS S3 and minio.
 
-The 1 and 2 sources are perferred since eliminating static credentials greatly improve security. But sometimes option 3 is unavoidable, e.g. neither the DB runs on EC2 nor there is a trusted issuer to issue secure identity token. In such case, the user is responsible to ensure the security of the static AK/SK, e.g. rotate it periodically.
+The 1 and 2 sources are preferred since eliminating static credentials greatly improve security. But sometimes option 3 is unavoidable, e.g. neither the DB runs on EC2 nor there is a trusted issuer to issue secure identity token. In such case, the user is responsible to ensure the security of the static AK/SK, e.g. rotate it periodically.
 
 ### Auto Healing
 
-The key benefits provided by Operator and k8s is auto healing failures.
+The key benefit provided by Operator and k8s is auto healing failures.
 Operator will provide the following automations:
 
 - When a container fails, it will be automatically restarted;
@@ -203,11 +204,11 @@ The combination of these automations can heal most of the minority failure scena
 1. If a process is OOM killed, it will be automatically restarted;
 2. If the process continuously fails after restart (maybe OOM again), the Pod will eventually be recognized as unready and new Pod will be added to failover.
 
-For application level knowledge, the detailed design of LogService can be found [here](./2022-07-04-logset.md). DN and CN is considered as generic stateless application in the first version of operator and the advanced ochestration knowledge like RO standby of DN and cache-awareness of DN/CN are left as future work.
+For application level knowledge, the detailed design of LogService can be found [here](./2022-07-04-logset.md). DN and CN are considered as generic stateless application in the first version of operator and the advanced orchestration knowledge like RO standby of DN and cache-awareness of DN/CN are left as future work.
 
 ### Cluster Validation
 
-The cluster spec might have errors that cannot be validated by OpenAPI v3 schema, for example, the replica number of HAKeeper must be less or equal to the replicas of LogService since place more than 1 HAKeeper replicas in one Pod is meaningless and should be avoided.
+The cluster spec might have errors that cannot be validated by OpenAPI v3 schema, for example, the replica number of HAKeeper must be less or equal to the replicas of LogService since placing more than 1 HAKeeper replicas in one Pod is meaningless and should be avoided.
 
 Therefore, the Operator will also act as a Kubernetes webhook to perform custom validations on `CRs` we defined above.
 
