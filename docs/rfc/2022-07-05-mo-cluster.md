@@ -180,7 +180,7 @@ The Operator will allow users to specify the following credential sources:
 
 1. EC2 instance meta: no credential for DB process, the DB process will automatically discover whether it is running in an AWS EC2 instance and use the role of the instance to access the bucket. Only applicable for AWS S3.
 2. Web identity: inject an identity token file to the container of the DB process and expose the file path of the token through environment variable, the DB process will automatically discover the token file, exchange temporary AWS credentials with this token and periodically refresh the credentials in memory. Only applicable for AWS S3;
-3. Access key: user create a k8s secret contains a pair of static access key and secret key then reference that secret when creating the mo-cluster. The access key and secret key will be injected to the environment variables of DB containers by the Operator. Applicable for all S3 compatible storage system including AWS S3 and minio.
+3. Access key: the user creates a k8s secret containing keypair <AccessKey, SecretKey> and then references that secret when creating the mo-cluster. The access key and secret key will be injected into the environment variables of DB containers by the Operator. Applicable for all S3 compatible storage systems including AWS S3 and Minio.
 
 The 1 and 2 sources are preferred since eliminating static credentials greatly improve security. But sometimes option 3 is unavoidable, e.g. neither the DB runs on EC2 nor there is a trusted issuer to issue secure identity token. In such case, the user is responsible to ensure the security of the static AK/SK, e.g. rotate it periodically.
 
