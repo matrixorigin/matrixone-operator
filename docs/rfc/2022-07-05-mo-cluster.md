@@ -18,7 +18,9 @@ This proposal describes the top level design of matrixone-operator (mo-operator)
 
 mo-operator should:
 
-- make it easy for the community to install the operator and manage mo-clusters;
+- make it easy for the community to install the operator and manage mo-clusters, e.g.:
+  - An amateur user can start a distributed MO cluster locally with a single command for evaluation purpose;
+  - An DBA can deploy and manage several distributed MO clusters on k8s for critical scenarios with a one page manual;
 - be highly customizable, so that it can be the cornerstone for building larger platforms like a database SaaS.
 
 ## Proposal
