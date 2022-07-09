@@ -11,6 +11,7 @@ BRANCH ?= main
 TOOLS_BIN_DIR ?= $(shell pwd)/tmp/bin
 CONTROLLER_GEN_BINARY := $(TOOLS_BIN_DIR)/controller-gen
 GOLANGCILINTER_BINARY=$(TOOLS_BIN_DIR)/golangci-lint
+LICENSE_EYE_BINARY=$(TOOLS_BIN_DIR)/license-eye
 TOOLING=$(CONTROLLER_GEN_BINARY)  $(GOLANGCILINTER_BINARY)
 
 export PATH := $(TOOLS_BIN_DIR):$(PATH)
@@ -36,16 +37,20 @@ mo-push:
 
 
 # Make sure the generated files are up to date before open PR
-reviewable: ci-reviewable go-lint
+reviewable: ci-reviewable go-lint check-license
 
 ci-reviewable: generate manifests test
 	go mod tidy
 
-# Check whether the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action 
+# Check whether the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action
 verify: ci-reviewable
 	echo "checking that branch is clean"
 	test -z "$$(git status --porcelain)" || (echo "unclean working tree, did you forget to run make reviewable?" && exit 1)
 	echo "branch is clean"
+
+# license check
+check-license: $(LICENSE_EYE_BINARY)
+	$(LICENSE_EYE_BINARY) -v info -c .licenserc.yml header check
 
 # Run tests
 test: generate fmt vet manifests

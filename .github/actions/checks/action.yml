@@ -13,13 +13,13 @@ runs:
       uses: ./.github/actions/dev_env
 
     - name: check_license_header
-      uses: apache/skywalking-eyes@main
+      uses: apache/skywalking-eyes/header@main
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
       with:
         log: info
-        config: .github/licenserc.yml
-    
+        config: .licenserc.yml
+
     - uses: actions/cache@v3
       with:
         path: |
