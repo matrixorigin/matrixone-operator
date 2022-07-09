@@ -18,7 +18,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
       with:
         log: info
-        config: .github/licenserc.yml
+        config: .licenserc.yml
 
     - uses: actions/cache@v3
       with:
