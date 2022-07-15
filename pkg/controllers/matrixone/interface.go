@@ -18,7 +18,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/matrixorigin/matrixone-operator/pkg/apis/matrixone/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
