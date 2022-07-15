@@ -3,7 +3,7 @@ name: update_workflows
 on:
   push:
     branches:
-      - main
+      - non-exist
   release:
     types:
       - published

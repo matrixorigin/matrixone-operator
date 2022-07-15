@@ -3,7 +3,7 @@ name: test_workflows
 on:
   pull_request:
     branches:
-      - main
+      - non-exist
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event-name }}
