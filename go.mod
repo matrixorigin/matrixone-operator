@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/go-logr/logr v1.2.0
-	github.com/matrixorigin/matrixone-operator/pkg/apis v0.0.0
+	github.com/matrixorigin/matrixone-operator/api v0.0.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
@@ -84,6 +84,6 @@ require (
 )
 
 replace (
-	github.com/matrixorigin/matrixone-operator/pkg/apis => ./pkg/apis
+	github.com/matrixorigin/matrixone-operator/api => ./api
 	github.com/matrixorigin/matrixone-operator/runtime => ./runtime
 )

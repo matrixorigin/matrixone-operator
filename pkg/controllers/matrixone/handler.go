@@ -24,7 +24,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/matrixorigin/matrixone-operator/pkg/apis/matrixone/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	com "github.com/matrixorigin/matrixone-operator/pkg/controllers/components"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/utils"
 	appsv1 "k8s.io/api/apps/v1"

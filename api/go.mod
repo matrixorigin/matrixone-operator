@@ -1,4 +1,4 @@
-module github.com/matrixorigin/matrixone-operator/pkg/apis
+module github.com/matrixorigin/matrixone-operator/api
 
 go 1.18
 
