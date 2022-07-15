@@ -134,7 +134,7 @@ type Overlay struct {
 	RuntimeClassName *string `json:"runtimeClassName,omitempty"`
 
 	// +optional
-	DnsConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
+	DNSConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
 }
 
 type Volume struct {
