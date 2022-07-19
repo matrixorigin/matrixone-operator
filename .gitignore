@@ -1,7 +1,7 @@
 .DS_Store
 vendor/
 cover.out
-bin/
+**/bin/
 .vscode
 
 # tools binary files

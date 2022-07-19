@@ -2,17 +2,14 @@ SHELL=/usr/bin/env bash -o pipefail
 
 # Image URL to use all building/pushing image targets
 IMG ?= "matrixorigin/matrixone-operator:latest"
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:maxDescLen=0,trivialVersions=true,generateEmbeddedObjectMeta=true"
 MIMG ?= "matrixorigin/matrixone:kc"
 BIMG ?= "matrixorigin/mysql-tester:latest"
 PROXY ?= https://goproxy.cn,direct
 BRANCH ?= main
 TOOLS_BIN_DIR ?= $(shell pwd)/tmp/bin
-CONTROLLER_GEN_BINARY := $(TOOLS_BIN_DIR)/controller-gen
 GOLANGCILINTER_BINARY=$(TOOLS_BIN_DIR)/golangci-lint
 LICENSE_EYE_BINARY=$(TOOLS_BIN_DIR)/license-eye
-TOOLING=$(CONTROLLER_GEN_BINARY)  $(GOLANGCILINTER_BINARY)
+TOOLING=$(GOLANGCILINTER_BINARY)
 
 export PATH := $(TOOLS_BIN_DIR):$(PATH)
 
@@ -34,7 +31,6 @@ mo-build:
 # push matrixone docker image
 mo-push:
 	docker push $(MIMG)
-
 
 # Make sure the generated files are up to date before open PR
 reviewable: ci-reviewable go-lint check-license
@@ -71,32 +67,35 @@ run: generate fmt vet manifests
 
 # Install CRDs into a cluster
 install: manifests
-	kubectl apply -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
+	kubectl apply -f deploy/crds
 
 # Uninstall CRDs from a cluster
 uninstall: manifests
-	kubectl delete -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
+	kubectl delete -f deploy/crds
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests
+deploy: install manifests
 	kubectl apply -f deploy/service_account.yaml
 	kubectl apply -f deploy/role.yaml
 	kubectl apply -f deploy/role_binding.yaml
-	kubectl apply -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
 	kustomize build deploy/ | kubectl apply -f -
 
 # Destroyo Controller the configured Kubernetes cluster in ~/.kube/config
-undeploy: manifests
+undeploy: uninstall manifests
 	kustomize build deploy/ | kubectl delete -f -
-	kubectl delete -f deploy/crds/matrixone.matrixorigin.cn_matrixoneclusters.yaml
 	kubectl delete -f deploy/service_account.yaml
 	kubectl delete -f deploy/role.yaml
 	kubectl delete -f deploy/role_binding.yaml
 
-# Generate manifests e.g. CRD, RBAC etc.
-manifests: $(CONTROLLER_GEN_BINARY)
-	$(CONTROLLER_GEN_BINARY) crd webhook paths="./..." output:crd:artifacts:config=deploy/crds/
-	$(CONTROLLER_GEN_BINARY) crd webhook paths="./..." output:crd:artifacts:config=charts/matrixone-operator/templates/crds/
+## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+.PHONY: manifests
+manifests:
+	cd api && make manifests
+
+## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+.PHONY: generate
+generate: 
+	cd api && make generate
 
 # Run go fmt against code
 fmt:
@@ -105,10 +104,6 @@ fmt:
 # Run go vet against code
 vet:
 	go vet ./...
-
-# Generate code
-generate: $(CONTROLLER_GEN_BINARY)
-	$(CONTROLLER_GEN_BINARY) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # helm lint
 lint:
