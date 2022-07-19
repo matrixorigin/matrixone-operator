@@ -6,7 +6,6 @@ import (
 
 type LogSetSpec struct {
 	PodSet `json:",inline"`
-
 	// Volume is the local persistent volume for each LogService instance
 	// +required
 	Volume Volume `json:"volume"`
