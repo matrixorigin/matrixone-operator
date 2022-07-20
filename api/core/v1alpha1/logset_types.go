@@ -23,13 +23,21 @@ type LogSetSpec struct {
 type InitialConfig struct {
 	// LogShards is the initial number of log shards,
 	// cannot be tuned after cluster creation currently.
+	// default to 1
 	// +optional
 	LogShards *int `json:"logShards,omitempty"`
 
 	// DNShards is the initial number of DN shards,
 	// cannot be tuned after cluster creation currently.
+	// default to 1
 	// +optional
 	DNShards *int `json:"dnShards,omitempty"`
+
+	// HAKeeperReplicas is the initial number of HAKeeper replicas,
+	// cannot be tuned after cluster creation currently.
+	// default to 3 if LogSet replicas >= 3, to 1 otherwise
+	// +optional
+	HAKeeperReplicas *int `json:"haKeeperReplicas,omitempty"`
 }
 
 // TODO: figure out what status should be exposed
