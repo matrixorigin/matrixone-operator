@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"golang.org/x/exp/slices"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -46,6 +47,37 @@ type Context[T client.Object] struct {
 	Log   logr.Logger
 
 	reconciler *Reconciler[T]
+}
+
+// TODO(aylei): add logging and tracing when operate upon kube-api
+func (c *Context[T]) Create(obj client.Object, opts ...client.CreateOption) error {
+	return c.Client.Create(c, obj, opts...)
+}
+
+func (c *Context[T]) Get(objKey client.ObjectKey, obj client.Object) error {
+	return c.Client.Get(c, objKey, obj)
+}
+
+func (c *Context[T]) Update(obj client.Object, opts ...client.UpdateOption) error {
+	return c.Client.Update(c, obj, opts...)
+}
+
+func (c *Context[T]) Delete(obj client.Object, opts ...client.DeleteOption) error {
+	return c.Client.Delete(c, obj, opts...)
+}
+
+func (c *Context[T]) List(objList client.ObjectList, opts ...client.ListOption) error {
+	return c.Client.List(c, objList, opts...)
+}
+
+func (c *Context[T]) CheckExists(objKey client.ObjectKey, kind client.Object) (bool, error) {
+	err := c.Get(objKey, kind)
+	if err != nil && apierrors.IsNotFound(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (c *Context[T]) hasFinalizer() bool {
