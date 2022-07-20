@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cn
+// follow RFC: https://github.com/matrixorigin/matrixone-operator/blob/main/docs/rfc/2022-07-05-mo-cluster.md
+// CN: compute node for matrixone
+package cnset
 
 func init() {}
