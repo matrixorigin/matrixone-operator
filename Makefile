@@ -1,3 +1,17 @@
+# Copyright 2022 Matrix Origin
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 SHELL=/usr/bin/env bash -o pipefail
 
 # Image URL to use all building/pushing image targets
@@ -14,6 +28,8 @@ TOOLING=$(GOLANGCILINTER_BINARY) $(LICENSE_EYE_BINARY)
 
 export PATH := $(TOOLS_BIN_DIR):$(PATH)
 
+
+include api/Makefile
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -88,15 +104,13 @@ undeploy: uninstall manifests
 	kubectl delete -f deploy/role.yaml
 	kubectl delete -f deploy/role_binding.yaml
 
-## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-.PHONY: manifests
-manifests:
-	cd api && make manifests
 
-## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-.PHONY: generate
-generate: 
-	cd api && make generate
+###############################################################################
+# api
+###############################################################################
+
+# make manifests
+# make generate
 
 # Run go fmt against code
 fmt:

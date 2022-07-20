@@ -1,58 +1,27 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: matrixone-operator
+  name: matrixone
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-      - configmaps
-      - services
-      - persistentvolumeclaims
-    verbs:
-      - list
-      - watch
-      - create
-      - update
-      - delete
-      - patch
-  - apiGroups:
-      - ""
-    resources:
-      - events
-    verbs:
-      - create
-      - patch
-  - apiGroups:
-      - apps
-    resources:
-      - statefulsets
-      - deployments
-    verbs:
-      - list
-      - watch
-      - create
-      - update
-      - delete
-  - apiGroups:
-      - matrixone.matrixorigin.cn
-    resources:
-      - matrixoneclusters
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - update
-      - patch
-      - delete
-  - apiGroups:
-      - matrixone.matrixorigin.cn
-    resources:
-      - matrixoneclusters/status
-    verbs:
-      - get
-      - update
-      - patch
+- apiGroups:
+  - matrixone.matrixorigin.cn
+  resources:
+  - matrixoneclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - matrixone.matrixorigin.cn
+  resources:
+  - matrixoneclusters/status
+  verbs:
+  - get
+  - patch
+  - update
