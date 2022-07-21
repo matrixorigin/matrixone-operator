@@ -16,14 +16,16 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-        corev1 "k8s.io/api/core/v1"
 )
 
 // See more about DN config: https://github.com/matrixorigin/matrixone/blob/main/pkg/dnservice/cfg.go
 type DNSetSpec struct {
-        // MatrixOne image version/tag, default is latest
-        // +optional
-        Version string `json:"version,omitempty"`
+	PodSet `json:",inline"`
+
+	// CacheVolume is the desired local cache volume for CNSet,
+	// node storage will be used if not specified
+	// +optional
+	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 
 	// UUID dn store uuid
 	// +optional
@@ -52,29 +54,21 @@ type DNSetSpec struct {
 
 	// LogService log service configuration
 	// +optional
-	LogService *DNLogService `json:"logservice,omitempty"`
+	LogService *DNLogService `json:"log-service,omitempty"`
 
 	// FileService file service configuration
 	// +optional
-	FileService *DNFileServcie `json:"fileservice,omitempty"`
+	FileService *DNFileServcie `json:"file-service,omitempty"`
 
 	// RPC configuration
 	// +optional
-	RPC *RPCConfig `json:""rpc,omitempty`
-
-	// StorageClass config
-	// +optional
-	CacheVolume *DNVolume `json:"volume,omitemtpy"`
-}
-
-type DNVolume struct {
-	StorageClass corev1.
+	RPC *RPCConfig `json:"rpc,omitempty"`
 }
 
 type DNLogService struct {
 	// ConnectTimeout timeout for connect to logservice. Default is 30s.
 	// +optional
-	ConnectTimeout int `json: "connect-timeout,omitempty"`
+	ConnectTimeout int `json:"connect-timeout,omitempty"`
 }
 
 type DNFileServcie struct {
@@ -118,10 +112,10 @@ type RPCConfig struct {
 
 	// WriteBufferSize buffer size for write messages per connection. Default is 1kb
 	// +optional
-	WriteBufferSize int `json:"write-buffer-size"`
+	WriteBufferSize int `json:"write-buffer-size,omitempty"`
 
 	// ReadBufferSize buffer size for read messages per connection. Default is 1kb
-	ReadBufferSize int `json:"read-buffer-size"`
+	ReadBufferSize int `json:"read-buffer-size,omitempty"`
 }
 
 type DNHAKeeper struct {
@@ -137,8 +131,8 @@ type DNHAKeeper struct {
 	// +optional
 	DiscoveryTimeout int `json:"hakeeper-discovery-timeout,omitempty"`
 
-        // HAKeeper
-        ServieceAddress []string `json:"service-address,omitempty"`
+	// HAKeeper
+	ServieceAddress []string `json:"service-address,omitempty"`
 }
 
 type DNTxn struct {
@@ -160,13 +154,13 @@ type DNTxn struct {
 type DNStorage struct {
 	// Backend txn storage backend implementation. [TAE|Mem], default TAE.
 	// +optional
-	Backend   string `json:"backend,omitempty "`
+	Backend string `json:"backend,omitempty"`
 
-        // TAE engine config
-	TAEConfig TAEConfig
+	// TAE engine config
+	TAEConfig TAEConfig `json:"tag-config,omitempty"`
 
-        // Mem engine config
-	MemConfig MemConfig
+	// Mem engine config
+	MemConfig MemConfig `json:"mem-config,omitempty"`
 }
 
 type MemConfig struct{}

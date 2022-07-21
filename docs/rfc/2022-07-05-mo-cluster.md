@@ -18,7 +18,9 @@ This proposal describes the top level design of matrixone-operator (mo-operator)
 
 mo-operator should:
 
-- make it easy for the community to install the operator and manage mo-clusters;
+- make it easy for the community to install the operator and manage mo-clusters, e.g.:
+  - An amateur user can start a distributed MO cluster locally with a single command for evaluation purpose;
+  - An DBA can deploy and manage several distributed MO clusters on k8s for critical scenarios with a one page manual;
 - be highly customizable, so that it can be the cornerstone for building larger platforms like a database SaaS.
 
 ## Proposal
@@ -87,6 +89,46 @@ It is worth noting that `MatrixOneCluster` object is not necessary to create a m
 - advanced user can ignore `MatrixOneCluster` object perform fine-grained control over `*Set` directly;
 - it is trivial to support heterogenous cluster: one simply deploy several `*Set` objects with different Pod specification;
 
+An overview of the deployment topology:
+
+```mermaid
+flowchart TD
+  subgraph k8s
+    subgraph Cluster
+    direction TB
+    LoadBalancer
+    subgraph CN
+      direction LR
+      CN-0 o--o|MPP| CN-1
+      CN-1 --> |scale-out| CN-2
+      style CN-2 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
+    end
+    subgraph DN
+      direction RL
+      DN-1 o--o |RPC| DN-0
+      DN-2 --> |standby| DN-0
+      DN-2 --> |standby| DN-1
+      style DN-2 fill:#bbf,stroke:#f66,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
+    end
+    subgraph LogService
+      direction LR
+      LogStore-0 <--> LogStore-1
+      LogStore-1 <--> LogStore-2
+      LogStore-2 <--> LogStore-0
+    end
+    end
+      WebUI --> |Query Metrics| Cluster
+      API(k8s apiserver) --> |Watched by| OP
+      OP(mo-operator) --> |Manage| Cluster
+      OP --> |Manage| cc(Other Clusters)
+  end
+  User --> |Run Query| Client
+  User --> |View Dashboards| WebUI
+  User --> |CRUD MO Clusters| API
+  Client(SQL Client) -->|SQL Query| LoadBalancer --> CN --> DN --> LogService
+  Cluster --> OS(Object Storage, e.g. S3)
+```
+
 ### Cluster Deployment
 
 Once a `MatrixOneCluster` object is created in k8s-apiserver, it is watched by the operator and the operator starts reconciling.
@@ -134,9 +176,41 @@ sequenceDiagram
 The Operator is not going to manage object storage for users in the first version.
 Documentations will be provided to guide users to setup a S3 compatible object storage (e.g. S3, minio) for the mo-cluster.
 
+Credentials for the application process to access S3 will be injected by the Operator.
+Official AWS SDK defines a well-known priority order to discover different credential sources from the environment, e.g. EC2 instance, identity federation, environment variables and credential configs.
+The Operator will allow users to specify the following credential sources:
+
+1. EC2 instance meta: no credential for DB process, the DB process will automatically discover whether it is running in an AWS EC2 instance and use the role of the instance to access the bucket. Only applicable for AWS S3.
+2. Web identity: inject an identity token file to the container of the DB process and expose the file path of the token through environment variable, the DB process will automatically discover the token file, exchange temporary AWS credentials with this token and periodically refresh the credentials in memory. Only applicable for AWS S3;
+3. Access key: the user creates a k8s secret containing keypair <AccessKey, SecretKey> and then references that secret when creating the mo-cluster. The access key and secret key will be injected into the environment variables of DB containers by the Operator. Applicable for all S3 compatible storage systems including AWS S3 and Minio.
+
+The 1 and 2 sources are preferred since eliminating static credentials greatly improve security. But sometimes option 3 is unavoidable, e.g. neither the DB runs on EC2 nor there is a trusted issuer to issue secure identity token. In such case, the user is responsible to ensure the security of the static AK/SK, e.g. rotate it periodically.
+
+### Auto Healing
+
+The key benefit provided by Operator and k8s is auto healing failures.
+Operator will provide the following automations:
+
+- When a container fails, it will be automatically restarted;
+- There are probes that periodically detect the liveness of containers and if the probing continuously fail for N times, the container is considered unhealthy and will be restarted automatically;
+- When a stateless Pod is `Unready`, a new equivalent Pod will be created to keep the number of `Ready` replicas above a certain number;
+- When a stateful Pod is `Unready`, a new Pod with a new UID and new persistent storage will be added to keep the number of `Ready` replicas above the certain number;
+- Periodically GC unneeded Pods gracefully, including `Unready` stateless Pods and `Unready` stateful Pods that will not be useful even if it is recovered (which usually means all the states managed by this Pod has already been migrated to other Pods at application level).
+
+> Define `Unready`?
+>
+> Besides the status of Pod reported by k8s, the Operator will also collect application level status like store liveness from HAKeeper to determine whether the application process runs in the Pod is functioning properly. So a Pod will considered `Unready` in the Operator even if Kubernetes claims it is `Ready`.
+
+The combination of these automations can heal most of the minority failure scenarios automatically, for example:
+
+1. If a process is OOM killed, it will be automatically restarted;
+2. If the process continuously fails after restart (maybe OOM again), the Pod will eventually be recognized as unready and new Pod will be added to failover.
+
+For application level knowledge, the detailed design of LogService can be found [here](./2022-07-04-logset.md). DN and CN are considered as generic stateless application in the first version of operator and the advanced orchestration knowledge like RO standby of DN and cache-awareness of DN/CN are left as future work.
+
 ### Cluster Validation
 
-The cluster spec might have errors that cannot be validated by OpenAPI v3 schema, for example, the replica number of HAKeeper must be less or equal to the replicas of LogService since place more than 1 HAKeeper replicas in one Pod is meaningless and should be avoided.
+The cluster spec might have errors that cannot be validated by OpenAPI v3 schema, for example, the replica number of HAKeeper must be less or equal to the replicas of LogService since placing more than 1 HAKeeper replicas in one Pod is meaningless and should be avoided.
 
 Therefore, the Operator will also act as a Kubernetes webhook to perform custom validations on `CRs` we defined above.
 
@@ -200,5 +274,5 @@ Amateur users may not have a k8s cluster to evaluate the distributed mo-cluster 
 
 ## Future Work
 
-1. Security: mTLS, encryption at rest and cluster authorization (e.g. authorize the cluster to access an S3 bucket) is not considered in this design and will be discussed separately;
+1. Security: mTLS, encryption at rest and cluster authorization (e.g. authorize the cluster to access general cloud resources) is not considered in this design and will be discussed separately;
 2. Operator dryrun: automated operation can be risky in some cases like [Operator Upgrade](#operator-upgrade), it would be helpful if we can dryrun an operation before real apply it and have an human operator preview the execution plan;

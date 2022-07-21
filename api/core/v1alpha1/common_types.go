@@ -15,6 +15,10 @@ const (
 	ConditionTypeSynced = "Synced"
 )
 
+const (
+	ContainerMain = "main"
+)
+
 type ConditionalStatus struct {
 	Conditions []Condition `json:"conditions,omitempty"`
 }
@@ -34,7 +38,7 @@ type PodSet struct {
 	MainContainer `json:",inline"`
 
 	// Replicas is the desired number of pods of this set
-	Replicas int `json:"replicas"`
+	Replicas int32 `json:"replicas"`
 
 	// ConfigMap reference to an external configmap that is used to configure the instance
 	// +optional
@@ -52,9 +56,14 @@ type PodSet struct {
 
 // MainContainers is the description of the main container of a Pod
 type MainContainer struct {
-	// +optional
+	// Image is the docker image of the main container
 	Image string `json:"image,omitempty"`
 
+	// Resources is the resource requirement of the main conainer
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type MainContainerOverlay struct {
 	// +optional
 	Command []string `json:"command,omitempty"`
 
@@ -68,16 +77,13 @@ type MainContainer struct {
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
 	// +optional
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	// +optional
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 
 	// +optional
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 
 	// +optional
-	ReadinessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 
 	// +optional
 	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`
@@ -85,14 +91,13 @@ type MainContainer struct {
 
 // Overlay allows advanced customization of the pod spec in the set
 type Overlay struct {
-	// +optional
-	Env []corev1.EnvVar `json:"env,omitempty"`
-
-	// +optional
-	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+	MainContainerOverlay `json:",inline"`
 
 	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// +optional
+	VolumeClaims []corev1.PersistentVolumeClaim `json:"volumeClaims,omitempty"`
 
 	// +optional
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
@@ -135,6 +140,12 @@ type Overlay struct {
 
 	// +optional
 	DNSConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
+
+	// +optional
+	PodLabels map[string]string `json:"podLabels,omitempty"`
+
+	// +optional
+	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 }
 
 type Volume struct {
