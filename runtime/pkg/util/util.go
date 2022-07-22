@@ -15,6 +15,9 @@
 package util
 
 import (
+	"reflect"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -27,4 +30,20 @@ func Ignore(isErr func(error) bool, err error) error {
 
 func WasDeleted(obj client.Object) bool {
 	return obj.GetDeletionTimestamp() != nil
+}
+
+func IsFound(err error) (error, bool) {
+	if err == nil {
+		return nil, true
+	}
+	if apierrors.IsNotFound(err) {
+		return nil, false
+	}
+	return err, false
+}
+
+func ChangedAfter(obj client.Object, mutateFn func()) bool {
+	before := obj.DeepCopyObject().(client.Object)
+	mutateFn()
+	return reflect.DeepEqual(before, obj)
 }
