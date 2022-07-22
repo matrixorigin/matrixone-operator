@@ -16,6 +16,7 @@ package reconciler
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"runtime"
 
@@ -58,10 +59,17 @@ func (c *Context[T]) Get(objKey client.ObjectKey, obj client.Object) error {
 	return c.Client.Get(c, objKey, obj)
 }
 
+// Update update the spec of the given obj
 func (c *Context[T]) Update(obj client.Object, opts ...client.UpdateOption) error {
 	return c.Client.Update(c, obj, opts...)
 }
 
+// UpdateStatus update the status of the given obj
+func (c *Context[T]) UpdateStatus(obj client.Object, opts ...client.UpdateOption) error {
+	return c.Client.Status().Update(c, obj, opts...)
+}
+
+// Delete marks the given obj to be deleted
 func (c *Context[T]) Delete(obj client.Object, opts ...client.DeleteOption) error {
 	return c.Client.Delete(c, obj, opts...)
 }
@@ -70,7 +78,35 @@ func (c *Context[T]) List(objList client.ObjectList, opts ...client.ListOption) 
 	return c.Client.List(c, objList, opts...)
 }
 
-func (c *Context[T]) CheckExists(objKey client.ObjectKey, kind client.Object) (bool, error) {
+// Patch patches the mutation by mutateFn to the spec of given obj
+// an error would be raised if mutateFn changed anything immutable (e.g. namespace / name)
+func (c *Context[T]) Patch(obj client.Object, mutateFn func(), opts ...client.PatchOption) error {
+	key := client.ObjectKeyFromObject(obj)
+	if err := c.Get(client.ObjectKeyFromObject(obj), obj); err != nil {
+		return err
+	}
+	before := obj.DeepCopyObject().(client.Object)
+	mutateFn()
+	if newKey := client.ObjectKeyFromObject(obj); key != newKey {
+		return fmt.Errorf("MutateFn cannot mutate object name and/or object namespace")
+	}
+	if reflect.DeepEqual(before, obj) {
+		// no change to patch
+		return nil
+	}
+	return c.Client.Patch(c, obj, client.MergeFrom(before), opts...)
+}
+
+// CreateOwned create the given object with an OwnerReference to the currently reconciling
+// controller object (ctx.Obj)
+func (c *Context[T]) CreateOwned(obj client.Object, opts ...client.CreateOption) error {
+	if err := controllerutil.SetOwnerReference(c.Obj, obj, c.reconciler.Scheme()); err != nil {
+		return err
+	}
+	return c.Client.Create(c, obj, opts...)
+}
+
+func (c *Context[T]) Exist(objKey client.ObjectKey, kind client.Object) (bool, error) {
 	err := c.Get(objKey, kind)
 	if err != nil && apierrors.IsNotFound(err) {
 		return false, nil
