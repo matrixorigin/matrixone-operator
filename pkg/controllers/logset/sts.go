@@ -126,6 +126,7 @@ func buildHeadlessSvc(ls *v1alpha1.LogSet) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ls.Namespace,
 			Name:      headlessSvcName(ls),
+			Labels:    common.SubResourceLabels(ls),
 		},
 		// TODO(aylei): ports definition
 		Spec: corev1.ServiceSpec{

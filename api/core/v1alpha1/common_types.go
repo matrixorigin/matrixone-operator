@@ -20,17 +20,7 @@ const (
 )
 
 type ConditionalStatus struct {
-	Conditions []Condition `json:"conditions,omitempty"`
-}
-
-type Condition struct {
-	Type ConditionType `json:"type"`
-
-	Status corev1.ConditionStatus `json:"status"`
-
-	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
-
-	Message string `json:"message,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // PodSet is an auxiliary struct to describe a set of isomorphic pods.

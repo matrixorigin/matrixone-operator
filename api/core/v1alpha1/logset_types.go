@@ -4,6 +4,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	StorePhaseUp   = "Up"
+	StorePhaseDown = "Down"
+)
+
 type LogSetSpec struct {
 	PodSet `json:",inline"`
 	// Volume is the local persistent volume for each LogService instance
@@ -43,6 +48,26 @@ type InitialConfig struct {
 // TODO: figure out what status should be exposed
 type LogSetStatus struct {
 	ConditionalStatus `json:",inline"`
+
+	AvailableStores []LogStore `json:"availableStores,omitempty"`
+	FailedStores    []LogStore `json:"failedStores,omitempty"`
+
+	Discovery *LogSetDiscovery `json:"discovery,omitempty"`
+	// TODO(aylei): collect LogShards, DNShards and HAKeeper status from HAKeeper
+	// HAKeeper          *HAKeeperStatus  `json:"haKeeper,omitempty"`
+	// LogShards
+	// DNShards
+}
+
+type LogStore struct {
+	PodName            string      `json:"podName,omitempty"`
+	Phase              string      `json:"phase,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+}
+
+type LogSetDiscovery struct {
+	Port    int32  `json:"port,omitempty"`
+	Address string `json:"address,omitempty"`
 }
 
 // +kubebuilder:object:root=true

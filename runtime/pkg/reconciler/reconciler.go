@@ -162,8 +162,15 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 	action, err := r.actor.Observe(ctx)
 	if err != nil {
 		ctx.Event.EmitEventGeneric(reconcileFail, "failed to observe status", err)
+		// TODO(aylei): we might also need to update the error to .status?
 		return none, errors.Wrap(err, "error observing object status diff")
 	}
+	// record the observation result anyway
+	err = ctx.UpdateStatus(ctx.Obj)
+	if err != nil {
+		return none, err
+	}
+
 	if action == nil {
 		// No action to take implies the object reached desired state, we forget it
 		// now and wait for the next change to be watched or some resync timeouts.

@@ -8,7 +8,9 @@ require (
 	github.com/matrixorigin/matrixone-operator/runtime v0.0.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
+	github.com/openkruise/kruise-api v1.2.0
 	github.com/pkg/errors v0.9.1
+	github.com/samber/lo v1.25.0
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
 	k8s.io/client-go v0.24.2
@@ -52,16 +54,16 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/openkruise/kruise-api v1.2.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
+	golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
