@@ -6762,7 +6762,7 @@ spec:
                 properties:
                   cacheVolume:
                     description: CacheVolume is the desired local cache volume for
-                      DNSet, node storage will be used if not specified
+                      CNSet, node storage will be used if not specified
                     properties:
                       size:
                         anyOf:
@@ -6817,9 +6817,64 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
+                  data-dir:
+                    description: DataDir storage directory for local data. Include
+                      DNShard metadata and TAE data.
+                    type: string
+                  file-service:
+                    description: FileService file service configuration
+                    properties:
+                      backend:
+                        description: Backend file service backend implementation.
+                          [Mem|DISK|S3|MINIO]. Default is DISK.
+                        type: string
+                      s3:
+                        description: S3 s3 configuration
+                        properties:
+                          access-key:
+                            type: string
+                          endpoint:
+                            type: string
+                          secret-key:
+                            type: string
+                        type: object
+                    type: object
+                  hakeeper:
+                    description: HAKeeper configuration
+                    properties:
+                      hakeeper-discovery-timeout:
+                        description: DiscoveryTimeout discovery HAKeeper service timeout.
+                          Default is 30s
+                        type: integer
+                      hakeeper-heartbeat-duration:
+                        description: HeatbeatDuration heartbeat duration to send message
+                          to hakeeper. Default is 1s
+                        type: integer
+                      hakeeper-heartbeat-timeout:
+                        description: HeatbeatTimeout heartbeat request timeout. Default
+                          is 500ms
+                        type: integer
+                      service-address:
+                        description: HAKeeper
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  listen-address:
+                    description: ListenAddress listening address for receiving external
+                      requests.
+                    type: string
+                  log-service:
+                    description: LogService log service configuration
+                    properties:
+                      connect-timeout:
+                        description: ConnectTimeout timeout for connect to logservice.
+                          Default is 30s.
+                        type: integer
+                    type: object
                   overlay:
                     description: Overlay allows advanced customization of the pod
                       spec in the set
@@ -13466,6 +13521,44 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  rpc:
+                    description: RPC configuration
+                    properties:
+                      busy-queue-size:
+                        description: BusyQueueSize when the length of the send queue
+                          reaches the currently set value, the current connection
+                          is busy with high load. When any connection with Busy status
+                          exists, a new connection will be created until the value
+                          set by MaxConnections is reached. Default is 3/4 of SendQueueSize.
+                        type: integer
+                      max-connections:
+                        description: MaxConnections maximum number of connections
+                          to communicate with each DNStore. Default is 400.
+                        type: integer
+                      max-idle-duration:
+                        description: MaxIdleDuration maximum connection idle time,
+                          connection will be closed automatically if this value is
+                          exceeded. Default is 1 min.
+                        type: integer
+                      read-buffer-size:
+                        description: ReadBufferSize buffer size for read messages
+                          per connection. Default is 1kb
+                        type: integer
+                      send-queue-size:
+                        description: SendQueueSize maximum capacity of the send request
+                          queue per connection, when the queue is full, the send request
+                          will be blocked. Default is 10240.
+                        type: integer
+                      write-buffer-size:
+                        description: WriteBufferSize buffer size for write messages
+                          per connection. Default is 1kb
+                        type: integer
+                    type: object
+                  service-address:
+                    description: ServiceAddress service address for communication,
+                      if this address is not set, use ListenAddress as the communication
+                      address.
+                    type: string
                   topologySpread:
                     description: TopologyEvenSpread specifies what topology domains
                       the Pods in set should be evenly spread in. This will overridden
@@ -13473,6 +13566,46 @@ spec:
                     items:
                       type: string
                     type: array
+                  txn:
+                    description: Txn transactions configuration
+                    properties:
+                      clock:
+                        description: Clock txn clock type. [LOCAL|HLC]. Default is
+                          LOCAL.
+                        properties:
+                          backend:
+                            description: Backend clock backend implementation. [LOCAL|HLC],
+                              default LOCAL.
+                            type: string
+                          max-clock-offset:
+                            description: MaxClockOffset max clock offset between two
+                              nodes. Default is 500ms
+                            type: string
+                        type: object
+                      storage:
+                        description: Storage txn storage config Optional
+                        properties:
+                          backend:
+                            description: Backend txn storage backend implementation.
+                              [TAE|Mem], default TAE.
+                            type: string
+                          mem-config:
+                            description: Mem engine config
+                            type: object
+                          tag-config:
+                            description: TAE engine config
+                            type: object
+                        type: object
+                      zombie-timeout:
+                        description: ZombieTimeout A transaction timeout, if an active
+                          transaction has not operated for more than the specified
+                          time, it will be considered a zombie transaction and the
+                          backend will roll back the transaction.
+                        type: integer
+                    type: object
+                  uuid:
+                    description: UUID dn store uuid
+                    type: string
                 required:
                 - replicas
                 type: object
