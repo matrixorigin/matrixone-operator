@@ -1,3 +1,17 @@
+// Copyright 2022 Matrix Origin
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package dnset
 
 import (
@@ -20,6 +34,7 @@ func (r *DNSetActor) with(cs *kruisev1alpha1.CloneSet) *WithResources {
 
 // Observe: observe dnset bootstrap
 func (d *DNSetActor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1alpha1.DNSet], error) {
+
 	return nil, nil
 }
 
@@ -39,6 +54,7 @@ func (d *DNSetActor) Bootstrap(ctx *recon.Context[*v1alpha1.DNSet]) error {
 }
 
 // Scale: scale in/scale out dnset
+// type: Horizontal scaling and Vertical scaling
 func (w *WithResources) Scale(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	return nil
 }
