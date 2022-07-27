@@ -3,8 +3,9 @@ queue_rules:
     conditions:
       # Must write expected checks explicitly
       # Reference: https://docs.mergify.com/conditions/#validating-all-status-checks
-      - check-success=e2e_kind_test
-      - check-success=helm_pkg_check
+      #- check-success=e2e_kind_test
+      #- check-success=helm_pkg_check
+      - "#approved-reviews-by>=1"
 
 pull_request_rules:
   - name: put pr to queue
