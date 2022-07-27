@@ -13,8 +13,6 @@ import (
 )
 
 const (
-	defaultGraceSeconds = 30
-
 	dataVolume   = "data"
 	dataPath     = "/var/lib/logservice"
 	configVolume = "config"
@@ -47,24 +45,8 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 		Containers: []corev1.Container{main},
 		Volumes:    []corev1.Volume{},
 	}
-	// TODO(aylei): attach configmap hash to pod annotation to trigger rolling-update on config change
-	// TODO(aylei): if external configmap is not provided, generate a default one
-	if ls.Spec.ConfigMap != nil {
-		podSpec.Volumes = append(podSpec.Volumes, corev1.Volume{
-			Name: configVolume,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ls.Spec.ConfigMap.Name,
-					},
-				},
-			},
-		})
-		main.VolumeMounts = append(main.VolumeMounts, corev1.VolumeMount{
-			Name:      configVolume,
-			MountPath: configPath,
-		})
-	}
+	common.SyncTopology(ls.Spec.TopologyEvenSpread, &podSpec)
+
 	ls.Spec.Overlay.OverlayPodSpec(&podSpec)
 	sts.Spec.Template.Spec = podSpec
 }

@@ -38,6 +38,20 @@ func (s Action[T]) String() string {
 	return runtime.FuncForPC(reflect.ValueOf(s).Pointer()).Name()
 }
 
+type KubeClient interface {
+	Create(obj client.Object, opts ...client.CreateOption) error
+	CreateOwned(obj client.Object, opts ...client.CreateOption) error
+	Get(objKey client.ObjectKey, obj client.Object) error
+	Update(obj client.Object, opts ...client.UpdateOption) error
+	UpdateStatus(obj client.Object, opts ...client.UpdateOption) error
+	Delete(obj client.Object, opts ...client.DeleteOption) error
+	List(objList client.ObjectList, opts ...client.ListOption) error
+	Patch(obj client.Object, mutateFn func() error, opts ...client.PatchOption) error
+	Exist(objKey client.ObjectKey, kind client.Object) (bool, error)
+}
+
+var _ KubeClient = &Context[client.Object]{}
+
 type Context[T client.Object] struct {
 	context.Context
 	Obj T
@@ -80,13 +94,15 @@ func (c *Context[T]) List(objList client.ObjectList, opts ...client.ListOption) 
 
 // Patch patches the mutation by mutateFn to the spec of given obj
 // an error would be raised if mutateFn changed anything immutable (e.g. namespace / name)
-func (c *Context[T]) Patch(obj client.Object, mutateFn func(), opts ...client.PatchOption) error {
+func (c *Context[T]) Patch(obj client.Object, mutateFn func() error, opts ...client.PatchOption) error {
 	key := client.ObjectKeyFromObject(obj)
 	if err := c.Get(client.ObjectKeyFromObject(obj), obj); err != nil {
 		return err
 	}
 	before := obj.DeepCopyObject().(client.Object)
-	mutateFn()
+	if err := mutateFn(); err != nil {
+		return err
+	}
 	if newKey := client.ObjectKeyFromObject(obj); key != newKey {
 		return fmt.Errorf("MutateFn cannot mutate object name and/or object namespace")
 	}

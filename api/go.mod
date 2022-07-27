@@ -3,6 +3,9 @@ module github.com/matrixorigin/matrixone-operator/api
 go 1.18
 
 require (
+	github.com/onsi/gomega v1.18.1
+	github.com/pelletier/go-toml v1.9.5
+	github.com/pkg/errors v0.9.1
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
 	sigs.k8s.io/controller-runtime v0.12.2

@@ -2,6 +2,7 @@ package logset
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -95,10 +96,12 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 		return r.Repair, nil
 	case ls.Spec.Replicas != *sts.Spec.Replicas:
 		return r.with(sts).Scale, nil
-	case util.ChangedAfter(sts, func() {
-		syncPodMeta(ls, sts)
-		syncPodSpec(ls, sts)
-	}):
+	}
+	origin := sts.DeepCopy()
+	if err := syncPods(ctx, sts); err != nil {
+		return nil, err
+	}
+	if !reflect.DeepEqual(origin, sts) {
 		return r.with(sts).Update, nil
 	}
 	return nil, nil
@@ -114,8 +117,15 @@ func (r *LogSetActor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	syncPodSpec(ls, sts)
 	syncPersistentVolumeClaim(ls, sts)
 	discovery := buildDiscoveryService(ls)
+	cm, err := buildConfigMap(ls)
+	if err != nil {
+		return err
+	}
+	if err := common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm); err != nil {
+		return err
+	}
 
-	err := lo.Reduce[client.Object, error]([]client.Object{
+	err = lo.Reduce[client.Object, error]([]client.Object{
 		svc,
 		sts,
 		discovery,
@@ -134,8 +144,9 @@ func (r *LogSetActor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 // Scale scale-out/in the log set pods to match the desired state
 // TODO(aylei): special treatment for scale-in
 func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.LogSet]) error {
-	return ctx.Patch(r.sts, func() {
+	return ctx.Patch(r.sts, func() error {
 		syncReplicas(ctx.Obj, r.sts)
+		return nil
 	})
 }
 
@@ -148,10 +159,7 @@ func (r *LogSetActor) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
 // Update rolling-update the log set pods to match the desired state
 // TODO(aylei): should logset controller take care of graceful rolling?
 func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.LogSet]) error {
-	return ctx.Patch(r.sts, func() {
-		syncPodMeta(ctx.Obj, r.sts)
-		syncPodSpec(ctx.Obj, r.sts)
-	})
+	return ctx.Update(r.sts)
 }
 
 func (r *LogSetActor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
@@ -167,10 +175,14 @@ func (r *LogSetActor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, erro
 	return (!svcExist) && (!stsExist) && (!discoverySvcExist), errs
 }
 
-func (r *LogSetActor) updateRequired(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) bool {
-	before := sts.DeepCopyObject()
+func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) error {
+	cm, err := buildConfigMap(ctx.Obj)
+	if err != nil {
+		return err
+	}
 	syncPodMeta(ctx.Obj, sts)
 	syncPodSpec(ctx.Obj, sts)
+	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }
 
 type bootstrapReplica struct {
@@ -178,7 +190,7 @@ type bootstrapReplica struct {
 	uuid    int
 }
 
-func (r *LogSetActor) bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error) {
+func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error) {
 	var replicas []bootstrapReplica
 	previousDecision, hasBootstrapped := ctx.Obj.GetAnnotations()[BootstrapAnnoKey]
 	if hasBootstrapped {

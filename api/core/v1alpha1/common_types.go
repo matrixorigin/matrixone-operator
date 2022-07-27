@@ -30,10 +30,6 @@ type PodSet struct {
 	// Replicas is the desired number of pods of this set
 	Replicas int32 `json:"replicas"`
 
-	// ConfigMap reference to an external configmap that is used to configure the instance
-	// +optional
-	ConfigMap *corev1.ObjectReference `json:"configMap,omitempty"`
-
 	// TopologyEvenSpread specifies what topology domains the Pods in set should be
 	// evenly spread in.
 	// This will overridden by .overlay.TopologySpreadConstraints
@@ -42,6 +38,9 @@ type PodSet struct {
 
 	// +optional
 	Overlay *Overlay `json:"overlay,omitempty"`
+
+	// Config is the raw config for pods
+	Config *TomlConfig `json:"config,omitempty"`
 }
 
 // MainContainers is the description of the main container of a Pod
