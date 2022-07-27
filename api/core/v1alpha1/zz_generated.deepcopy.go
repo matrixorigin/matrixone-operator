@@ -813,11 +813,6 @@ func (in *Overlay) DeepCopy() *Overlay {
 func (in *PodSet) DeepCopyInto(out *PodSet) {
 	*out = *in
 	in.MainContainer.DeepCopyInto(&out.MainContainer)
-	if in.ConfigMap != nil {
-		in, out := &in.ConfigMap, &out.ConfigMap
-		*out = new(corev1.ObjectReference)
-		**out = **in
-	}
 	if in.TopologyEvenSpread != nil {
 		in, out := &in.TopologyEvenSpread, &out.TopologyEvenSpread
 		*out = make([]string, len(*in))
@@ -826,6 +821,11 @@ func (in *PodSet) DeepCopyInto(out *PodSet) {
 	if in.Overlay != nil {
 		in, out := &in.Overlay, &out.Overlay
 		*out = new(Overlay)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Config != nil {
+		in, out := &in.Config, &out.Config
+		*out = new(TomlConfig)
 		(*in).DeepCopyInto(*out)
 	}
 }

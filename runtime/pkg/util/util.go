@@ -17,6 +17,7 @@ package util
 import (
 	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,8 +43,25 @@ func IsFound(err error) (error, bool) {
 	return err, false
 }
 
-func ChangedAfter(obj client.Object, mutateFn func()) bool {
+func ChangedAfter(obj client.Object, mutateFn func() error) bool {
 	before := obj.DeepCopyObject().(client.Object)
 	mutateFn()
 	return reflect.DeepEqual(before, obj)
+}
+
+type Predicate[E any] func(E) bool
+
+func FindFirst[E any](list []E, predicate Predicate[E]) *E {
+	for _, v := range list {
+		if predicate(v) {
+			return &v
+		}
+	}
+	return nil
+}
+
+func WithVolumeName(name string) Predicate[corev1.Volume] {
+	return func(v corev1.Volume) bool {
+		return v.Name == name
+	}
 }

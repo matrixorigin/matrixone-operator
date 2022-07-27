@@ -164,8 +164,3 @@ func findMainContainer(containers []corev1.Container) *corev1.Container {
 	}
 	return nil
 }
-
-// TODO(aylei): build constraints from evenlySpreadDomains
-func buildTopologyConstraints(evenlyDomains []string) []corev1.TopologySpreadConstraint {
-	return nil
-}
