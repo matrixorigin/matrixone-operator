@@ -60,5 +60,5 @@ func collectDNStoreStatus(obj *v1alpha1.CNSet, pods []corev1.Pod) {
 	}
 
 	obj.Status.FailedStore = failed
-	obj.Status.AvailableStores = avalable
+	obj.Status.AvailableStores = available
 }
