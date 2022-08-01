@@ -14,18 +14,14 @@
 
 package dnset
 
-import (
-	"context"
-
-	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-)
-
-type SetType string
+type DNEventReson string
 
 const (
-	SetContextKey = SetType("matrixone-dnset")
+	CloneSetGetError DNEventReson = "ClonSetGetFailed"
 )
 
-func contextWithDNSet(ctx context.Context, set *v1alpha1.CNSet) context.Context {
-	return context.WithValue(ctx, SetContextKey, set)
+// DNSetController is the interface that all types of DNset controller implements
+type CommonController interface {
+	Create() error
+	Finialize() error
 }
