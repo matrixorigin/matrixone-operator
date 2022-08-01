@@ -7,14 +7,6 @@ import (
 type DNSetSpec struct {
 	PodSet `json:",inline"`
 
-	// Volume is the local persistent volume for each dn service isntance
-	// +required
-	Volume Volume `json:"volume"`
-
-	// ShardStorage is an external shard storage shared by all dn service instances
-	// +required
-	SharedStorage SharedStorageProvider `json:"sharedStorage"`
-
 	// CacheVolume is the desired local cache volume for DNSet,
 	// node storage will be used if not specified
 	// +optional
@@ -30,9 +22,9 @@ type DNSetStatus struct {
 }
 
 type DNStore struct {
-	PodName           string `json:"podName,omitempty"`
-	Phase             string `json:"phase,omitempty"`
-	LastTrasitionTime string `json:"lastTransitionTime,omitempty"`
+	PodName      string `json:"podName,omitempty"`
+	Phase        string `json:"phase,omitempty"`
+	LastRevision string `json:"lastTransitionTime,omitempty"`
 }
 
 type DNSetDeps struct {

@@ -38,6 +38,20 @@ func (d *DNSetController) Finialize() error {
 	return nil
 }
 
+func (d *DNSetController) size(ctx recon.Context[*v1alpha1.DNSet]) (int32, error) {
+	if d.cloneSet == nil {
+		err := d.fetchCloneSet(ctx)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if d.cloneSet.Spec.Replicas == nil {
+		return 1, nil
+	}
+
+	return *d.cloneSet.Spec.Replicas, nil
+}
+
 func (d *DNSetController) fetchCloneSet(ctx recon.Context[*v1alpha1.DNSet]) error {
 	workload := kruise.CloneSet{}
 	err := ctx.Client.Get(ctx, d.targetNamespacedName, &workload)
