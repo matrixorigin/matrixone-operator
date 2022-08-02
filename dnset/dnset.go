@@ -18,50 +18,27 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type DNSetController struct {
+type DNSetActor struct {
 	targetNamespacedName types.NamespacedName
 	cloneSet             *kruise.CloneSet
-	recon                recon.Actor[*v1alpha1.DNSet]
 }
 
-var _ CommonController = &DNSetController{}
+// Add runtime actor to dnset
+var _ recon.Actor[*v1alpha1.DNSet] = &DNSetActor{}
 
-func (d *DNSetController) Create() error {
-	return nil
+func (d *DNSetActor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1alpha1.DNSet], error) {
+
+	return nil, nil
 }
 
-func (d *DNSetController) Finialize() error {
-	return nil
+func (d *DNSetActor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error) {
+	return true, nil
 }
 
-func (d *DNSetController) size(ctx recon.Context[*v1alpha1.DNSet]) (int32, error) {
-	if d.cloneSet == nil {
-		err := d.fetchCloneSet(ctx)
-		if err != nil {
-			return 0, err
-		}
-	}
-	if d.cloneSet.Spec.Replicas == nil {
-		return 1, nil
-	}
-
-	return *d.cloneSet.Spec.Replicas, nil
-}
-
-func (d *DNSetController) fetchCloneSet(ctx recon.Context[*v1alpha1.DNSet]) error {
-	workload := kruise.CloneSet{}
-	err := ctx.Client.Get(ctx, d.targetNamespacedName, &workload)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			ctx.Event.EmitEventGeneric(string(CloneSetGetError), "fetch clone set error", err)
-		}
-	}
-
-	d.cloneSet = &workload
+func (d *DNSetActor) Create(ctx *recon.Context[**v1alpha1.DNSet]) error {
 
 	return nil
 }

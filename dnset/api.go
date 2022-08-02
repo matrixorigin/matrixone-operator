@@ -14,14 +14,14 @@
 
 package dnset
 
-type DNEventReson string
-
-const (
-	CloneSetGetError DNEventReson = "ClonSetGetFailed"
+import (
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 )
 
 // DNSetController is the interface that all types of DNset controller implements
-type CommonController interface {
-	Create() error
-	Finialize() error
+type DNSetCommonController interface {
+	Create(ctx recon.Context[*v1alpha1.DNSet]) error
+	Scale(ctx recon.Context[*v1alpha1.DNSet]) error
+	Update(ctx recon.Context[*v1alpha1.DNSet]) error
 }
