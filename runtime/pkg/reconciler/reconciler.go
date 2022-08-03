@@ -40,7 +40,14 @@ const (
 )
 
 const (
-	debug = 4
+	// Following analog to https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md
+
+	Error        = 0
+	Warn         = 1
+	Info         = 2
+	ExtendedInfo = 3
+	Debug        = 4
+	Trace        = 5
 )
 
 var (
@@ -130,7 +137,7 @@ func Setup[T client.Object](tpl T, name string, mgr ctrl.Manager, actor Actor[T]
 
 func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (recon.Result, error) {
 	log := r.logger.WithValues("namespace", req.Namespace, "name", req.Name)
-	log.V(debug).Info("start reconciling")
+	log.V(Debug).Info("start reconciling")
 
 	// get the latest spec and status from apiserver and build the action context
 	obj := r.newT()
@@ -149,7 +156,7 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 
 	// optionally transit to deleting state
 	if util.WasDeleted(obj) {
-		log.V(debug).Info("finalize deleting object")
+		log.V(Debug).Info("finalize deleting object")
 		return r.finalize(ctx)
 	}
 
@@ -177,7 +184,7 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 		ctx.Event.EmitEventGeneric(reconcileSuccess, "object is synced", nil)
 		return forget, nil
 	}
-	log.V(debug).Info("execute reconcile action", "action", action)
+	log.V(Debug).Info("execute reconcile action", "action", action)
 	if err := action(ctx); err != nil {
 		ctx.Event.EmitEventGeneric(reconcileFail, fmt.Sprintf("failed to execute action %s", action), err)
 		return none, errors.Wrap(err, "error executing reconcile action")
@@ -198,7 +205,7 @@ func (r *Reconciler[T]) finalize(ctx *Context[T]) (recon.Result, error) {
 		return none, errors.Wrap(err, "error finalizing object")
 	}
 	if !done {
-		ctx.Log.V(debug).Info("does not complete finalizing, requeue")
+		ctx.Log.V(Debug).Info("does not complete finalizing, requeue")
 		return requeue, nil
 	}
 	ctx.Log.Info("resource finalizing complete, remove finalizer")
