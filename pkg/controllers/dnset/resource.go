@@ -36,6 +36,8 @@ const (
 	dnUUID         = ""
 	dnTxnBackend   = "MEM"
 	configFile     = "dn-config.toml"
+	listenAddress  = ""
+	serviceAddress = ""
 )
 
 // buildHeadlessSvc build the initial headless service object for the given dnset
@@ -111,7 +113,9 @@ func buildDNSetConfigMap(ds *v1alpha1.DNSet) (*corev1.ConfigMap, error) {
 				"dat-dir": s3BucketPath,
 			},
 			"dn": map[string]interface{}{
-				"uuid": dnUUID,
+				"uuid":            dnUUID,
+				"listen-address":  listenAddress,
+				"service-address": serviceAddress,
 			},
 			"dn.Txn.Storage": map[string]interface{}{
 				"backend": dnTxnBackend,
