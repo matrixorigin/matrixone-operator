@@ -35,6 +35,7 @@ const (
 	s3BucketPath   = "/store/dn"
 	dnUUID         = ""
 	dnTxnBackend   = "MEM"
+	configFile     = "dn-config.toml"
 )
 
 // buildHeadlessSvc build the initial headless service object for the given dnset
@@ -63,42 +64,78 @@ func headlessSvcName(ds *v1alpha1.DNSet) string {
 	return name
 }
 
-// buildDNSet return dnset as kruise CloneSet resource
+// buildDNSet return kruise CloneSet as dn resource
 func buildDNSet(ds *v1alpha1.DNSet, hSvc *corev1.Service) *kruise.CloneSet {
-	dn := &kruise.CloneSet{}
+	dn := &kruise.CloneSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ds.Namespace,
+			Name:      getName(ds),
+		},
+		Spec: kruise.CloneSetSpec{
+			Replicas:             nil,
+			Selector:             nil,
+			Template:             corev1.PodTemplateSpec{},
+			VolumeClaimTemplates: nil,
+			ScaleStrategy:        kruise.CloneSetScaleStrategy{},
+			UpdateStrategy:       kruise.CloneSetUpdateStrategy{},
+			RevisionHistoryLimit: nil,
+			MinReadySeconds:      0,
+			Lifecycle:            nil,
+		},
+	}
 
 	return dn
 }
 
-// DNSetConfig return dn set configmap
-func buildDNSetConfig(hakapeerAdress []string) *v1alpha1.TomlConfig {
-	cfg := v1alpha1.NewTomlConfig(map[string]interface{}{
-		"service-type": serviceType,
-		"log": map[string]interface{}{
-			"level":    logLevel,
-			"format":   logFormatType,
-			"max-size": logMaxSize,
-		},
-		"file-service.local": map[string]interface{}{
-			"name":     localFSName,
-			"backend":  localFSBackend,
-			"data-dir": dataDir,
-		},
-		"file-service.object": map[string]interface{}{
-			"name":    s3FSNam,
-			"backend": s3BackendType,
-			"dat-dir": s3BucketPath,
-		},
-		"dn": map[string]interface{}{
-			"uuid": dnUUID,
-		},
-		"dn.Txn.Storage": map[string]interface{}{
-			"backend": dnTxnBackend,
-		},
-		"dn.HAKeeper.hakeeper-client": map[string]interface{}{
-			"service-addresses": hakapeerAdress,
-		},
-	})
+// buildDNSetConfigMap return dn set configmap
+func buildDNSetConfigMap(ds *v1alpha1.DNSet) (*corev1.ConfigMap, error) {
+	configMapName := ds.Name + "-config"
 
-	return cfg
+	dsCfg := ds.Spec.Config
+	if dsCfg == nil {
+		dsCfg = v1alpha1.NewTomlConfig(map[string]interface{}{
+			"service-type": serviceType,
+			"log": map[string]interface{}{
+				"level":    logLevel,
+				"format":   logFormatType,
+				"max-size": logMaxSize,
+			},
+			"file-service.local": map[string]interface{}{
+				"name":     localFSName,
+				"backend":  localFSBackend,
+				"data-dir": dataDir,
+			},
+			"file-service.object": map[string]interface{}{
+				"name":    s3FSNam,
+				"backend": s3BackendType,
+				"dat-dir": s3BucketPath,
+			},
+			"dn": map[string]interface{}{
+				"uuid": dnUUID,
+			},
+			"dn.Txn.Storage": map[string]interface{}{
+				"backend": dnTxnBackend,
+			},
+			"dn.HAKeeper.hakeeper-client": map[string]interface{}{
+				// TODO: config global Hakeeper addresses, It may get from logset
+				"service-addresses": []string{},
+			},
+		})
+	}
+	s, err := dsCfg.ToString()
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ds.Namespace,
+			Name:      configMapName,
+			Labels:    common.SubResourceLabels(ds),
+		},
+		Data: map[string]string{
+			configFile: s,
+		},
+	}, nil
+
 }
