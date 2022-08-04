@@ -18,7 +18,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
-	kruise "github.com/openekruise/kruise-api/apps/v1alpha1"
+	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +29,7 @@ import (
 
 type DNSetActor struct {
 	targetNamespacedName types.NamespacedName
-	cloneSet             *kruise.ClonetSet
+	cloneSet             *kruise.CloneSet
 }
 
 var _ recon.Actor[*v1alpha1.DNSet] = &DNSetActor{}
@@ -89,7 +89,7 @@ func (d *DNSetActor) fetchCloneSet(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	err := ctx.Client.Get(ctx.Context, d.targetNamespacedName, &cs)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			ctx.Event.EmitEventGeneric(string(FetchFail), "clonsetfetch error", err)
+			ctx.Event.EmitEventGeneric(string(FetchFail), "clonw set fetch error", err)
 		}
 		return err
 	}

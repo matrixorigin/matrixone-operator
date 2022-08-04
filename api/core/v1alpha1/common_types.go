@@ -9,9 +9,9 @@ import (
 type ConditionType string
 
 const (
-	// Whether the object is ready to act
+	// ConditionTypeReady Whether the object is ready to act
 	ConditionTypeReady = "Ready"
-	// Whether the object is update to date
+	// ConditionTypeSynced Whether the object is update to date
 	ConditionTypeSynced = "Synced"
 )
 
@@ -43,7 +43,7 @@ type PodSet struct {
 	Config *TomlConfig `json:"config,omitempty"`
 }
 
-// MainContainers is the description of the main container of a Pod
+// MainContainer is the description of the main container of a Pod
 type MainContainer struct {
 	// Image is the docker image of the main container
 	Image string `json:"image,omitempty"`

@@ -17,9 +17,24 @@ package dnset
 import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	kruise "github.com/openekruise/kruise-api/apps/v1alpha1"
+	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	logLevel       = "debug"
+	serviceType    = "dn"
+	logFormatType  = "json"
+	logMaxSize     = 512
+	localFSName    = "local"
+	localFSBackend = "DISK"
+	dataDir        = "/store/dn"
+	s3FSNam        = "s3"
+	s3BackendType  = "DISK"
+	s3BucketPath   = "/store/dn"
+	dnUUID         = ""
+	dnTxnBackend   = "MEM"
 )
 
 // buildHeadlessSvc build the initial headless service object for the given dnset
@@ -30,7 +45,7 @@ func buildHeadlessSvc(ds *v1alpha1.DNSet) *corev1.Service {
 			Name:      headlessSvcName(ds),
 			Labels:    common.SubResourceLabels(ds),
 		},
-		// TODO(aylei): ports definition
+
 		Spec: corev1.ServiceSpec{
 			ClusterIP: corev1.ClusterIPNone,
 			Selector:  common.SubResourceLabels(ds),
@@ -41,14 +56,49 @@ func buildHeadlessSvc(ds *v1alpha1.DNSet) *corev1.Service {
 
 }
 
+// headlessSvcName return headless service name
 func headlessSvcName(ds *v1alpha1.DNSet) string {
 	name := ds.Name + "-headless"
 
 	return name
 }
 
+// buildDNSet return dnset as kruise CloneSet resource
 func buildDNSet(ds *v1alpha1.DNSet, hSvc *corev1.Service) *kruise.CloneSet {
-	dnset := &kruise.CloneSet{}
+	dn := &kruise.CloneSet{}
 
-	return dnset
+	return dn
+}
+
+// DNSetConfig return dn set configmap
+func buildDNSetConfig(hakapeerAdress []string) *v1alpha1.TomlConfig {
+	cfg := v1alpha1.NewTomlConfig(map[string]interface{}{
+		"service-type": serviceType,
+		"log": map[string]interface{}{
+			"level":    logLevel,
+			"format":   logFormatType,
+			"max-size": logMaxSize,
+		},
+		"file-service.local": map[string]interface{}{
+			"name":     localFSName,
+			"backend":  localFSBackend,
+			"data-dir": dataDir,
+		},
+		"file-service.object": map[string]interface{}{
+			"name":    s3FSNam,
+			"backend": s3BackendType,
+			"dat-dir": s3BucketPath,
+		},
+		"dn": map[string]interface{}{
+			"uuid": dnUUID,
+		},
+		"dn.Txn.Storage": map[string]interface{}{
+			"backend": dnTxnBackend,
+		},
+		"dn.HAKeeper.hakeeper-client": map[string]interface{}{
+			"service-addresses": hakapeerAdress,
+		},
+	})
+
+	return cfg
 }

@@ -14,10 +14,3 @@
 
 package dnset
 
-import (
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
-)
-
-const (
-	FetchFail recon.EventReason = "DNSetFetchFailed"
-)
