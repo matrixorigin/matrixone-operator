@@ -17,6 +17,9 @@ const (
 	dataPath     = "/var/lib/logservice"
 	configVolume = "config"
 	configPath   = "/etc/logservice"
+
+	bootstrapVolume = "bootstrap"
+	bootstrapPath   = "/etc/bootstrap"
 )
 
 // syncReplicas controls the real replicas field of the logset pods
@@ -38,12 +41,24 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 		VolumeMounts: []corev1.VolumeMount{{
 			Name:      dataVolume,
 			MountPath: dataPath,
+		}, {
+			Name:      bootstrapVolume,
+			MountPath: bootstrapPath,
 		}},
 	}
 	ls.Spec.Overlay.OverlayMainContainer(&main)
 	podSpec := corev1.PodSpec{
 		Containers: []corev1.Container{main},
-		Volumes:    []corev1.Volume{},
+		Volumes: []corev1.Volume{{
+			// bootstrap configmap is immutable before the bootstrap is complete and no rolling-update
+			// is required when we clean its content after bootstrap completes
+			Name: bootstrapVolume,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: bootstrapConfigMapName(ls)},
+				},
+			},
+		}},
 	}
 	common.SyncTopology(ls.Spec.TopologyEvenSpread, &podSpec)
 

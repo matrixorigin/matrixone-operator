@@ -42,7 +42,8 @@ func SyncTopology(domains []string, podSpec *corev1.PodSpec) {
 	podSpec.TopologySpreadConstraints = constraints
 }
 
-// SyncConfigMap syncs the desired configmap for pods
+// SyncConfigMap syncs the desired configmap for pods, which will cause rolling-update if the
+// data of the configmap is changed
 func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1.ConfigMap) error {
 	var currentCmName string
 	vp := util.FindFirst(podSpec.Volumes, util.WithVolumeName("config"))

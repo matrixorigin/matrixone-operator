@@ -54,6 +54,11 @@ spec:
                       replicas, cannot be tuned after cluster creation currently.
                       default to 3 if LogSet replicas >= 3, to 1 otherwise
                     type: integer
+                  logShardReplicas:
+                    description: LogShardReplicas is the replica numbers of each log
+                      shard, cannot be tuned after cluster creation currently. default
+                      to 3 if LogSet replicas >= 3, to 1 otherwise
+                    type: integer
                   logShards:
                     description: LogShards is the initial number of log shards, cannot
                       be tuned after cluster creation currently. default to 1

@@ -1,7 +1,6 @@
 package logset
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -15,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/json"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -26,11 +24,6 @@ const (
 	IDRangeEnd   int = 262144
 
 	ReasonNoEnoughReadyStores = "NoEnoughReadyStores"
-)
-
-const (
-	// TODO(aylei): use real port
-	haKeeperDiscoveryPort = 9999
 )
 
 var _ recon.Actor[*v1alpha1.LogSet] = &LogSetActor{}
@@ -86,9 +79,8 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 		})
 	}
 	ls.Status.Discovery = &v1alpha1.LogSetDiscovery{
-		Port: haKeeperDiscoveryPort,
-		// TODO(aylei): we need FQDN (name.ns.svc.cluster.${clusterName}) for cross-cluster dns resolution
-		Address: fmt.Sprintf("%s.%s.svc", discoverySvc.Name, discoverySvc.Namespace),
+		Port:    LogServicePort,
+		Address: discoverySvcAddress(ls),
 	}
 
 	switch {
@@ -110,6 +102,11 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 func (r *LogSetActor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	ls := ctx.Obj
 
+	// build resources required by a logset
+	bc, err := buildBootstrapConfig(ctx)
+	if err != nil {
+		return err
+	}
 	svc := buildHeadlessSvc(ls)
 	sts := buildStatefulSet(ls, svc)
 	syncReplicas(ls, sts)
@@ -117,6 +114,8 @@ func (r *LogSetActor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	syncPodSpec(ls, sts)
 	syncPersistentVolumeClaim(ls, sts)
 	discovery := buildDiscoveryService(ls)
+
+	// sync the config
 	cm, err := buildConfigMap(ls)
 	if err != nil {
 		return err
@@ -125,7 +124,9 @@ func (r *LogSetActor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 		return err
 	}
 
+	// create all resources
 	err = lo.Reduce[client.Object, error]([]client.Object{
+		bc,
 		svc,
 		sts,
 		discovery,
@@ -183,42 +184,4 @@ func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) e
 	syncPodMeta(ctx.Obj, sts)
 	syncPodSpec(ctx.Obj, sts)
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
-}
-
-type bootstrapReplica struct {
-	ordinal int
-	uuid    int
-}
-
-func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error) {
-	var replicas []bootstrapReplica
-	previousDecision, hasBootstrapped := ctx.Obj.GetAnnotations()[BootstrapAnnoKey]
-	if hasBootstrapped {
-		if err := json.Unmarshal([]byte(previousDecision), &replicas); err != nil {
-			return nil, errors.Wrap(err, "error deserialize boostrap replicas")
-		}
-		return replicas, nil
-	}
-
-	// if the bootstrap decision has not yet been made,pick a bootstrap decision
-	n := *ctx.Obj.Spec.InitialConfig.HAKeeperReplicas
-	// pick first N pods as initial HAKeeperReplicas
-	for i := 0; i < n; i++ {
-		uid := IDRangeStart + i
-		if uid > IDRangeEnd {
-			return nil, errors.Errorf("UID %d exceed range, max allowed: %d", uid, IDRangeEnd)
-		}
-		replicas = append(replicas, bootstrapReplica{
-			ordinal: i,
-			uuid:    uid,
-		})
-	}
-	serialized, err := json.Marshal(replicas)
-	if err != nil {
-		return nil, errors.Wrap(err, "error serialize bootstrap replicas")
-	}
-	annos := ctx.Obj.GetAnnotations()
-	annos[BootstrapAnnoKey] = string(serialized)
-	ctx.Obj.SetAnnotations(annos)
-	return replicas, ctx.Update(ctx.Obj)
 }
