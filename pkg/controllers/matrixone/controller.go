@@ -15,13 +15,25 @@
 package matrixone
 
 import (
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/dnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
+	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 )
 
 type MatrixOneActor struct {
 	dnset.DNSetActor
 	logset.LogSetActor
 	cnset.CNSetActor
+}
+
+var _ recon.Actor[*v1alpha1.MatrixoneCluster] = &MatrixOneActor{}
+
+func (m *MatrixOneActor) Observe(ctx *recon.Context[*v1alpha1.MatrixoneCluster]) (recon.Action[*v1alpha1.MatrixoneCluster], error) {
+	return nil, nil
+}
+
+func (m *MatrixOneActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixoneCluster]) (bool, error) {
+	return true, nil
 }
