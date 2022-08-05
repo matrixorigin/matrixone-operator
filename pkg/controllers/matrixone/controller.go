@@ -13,3 +13,15 @@
 // limitations under the License.
 
 package matrixone
+
+import (
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/dnset"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
+)
+
+type MatrixOneActor struct {
+	dnset.DNSetActor
+	logset.LogSetActor
+	cnset.CNSetActor
+}

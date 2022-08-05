@@ -124,7 +124,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet) (*corev1.ConfigMap, error) {
 		return nil, err
 	}
 
-	return &corev1.ConfigMap{
+	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dn.Namespace,
 			Name:      configMapName,
@@ -133,6 +133,8 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet) (*corev1.ConfigMap, error) {
 		Data: map[string]string{
 			configFile: s,
 		},
-	}, nil
+	}
+
+	return configMap, nil
 
 }
