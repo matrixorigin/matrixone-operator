@@ -1,6 +1,8 @@
 package logset
 
 import (
+	"fmt"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	corev1 "k8s.io/api/core/v1"
@@ -28,4 +30,9 @@ func buildDiscoveryService(ls *v1alpha1.LogSet) *corev1.Service {
 
 func discoverySvcName(ls *v1alpha1.LogSet) string {
 	return ls.Name + "-discovery"
+}
+
+func discoverySvcAddress(ls *v1alpha1.LogSet) string {
+	// TODO(aylei): we need FQDN (name.ns.svc.cluster.${clusterName}) for cross-cluster dns resolution
+	return fmt.Sprintf("%s.%s.svc", discoverySvcName(ls), ls.Namespace)
 }

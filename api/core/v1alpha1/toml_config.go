@@ -116,6 +116,8 @@ func set(m map[string]interface{}, value interface{}, path ...string) {
 	return
 }
 
+// +kubebuilder:object:root=false
+// +kubebuilder:object:generate=false
 type Value struct {
 	inner interface{}
 }

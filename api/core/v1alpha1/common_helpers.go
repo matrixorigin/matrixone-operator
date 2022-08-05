@@ -66,9 +66,10 @@ func (o *Overlay) OverlayPodSpec(pod *corev1.PodSpec) {
 	if o == nil {
 		return
 	}
-	if o.Volumes != nil {
-		pod.Volumes = append(pod.Volumes, o.Volumes...)
-	}
+	// TODO(aylei): append is not idempotent, should upsert instead
+	//if o.Volumes != nil {
+	//	pod.Volumes = o.Volumes
+	//}
 	if o.Affinity != nil {
 		pod.Affinity = o.Affinity
 	}
@@ -151,9 +152,10 @@ func (o *Overlay) OverlayMainContainer(c *corev1.Container) {
 	if mc.Lifecycle != nil {
 		c.Lifecycle = mc.Lifecycle
 	}
-	if mc.VolumeMounts != nil {
-		c.VolumeMounts = append(c.VolumeMounts, o.VolumeMounts...)
-	}
+	// TODO(aylei): append is not idempotent, should upsert instead
+	//if mc.VolumeMounts != nil {
+	//	c.VolumeMounts = o.VolumeMounts
+	//}
 }
 
 func findMainContainer(containers []corev1.Container) *corev1.Container {
