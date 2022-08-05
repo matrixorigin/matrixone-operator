@@ -26,6 +26,20 @@ const (
 	configFile = "cn-config.toml"
 )
 
+const (
+	serviceType   = "cn"
+	listenAddress = ""
+	logLevel      = "debug"
+	logFormatType = "json"
+	logMaxSize    = "512"
+	backendType   = "s3"
+	hostSize      = 1000
+	guestSize     = 2000
+	operatorSize  = 3000
+	batchRow      = 300
+	batchSize     = 400
+)
+
 func buildHeadlessSvc(cn *v1alpha1.CNSet) *corev1.Service {
 	svc := &corev1.Service{}
 
@@ -40,8 +54,32 @@ func buildCNSet(cn *v1alpha1.DNSet) *kruise.CloneSet {
 func buildCNSetCOnfigMap(cn *v1alpha1.CNSet) (*corev1.ConfigMap, error) {
 	configMapName := cn.Name + "-config"
 	dsCfg := cn.Spec.Config
+	// detail: https://github.com/matrixorigin/matrixone/blob/main/pkg/dnservice/cfg.go
 	if dsCfg == nil {
-		dsCfg = v1alpha1.NewTomlConfig(map[string]interface{}{})
+		dsCfg = v1alpha1.NewTomlConfig(map[string]interface{}{
+			"service-type":   serviceType,
+			"listen-address": listenAddress,
+			"log": map[string]interface{}{
+				"level":    logLevel,
+				"format":   logFormatType,
+				"max-size": logMaxSize,
+			},
+			"file-service": map[string]interface{}{
+				"backend": backendType,
+				"s3": map[string]interface{}{
+					"endpoint":   "",
+					"bucket":     "",
+					"key-prefix": "",
+				},
+			},
+			"pipeline": map[string]interface{}{
+				"host-size":     hostSize,
+				"guest-size":    guestSize,
+				"operator-size": operatorSize,
+				"batch-row":     batchRow,
+				"batch-size":    batchSize,
+			},
+		})
 	}
 	s, err := dsCfg.ToString()
 	if err != nil {

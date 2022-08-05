@@ -30,7 +30,7 @@ const (
 	localFSName    = "local"
 	localFSBackend = "DISK"
 	dataDir        = "/store/dn"
-	s3FSNam        = "s3"
+	s3FSName       = "s3"
 	s3BackendType  = "DISK"
 	s3BucketPath   = "/store/dn"
 	dnUUID         = ""
@@ -87,6 +87,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet) (*corev1.ConfigMap, error) {
 	configMapName := dn.Name + "-config"
 
 	dsCfg := dn.Spec.Config
+	// detail: https://github.com/matrixorigin/matrixone/blob/main/pkg/cnservice/types.go
 	if dsCfg == nil {
 		dsCfg = v1alpha1.NewTomlConfig(map[string]interface{}{
 			"service-type": serviceType,
@@ -101,7 +102,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet) (*corev1.ConfigMap, error) {
 				"data-dir": dataDir,
 			},
 			"file-service.object": map[string]interface{}{
-				"name":    s3FSNam,
+				"name":    s3FSName,
 				"backend": s3BackendType,
 				"dat-dir": s3BucketPath,
 			},
