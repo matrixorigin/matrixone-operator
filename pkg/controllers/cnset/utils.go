@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dnset
+package cnset
 
 import "github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 
-func getDNSetName(ds *v1alpha1.DNSet) string {
-	return ds.Name
+func getCNSetName(cn *v1alpha1.CNSet) string {
+	return cn.Name
 }
 
-func getDNSetHeadlessSvcName(ds *v1alpha1.DNSet) string {
-	return ds.Name + "-headless"
+func getCNSetHeadlessSvcName(cn *v1alpha1.CNSet) string {
+	return cn.Name + "-headless"
+
 }

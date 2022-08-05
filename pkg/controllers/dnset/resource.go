@@ -41,17 +41,17 @@ const (
 )
 
 // buildHeadlessSvc build the initial headless service object for the given dnset
-func buildHeadlessSvc(ds *v1alpha1.DNSet) *corev1.Service {
+func buildHeadlessSvc(dn *v1alpha1.DNSet) *corev1.Service {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ds.Namespace,
-			Name:      headlessSvcName(ds),
-			Labels:    common.SubResourceLabels(ds),
+			Namespace: dn.Namespace,
+			Name:      getDNSetHeadlessSvcName(dn),
+			Labels:    common.SubResourceLabels(dn),
 		},
 
 		Spec: corev1.ServiceSpec{
 			ClusterIP: corev1.ClusterIPNone,
-			Selector:  common.SubResourceLabels(ds),
+			Selector:  common.SubResourceLabels(dn),
 		},
 	}
 
@@ -59,19 +59,12 @@ func buildHeadlessSvc(ds *v1alpha1.DNSet) *corev1.Service {
 
 }
 
-// headlessSvcName return headless service name
-func headlessSvcName(ds *v1alpha1.DNSet) string {
-	name := ds.Name + "-headless"
-
-	return name
-}
-
 // buildDNSet return kruise CloneSet as dn resource
-func buildDNSet(ds *v1alpha1.DNSet, hSvc *corev1.Service) *kruise.CloneSet {
-	dn := &kruise.CloneSet{
+func buildDNSet(dn *v1alpha1.DNSet, hSvc *corev1.Service) *kruise.CloneSet {
+	dnCloneSet := &kruise.CloneSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ds.Namespace,
-			Name:      getName(ds),
+			Namespace: dn.Namespace,
+			Name:      getDNSetName(dn),
 		},
 		Spec: kruise.CloneSetSpec{
 			Replicas:             nil,
@@ -86,14 +79,14 @@ func buildDNSet(ds *v1alpha1.DNSet, hSvc *corev1.Service) *kruise.CloneSet {
 		},
 	}
 
-	return dn
+	return dnCloneSet
 }
 
 // buildDNSetConfigMap return dn set configmap
-func buildDNSetConfigMap(ds *v1alpha1.DNSet) (*corev1.ConfigMap, error) {
-	configMapName := ds.Name + "-config"
+func buildDNSetConfigMap(dn *v1alpha1.DNSet) (*corev1.ConfigMap, error) {
+	configMapName := dn.Name + "-config"
 
-	dsCfg := ds.Spec.Config
+	dsCfg := dn.Spec.Config
 	if dsCfg == nil {
 		dsCfg = v1alpha1.NewTomlConfig(map[string]interface{}{
 			"service-type": serviceType,
@@ -133,9 +126,9 @@ func buildDNSetConfigMap(ds *v1alpha1.DNSet) (*corev1.ConfigMap, error) {
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ds.Namespace,
+			Namespace: dn.Namespace,
 			Name:      configMapName,
-			Labels:    common.SubResourceLabels(ds),
+			Labels:    common.SubResourceLabels(dn),
 		},
 		Data: map[string]string{
 			configFile: s,
