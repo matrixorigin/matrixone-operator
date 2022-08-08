@@ -10,6 +10,13 @@ const (
 )
 
 type LogSetSpec struct {
+	LogSetBasic `json:",inline"`
+
+	// +optional
+	Overlay *Overlay `json:"overlay,omitempty"`
+}
+
+type LogSetBasic struct {
 	PodSet `json:",inline"`
 	// Volume is the local persistent volume for each LogService instance
 	// +required
@@ -21,7 +28,8 @@ type LogSetSpec struct {
 
 	// InitialConfig is the initial configuration of HAKeeper
 	// InitialConfig is immutable
-	InitialConfig InitialConfig `json:"initialConfig,omitempty"`
+	// +required
+	InitialConfig InitialConfig `json:"initialConfig"`
 }
 
 type InitialConfig struct {

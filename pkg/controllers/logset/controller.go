@@ -165,15 +165,32 @@ func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.LogSet]) error {
 
 func (r *LogSetActor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
 	ls := ctx.Obj
-	var errs error
-	// subresources should be deleted by owner reference, simply wait the deletion complete
-	svcExist, err := ctx.Exist(client.ObjectKey{Namespace: ls.Namespace, Name: headlessSvcName(ls)}, &corev1.Service{})
-	errs = multierr.Append(errs, err)
-	stsExist, err := ctx.Exist(client.ObjectKey{Namespace: ls.Namespace, Name: stsName(ls)}, &kruisev1.StatefulSet{})
-	errs = multierr.Append(errs, err)
-	discoverySvcExist, err := ctx.Exist(client.ObjectKey{Namespace: ls.Namespace, Name: stsName(ls)}, &corev1.Service{})
-	errs = multierr.Append(errs, err)
-	return (!svcExist) && (!stsExist) && (!discoverySvcExist), errs
+	ctx.Log.Info("finalzie logset")
+	// TODO(aylei): we may encode the created resources in etcd so that we don't have
+	// to maintain a hardcoded list
+	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name: headlessSvcName(ls),
+	}}, &kruisev1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
+		Name: stsName(ls),
+	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name: discoverySvcName(ls),
+	}}}
+	for _, obj := range objs {
+		obj.SetNamespace(ls.Namespace)
+		if err := ctx.Delete(obj); err != nil {
+			return false, err
+		}
+	}
+	for _, obj := range objs {
+		exist, err := ctx.Exist(client.ObjectKeyFromObject(obj), obj)
+		if err != nil {
+			return false, err
+		}
+		if exist {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) error {

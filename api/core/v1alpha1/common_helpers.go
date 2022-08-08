@@ -16,10 +16,9 @@ type Conditional interface {
 
 func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
 	if c.Conditions == nil {
-		c.Conditions = []metav1.Condition{condition}
-	} else {
-		meta.SetStatusCondition(&c.Conditions, condition)
+		c.Conditions = []metav1.Condition{}
 	}
+	meta.SetStatusCondition(&c.Conditions, condition)
 }
 
 func (c *ConditionalStatus) GetConditions() []metav1.Condition {

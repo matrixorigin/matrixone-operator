@@ -9,6 +9,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	logServicePort = 32001
+)
+
 func buildDiscoveryService(ls *v1alpha1.LogSet) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -19,7 +23,9 @@ func buildDiscoveryService(ls *v1alpha1.LogSet) *corev1.Service {
 		// TODO(aylei): ports definition
 		Spec: corev1.ServiceSpec{
 			// TODO(aylei): determine haKeeper discovery service port
-			// Ports: []corev1.ServicePort{}
+			Ports: []corev1.ServicePort{{
+				Port: logServicePort,
+			}},
 			// service type might need to be configurable since the components
 			// might not placed in a same k8s cluster
 			Type:     corev1.ServiceTypeClusterIP,

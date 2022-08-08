@@ -5,20 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: cnsets.matrixone.matrixorigin.cn
+  name: dnsets.core.matrixorigin.io
 spec:
-  group: matrixone.matrixorigin.cn
+  group: core.matrixorigin.io
   names:
-    kind: CNSet
-    listKind: CNSetList
-    plural: cnsets
-    singular: cnset
+    kind: DNSet
+    listKind: DNSetList
+    plural: dnsets
+    singular: dnset
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: A CNSet is a resource that represents a set of MO's CN instances
+        description: A DNSet is a resource that represents a set of MO's DN instances
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -37,6 +37,8 @@ spec:
                 type: object
               logSet:
                 description: The LogSet it depends on, mutual exclusive with ExternalLogSet
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
             type: object
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -48,7 +50,7 @@ spec:
           spec:
             properties:
               cacheVolume:
-                description: CacheVolume is the desired local cache volume for CNSet,
+                description: CacheVolume is the desired local cache volume for DNSet,
                   node storage will be used if not specified
                 properties:
                   size:

@@ -5,6 +5,13 @@ import (
 )
 
 type CNSetSpec struct {
+	CNSetBasic `json:",inline"`
+
+	// +optional
+	Overlay *Overlay `json:"overlay,omitempty"`
+}
+
+type CNSetBasic struct {
 	PodSet `json:",inline"`
 
 	// CacheVolume is the desired local cache volume for CNSet,

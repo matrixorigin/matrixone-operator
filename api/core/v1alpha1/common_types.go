@@ -36,9 +36,6 @@ type PodSet struct {
 	// +optional
 	TopologyEvenSpread []string `json:"topologySpread,omitempty"`
 
-	// +optional
-	Overlay *Overlay `json:"overlay,omitempty"`
-
 	// Config is the raw config for pods
 	Config *TomlConfig `json:"config,omitempty"`
 }
@@ -46,6 +43,7 @@ type PodSet struct {
 // MainContainers is the description of the main container of a Pod
 type MainContainer struct {
 	// Image is the docker image of the main container
+	// +required
 	Image string `json:"image,omitempty"`
 
 	// Resources is the resource requirement of the main conainer
@@ -169,13 +167,15 @@ type S3Provider struct {
 	// Credentials for s3, the client will automatically discover credential sources
 	// from the environment if not specified
 	// +optional
-	SecretRef *corev1.ObjectReference `json:"secretRef,omitempty"`
+	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
 }
 
 // LogSetRef reference to an LogSet, either internal or external
 type LogSetRef struct {
 	// The LogSet it depends on, mutual exclusive with ExternalLogSet
 	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:validation:Type=object
+	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	LogSet *LogSet `json:"logSet,omitempty"`
 
