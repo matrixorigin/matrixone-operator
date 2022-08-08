@@ -19,13 +19,21 @@ import (
 )
 
 // MatrixoneClusterSpec defines the desired state of MatrixoneCluster
+// Note that MatrixOneCluster does not support specify overlay for underlying sets directly due to the size limitation
+// of kubernetes apiserver
 type MatrixoneClusterSpec struct {
-	// CN is the default CN pod set of this Cluster
-	CN CNSetSpec `json:"cn"`
+	// TP is the default CN pod set that accepts client connections and execute queries
+	// +required
+	TP CNSetBasic `json:"tp"`
+
+	// AP is an optional CN pod set that accept MPP sub-plans to accelerate sql queries
+	// +optionals
+	AP *CNSetBasic `json:"ap,omitempty"`
+
 	// DN is the default DN pod set of this Cluster
-	DN DNSetSpec `json:"dn"`
+	DN DNSetBasic `json:"dn"`
 	// LogService is the default LogService pod set of this cluster
-	LogService LogSetSpec `json:"logService"`
+	LogService LogSetBasic `json:"logService"`
 	// Version is the version of the cluster, which translated
 	// to the docker image tag used for each component.
 	// default to the recommended version of the operator

@@ -18,9 +18,14 @@ import (
 	"flag"
 	"os"
 
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
+	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
+	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -30,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"github.com/matrixorigin/matrixone-operator/pkg/controllers/matrixone"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -41,9 +45,8 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
+	utilruntime.Must(kruisev1.AddToScheme(scheme))
 }
 
 func main() {
@@ -69,8 +72,7 @@ func main() {
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "0c8ab548.matrixorigin.cn",
-		Namespace:              os.Getenv("WATCH_NAMESPACE"),
+		LeaderElectionID:       "0c8ab548.matrixorigin.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -84,11 +86,16 @@ func main() {
 	// 	setupLog.Error(err, "unable to create controller", "controller", "MatrixoneCluster")
 	// 	os.Exit(1)
 	// }
-	if err = (matrixone.NewMatrixoneReconciler(mgr)).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Matrixone")
+	//if err = (matrixone.NewMatrixoneReconciler(mgr)).SetupWithManager(mgr); err != nil {
+	//	setupLog.Error(err, "unable to create controller", "controller", "Matrixone")
+	//	os.Exit(1)
+	//}
+	//+kubebuilder:scaffold:builder
+	logsetActor := &logset.LogSetActor{}
+	if err := recon.Setup[*v1alpha1.LogSet](&v1alpha1.LogSet{}, "logset", mgr, logsetActor); err != nil {
+		setupLog.Error(err, "unable to set up logset controller")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")

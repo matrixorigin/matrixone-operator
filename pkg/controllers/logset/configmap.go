@@ -55,11 +55,11 @@ exec /mo-service --config ${conf}
 `))
 
 type model struct {
-	RaftPort         int
-	LogServicePort   int
-	GossipPort       int
-	ConfigFilePath   string
-	BoostrapFilePath string
+	RaftPort          int
+	LogServicePort    int
+	GossipPort        int
+	ConfigFilePath    string
+	BootstrapFilePath string
 }
 
 // buildConfigMap build the configmap for log service
@@ -81,11 +81,11 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	// 2. build the start script
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
-		RaftPort:         RaftPort,
-		LogServicePort:   LogServicePort,
-		GossipPort:       GossipPort,
-		ConfigFilePath:   fmt.Sprintf("%s/%s", configPath, ConfigFile),
-		BoostrapFilePath: fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
+		RaftPort:          RaftPort,
+		LogServicePort:    LogServicePort,
+		GossipPort:        GossipPort,
+		ConfigFilePath:    fmt.Sprintf("%s/%s", configPath, ConfigFile),
+		BootstrapFilePath: fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
 	})
 	if err != nil {
 		return nil, err

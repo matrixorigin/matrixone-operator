@@ -1,0 +1,17 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: LogSet
+metadata:
+  name: logset
+spec:
+  image: aylei/mo-service:0.1.0
+  replicas: 3
+  sharedStorage:
+    s3:
+      path: test/bucket
+  volume:
+    size: 10Gi
+  initialConfig:
+    logShards: 1
+    dnShards: 1
+    haKeeperReplicas: 3
+    logShardReplicas: 3

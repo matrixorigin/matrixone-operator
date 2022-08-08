@@ -5,6 +5,7 @@ import (
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +21,7 @@ const (
 
 	bootstrapVolume = "bootstrap"
 	bootstrapPath   = "/etc/bootstrap"
+	PodNameEnvKey   = "POD_NAME"
 )
 
 // syncReplicas controls the real replicas field of the logset pods
@@ -36,14 +38,21 @@ func syncPodMeta(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 	main := corev1.Container{
 		Name:      v1alpha1.ContainerMain,
-		Image:     fmt.Sprintf(ls.Spec.Image),
+		Image:     ls.Spec.Image,
 		Resources: ls.Spec.Resources,
-		VolumeMounts: []corev1.VolumeMount{{
-			Name:      dataVolume,
-			MountPath: dataPath,
-		}, {
-			Name:      bootstrapVolume,
-			MountPath: bootstrapPath,
+		Command:   []string{"/bin/sh", fmt.Sprintf("%s/%s", configPath, Entrypoint)},
+		VolumeMounts: []corev1.VolumeMount{
+			{Name: dataVolume, ReadOnly: true, MountPath: dataPath},
+			{Name: bootstrapVolume, ReadOnly: true, MountPath: bootstrapPath},
+			{Name: configVolume, ReadOnly: true, MountPath: configPath},
+		},
+		Env: []corev1.EnvVar{{
+			Name: PodNameEnvKey,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
 		}},
 	}
 	ls.Spec.Overlay.OverlayMainContainer(&main)
@@ -58,6 +67,9 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 					LocalObjectReference: corev1.LocalObjectReference{Name: bootstrapConfigMapName(ls)},
 				},
 			},
+		}},
+		ReadinessGates: []corev1.PodReadinessGate{{
+			ConditionType: pub.InPlaceUpdateReady,
 		}},
 	}
 	common.SyncTopology(ls.Spec.TopologyEvenSpread, &podSpec)
