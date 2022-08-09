@@ -3,8 +3,7 @@ package logset
 import (
 	"bytes"
 	"fmt"
-	"html/template"
-	"strings"
+	"text/template"
 
 	"github.com/cespare/xxhash"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -29,29 +28,48 @@ const (
 // TODO(aylei): add logservice topology labels
 var startScriptTpl = template.Must(template.New("logservice-start-script").Parse(`
 #!/bin/sh
-set -euo pipefail
+set -eu
 
 POD_NAME=${POD_NAME:-$HOSTNAME}
 ADDR="${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc"
 ORDINAL=${POD_NAME##*-}
 UUID=$(printf '00000000-0000-0000-0000-%012x' ${ORDINAL})
-conf=$(mktemp /tmp/config.XXXX)
-bc=$(mktemp /tmp/bc.XXXX)
+conf=$(mktemp)
+
+bc=$(mktemp)
 cat <<EOF > ${bc}
 uuid = "${UUID}"
 raft-address = "${ADDR}:{{ .RaftPort }}"
 logservice-address = "${ADDR}:{{ .LogServicePort }}"
-gossip-address = "${ADDR}:{{ .GossipPort }}"
+gossip-address = "${POD_IP}:{{ .GossipPort }}"
 EOF
 
 # build instance config
 sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
 
 # append bootstrap config
-cat {{ .BootstrapFilePath }} >> ${conf}
+sed "/\[logservice\]/d" {{ .BootstrapFilePath }} >> ${conf}
 
-echo "/mo-service --config ${conf}"
-exec /mo-service --config ${conf}
+# there is a chance that the dns is not yet added to kubedns and the
+# server will crash, wait before myself to be resolvable
+elapseTime=0
+period=1
+threshold=30
+while true; do
+    sleep ${period}
+    elapseTime=$(( elapseTime+period ))
+    if [[ ${elapseTime} -ge ${threshold} ]]; then
+        echo "waiting for dns resolvable timeout" >&2 && exit 1
+    fi
+    if nslookup ${ADDR} 2>/dev/null; then
+        break
+    else
+        echo "waiting pod dns name ${ADDR} resolvable" >&2
+    fi
+done
+
+echo "/mo-service -cfg ${conf}"
+exec /mo-service -cfg ${conf}
 `))
 
 type model struct {
@@ -72,7 +90,8 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	conf.Set([]string{"service-type"}, ServiceTypeLog)
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentId(ls))
 	conf.Set([]string{"logservice", "gossip-seed-addresses"}, gossipSeeds(ls))
-	conf.Set([]string{"logservice", "HAKeeperClientConfig", "hakeeper-service-addresses"}, fmt.Sprintf("%s:d", discoverySvcAddress(ls), LogServicePort))
+	conf.Set([]string{"hakeeper-client", "service-addresses"}, haKeeperAdds(ls))
+	// conf.Set([]string{"hakeeper-client", "service-addresses"}, fmt.Sprintf("%s:%d", discoverySvcAddress(ls), LogServicePort))
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
@@ -104,21 +123,28 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	}, nil
 }
 
-func gossipSeeds(ls *v1alpha1.LogSet) string {
+func haKeeperAdds(ls *v1alpha1.LogSet) []string {
 	// TODO: consider hole in asts ordinals
-	sb := strings.Builder{}
+	var seeds []string
 	for i := int32(0); i < ls.Spec.Replicas; i++ {
-		if i != 0 {
-			sb.WriteRune(';')
-		}
 		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
-		sb.WriteString(fmt.Sprintf("%s.%s:%d", podName, headlessSvcName(ls), GossipPort))
+		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, LogServicePort))
 	}
-	return sb.String()
+	return seeds
+}
+
+func gossipSeeds(ls *v1alpha1.LogSet) []string {
+	// TODO: consider hole in asts ordinals
+	var seeds []string
+	for i := int32(0); i < ls.Spec.Replicas; i++ {
+		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
+		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, GossipPort))
+	}
+	return seeds
 }
 
 func deploymentId(ls *v1alpha1.LogSet) uint64 {
-	return xxhash.Sum64String(ls.Name)
+	return xxhash.Sum64String(ls.Name) >> 1
 }
 
 func configMapName(ls *v1alpha1.LogSet) string {

@@ -101,6 +101,7 @@ func addConfigMapDigest(cm *corev1.ConfigMap) error {
 		return err
 	}
 	sum := xxhash.Sum64(s)
-	cm.Name = fmt.Sprintf("%s-%x", cm.Name, sum)
+	suffix := fmt.Sprintf("%x", sum)[0:7]
+	cm.Name = fmt.Sprintf("%s-%s", cm.Name, suffix)
 	return nil
 }

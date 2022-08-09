@@ -3,13 +3,18 @@ kind: LogSet
 metadata:
   name: logset
 spec:
-  image: aylei/mo-service:0.1.0
+  image: aylei/mo-service:0.1.2
   replicas: 3
   sharedStorage:
     s3:
       path: test/bucket
   volume:
     size: 10Gi
+    storageClassName: gp2
+  overlay:
+    nodeSelector:
+      arch: amd64
+      topology.kubernetes.io/zone: us-west-2c
   initialConfig:
     logShards: 1
     dnShards: 1

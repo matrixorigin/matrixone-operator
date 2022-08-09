@@ -2,10 +2,7 @@ package logset
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
-	"github.com/google/uuid"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/pkg/errors"
@@ -89,18 +86,12 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 
 // encodeSeeds encode the bootstrap replicas decision to the configuration format
 // accepted by logservice
-func encodeSeeds(brs []bootstrapReplica) string {
-	sb := strings.Builder{}
-	for i, r := range brs {
-		if i != 0 {
-			sb.WriteRune(';')
-		}
-		uuid.New()
-		sb.WriteString(encodeOrdinal(r.ordinal))
-		sb.WriteRune(':')
-		sb.WriteString(strconv.Itoa(r.replicaId))
+func encodeSeeds(brs []bootstrapReplica) []string {
+	var seeds []string
+	for _, r := range brs {
+		seeds = append(seeds, fmt.Sprintf("%d:%s", r.replicaId, encodeOrdinal(r.ordinal)))
 	}
-	return sb.String()
+	return seeds
 }
 
 // encodeOrdinal encode the pod ordinal to UUID

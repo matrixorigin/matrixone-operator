@@ -205,7 +205,7 @@ func (r *Reconciler[T]) finalize(ctx *Context[T]) (recon.Result, error) {
 		return none, errors.Wrap(err, "error finalizing object")
 	}
 	if !done {
-		ctx.Log.V(Debug).Info("does not complete finalizing, requeue")
+		ctx.Log.Info("does not complete finalizing, requeue")
 		return requeue, nil
 	}
 	ctx.Log.Info("resource finalizing complete, remove finalizer")

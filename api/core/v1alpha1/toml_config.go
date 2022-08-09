@@ -19,8 +19,8 @@ type TomlConfig struct {
 }
 
 func (c *TomlConfig) ToString() (string, error) {
-	s := []byte{}
-	if err := c.UnmarshalTOML(s); err != nil {
+	s, err := c.MarshalTOML()
+	if err != nil {
 		return "", err
 	}
 	return string(s), nil
@@ -107,6 +107,7 @@ func set(m map[string]interface{}, value interface{}, path ...string) {
 		nextM, ok := next.(map[string]interface{})
 		if ok {
 			set(nextM, value, path[1:]...)
+			return
 		}
 	}
 	// if the next key is not found or the next key is not a nested map,
