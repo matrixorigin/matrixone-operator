@@ -39,6 +39,9 @@ func TestOperation(t *testing.T) {
 	c.Set([]string{"k3"}, "v6")
 	g.Expect(c.Get("k3", "k4")).Should(BeNil())
 
+	c.Set([]string{"profile", "nested", "k1", "k3"}, "v4")
+	g.Expect(c.Get("profile", "nested", "k2")).ShouldNot(BeNil(), "set nested fields must not override parent map")
+
 	profile := c.Get("profile").MustToml()
 	profile.Del("nested")
 	g.Expect(c.Get("profile", "nested", "k2")).Should(BeNil())

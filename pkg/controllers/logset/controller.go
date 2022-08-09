@@ -177,7 +177,7 @@ func (r *LogSetActor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, erro
 	}}}
 	for _, obj := range objs {
 		obj.SetNamespace(ls.Namespace)
-		if err := ctx.Delete(obj); err != nil {
+		if err := util.Ignore(apierrors.IsNotFound, ctx.Delete(obj)); err != nil {
 			return false, err
 		}
 	}

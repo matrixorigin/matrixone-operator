@@ -21,7 +21,11 @@ const (
 
 	bootstrapVolume = "bootstrap"
 	bootstrapPath   = "/etc/bootstrap"
-	PodNameEnvKey   = "POD_NAME"
+
+	PodNameEnvKey     = "POD_NAME"
+	HeadlessSvcEnvKey = "HEADLESS_SERVICE_NAME"
+	NamespaceEnvKey   = "NAMESPACE"
+	PodIPEnvKey       = "POD_IP"
 )
 
 // syncReplicas controls the real replicas field of the logset pods
@@ -51,6 +55,23 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
 					FieldPath: "metadata.name",
+				},
+			},
+		}, {
+			Name:  HeadlessSvcEnvKey,
+			Value: headlessSvcName(ls),
+		}, {
+			Name: NamespaceEnvKey,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		}, {
+			Name: PodIPEnvKey,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "status.podIP",
 				},
 			},
 		}},
@@ -118,6 +139,10 @@ func buildStatefulSet(ls *v1alpha1.LogSet, headlessSvc *corev1.Service) *kruisev
 			Selector: &metav1.LabelSelector{
 				MatchLabels: common.SubResourceLabels(ls),
 			},
+			PersistentVolumeClaimRetentionPolicy: &kruisev1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+				WhenDeleted: kruisev1.DeletePersistentVolumeClaimRetentionPolicyType,
+				WhenScaled:  kruisev1.DeletePersistentVolumeClaimRetentionPolicyType,
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      common.SubResourceLabels(ls),
@@ -150,5 +175,5 @@ func stsName(ls *v1alpha1.LogSet) string {
 }
 
 func headlessSvcName(ls *v1alpha1.LogSet) string {
-	return ls.Name + "-headless"
+	return ls.Name
 }

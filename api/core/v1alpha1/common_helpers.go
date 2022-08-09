@@ -6,6 +6,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	reasonEmpty = "empty"
+)
+
 // +kubebuilder:object:root=false
 // +kubebuilder:object:generate=false
 type Conditional interface {
@@ -17,6 +21,9 @@ type Conditional interface {
 func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
 	if c.Conditions == nil {
 		c.Conditions = []metav1.Condition{}
+	}
+	if condition.Reason == "" {
+		condition.Reason = reasonEmpty
 	}
 	meta.SetStatusCondition(&c.Conditions, condition)
 }
