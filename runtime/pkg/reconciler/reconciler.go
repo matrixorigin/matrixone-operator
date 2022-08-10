@@ -165,7 +165,18 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 		return none, errors.Wrap(err, "error adding finalizer to object")
 	}
 
-	// TODO(aylei): wait dependencies to be ready
+	if _, ok := any(obj).(Dependant); ok {
+		depHolder := obj.DeepCopyObject().(Dependant)
+		ready, err := r.waitDependencies(ctx, depHolder)
+		if err != nil {
+			return none, errors.Wrap(err, "error waiting dependencies to be ready")
+		}
+		if !ready {
+			return requeue, nil
+		}
+		ctx.Dep = depHolder.(T)
+	}
+
 	action, err := r.actor.Observe(ctx)
 	if err != nil {
 		ctx.Event.EmitEventGeneric(reconcileFail, "failed to observe status", err)
@@ -189,8 +200,22 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 		ctx.Event.EmitEventGeneric(reconcileFail, fmt.Sprintf("failed to execute action %s", action), err)
 		return none, errors.Wrap(err, "error executing reconcile action")
 	}
-	// Always requeue after an successful action to check what should be done next
+	// Always requeue after a successful action to check what should be done next
 	return requeue, nil
+}
+
+func (r *Reconciler[T]) waitDependencies(ctx *Context[T], dt Dependant) (bool, error) {
+	deps := dt.GetDependencies()
+	for _, dep := range deps {
+		ready, err := dep.IsReady(ctx)
+		if err != nil {
+			return false, err
+		}
+		if !ready {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (r *Reconciler[T]) finalize(ctx *Context[T]) (recon.Result, error) {

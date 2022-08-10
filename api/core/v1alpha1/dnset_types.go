@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -43,6 +44,19 @@ type DNSet struct {
 	Spec   DNSetSpec   `json:"spec,omitempty"`
 	Deps   DNSetDeps   `json:"deps,omitempty"`
 	Status DNSetStatus `json:"status,omitempty"`
+}
+
+func (d *DNSet) GetDependencies() []recon.Dependency {
+	var deps []recon.Dependency
+	if d.Deps.LogSet != nil {
+		deps = append(deps, &recon.ObjectDependency[*LogSet]{
+			ObjectRef: d.Deps.LogSet,
+			ReadyFunc: func(l *LogSet) bool {
+				return l.Status.Ready()
+			},
+		})
+	}
+	return deps
 }
 
 //+kubebuilder:object:root=true
