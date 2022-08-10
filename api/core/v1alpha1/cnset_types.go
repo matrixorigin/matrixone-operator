@@ -30,6 +30,9 @@ type CNSetDeps struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="Image",type="string",JSONPath=".spec.image"
+// +kubebuilder:printcolumn:name="Replicas",type="integer",JSONPath=".spec.replicas"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // A CNSet is a resource that represents a set of MO's CN instances
 // +kubebuilder:subresource:status

@@ -15,7 +15,17 @@ spec:
     singular: dnset
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.image
+      name: Image
+      type: string
+    - jsonPath: .spec.replicas
+      name: Replicas
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: A DNSet is a resource that represents a set of MO's DN instances
@@ -6465,8 +6475,8 @@ spec:
                 type: object
               topologySpread:
                 description: TopologyEvenSpread specifies what topology domains the
-                  Pods in set should be evenly spread in. This will overridden by
-                  .overlay.TopologySpreadConstraints
+                  Pods in set should be evenly spread in. This will be overridden
+                  by .overlay.TopologySpreadConstraints
                 items:
                   type: string
                 type: array
