@@ -56,6 +56,10 @@ type Context[T client.Object] struct {
 	context.Context
 	Obj T
 
+	// Dep hold the dependencies of the object T, will only be set when
+	// the object implement the `Dependant` interface
+	Dep T
+
 	Client client.Client
 	// TODO(aylei): add tracing
 	Event EventEmitter
