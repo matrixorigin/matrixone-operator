@@ -102,7 +102,7 @@ spec:
                     type: object
                   topologySpread:
                     description: TopologyEvenSpread specifies what topology domains
-                      the Pods in set should be evenly spread in. This will overridden
+                      the Pods in set should be evenly spread in. This will be overridden
                       by .overlay.TopologySpreadConstraints
                     items:
                       type: string
@@ -171,7 +171,7 @@ spec:
                     type: object
                   topologySpread:
                     description: TopologyEvenSpread specifies what topology domains
-                      the Pods in set should be evenly spread in. This will overridden
+                      the Pods in set should be evenly spread in. This will be overridden
                       by .overlay.TopologySpreadConstraints
                     items:
                       type: string
@@ -287,7 +287,7 @@ spec:
                     type: object
                   topologySpread:
                     description: TopologyEvenSpread specifies what topology domains
-                      the Pods in set should be evenly spread in. This will overridden
+                      the Pods in set should be evenly spread in. This will be overridden
                       by .overlay.TopologySpreadConstraints
                     items:
                       type: string
@@ -379,7 +379,7 @@ spec:
                     type: object
                   topologySpread:
                     description: TopologyEvenSpread specifies what topology domains
-                      the Pods in set should be evenly spread in. This will overridden
+                      the Pods in set should be evenly spread in. This will be overridden
                       by .overlay.TopologySpreadConstraints
                     items:
                       type: string
