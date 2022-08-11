@@ -16,10 +16,16 @@ package util
 
 import (
 	"reflect"
+	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	configmapMode = 0644
 )
 
 func Ignore(isErr func(error) bool, err error) error {
@@ -64,4 +70,41 @@ func WithVolumeName(name string) Predicate[corev1.Volume] {
 	return func(v corev1.Volume) bool {
 		return v.Name == name
 	}
+}
+
+func ConfigMapVolume(name string) corev1.VolumeSource {
+	mode := int32(configmapMode)
+	return corev1.VolumeSource{
+		ConfigMap: &corev1.ConfigMapVolumeSource{
+			LocalObjectReference: corev1.LocalObjectReference{Name: name},
+			DefaultMode:          &mode,
+		},
+	}
+}
+
+func FieldRefEnv(key string, field string) corev1.EnvVar {
+	return corev1.EnvVar{
+		Name: key,
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				APIVersion: "v1",
+				FieldPath:  field,
+			},
+		},
+	}
+}
+
+func Upsert[E comparable](list []E, elem E) []E {
+	for _, o := range list {
+		if o == elem {
+			return list
+		}
+	}
+	return append(list, elem)
+}
+
+func PodOrdinal(name string) (int, error) {
+	ss := strings.Split(name, "-")
+	suffix := ss[len(ss)-1]
+	return strconv.Atoi(suffix)
 }

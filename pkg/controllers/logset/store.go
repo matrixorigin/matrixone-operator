@@ -22,16 +22,16 @@ func collectStoreStatus(ls *v1alpha1.LogSet, pods []corev1.Pod) {
 	for _, pod := range pods {
 		store := v1alpha1.LogStore{
 			PodName:            pod.Name,
+			Phase:              v1alpha1.StorePhaseUp,
 			LastTransitionTime: metav1.Time{time.Now()},
 		}
-		if util.IsPodReady(&pod) {
-			store.Phase = v1alpha1.StorePhaseUp
-		} else {
+		if !util.IsPodReady(&pod) {
 			store.Phase = v1alpha1.StorePhaseDown
 		}
+		// update last transition time
 		if previous, ok := previousStore[store.PodName]; ok {
 			if previous.Phase == store.Phase {
-				// keep last transition time
+				// phase not changed, keep last transition time
 				store.LastTransitionTime = previous.LastTransitionTime
 			}
 		}

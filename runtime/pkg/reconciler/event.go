@@ -42,7 +42,7 @@ const (
 	deleteSuccess     EventReason = "DeleteSuccess"
 )
 
-//  EventEmitter Interface is a wrapper interface for all the emitter interface  operator shall support.
+// EventEmitter Interface is a wrapper interface for all the emitter interface  operator shall support.
 type EventEmitter interface {
 	K8sEventEmitter
 	GenericEventEmitter
@@ -74,7 +74,7 @@ type GenericEventEmitter interface {
 // EmitEventGeneric shall emit a generic event
 func (e *EmitEventWrapper) EmitEventGeneric(eventReason, msg string, err error) {
 	if err != nil {
-		e.Event(e.subject, corev1.EventTypeWarning, eventReason, err.Error())
+		e.Event(e.subject, corev1.EventTypeWarning, eventReason, fmt.Sprintf("%s, error: %s", msg, err.Error()))
 	} else if msg != "" {
 		e.Event(e.subject, corev1.EventTypeNormal, eventReason, msg)
 	}
@@ -132,7 +132,7 @@ func (e *EmitEventWrapper) EmitEventOnGetError(getObj client.Object, err error) 
 	e.Event(e.subject, v1.EventTypeWarning, string(objectGetFail), getErr.Error())
 }
 
-//  EmitEventOnList shall emit event on LIST err operation
+// EmitEventOnList shall emit event on LIST err operation
 func (e *EmitEventWrapper) EmitEventOnList(listObj client.ObjectList, err error) {
 	if err != nil {
 		errMsg := fmt.Errorf("error listing object [%s] in namespace [%s] due to [%s]", listObj.GetObjectKind().GroupVersionKind().Kind, e.subject.GetNamespace(), err.Error())

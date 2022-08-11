@@ -2,9 +2,9 @@ package logset
 
 import (
 	"fmt"
-
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,63 +40,44 @@ func syncPodMeta(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 
 // syncPodSpec controls pod spec of the underlying logset pods
 func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
-	main := corev1.Container{
-		Name:      v1alpha1.ContainerMain,
-		Image:     ls.Spec.Image,
-		Resources: ls.Spec.Resources,
-		Command:   []string{"/bin/sh", fmt.Sprintf("%s/%s", configPath, Entrypoint)},
-		VolumeMounts: []corev1.VolumeMount{
-			{Name: dataVolume, ReadOnly: true, MountPath: dataPath},
-			{Name: bootstrapVolume, ReadOnly: true, MountPath: bootstrapPath},
-			{Name: configVolume, ReadOnly: true, MountPath: configPath},
-		},
-		Env: []corev1.EnvVar{{
-			Name: PodNameEnvKey,
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.name",
-				},
-			},
-		}, {
-			Name:  HeadlessSvcEnvKey,
-			Value: headlessSvcName(ls),
-		}, {
-			Name: NamespaceEnvKey,
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.namespace",
-				},
-			},
-		}, {
-			Name: PodIPEnvKey,
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "status.podIP",
-				},
-			},
-		}},
-	}
-	ls.Spec.Overlay.OverlayMainContainer(&main)
-	podSpec := corev1.PodSpec{
-		Containers: []corev1.Container{main},
-		Volumes: []corev1.Volume{{
-			// bootstrap configmap is immutable before the bootstrap is complete and no rolling-update
-			// is required when we clean its content after bootstrap completes
-			Name: bootstrapVolume,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: bootstrapConfigMapName(ls)},
-				},
-			},
-		}},
-		ReadinessGates: []corev1.PodReadinessGate{{
-			ConditionType: pub.InPlaceUpdateReady,
-		}},
-	}
-	common.SyncTopology(ls.Spec.TopologyEvenSpread, &podSpec)
+	// we should sync the spec as fine-grained as possible since not all fields in spec are managed by
+	// current controller (e.g. some fields might be populated by the defaulting logic of api-server)
+	specRef := &sts.Spec.Template.Spec
 
-	ls.Spec.Overlay.OverlayPodSpec(&podSpec)
-	sts.Spec.Template.Spec = podSpec
+	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
+		return c.Name == v1alpha1.ContainerMain
+	})
+	if mainRef == nil {
+		mainRef = &corev1.Container{Name: v1alpha1.ContainerMain}
+	}
+	mainRef.Image = ls.Spec.Image
+	mainRef.Resources = ls.Spec.Resources
+	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", configPath, Entrypoint)}
+	mainRef.VolumeMounts = []corev1.VolumeMount{
+		{Name: dataVolume, ReadOnly: true, MountPath: dataPath},
+		{Name: bootstrapVolume, ReadOnly: true, MountPath: bootstrapPath},
+		{Name: configVolume, ReadOnly: true, MountPath: configPath},
+	}
+	mainRef.Env = []corev1.EnvVar{
+		util.FieldRefEnv(PodNameEnvKey, "metadata.name"),
+		util.FieldRefEnv(NamespaceEnvKey, "metadata.namespace"),
+		util.FieldRefEnv(PodIPEnvKey, "status.podIP"),
+		{Name: HeadlessSvcEnvKey, Value: headlessSvcName(ls)},
+	}
+	ls.Spec.Overlay.OverlayMainContainer(mainRef)
+
+	specRef.Containers = []corev1.Container{*mainRef}
+	specRef.Volumes = []corev1.Volume{{
+		// bootstrap configmap is immutable before the bootstrap is complete and no rolling-update
+		// is required when we clean its content after bootstrap completes
+		Name:         bootstrapVolume,
+		VolumeSource: util.ConfigMapVolume(bootstrapConfigMapName(ls)),
+	}}
+	specRef.ReadinessGates = []corev1.PodReadinessGate{{
+		ConditionType: pub.InPlaceUpdateReady,
+	}}
+	common.SyncTopology(ls.Spec.TopologyEvenSpread, specRef)
+	ls.Spec.Overlay.OverlayPodSpec(specRef)
 }
 
 // syncPersistentVolumeClaim controls the persistent volume claim of underlying pods

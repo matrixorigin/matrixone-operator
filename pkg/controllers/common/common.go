@@ -64,14 +64,8 @@ func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1
 	} else {
 		// insert new config volume ref
 		podSpec.Volumes = append(podSpec.Volumes, corev1.Volume{
-			Name: "config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: desiredName,
-					},
-				},
-			},
+			Name:         "config",
+			VolumeSource: util.ConfigMapVolume(desiredName),
 		})
 	}
 	return nil

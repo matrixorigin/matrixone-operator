@@ -16,10 +16,12 @@ package main
 
 import (
 	"flag"
-	"os"
-
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
+	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
+	"os"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -58,13 +60,14 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	opts := zap.Options{
+	opts := &zap.Options{
 		Development: true,
+		TimeEncoder: zapcore.RFC3339TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -79,20 +82,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// if err = (&matrixone.MatrixoneClusterReconciler{
-	// 	Client: mgr.GetClient(),
-	// 	Scheme: mgr.GetScheme(),
-	// }).SetupWithManager(mgr); err != nil {
-	// 	setupLog.Error(err, "unable to create controller", "controller", "MatrixoneCluster")
-	// 	os.Exit(1)
-	// }
-	//if err = (matrixone.NewMatrixoneReconciler(mgr)).SetupWithManager(mgr); err != nil {
-	//	setupLog.Error(err, "unable to create controller", "controller", "Matrixone")
-	//	os.Exit(1)
-	//}
-	//+kubebuilder:scaffold:builder
 	logsetActor := &logset.LogSetActor{}
-	if err := recon.Setup[*v1alpha1.LogSet](&v1alpha1.LogSet{}, "logset", mgr, logsetActor); err != nil {
+	if err := recon.Setup[*v1alpha1.LogSet](&v1alpha1.LogSet{}, "logset", mgr, logsetActor,
+		recon.WithBuildFn(func(b *builder.Builder) {
+			// watch all changes on the owned statefulset since we need perform failover if there is a pod failure
+			b.Owns(&kruisev1.StatefulSet{}).
+				Owns(&corev1.Service{})
+		})); err != nil {
 		setupLog.Error(err, "unable to set up logset controller")
 		os.Exit(1)
 	}
