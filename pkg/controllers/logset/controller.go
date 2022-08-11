@@ -2,6 +2,7 @@ package logset
 
 import (
 	"reflect"
+	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -24,6 +25,11 @@ const (
 	IDRangeEnd   int = 262144
 
 	ReasonNoEnoughReadyStores = "NoEnoughReadyStores"
+)
+
+const (
+	// TODO(aylei): should be configurable
+	storeDownTimeout = 5 * time.Minute
 )
 
 var _ recon.Actor[*v1alpha1.LogSet] = &LogSetActor{}
@@ -84,8 +90,8 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 	}
 
 	switch {
-	case len(ls.Status.FailedStores) > 0:
-		return r.Repair, nil
+	case len(ls.StoresFailedFor(storeDownTimeout)) > 0:
+		return r.with(sts).Repair, nil
 	case ls.Spec.Replicas != *sts.Spec.Replicas:
 		return r.with(sts).Scale, nil
 	}
@@ -100,6 +106,7 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 }
 
 func (r *LogSetActor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
+	ctx.Log.Info("create logset")
 	ls := ctx.Obj
 
 	// build resources required by a logset
@@ -152,8 +159,21 @@ func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.LogSet]) error {
 }
 
 // Repair repairs failed log set pods to match the desired state
-func (r *LogSetActor) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
-	// TODO(aylei): implement
+func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
+	toRepair := ctx.Obj.StoresFailedFor(storeDownTimeout)
+	if len(toRepair) == 0 {
+		return nil
+	}
+	if len(toRepair) >= (*ctx.Obj.Spec.InitialConfig.LogShardReplicas)/2 {
+		ctx.Log.Info("majority failure might happen, wait for human intervention")
+		return nil
+	}
+	// repair one at a time
+	ordinal, err := util.PodOrdinal(toRepair[0].PodName)
+	if err != nil {
+		return errors.Wrapf(err, "error parse ordinal from pod name %s", toRepair[0].PodName)
+	}
+	r.sts.Spec.ReserveOrdinals = util.Upsert(r.sts.Spec.ReserveOrdinals, ordinal)
 	return nil
 }
 
@@ -165,7 +185,6 @@ func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.LogSet]) error {
 
 func (r *LogSetActor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
 	ls := ctx.Obj
-	ctx.Log.Info("finalzie logset")
 	// TODO(aylei): we may encode the created resources in etcd so that we don't have
 	// to maintain a hardcoded list
 	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{

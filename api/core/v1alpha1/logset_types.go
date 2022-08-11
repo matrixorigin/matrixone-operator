@@ -73,8 +73,9 @@ type LogSetStatus struct {
 }
 
 type LogStore struct {
-	PodName            string      `json:"podName,omitempty"`
-	Phase              string      `json:"phase,omitempty"`
+	PodName string `json:"podName,omitempty"`
+	Phase   string `json:"phase,omitempty"`
+	// lastTransitionTime is the latest timestamp a state transition occurs
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 

@@ -629,6 +629,8 @@ spec:
                     items:
                       properties:
                         lastTransitionTime:
+                          description: lastTransitionTime is the latest timestamp
+                            a state transition occurs
                           format: date-time
                           type: string
                         phase:
@@ -720,6 +722,8 @@ spec:
                     items:
                       properties:
                         lastTransitionTime:
+                          description: lastTransitionTime is the latest timestamp
+                            a state transition occurs
                           format: date-time
                           type: string
                         phase:
