@@ -11,10 +11,9 @@ spec:
   volume:
     size: 10Gi
     storageClassName: gp2
-  overlay:
-    nodeSelector:
-      arch: amd64
-      topology.kubernetes.io/zone: us-west-2c
+  nodeSelector:
+    arch: amd64
+    topology.kubernetes.io/zone: us-west-2c
   initialConfig:
     logShards: 1
     dnShards: 1

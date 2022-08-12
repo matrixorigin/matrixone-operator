@@ -1,0 +1,26 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: MatrixoneCluster
+metadata:
+  name: mo
+spec:
+  imageRepository: aylei/mo-service
+  version: 0.1.2
+  logService:
+    initialConfig:
+      logShards: 1
+      dnShards: 1
+      haKeeperReplicas: 3
+      logShardReplicas: 3
+    replicas: 3
+    sharedStorage:
+      s3:
+        path: test/bucket
+    volume:
+      size: 10Gi
+    nodeSelector:
+      arch: amd64
+      topology.kubernetes.io/zone: us-west-2c
+  dn:
+    replicas: 2
+  tp:
+    replicas: 2

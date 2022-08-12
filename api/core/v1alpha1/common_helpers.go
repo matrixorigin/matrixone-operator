@@ -88,9 +88,6 @@ func (o *Overlay) OverlayPodSpec(pod *corev1.PodSpec) {
 	if o.Affinity != nil {
 		pod.Affinity = o.Affinity
 	}
-	if o.NodeSelector != nil {
-		pod.NodeSelector = o.NodeSelector
-	}
 	if o.ServiceAccountName != "" {
 		pod.ServiceAccountName = o.ServiceAccountName
 	}

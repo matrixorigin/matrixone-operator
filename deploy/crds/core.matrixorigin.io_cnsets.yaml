@@ -84,6 +84,10 @@ spec:
               image:
                 description: Image is the docker image of the main container
                 type: string
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                type: object
               overlay:
                 description: Overlay allows advanced customization of the pod spec
                   in the set
@@ -2765,10 +2769,6 @@ spec:
                           https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                         format: int32
                         type: integer
-                    type: object
-                  nodeSelector:
-                    additionalProperties:
-                      type: string
                     type: object
                   podAnnotations:
                     additionalProperties:

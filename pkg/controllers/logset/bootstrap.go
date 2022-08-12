@@ -78,9 +78,10 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 	if err != nil {
 		return nil, errors.Wrap(err, "error serialize bootstrap replicas")
 	}
-	annos := ctx.Obj.GetAnnotations()
-	annos[BootstrapAnnoKey] = string(serialized)
-	ctx.Obj.SetAnnotations(annos)
+	if ctx.Obj.Annotations == nil {
+		ctx.Obj.Annotations = map[string]string{}
+	}
+	ctx.Obj.Annotations[BootstrapAnnoKey] = string(serialized)
 	return replicas, ctx.Update(ctx.Obj)
 }
 

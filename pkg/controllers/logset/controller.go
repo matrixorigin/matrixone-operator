@@ -1,7 +1,7 @@
 package logset
 
 import (
-	"reflect"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -99,7 +99,7 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 	if err := syncPods(ctx, sts); err != nil {
 		return nil, err
 	}
-	if !reflect.DeepEqual(origin, sts) {
+	if !equality.Semantic.DeepEqual(origin, sts) {
 		return r.with(sts).Update, nil
 	}
 	return nil, nil

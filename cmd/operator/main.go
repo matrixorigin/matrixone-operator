@@ -17,6 +17,7 @@ package main
 import (
 	"flag"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mocluster"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
@@ -90,6 +91,17 @@ func main() {
 				Owns(&corev1.Service{})
 		})); err != nil {
 		setupLog.Error(err, "unable to set up logset controller")
+		os.Exit(1)
+	}
+
+	moActor := &mocluster.MatrixoneClusterActor{}
+	if err := recon.Setup[*v1alpha1.MatrixoneCluster](&v1alpha1.MatrixoneCluster{}, "matrixonecluster", mgr, moActor,
+		recon.WithBuildFn(func(b *builder.Builder) {
+			b.Owns(&v1alpha1.LogSet{}).
+				Owns(&v1alpha1.DNSet{}).
+				Owns(&v1alpha1.CNSet{})
+		})); err != nil {
+		setupLog.Error(err, "unable to set up matrixonecluster controller")
 		os.Exit(1)
 	}
 
