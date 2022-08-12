@@ -37,24 +37,26 @@ type MatrixoneClusterSpec struct {
 	// Version is the version of the cluster, which translated
 	// to the docker image tag used for each component.
 	// default to the recommended version of the operator
-	// +optional
-	Version *string `json:"version"`
+	// +required
+	Version string `json:"version"`
+	// ImageRepository allows user to override the default image
+	// repository in order to use a docker registry proxy or private
+	// registry.
+	// +required
+	ImageRepository string `json:"imageRepository,omitempty"`
 	// WebUIEnabled indicates whether deploy the MO web-ui,
 	// default to true.
 	// +optional
 	WebUIEnabled *bool `json:"webUIEnabled,omitempty"`
-	// ImageRepository allows user to override the default image
-	// repository in order to use a docker registry proxy or private
-	// registry.
-	// +optional
-	ImageRepository *string `json:"imageRepository,omitempty"`
 }
 
 // MatrixoneClusterStatus defines the observed state of MatrixoneCluster
 type MatrixoneClusterStatus struct {
 	ConditionalStatus `json:",inline"`
-	// CN is the CN set status
-	CN *CNSetStatus `json:"cn,omitempty"`
+	// TP is the TP set status
+	TP *CNSetStatus `json:"tp,omitempty"`
+	// AP is the AP set status
+	AP *CNSetStatus `json:"ap,omitempty"`
 	// DN is the DN set status
 	DN *DNSetStatus `json:"dn,omitempty"`
 	// LogService is the LogService status
@@ -66,6 +68,12 @@ type MatrixoneClusterStatus struct {
 // A MatrixoneCluster is a resource that represents a MatrixOne Cluster
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=mo
+// +kubebuilder:printcolumn:name="Log",type="integer",JSONPath=".spec.logService.replicas"
+// +kubebuilder:printcolumn:name="DN",type="integer",JSONPath=".spec.dn.replicas"
+// +kubebuilder:printcolumn:name="TP",type="integer",JSONPath=".spec.tp.replicas"
+// +kubebuilder:printcolumn:name="AP",type="integer",JSONPath=".spec.ap.replicas"
+// +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type MatrixoneCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

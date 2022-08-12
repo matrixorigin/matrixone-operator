@@ -76,6 +76,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 	specRef.ReadinessGates = []corev1.PodReadinessGate{{
 		ConditionType: pub.InPlaceUpdateReady,
 	}}
+	specRef.NodeSelector = ls.Spec.NodeSelector
 	common.SyncTopology(ls.Spec.TopologyEvenSpread, specRef)
 	ls.Spec.Overlay.OverlayPodSpec(specRef)
 }

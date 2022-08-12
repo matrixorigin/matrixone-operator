@@ -28,7 +28,7 @@ type LogSetBasic struct {
 
 	// InitialConfig is the initial configuration of HAKeeper
 	// InitialConfig is immutable
-	// +required
+	// +optional
 	InitialConfig InitialConfig `json:"initialConfig"`
 }
 

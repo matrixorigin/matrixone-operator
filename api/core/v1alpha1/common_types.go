@@ -36,6 +36,9 @@ type PodSet struct {
 	// +optional
 	TopologyEvenSpread []string `json:"topologySpread,omitempty"`
 
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
 	// Config is the raw config for pods
 	Config *TomlConfig `json:"config,omitempty"`
 }
@@ -43,7 +46,7 @@ type PodSet struct {
 // MainContainers is the description of the main container of a Pod
 type MainContainer struct {
 	// Image is the docker image of the main container
-	// +required
+	// +optional
 	Image string `json:"image,omitempty"`
 
 	// Resources is the resource requirement of the main conainer
@@ -91,9 +94,6 @@ type Overlay struct {
 
 	// +optional
 	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`
-
-	// +optional
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
