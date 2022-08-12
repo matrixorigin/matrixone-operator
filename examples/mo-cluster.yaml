@@ -14,7 +14,7 @@ spec:
     replicas: 3
     sharedStorage:
       s3:
-        path: test/bucket
+        path: aylei-test/mo-logset
     volume:
       size: 10Gi
     nodeSelector:
