@@ -23,7 +23,7 @@ func collectStoreStatus(ls *v1alpha1.LogSet, pods []corev1.Pod) {
 		store := v1alpha1.LogStore{
 			PodName:            pod.Name,
 			Phase:              v1alpha1.StorePhaseUp,
-			LastTransitionTime: metav1.Time{time.Now()},
+			LastTransitionTime: metav1.Time{Time: time.Now()},
 		}
 		if !util.IsPodReady(&pod) {
 			store.Phase = v1alpha1.StorePhaseDown

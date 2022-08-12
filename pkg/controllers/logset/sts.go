@@ -62,7 +62,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 		util.FieldRefEnv(PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(NamespaceEnvKey, "metadata.namespace"),
 		util.FieldRefEnv(PodIPEnvKey, "status.podIP"),
-		{Name: HeadlessSvcEnvKey, Value: headlessSvcName(ls)},
+		{Name: HeadlessSvcEnvKey, Value: HeadlessSvcName(ls)},
 	}
 	ls.Spec.Overlay.OverlayMainContainer(mainRef)
 
@@ -140,7 +140,7 @@ func buildHeadlessSvc(ls *v1alpha1.LogSet) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ls.Namespace,
-			Name:      headlessSvcName(ls),
+			Name:      HeadlessSvcName(ls),
 			Labels:    common.SubResourceLabels(ls),
 		},
 		// TODO(aylei): ports definition
@@ -155,6 +155,6 @@ func stsName(ls *v1alpha1.LogSet) string {
 	return ls.Name
 }
 
-func headlessSvcName(ls *v1alpha1.LogSet) string {
+func HeadlessSvcName(ls *v1alpha1.LogSet) string {
 	return ls.Name
 }

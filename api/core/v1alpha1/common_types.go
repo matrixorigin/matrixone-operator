@@ -1,9 +1,13 @@
 package v1alpha1
 
 import (
+	"github.com/openkruise/kruise-api/apps/pub"
+	appspub "github.com/openkruise/kruise-api/apps/pub"
+	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type ConditionType string
@@ -190,4 +194,114 @@ type ExternalLogSet struct {
 	// HAKeeperEndpoint of the ExternalLogSet
 	// +required
 	HAKeeperEndpoint string `json:"haKeeperEndpoint,omitempty"`
+}
+
+type CloneSetScaleStrategy struct {
+	// PodsToDelete is the names of Pod should be deleted.
+	// Note that this list will be truncated for non-existing pod names.
+	// +optional
+	PodsToDelete []string `json:"podsToDelete,omitempty"`
+
+	// The maximum number of pods that can be unavailable during the update.
+	// Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).
+	// Absolute number is calculated from percentage by rounding down.
+	// Defaults to 25%.
+	// +optional
+	// +kubebuilder:default="25%"
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+}
+
+type CloneSetUpdateStrategy struct {
+	// Type indicates the type of the CloneSetUpdateStrategy.
+	// Default is ReCreate.
+	// +optional
+	// +kubebuilder:default="ReCreate"
+	Type kruise.CloneSetUpdateStrategyType `json:"type,omitempty"`
+
+	// Partition is the desired number of pods in old revisions.
+	// Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).
+	// Absolute number is calculated from percentage by rounding up by default.
+	// It means when partition is set during pods updating, (replicas - partition value) number of pods will be updated.
+	// Default value is 0.
+	// +optional
+	// +kubebuilder:default="0"
+	Partition *intstr.IntOrString `json:"partition,omitempty"`
+
+	// The maximum number of pods that can be unavailable during update or scale.
+	// Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).
+	// Absolute number is calculated from percentage by rounding up by default.
+	// When maxSurge > 0, absolute number is calculated from percentage by rounding down.
+	// Defaults to 20%.
+	// +optional
+	// +kubebuilder:default="20%"
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+
+	// The maximum number of pods that can be scheduled above the desired replicas during update or specified delete.
+	// Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).
+	// Absolute number is calculated from percentage by rounding up.
+	// Defaults to 0.
+	// +optional
+	// +kubebuilder:default="0"
+	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty"`
+
+	// Paused indicates that the CloneSet is paused.
+	// Default value is false
+	// +optional
+	// +kubebuilder:default=false
+	Paused bool `json:"paused,omitempty"`
+
+	// Priorities are the rules for calculating the priority of updating pods.
+	// Each pod to be updated, will pass through these terms and get a sum of weights.
+	// +optional
+	PriorityStrategy *pub.UpdatePriorityStrategy `json:"priorityStrategy,omitempty"`
+
+	// ScatterStrategy defines the scatter rules to make pods been scattered when update.
+	// This will avoid pods with the same key-value to be updated in one batch.
+	// - Note that pods will be scattered after priority sort.
+	// So, although priority strategy and scatter strategy can be applied together,
+	// we suggest to use either one of them.
+	// - If scatterStrategy is used, we suggest to just use one term.
+	// Otherwise, the update order can be hard to understand.
+	// +optional
+	ScatterStrategy kruise.UpdateScatterStrategy `json:"scatterStrategy,omitempty"`
+
+	// InPlaceUpdateStrategy contains strategies for in-place update.
+	// +optional
+	InPlaceUpdateStrategy *pub.InPlaceUpdateStrategy `json:"inPlaceUpdateStrategy,omitempty"`
+}
+
+type CloneSetCommon struct {
+	// RevisionHistoryLimit is the maximum number of revisions that will
+	// be maintained in the CloneSet's revision history. The revision history
+	// consists of all revisions not represented by a currently applied
+	// CloneSetSpec version. The default value is 10.
+	// +optional
+	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
+
+	// Minimum number of seconds for which a newly created pod should be ready
+	// without any of its container crashing, for it to be considered available.
+	// Defaults to 0 (pod will be considered available as soon as it is ready)
+	// +optional
+	MinReadySeconds int32 `json:"minReadySeconds,omitempty"`
+
+	// Lifecycle defines the lifecycle hooks for Pods pre-delete, in-place update.
+	// +optional
+	Lifecycle *appspub.Lifecycle `json:"lifecycle,omitempty"`
+}
+
+type LogConfig struct {
+	// Level log level: debug,info,warning
+	// +optional
+	// +kubebuilder:default="info"
+	Level string `json:"level,omitempty"`
+
+	// Format log format method: json, console
+	// +optional
+	// +kubebuilder:default="json"
+	Format string `json:"format,omitempty"`
+
+	// MaxSize log file max size
+	// +optional
+	// +kubebuilder:default=512
+	MaxSize int `json:"maxSize,omitempty"`
 }

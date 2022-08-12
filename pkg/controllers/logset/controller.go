@@ -188,7 +188,7 @@ func (r *LogSetActor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, erro
 	// TODO(aylei): we may encode the created resources in etcd so that we don't have
 	// to maintain a hardcoded list
 	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{
-		Name: headlessSvcName(ls),
+		Name: HeadlessSvcName(ls),
 	}}, &kruisev1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
 		Name: stsName(ls),
 	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{

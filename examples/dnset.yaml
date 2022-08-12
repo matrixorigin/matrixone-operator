@@ -1,0 +1,7 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: DNSet
+metadata:
+  name: dnset
+spec:
+  image: aylei/mo-service:0.1.2
+  replicas: 1

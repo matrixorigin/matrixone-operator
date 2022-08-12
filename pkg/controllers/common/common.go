@@ -18,6 +18,7 @@ const (
 	ComponentLabelKey = "matrixorigin.io/component"
 	// NamespaceLabelKey is the label key for cluster-scope resources
 	NamespaceLabelKey = "matrixorigin.io/namespace"
+	DNSet             = 1
 )
 
 // SubResourceLabels generate labels for sub-resources

@@ -128,7 +128,7 @@ func haKeeperAdds(ls *v1alpha1.LogSet) []string {
 	var seeds []string
 	for i := int32(0); i < ls.Spec.Replicas; i++ {
 		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
-		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, LogServicePort))
+		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, HeadlessSvcName(ls), ls.Namespace, LogServicePort))
 	}
 	return seeds
 }
@@ -138,7 +138,7 @@ func gossipSeeds(ls *v1alpha1.LogSet) []string {
 	var seeds []string
 	for i := int32(0); i < ls.Spec.Replicas; i++ {
 		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
-		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, GossipPort))
+		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, HeadlessSvcName(ls), ls.Namespace, GossipPort))
 	}
 	return seeds
 }

@@ -16,7 +16,8 @@ package main
 
 import (
 	"flag"
-	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/dnset"
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
@@ -49,6 +50,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kruisev1.AddToScheme(scheme))
+	utilruntime.Must(kruisev1alpha1.AddToScheme(scheme))
 }
 
 func main() {
@@ -82,17 +84,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	logsetActor := &logset.LogSetActor{}
-	if err := recon.Setup[*v1alpha1.LogSet](&v1alpha1.LogSet{}, "logset", mgr, logsetActor,
+	//logsetActor := &logset.LogSetActor{}
+	//if err := recon.Setup[*v1alpha1.LogSet](&v1alpha1.LogSet{}, "logset", mgr, logsetActor,
+	//	recon.WithBuildFn(func(b *builder.Builder) {
+	//		// watch all changes on the owned statefulset since we need perform failover if there is a pod failure
+	//		b.Owns(&kruisev1.StatefulSet{}).
+	//			Owns(&corev1.Service{})
+	//	})); err != nil {
+	//	setupLog.Error(err, "unable to set up logset controller")
+	//	os.Exit(1)
+	//}
+
+	dnsetActor := &dnset.DNSetActor{}
+	if err := recon.Setup[*v1alpha1.DNSet](&v1alpha1.DNSet{}, "logset", mgr, dnsetActor,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			// watch all changes on the owned statefulset since we need perform failover if there is a pod failure
-			b.Owns(&kruisev1.StatefulSet{}).
+			b.Owns(&kruisev1alpha1.CloneSet{}).
 				Owns(&corev1.Service{})
 		})); err != nil {
 		setupLog.Error(err, "unable to set up logset controller")
 		os.Exit(1)
 	}
-
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)

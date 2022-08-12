@@ -2,11 +2,15 @@ package v1alpha1
 
 import (
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type DNSetSpec struct {
-	DNSetBasic `json:",inline"`
+	DNSetBasic     `json:",inline"`
+	ScaleStrategy  CloneSetScaleStrategy  `json:"scaleStrategy,omitempty"`
+	UpdateStrategy CloneSetUpdateStrategy `json:"updateStrategy,omitempty"`
+	CloneSetCommon `json:",inline"`
 
 	// +optional
 	Overlay *Overlay `json:"overlay,omitempty"`
@@ -15,10 +19,28 @@ type DNSetSpec struct {
 type DNSetBasic struct {
 	PodSet `json:",inline"`
 
+	// ServiceType is the service type of dn service
+	// +optional
+	// +kubebuilder:default=ClusterIP
+	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
+	ServiceType corev1.ServiceType `json:"serviceType,omitempty"`
+
+	// Log is the service log config
+	// +optional
+	Log LogConfig `json:"log,omitempty"`
+
+	// InitialConfig is the dn service initial config
+	// +required
+	InitialConfig DNInitialConfig `json:"initialConfig"`
+
 	// CacheVolume is the desired local cache volume for DNSet,
 	// node storage will be used if not specified
 	// +optional
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
+}
+
+type DNInitialConfig struct {
+	StorageBackend string `json:"storageBackend,omitempty"`
 }
 
 // TODO: figure out what status should be exposed

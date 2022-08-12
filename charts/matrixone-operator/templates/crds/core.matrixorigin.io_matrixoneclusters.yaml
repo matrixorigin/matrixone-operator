@@ -169,6 +169,14 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  serviceType:
+                    default: ClusterIP
+                    description: ServiceType is the service type of dn service
+                    enum:
+                    - ClusterIP
+                    - NodePort
+                    - LoadBalancer
+                    type: string
                   topologySpread:
                     description: TopologyEvenSpread specifies what topology domains
                       the Pods in set should be evenly spread in. This will be overridden
