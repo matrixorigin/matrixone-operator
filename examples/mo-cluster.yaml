@@ -6,6 +6,9 @@ spec:
   imageRepository: aylei/mo-service
   version: 0.1.2
   logService:
+    resources:
+      requests:
+        cpu: 1
     initialConfig:
       logShards: 1
       dnShards: 1
@@ -19,7 +22,6 @@ spec:
       size: 10Gi
     nodeSelector:
       arch: amd64
-      topology.kubernetes.io/zone: us-west-2c
   dn:
     replicas: 2
   tp:
