@@ -173,11 +173,6 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 		return r.finalize(ctx)
 	}
 
-	// ensure finalizer before any action to guarantee completeness of finalizing
-	if err := ctx.ensureFinalizer(ctx, obj); err != nil {
-		return none, errors.Wrap(err, "error adding finalizer to object")
-	}
-
 	if _, ok := any(obj).(Dependant); ok {
 		depHolder := obj.DeepCopyObject().(Dependant)
 		ready, err := r.waitDependencies(ctx, depHolder)
@@ -188,6 +183,11 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 			return requeue, nil
 		}
 		ctx.Dep = depHolder.(T)
+	}
+
+	// ensure finalizer before any action to guarantee completeness of finalizing
+	if err := ctx.ensureFinalizer(ctx, obj); err != nil {
+		return none, errors.Wrap(err, "error adding finalizer to object")
 	}
 
 	action, err := r.actor.Observe(ctx)
