@@ -23,9 +23,11 @@ func (r *MatrixoneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixoneCl
 	}
 	dn := &v1alpha1.DNSet{
 		ObjectMeta: dnSetKey(mo),
+		Deps:       v1alpha1.DNSetDeps{LogSetRef: ls.AsDependency()},
 	}
 	tp := &v1alpha1.CNSet{
 		ObjectMeta: tpSetKey(mo),
+		Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
 	}
 	errs := multierr.Combine(
 		recon.CreateOwnedOrUpdate(ctx, ls, func() error {
@@ -36,17 +38,20 @@ func (r *MatrixoneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixoneCl
 		recon.CreateOwnedOrUpdate(ctx, dn, func() error {
 			dn.Spec.DNSetBasic = mo.Spec.DN
 			dn.Spec.Image = mo.DnSetImage()
+			dn.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
 			return nil
 		}),
 		recon.CreateOwnedOrUpdate(ctx, tp, func() error {
 			tp.Spec.CNSetBasic = mo.Spec.TP
 			tp.Spec.Image = mo.TpSetImage()
+			tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
 			return nil
 		}),
 	)
 	if mo.Spec.AP != nil {
 		ap := &v1alpha1.CNSet{
 			ObjectMeta: apSetKey(mo),
+			Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
 		}
 		errs = multierr.Append(errs, recon.CreateOwnedOrUpdate(ctx, ap, func() error {
 			ap.Spec.CNSetBasic = *mo.Spec.AP
