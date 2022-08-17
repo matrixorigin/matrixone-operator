@@ -19,11 +19,12 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
-	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
@@ -38,7 +39,11 @@ var _ recon.Actor[*v1alpha1.DNSet] = &DNSetActor{}
 
 type WithResources struct {
 	*DNSetActor
-	cloneSet *kruise.CloneSet
+	sts *kruise.StatefulSet
+}
+
+func (d *DNSetActor) with(sts *kruise.StatefulSet) *WithResources {
+	return &WithResources{DNSetActor: d, sts: sts}
 }
 
 func (d *DNSetActor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1alpha1.DNSet], error) {
@@ -52,16 +57,24 @@ func (d *DNSetActor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[
 		return nil, errors.Wrap(err, "get dn service discovery service")
 	}
 
-	cloneSet := &kruise.CloneSet{}
+	sts := &kruise.StatefulSet{}
 	err, foundCs := util.IsFound(ctx.Get(client.ObjectKey{
 		Namespace: common.GetNamespace(dn),
-		Name:      common.GetName(dn)}, cloneSet))
+		Name:      common.GetName(dn)}, sts))
 	if err != nil {
-		return nil, errors.Wrap(err, "get dn service cloneset")
+		return nil, errors.Wrap(err, "get dn service statefulset")
 	}
 
 	if !foundCs || !foundSvc {
 		return d.Create, nil
+	}
+
+	origin := sts.DeepCopy()
+	if err := syncPods(ctx, sts); err != nil {
+		return nil, err
+	}
+	if !equality.Semantic.DeepEqual(origin, sts) {
+		return d.with(sts).Update, nil
 	}
 	return nil, nil
 }
@@ -71,7 +84,7 @@ func (d *DNSetActor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error)
 
 	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{
 		Name: common.GetHeadlessSvcName(dn),
-	}}, &kruise.CloneSet{ObjectMeta: metav1.ObjectMeta{
+	}}, &kruise.StatefulSet{ObjectMeta: metav1.ObjectMeta{
 		Name: common.GetName(dn),
 	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
 		Name: common.GetDiscoverySvcName(dn),
@@ -101,6 +114,7 @@ func (d *DNSetActor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 
 	hSvc := buildHeadlessSvc(dn)
 	dnCloneSet := buildDNSet(dn)
+	svc := buildSvc(dn)
 	syncReplicas(dn, dnCloneSet)
 	syncPodMeta(dn, dnCloneSet)
 	syncPodSpec(dn, dnCloneSet)
@@ -117,6 +131,7 @@ func (d *DNSetActor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	// create all resources
 	err = lo.Reduce[client.Object, error]([]client.Object{
 		hSvc,
+		svc,
 		dnCloneSet,
 	}, func(errs error, o client.Object, _ int) error {
 		err := ctx.CreateOwned(o)
@@ -129,10 +144,21 @@ func (d *DNSetActor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	return nil
 }
 
+func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.DNSet]) error {
+	return ctx.Patch(r.sts, func() error {
+		syncReplicas(ctx.Obj, r.sts)
+		return nil
+	})
+}
+
+func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.DNSet]) error {
+	return ctx.Update(r.sts)
+}
+
 func (d *DNSetActor) Reconcile(mgr manager.Manager, dn *v1alpha1.DNSet) error {
 	err := recon.Setup[*v1alpha1.DNSet](dn, "dnset", mgr, d,
 		recon.WithBuildFn(func(b *builder.Builder) {
-			b.Owns(&kruise.CloneSet{}).
+			b.Owns(&kruise.StatefulSet{}).
 				Owns(&corev1.Service{})
 		}))
 	if err != nil {

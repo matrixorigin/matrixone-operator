@@ -7,8 +7,9 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
-	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -224,17 +225,31 @@ func GetConfigMapObjMeta(obj client.Object) metav1.ObjectMeta {
 	}
 }
 
-// GetCloneSet get a kruise clone set object
-func GetCloneSet(obj client.Object) *kruise.StatefulSet {
+// GetStatefulSet get a kruise statefulset object
+func GetStatefulSet(obj client.Object) *kruise.StatefulSet {
 	return &kruise.StatefulSet{
 		ObjectMeta: GetObjMeta(obj),
 		Spec: kruise.StatefulSetSpec{
+			ServiceName: GetHeadlessSvcName(obj),
+			UpdateStrategy: kruise.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+				RollingUpdate: &kruise.RollingUpdateStatefulSetStrategy{
+					PodUpdatePolicy: kruise.InPlaceIfPossiblePodUpdateStrategyType,
+				},
+			},
+			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: SubResourceLabels(obj),
 			},
-			ServiceName: GetHeadlessSvcName(obj),
+			PersistentVolumeClaimRetentionPolicy: &kruise.StatefulSetPersistentVolumeClaimRetentionPolicy{
+				WhenDeleted: kruise.DeletePersistentVolumeClaimRetentionPolicyType,
+				WhenScaled:  kruise.DeletePersistentVolumeClaimRetentionPolicyType,
+			},
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: GetObjMeta(obj),
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      SubResourceLabels(obj),
+					Annotations: map[string]string{},
+				},
 			},
 		},
 	}

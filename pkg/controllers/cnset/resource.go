@@ -16,12 +16,11 @@ package cnset
 
 import (
 	"fmt"
-
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"github.com/openkruise/kruise-api/apps/pub"
-	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,61 +34,60 @@ func buildSvc(cn *v1alpha1.CNSet) *corev1.Service {
 }
 
 func buildCNSet(cn *v1alpha1.CNSet) *kruise.StatefulSet {
-	return common.GetCloneSet(cn)
+	return common.GetStatefulSet(cn)
 }
 
-func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, cloneSet *kruise.StatefulSet) {
+func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	dataPVC := common.GetPersistentVolumeClaim(cn.Spec.CacheVolume.Size, cn.Spec.CacheVolume.StorageClassName)
 	tpls := []corev1.PersistentVolumeClaim{dataPVC}
 	cn.Spec.Overlay.AppendVolumeClaims(&tpls)
-	cloneSet.Spec.VolumeClaimTemplates = tpls
+	sts.Spec.VolumeClaimTemplates = tpls
 }
 
-func syncReplicas(cn *v1alpha1.CNSet, cs *kruise.StatefulSet) {
-	cs.Spec.Replicas = &cn.Spec.Replicas
+func syncReplicas(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
+	sts.Spec.Replicas = &cn.Spec.Replicas
 
 }
 
-func syncPodMeta(cn *v1alpha1.CNSet, cs *kruise.StatefulSet) {
-	cn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
+func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
+	cn.Spec.Overlay.OverlayPodMeta(&sts.Spec.Template.ObjectMeta)
 }
 
-func syncPodSpec(cn *v1alpha1.CNSet, cs *kruise.StatefulSet) {
-	main := corev1.Container{
-		Name:      v1alpha1.ContainerMain,
-		Image:     cn.Spec.Image,
-		Resources: cn.Spec.Resources,
-		Command: []string{
-			"/bin/sh", fmt.Sprintf("%s/%s", configPath, Entrypoint),
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{Name: dataVolume, ReadOnly: true, MountPath: dataPath},
-			{Name: configVolume, ReadOnly: true, MountPath: configPath},
-		},
-		Env: []corev1.EnvVar{
-			util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
-			util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
-			util.FieldRefEnv(common.PodIPEnvKey, "status.podIP"),
-			{Name: common.HeadlessSvcEnvKey, Value: common.GetHeadlessSvcName(cn)},
-		},
+func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
+	specRef := &sts.Spec.Template.Spec
+
+	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
+		return c.Name == v1alpha1.ContainerMain
+	})
+	if mainRef == nil {
+		mainRef = &corev1.Container{Name: v1alpha1.ContainerMain}
 	}
-	cn.Spec.Overlay.OverlayMainContainer(&main)
-	podSpec := corev1.PodSpec{
-		Containers: []corev1.Container{main},
-		ReadinessGates: []corev1.PodReadinessGate{{
-			ConditionType: pub.InPlaceUpdateReady,
-		}},
-		NodeSelector: cn.Spec.NodeSelector,
+	mainRef.Image = cn.Spec.Image
+	mainRef.Resources = cn.Spec.Resources
+	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint)}
+	mainRef.VolumeMounts = []corev1.VolumeMount{
+		{Name: common.DataVolume, MountPath: common.DataPath},
+		{Name: common.ConfigVolume, ReadOnly: true, MountPath: common.ConfigPath},
 	}
-	common.SyncTopology(cn.Spec.TopologyEvenSpread, &podSpec)
+	mainRef.Env = []corev1.EnvVar{
+		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
+		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
+		util.FieldRefEnv(common.PodIPEnvKey, "status.podIP"),
+		{Name: common.HeadlessSvcEnvKey, Value: common.GetHeadlessSvcName(cn)},
+	}
+	cn.Spec.Overlay.OverlayMainContainer(mainRef)
 
-	cn.Spec.Overlay.OverlayPodSpec(&podSpec)
-	cs.Spec.Template.Spec = podSpec
+	specRef.Containers = []corev1.Container{*mainRef}
+	specRef.ReadinessGates = []corev1.PodReadinessGate{{
+		ConditionType: pub.InPlaceUpdateReady,
+	}}
+	specRef.NodeSelector = cn.Spec.NodeSelector
+	common.SyncTopology(cn.Spec.TopologyEvenSpread, specRef)
+	cn.Spec.Overlay.OverlayPodSpec(specRef)
 }
 
 func buildCNSetConfigMap(cn *v1alpha1.CNSet) (*corev1.ConfigMap, error) {
 	dsCfg := cn.Spec.Config
-	// detail: https://github.com/matrixorigin/matrixone/blob/main/pkg/dnservice/cfg.go
 	if dsCfg == nil {
 		dsCfg = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
@@ -105,7 +103,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet) (*corev1.ConfigMap, error) {
 			Labels:    common.SubResourceLabels(cn),
 		},
 		Data: map[string]string{
-			configFile: s,
+			common.ConfigFile: s,
 		},
 	}, nil
 }
