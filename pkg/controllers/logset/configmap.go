@@ -33,7 +33,7 @@ set -eu
 POD_NAME=${POD_NAME:-$HOSTNAME}
 ADDR="${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc"
 ORDINAL=${POD_NAME##*-}
-UUID=$(printf '00000000-0000-0000-0000-%012x' ${ORDINAL})
+UUID=$(printf '00000000-0000-0000-0000-0%011x' ${ORDINAL})
 conf=$(mktemp)
 
 bc=$(mktemp)
@@ -90,8 +90,8 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	conf.Set([]string{"service-type"}, ServiceTypeLog)
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentId(ls))
 	conf.Set([]string{"logservice", "gossip-seed-addresses"}, gossipSeeds(ls))
-	// conf.Set([]string{"hakeeper-client", "service-addresses"}, haKeeperAdds(ls))
-	conf.Set([]string{"hakeeper-client", "discovery-address"}, fmt.Sprintf("%s:%d", discoverySvcAddress(ls), LogServicePort))
+	conf.Set([]string{"hakeeper-client", "service-addresses"}, HaKeeperAdds(ls))
+	// conf.Set([]string{"hakeeper-client", "discovery-address"}, fmt.Sprintf("%s:%d", discoverySvcAddress(ls), LogServicePort))
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	}, nil
 }
 
-func haKeeperAdds(ls *v1alpha1.LogSet) []string {
+func HaKeeperAdds(ls *v1alpha1.LogSet) []string {
 	// TODO: consider hole in asts ordinals
 	var seeds []string
 	for i := int32(0); i < ls.Spec.Replicas; i++ {

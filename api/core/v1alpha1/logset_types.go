@@ -18,6 +18,7 @@ type LogSetSpec struct {
 
 type LogSetBasic struct {
 	PodSet `json:",inline"`
+
 	// Volume is the local persistent volume for each LogService instance
 	// +required
 	Volume Volume `json:"volume"`
@@ -97,6 +98,14 @@ type LogSet struct {
 
 	Spec   LogSetSpec   `json:"spec,omitempty"`
 	Status LogSetStatus `json:"status,omitempty"`
+}
+
+func (d *LogSet) SetCondition(condition metav1.Condition) {
+	d.Status.SetCondition(condition)
+}
+
+func (d *LogSet) GetConditions() []metav1.Condition {
+	return d.Status.GetConditions()
 }
 
 //+kubebuilder:object:root=true

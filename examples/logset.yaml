@@ -12,8 +12,7 @@ spec:
     size: 10Gi
     storageClassName: gp2
   nodeSelector:
-    arch: amd64
-    topology.kubernetes.io/zone: us-west-2c
+    kubernetes.io/arch: amd64
   initialConfig:
     logShards: 1
     dnShards: 1

@@ -1,4 +1,4 @@
-// Copyright 2021 Matrix Origin
+// Copyright 2022 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,4 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package components
+package cnset
+
+import (
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	corev1 "k8s.io/api/core/v1"
+)
+
+func getCNServicePort() []corev1.ServicePort {
+	return []corev1.ServicePort{
+		{
+			Name: cnPortName,
+			Port: common.CNServicePort,
+		},
+	}
+}

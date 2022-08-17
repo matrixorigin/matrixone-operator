@@ -6,15 +6,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ConditionType string
-
-const (
-	// Whether the object is ready to act
-	ConditionTypeReady = "Ready"
-	// Whether the object is update to date
-	ConditionTypeSynced = "Synced"
-)
-
 const (
 	ContainerMain = "main"
 )
@@ -32,6 +23,7 @@ type PodSet struct {
 
 	// TopologyEvenSpread specifies what topology domains the Pods in set should be
 	// evenly spread in.
+
 	// This will be overridden by .overlay.TopologySpreadConstraints
 	// +optional
 	TopologyEvenSpread []string `json:"topologySpread,omitempty"`
@@ -43,7 +35,7 @@ type PodSet struct {
 	Config *TomlConfig `json:"config,omitempty"`
 }
 
-// MainContainers is the description of the main container of a Pod
+// MainContainer is the description of the main container of a Pod
 type MainContainer struct {
 	// Image is the docker image of the main container
 	// +optional
@@ -65,6 +57,13 @@ type MainContainerOverlay struct {
 
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// ImagePullPolicy is the pull policy of MatrixOne image. The default value is the same as the
+	// default of Kubernetes.
+	// +optional
+	// +kubebuilder:default=IfNotPresent
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	ImagePullPolicy corev1.PullPolicy `json:"ImagePullPolicy,omitempty"`
 
 	// +optional
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
@@ -190,4 +189,21 @@ type ExternalLogSet struct {
 	// HAKeeperEndpoint of the ExternalLogSet
 	// +required
 	HAKeeperEndpoint string `json:"haKeeperEndpoint,omitempty"`
+}
+
+type LogConfig struct {
+	// Level log level: debug,info,warning
+	// +optional
+	// +kubebuilder:default="info"
+	Level string `json:"level,omitempty"`
+
+	// Format log format method: json, console
+	// +optional
+	// +kubebuilder:default="json"
+	Format string `json:"format,omitempty"`
+
+	// MaxSize log file max size
+	// +optional
+	// +kubebuilder:default=512
+	MaxSize int `json:"maxSize,omitempty"`
 }

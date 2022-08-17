@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -15,11 +16,25 @@ type CNSetSpec struct {
 type CNSetBasic struct {
 	PodSet `json:",inline"`
 
+	InitialConfig CNInitialConfig `json:"initialConfig,omitempty"`
+
+	// ConfigMap is reference to a key in a config map
+	// +optional
+	ConfigMap *corev1.ConfigMapKeySelector `json:"configmap,omitempty"`
+
+	// ServiceType is the service type of cn service
+	// +optional
+	// +kubebuilder:default=ClusterIP
+	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
+	ServiceType corev1.ServiceType `json:"serviceType,omitempty"`
+
 	// CacheVolume is the desired local cache volume for CNSet,
 	// node storage will be used if not specified
 	// +optional
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 }
+
+type CNInitialConfig struct{}
 
 // TODO: figure out what status should be exposed
 type CNSetStatus struct {
@@ -52,11 +67,19 @@ func (d *CNSet) GetDependencies() []recon.Dependency {
 		deps = append(deps, &recon.ObjectDependency[*LogSet]{
 			ObjectRef: d.Deps.LogSet,
 			ReadyFunc: func(l *LogSet) bool {
-				return l.Status.Ready()
+				return recon.IsReady(&l.Status)
 			},
 		})
 	}
 	return deps
+}
+
+func (d *CNSet) SetCondition(condition metav1.Condition) {
+	d.Status.SetCondition(condition)
+}
+
+func (d *CNSet) GetConditions() []metav1.Condition {
+	return d.Status.GetConditions()
 }
 
 //+kubebuilder:object:root=true

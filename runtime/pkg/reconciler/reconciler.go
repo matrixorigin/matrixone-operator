@@ -17,6 +17,7 @@ package reconciler
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"time"
 
@@ -196,19 +197,31 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 		// TODO(aylei): we might also need to update the error to .status?
 		return none, errors.Wrap(err, "error observing object status diff")
 	}
-	// record the observation result anyway
-	err = ctx.UpdateStatus(ctx.Obj)
-	if err != nil {
+
+	cond, isConditional := any(obj).(Conditional)
+
+	// No action to take implies the object reached desired state, we forget it
+	// now and wait for the next change to be watched or some resync timeouts.
+	if action == nil {
+		ctx.Log.Info("object is synced, reconcile will be triggered on next change or resync")
+		ctx.Event.EmitEventGeneric(reconcileSuccess, "object is synced", nil)
+
+		if isConditional {
+			cond.SetCondition(synced(true))
+		}
+		if err := ctx.UpdateStatus(obj); err != nil {
+			return none, err
+		}
+		return forget, nil
+	}
+
+	if isConditional {
+		cond.SetCondition(synced(false))
+	}
+	if err := ctx.UpdateStatus(ctx.Obj); err != nil {
 		return none, err
 	}
 
-	if action == nil {
-		// No action to take implies the object reached desired state, we forget it
-		// now and wait for the next change to be watched or some resync timeouts.
-		ctx.Log.Info("object is synced, reconcile will be triggered on next change or resync")
-		ctx.Event.EmitEventGeneric(reconcileSuccess, "object is synced", nil)
-		return forget, nil
-	}
 	log.V(Debug).Info("execute reconcile action", "action", action)
 	if err := action(ctx); err != nil {
 		ctx.Event.EmitEventGeneric(reconcileFail, fmt.Sprintf("failed to execute action %s", action), err)
@@ -282,6 +295,28 @@ func (r *Reconciler[T]) setupObjectFactory(scheme *runtime.Scheme, tpl T) error 
 	return nil
 }
 
+func (r *Reconciler[T]) trySetCondition(obj client.Object, c metav1.Condition) {
+	if cond, ok := obj.(Conditional); ok {
+		cond.SetCondition(c)
+	}
+	return
+}
+
 func (r *Reconciler[T]) finalizer() string {
 	return fmt.Sprintf("%s/%s", finalizerPrefix, r.name)
+}
+
+func synced(b bool) metav1.Condition {
+	if b {
+		return metav1.Condition{
+			Type:    ConditionTypeSynced,
+			Status:  metav1.ConditionTrue,
+			Message: "the object is synced",
+		}
+	}
+	return metav1.Condition{
+		Type:    ConditionTypeSynced,
+		Status:  metav1.ConditionFalse,
+		Message: "the object is reconciling",
+	}
 }

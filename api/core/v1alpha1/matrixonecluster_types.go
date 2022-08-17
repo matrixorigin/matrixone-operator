@@ -18,10 +18,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// MatrixoneClusterSpec defines the desired state of MatrixoneCluster
+// MatrixOneClusterSpec defines the desired state of MatrixOneCluster
 // Note that MatrixOneCluster does not support specify overlay for underlying sets directly due to the size limitation
 // of kubernetes apiserver
-type MatrixoneClusterSpec struct {
+type MatrixOneClusterSpec struct {
 	// TP is the default CN pod set that accepts client connections and execute queries
 	// +required
 	TP CNSetBasic `json:"tp"`
@@ -32,26 +32,30 @@ type MatrixoneClusterSpec struct {
 
 	// DN is the default DN pod set of this Cluster
 	DN DNSetBasic `json:"dn"`
+
 	// LogService is the default LogService pod set of this cluster
 	LogService LogSetBasic `json:"logService"`
+
 	// Version is the version of the cluster, which translated
 	// to the docker image tag used for each component.
 	// default to the recommended version of the operator
 	// +required
 	Version string `json:"version"`
+
 	// ImageRepository allows user to override the default image
 	// repository in order to use a docker registry proxy or private
 	// registry.
 	// +required
 	ImageRepository string `json:"imageRepository,omitempty"`
+
 	// WebUIEnabled indicates whether deploy the MO web-ui,
 	// default to true.
 	// +optional
 	WebUIEnabled *bool `json:"webUIEnabled,omitempty"`
 }
 
-// MatrixoneClusterStatus defines the observed state of MatrixoneCluster
-type MatrixoneClusterStatus struct {
+// MatrixOneClusterStatus defines the observed state of MatrixOneCluster
+type MatrixOneClusterStatus struct {
 	ConditionalStatus `json:",inline"`
 	// TP is the TP set status
 	TP *CNSetStatus `json:"tp,omitempty"`
@@ -65,7 +69,7 @@ type MatrixoneClusterStatus struct {
 
 // +kubebuilder:object:root=true
 
-// A MatrixoneCluster is a resource that represents a MatrixOne Cluster
+// A MatrixOneCluster is a resource that represents a MatrixOne Cluster
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=mo
 // +kubebuilder:printcolumn:name="Log",type="integer",JSONPath=".spec.logService.replicas"
@@ -74,23 +78,31 @@ type MatrixoneClusterStatus struct {
 // +kubebuilder:printcolumn:name="AP",type="integer",JSONPath=".spec.ap.replicas"
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-type MatrixoneCluster struct {
+type MatrixOneCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   MatrixoneClusterSpec   `json:"spec,omitempty"`
-	Status MatrixoneClusterStatus `json:"status,omitempty"`
+	Spec   MatrixOneClusterSpec   `json:"spec,omitempty"`
+	Status MatrixOneClusterStatus `json:"status,omitempty"`
+}
+
+func (d *MatrixOneCluster) SetCondition(condition metav1.Condition) {
+	d.Status.SetCondition(condition)
+}
+
+func (d *MatrixOneCluster) GetConditions() []metav1.Condition {
+	return d.Status.GetConditions()
 }
 
 //+kubebuilder:object:root=true
 
-// MatrixoneClusterList contains a list of MatrixoneCluster
-type MatrixoneClusterList struct {
+// MatrixOneClusterList contains a list of MatrixOneCluster
+type MatrixOneClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MatrixoneCluster `json:"items"`
+	Items           []MatrixOneCluster `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&MatrixoneCluster{}, &MatrixoneClusterList{})
+	SchemeBuilder.Register(&MatrixOneCluster{}, &MatrixOneClusterList{})
 }

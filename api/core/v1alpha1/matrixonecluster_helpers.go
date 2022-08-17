@@ -2,7 +2,7 @@ package v1alpha1
 
 import "fmt"
 
-func (m *MatrixoneCluster) LogSetImage() string {
+func (m *MatrixOneCluster) LogSetImage() string {
 	image := m.Spec.LogService.Image
 	if image == "" {
 		image = m.defaultImage()
@@ -10,7 +10,7 @@ func (m *MatrixoneCluster) LogSetImage() string {
 	return image
 }
 
-func (m *MatrixoneCluster) DnSetImage() string {
+func (m *MatrixOneCluster) DnSetImage() string {
 	image := m.Spec.DN.Image
 	if image == "" {
 		image = m.defaultImage()
@@ -18,7 +18,7 @@ func (m *MatrixoneCluster) DnSetImage() string {
 	return image
 }
 
-func (m *MatrixoneCluster) TpSetImage() string {
+func (m *MatrixOneCluster) TpSetImage() string {
 	image := m.Spec.TP.Image
 	if image == "" {
 		image = m.defaultImage()
@@ -26,7 +26,7 @@ func (m *MatrixoneCluster) TpSetImage() string {
 	return image
 }
 
-func (m *MatrixoneCluster) ApSetImage() string {
+func (m *MatrixOneCluster) ApSetImage() string {
 	image := m.Spec.AP.Image
 	if image == "" {
 		image = m.defaultImage()
@@ -34,6 +34,6 @@ func (m *MatrixoneCluster) ApSetImage() string {
 	return image
 }
 
-func (m *MatrixoneCluster) defaultImage() string {
+func (m *MatrixOneCluster) defaultImage() string {
 	return fmt.Sprintf("%s:%s", m.Spec.ImageRepository, m.Spec.Version)
 }

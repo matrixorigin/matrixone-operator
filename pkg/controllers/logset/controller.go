@@ -70,16 +70,17 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 	if err != nil {
 		return nil, errors.Wrap(err, "list logservice pods")
 	}
+	collectStoreStatus(ls, podList.Items)
 
 	collectStoreStatus(ls, podList.Items)
 	if len(ls.Status.AvailableStores) >= int(ls.Spec.Replicas) {
 		ls.Status.SetCondition(metav1.Condition{
-			Type:   v1alpha1.ConditionTypeReady,
+			Type:   recon.ConditionTypeReady,
 			Status: metav1.ConditionTrue,
 		})
 	} else {
 		ls.Status.SetCondition(metav1.Condition{
-			Type:   v1alpha1.ConditionTypeReady,
+			Type:   recon.ConditionTypeReady,
 			Status: metav1.ConditionFalse,
 			Reason: ReasonNoEnoughReadyStores,
 		})

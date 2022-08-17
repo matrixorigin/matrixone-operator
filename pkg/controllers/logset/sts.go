@@ -54,7 +54,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 	mainRef.Resources = ls.Spec.Resources
 	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", configPath, Entrypoint)}
 	mainRef.VolumeMounts = []corev1.VolumeMount{
-		{Name: dataVolume, ReadOnly: true, MountPath: dataPath},
+		{Name: dataVolume, MountPath: dataPath},
 		{Name: bootstrapVolume, ReadOnly: true, MountPath: bootstrapPath},
 		{Name: configVolume, ReadOnly: true, MountPath: configPath},
 	}
