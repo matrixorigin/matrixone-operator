@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -13,12 +14,25 @@ type DNSetSpec struct {
 }
 
 type DNSetBasic struct {
-	PodSet `json:",inline"`
+	PodSet    `json:",inline"`
+	LogConfig `json:",inline"`
+
+	// ServiceType is the service type of dn service
+	// +optional
+	// +kubebuilder:default=ClusterIP
+	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
+	ServiceType corev1.ServiceType `json:"serviceType,omitempty"`
+
+	InitialConfig DNInitialConfig `json:"initialConfig,omitempty"`
 
 	// CacheVolume is the desired local cache volume for DNSet,
 	// node storage will be used if not specified
 	// +optional
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
+}
+
+type DNInitialConfig struct {
+	StorageBackend *string `json:"storageBackend,omitempty"`
 }
 
 // TODO: figure out what status should be exposed
@@ -52,11 +66,19 @@ func (d *DNSet) GetDependencies() []recon.Dependency {
 		deps = append(deps, &recon.ObjectDependency[*LogSet]{
 			ObjectRef: d.Deps.LogSet,
 			ReadyFunc: func(l *LogSet) bool {
-				return l.Status.Ready()
+				return recon.IsReady(&l.Status)
 			},
 		})
 	}
 	return deps
+}
+
+func (d *DNSet) SetCondition(condition metav1.Condition) {
+	d.Status.SetCondition(condition)
+}
+
+func (d *DNSet) GetConditions() []metav1.Condition {
+	return d.Status.GetConditions()
 }
 
 //+kubebuilder:object:root=true

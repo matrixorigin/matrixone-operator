@@ -10,15 +10,6 @@ const (
 	reasonEmpty = "empty"
 )
 
-// +kubebuilder:object:root=false
-// +kubebuilder:object:generate=false
-type Conditional interface {
-	SetCondition(c metav1.Condition)
-	GetConditions() []metav1.Condition
-	GetCondition(conditionType ConditionType) (*metav1.Condition, bool)
-	Ready() bool
-}
-
 func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
 	if c.Conditions == nil {
 		c.Conditions = []metav1.Condition{}
@@ -31,23 +22,6 @@ func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
 
 func (c *ConditionalStatus) GetConditions() []metav1.Condition {
 	return c.Conditions
-}
-
-func (c *ConditionalStatus) GetCondition(conditionType ConditionType) (*metav1.Condition, bool) {
-	for i := range c.Conditions {
-		if c.Conditions[i].Type == string(conditionType) {
-			return &c.Conditions[i], true
-		}
-	}
-	return nil, false
-}
-
-func (c *ConditionalStatus) Ready() bool {
-	cond, found := c.GetCondition(ConditionTypeReady)
-	if !found {
-		return false
-	}
-	return cond.Status == metav1.ConditionTrue
 }
 
 func (o *Overlay) OverlayPodMeta(meta *metav1.ObjectMeta) {

@@ -3,6 +3,7 @@ vendor/
 cover.out
 **/bin/
 .vscode
+.idea/
 
 # tools binary files
 tmp/

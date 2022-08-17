@@ -18,7 +18,7 @@ func collectStoreStatus(ls *v1alpha1.LogSet, pods []corev1.Pod) {
 		previousStore[store.PodName] = store
 	}
 	var failed []v1alpha1.LogStore
-	var avalable []v1alpha1.LogStore
+	var available []v1alpha1.LogStore
 	for _, pod := range pods {
 		store := v1alpha1.LogStore{
 			PodName:            pod.Name,
@@ -36,11 +36,11 @@ func collectStoreStatus(ls *v1alpha1.LogSet, pods []corev1.Pod) {
 			}
 		}
 		if store.Phase == v1alpha1.StorePhaseUp {
-			avalable = append(avalable, store)
+			available = append(available, store)
 		} else {
-			failed = append(avalable, store)
+			failed = append(failed, store)
 		}
 	}
 	ls.Status.FailedStores = failed
-	ls.Status.AvailableStores = avalable
+	ls.Status.AvailableStores = available
 }

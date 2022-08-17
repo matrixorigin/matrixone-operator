@@ -16,11 +16,15 @@ package main
 
 import (
 	"flag"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/dnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mocluster"
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap/zapcore"
-	corev1 "k8s.io/api/core/v1"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 
@@ -50,6 +54,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kruisev1.AddToScheme(scheme))
+	utilruntime.Must(kruisev1alpha1.AddToScheme(scheme))
 }
 
 func main() {
@@ -90,18 +95,32 @@ func main() {
 			b.Owns(&kruisev1.StatefulSet{}).
 				Owns(&corev1.Service{})
 		})); err != nil {
-		setupLog.Error(err, "unable to set up logset controller")
+		setupLog.Error(err, "unable to set up log service controller")
 		os.Exit(1)
 	}
 
-	moActor := &mocluster.MatrixoneClusterActor{}
-	if err := recon.Setup[*v1alpha1.MatrixoneCluster](&v1alpha1.MatrixoneCluster{}, "matrixonecluster", mgr, moActor,
+	dnSetActor := &dnset.DNSetActor{}
+	err = dnSetActor.Reconcile(mgr, &v1alpha1.DNSet{})
+	if err != nil {
+		setupLog.Error(err, "unable to set up dn service controller")
+		os.Exit(1)
+	}
+
+	cnSetActor := &cnset.CNSetActor{}
+	err = cnSetActor.Reconcile(mgr, &v1alpha1.CNSet{})
+	if err != nil {
+		setupLog.Error(err, "unable to setup  dn service controller")
+		os.Exit(1)
+	}
+
+	moActor := &mocluster.MatrixOneClusterActor{}
+	if err := recon.Setup[*v1alpha1.MatrixOneCluster](&v1alpha1.MatrixOneCluster{}, "matrixonecluster", mgr, moActor,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&v1alpha1.LogSet{}).
 				Owns(&v1alpha1.DNSet{}).
 				Owns(&v1alpha1.CNSet{})
 		})); err != nil {
-		setupLog.Error(err, "unable to set up matrixonecluster controller")
+		setupLog.Error(err, "unable to set up matrixone cluster controller")
 		os.Exit(1)
 	}
 

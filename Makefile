@@ -74,6 +74,11 @@ install: manifests
 uninstall: manifests
 	kubectl delete -f deploy/crds
 
+kruise:
+	helm repo add openkruise https://openkruise.github.io/charts/
+	helm repo update
+	helm install kruise openkruise/kruise --version 1.2.0
+
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: install manifests
 	kubectl apply -f deploy/service_account.yaml
@@ -95,7 +100,7 @@ manifests:
 
 ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 .PHONY: generate
-generate: 
+generate:
 	cd api && make generate
 
 # Run go fmt against code
