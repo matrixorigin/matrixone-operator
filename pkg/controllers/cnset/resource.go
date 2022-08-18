@@ -15,7 +15,6 @@
 package cnset
 
 import (
-	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
@@ -37,11 +36,13 @@ func buildCNSet(cn *v1alpha1.CNSet) *kruise.StatefulSet {
 	return common.GetStatefulSet(cn)
 }
 
-func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
-	dataPVC := common.GetPersistentVolumeClaim(cn.Spec.CacheVolume.Size, cn.Spec.CacheVolume.StorageClassName)
-	tpls := []corev1.PersistentVolumeClaim{dataPVC}
-	cn.Spec.Overlay.AppendVolumeClaims(&tpls)
-	sts.Spec.VolumeClaimTemplates = tpls
+func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, cloneSet *kruise.StatefulSet) {
+	if cn.Spec.CacheVolume != nil {
+		dataPVC := common.GetPersistentVolumeClaim(cn.Spec.CacheVolume.Size, cn.Spec.CacheVolume.StorageClassName)
+		tpls := []corev1.PersistentVolumeClaim{dataPVC}
+		cn.Spec.Overlay.AppendVolumeClaims(&tpls)
+		cloneSet.Spec.VolumeClaimTemplates = tpls
+	}
 }
 
 func syncReplicas(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
@@ -64,16 +65,14 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	}
 	mainRef.Image = cn.Spec.Image
 	mainRef.Resources = cn.Spec.Resources
-	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint)}
+
+	// since CN is not yet complete, start an CN service will just panic, we hold the CN pod for end to end test
+	// FIXME: start CN when mo code is ready
+	mainRef.Command = []string{"tail", "-f", "/dev/null"}
+	// mainRef.Command = []string{"/mo-service", "-cfg", fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile)}
 	mainRef.VolumeMounts = []corev1.VolumeMount{
 		{Name: common.DataVolume, MountPath: common.DataPath},
 		{Name: common.ConfigVolume, ReadOnly: true, MountPath: common.ConfigPath},
-	}
-	mainRef.Env = []corev1.EnvVar{
-		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
-		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
-		util.FieldRefEnv(common.PodIPEnvKey, "status.podIP"),
-		{Name: common.HeadlessSvcEnvKey, Value: common.GetHeadlessSvcName(cn)},
 	}
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)
 
@@ -87,11 +86,12 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 }
 
 func buildCNSetConfigMap(cn *v1alpha1.CNSet) (*corev1.ConfigMap, error) {
-	dsCfg := cn.Spec.Config
-	if dsCfg == nil {
-		dsCfg = v1alpha1.NewTomlConfig(map[string]interface{}{})
+	cfg := cn.Spec.Config
+	if cfg == nil {
+		cfg = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
-	s, err := dsCfg.ToString()
+	cfg.Set([]string{"service-type"}, "CN")
+	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err
 	}
