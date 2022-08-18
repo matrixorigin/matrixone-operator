@@ -6511,7 +6511,7 @@ spec:
                 - LoadBalancer
                 type: string
               topologySpread:
-                description: This will overridden by .overlay.TopologySpreadConstraints
+                description: This will be overridden by .overlay.TopologySpreadConstraints
                 items:
                   type: string
                 type: array

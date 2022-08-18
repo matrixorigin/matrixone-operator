@@ -20,9 +20,10 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
+	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"github.com/openkruise/kruise-api/apps/pub"
-	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -115,8 +116,13 @@ func buildHeadlessSvc(dn *v1alpha1.DNSet) *corev1.Service {
 	return common.GetHeadlessService(dn, ports)
 }
 
+func buildSvc(dn *v1alpha1.DNSet) *corev1.Service {
+	ports := getDNServicePort()
+	return common.GetDiscoveryService(dn, ports, dn.Spec.ServiceType)
+}
+
 func buildDNSet(dn *v1alpha1.DNSet) *kruise.StatefulSet {
-	return common.GetCloneSet(dn)
+	return common.GetStatefulSet(dn)
 }
 
 func syncPersistentVolumeClaim(dn *v1alpha1.DNSet, cloneSet *kruise.StatefulSet) {
@@ -136,4 +142,16 @@ func getTxnStorageConfig(dn *v1alpha1.DNSet) map[string]interface{} {
 	return map[string]interface{}{
 		"backend": common.MemoryEngine,
 	}
+}
+
+func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) error {
+	cm, err := buildDNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
+	if err != nil {
+		return err
+	}
+
+	syncPodMeta(ctx.Obj, sts)
+	syncPodSpec(ctx.Obj, sts)
+
+	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }

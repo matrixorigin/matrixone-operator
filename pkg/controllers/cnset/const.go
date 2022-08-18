@@ -15,12 +15,5 @@
 package cnset
 
 const (
-	cnPortName    = "cn-service"
-	ListenAddress = ""
-	configFile    = "cnservice.toml"
-	configVolume  = "config"
-	dataVolume    = "cndata"
-	configPath    = "/etc/cnservice"
-	Entrypoint    = "start.sh"
-	dataPath      = "/var/lib/cnservice"
+	cnPortName = "cn-service"
 )

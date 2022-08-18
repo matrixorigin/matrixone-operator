@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mocluster"
-	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap/zapcore"
 	"os"
@@ -54,7 +53,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kruisev1.AddToScheme(scheme))
-	utilruntime.Must(kruisev1alpha1.AddToScheme(scheme))
 }
 
 func main() {

@@ -19,11 +19,12 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
-	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
@@ -36,6 +37,15 @@ type CNSetActor struct{}
 
 var _ recon.Actor[*v1alpha1.CNSet] = &CNSetActor{}
 
+type WithResources struct {
+	*CNSetActor
+	sts *kruise.StatefulSet
+}
+
+func (c *CNSetActor) with(sts *kruise.StatefulSet) *WithResources {
+	return &WithResources{CNSetActor: c, sts: sts}
+}
+
 func (c *CNSetActor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1alpha1.CNSet], error) {
 	cn := ctx.Obj
 
@@ -47,9 +57,9 @@ func (c *CNSetActor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[
 		return nil, errors.Wrap(err, "get dn service discovery service")
 	}
 
-	cloneSet := &kruise.CloneSet{}
+	sts := &kruise.StatefulSet{}
 	err, foundCs := util.IsFound(ctx.Get(client.ObjectKey{
-		Namespace: common.GetNamespace(cn), Name: common.GetName(cn)}, cloneSet))
+		Namespace: common.GetNamespace(cn), Name: common.GetName(cn)}, sts))
 	if err != nil {
 		return nil, errors.Wrap(err, "get dn service cloneset")
 	}
@@ -57,8 +67,28 @@ func (c *CNSetActor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[
 	if !foundCs || !foundSvc {
 		return c.Create, nil
 	}
+
+	origin := sts.DeepCopy()
+	if err := syncPods(ctx, sts); err != nil {
+		return nil, err
+	}
+	if !equality.Semantic.DeepEqual(origin, sts) {
+		return c.with(sts).Update, nil
+	}
+
 	return nil, nil
 
+}
+
+func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
+	return ctx.Patch(c.sts, func() error {
+		syncReplicas(ctx.Obj, c.sts)
+		return nil
+	})
+}
+
+func (c *WithResources) Update(ctx *recon.Context[*v1alpha1.CNSet]) error {
+	return ctx.Update(c.sts)
 }
 
 func (c *CNSetActor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
@@ -66,7 +96,7 @@ func (c *CNSetActor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error)
 
 	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{
 		Name: common.GetHeadlessSvcName(cn),
-	}}, &kruise.CloneSet{ObjectMeta: metav1.ObjectMeta{
+	}}, &kruise.StatefulSet{ObjectMeta: metav1.ObjectMeta{
 		Name: common.GetName(cn),
 	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
 		Name: common.GetDiscoverySvcName(cn),
@@ -95,18 +125,18 @@ func (c *CNSetActor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	cn := ctx.Obj
 
 	hSvc := buildHeadlessSvc(cn)
-	cnCloneSet := buildCNSet(cn)
+	cnSet := buildCNSet(cn)
 	svc := buildSvc(cn)
-	syncReplicas(cn, cnCloneSet)
-	syncPodMeta(cn, cnCloneSet)
-	syncPodSpec(cn, cnCloneSet)
-	syncPersistentVolumeClaim(cn, cnCloneSet)
+	syncReplicas(cn, cnSet)
+	syncPodMeta(cn, cnSet)
+	syncPodSpec(cn, cnSet)
+	syncPersistentVolumeClaim(cn, cnSet)
 	configMap, err := buildCNSetConfigMap(cn)
 	if err != nil {
 		return err
 	}
 
-	if err := common.SyncConfigMap(ctx, &cnCloneSet.Spec.Template.Spec, configMap); err != nil {
+	if err := common.SyncConfigMap(ctx, &cnSet.Spec.Template.Spec, configMap); err != nil {
 		return err
 	}
 
@@ -114,7 +144,7 @@ func (c *CNSetActor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	err = lo.Reduce[client.Object, error]([]client.Object{
 		hSvc,
 		svc,
-		cnCloneSet,
+		cnSet,
 	}, func(errs error, o client.Object, _ int) error {
 		err := ctx.CreateOwned(o)
 		return multierr.Append(errs, util.Ignore(apierrors.IsAlreadyExists, err))
@@ -122,13 +152,14 @@ func (c *CNSetActor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	if err != nil {
 		return errors.Wrap(err, "create dn service")
 	}
+
 	return nil
 }
 
 func (c *CNSetActor) Reconcile(mgr manager.Manager, cn *v1alpha1.CNSet) error {
 	err := recon.Setup[*v1alpha1.CNSet](cn, "cnset", mgr, c,
 		recon.WithBuildFn(func(b *builder.Builder) {
-			b.Owns(&kruise.CloneSet{}).
+			b.Owns(&kruise.StatefulSet{}).
 				Owns(&corev1.Service{})
 		}))
 	if err != nil {
@@ -136,4 +167,15 @@ func (c *CNSetActor) Reconcile(mgr manager.Manager, cn *v1alpha1.CNSet) error {
 	}
 
 	return nil
+}
+func syncPods(ctx *recon.Context[*v1alpha1.CNSet], sts *kruise.StatefulSet) error {
+	cm, err := buildCNSetConfigMap(ctx.Obj)
+	if err != nil {
+		return err
+	}
+
+	syncPodMeta(ctx.Obj, sts)
+	syncPodSpec(ctx.Obj, sts)
+
+	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }
