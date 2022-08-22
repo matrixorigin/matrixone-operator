@@ -190,20 +190,3 @@ type ExternalLogSet struct {
 	// +required
 	HAKeeperEndpoint string `json:"haKeeperEndpoint,omitempty"`
 }
-
-type LogConfig struct {
-	// Level log level: debug,info,warning
-	// +optional
-	// +kubebuilder:default="info"
-	Level string `json:"level,omitempty"`
-
-	// Format log format method: json, console
-	// +optional
-	// +kubebuilder:default="json"
-	Format string `json:"format,omitempty"`
-
-	// MaxSize log file max size
-	// +optional
-	// +kubebuilder:default=512
-	MaxSize int `json:"maxSize,omitempty"`
-}

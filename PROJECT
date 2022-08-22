@@ -10,7 +10,7 @@ resources:
   controller: true
   domain: matrixorigin.io
   group: core
-  kind: MatrixoneCluster
+  kind: MatrixOneCluster
   path: github.com/matrixorigin/matrixone-operator/api/core/v1alpha1
   version: v1alpha1
 - api:
