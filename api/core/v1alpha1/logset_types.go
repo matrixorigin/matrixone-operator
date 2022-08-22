@@ -38,7 +38,7 @@ type InitialConfig struct {
 	// cannot be tuned after cluster creation currently.
 	// default to 1
 	// +required
-	LogShards int `json:"logShards,omitempty"`
+	LogShards *int `json:"logShards,omitempty"`
 
 	// DNShards is the initial number of DN shards,
 	// cannot be tuned after cluster creation currently.

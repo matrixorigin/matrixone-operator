@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
@@ -53,18 +54,27 @@ var _ webhook.Validator = &LogSet{}
 func (r *LogSet) ValidateCreate() error {
 	var errs field.ErrorList
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
-	return nil
+	errs = append(errs, r.validateInitialConfig()...)
+	return invalidOrNil(errs, r)
 }
 
-func (r *LogSet) ValidateUpdate(old runtime.Object) error {
-	return nil
+func (r *LogSet) ValidateUpdate(o runtime.Object) error {
+	old := o.(*LogSet)
+	if err := r.ValidateCreate(); err != nil {
+		return err
+	}
+	var errs field.ErrorList
+	if !equality.Semantic.DeepEqual(old.Spec.InitialConfig, r.Spec.InitialConfig) {
+		errs = append(errs, field.Invalid(field.NewPath("spec").Child("initialConfig"), nil, "initialConfig is immutable"))
+	}
+	return invalidOrNil(errs, r)
 }
 
 func (r *LogSet) ValidateDelete() error {
 	return nil
 }
 
-func (r *LogSet) validateInitialConfig() error {
+func (r *LogSet) validateInitialConfig() field.ErrorList {
 	var errs field.ErrorList
 	parent := field.NewPath("spec").Child("initialConfig")
 
@@ -74,4 +84,18 @@ func (r *LogSet) validateInitialConfig() error {
 		errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must not larger then logservice replicas"))
 	}
 
+	if lrs := r.Spec.InitialConfig.LogShardReplicas; lrs == nil {
+		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must be set"))
+	} else if *lrs > int(r.Spec.Replicas) {
+		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must not larger then logservice replicas"))
+	}
+
+	if lss := r.Spec.InitialConfig.LogShards; lss == nil {
+		errs = append(errs, field.Invalid(parent.Child("logShards"), lss, "logShards must be set"))
+	}
+
+	if dss := r.Spec.InitialConfig.DNShards; dss == nil {
+		errs = append(errs, field.Invalid(parent.Child("dnShards"), dss, "dnShards must be set"))
+	}
+	return errs
 }

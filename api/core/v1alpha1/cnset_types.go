@@ -16,12 +16,6 @@ type CNSetSpec struct {
 type CNSetBasic struct {
 	PodSet `json:",inline"`
 
-	InitialConfig CNInitialConfig `json:"initialConfig,omitempty"`
-
-	// ConfigMap is reference to a key in a config map
-	// +optional
-	ConfigMap *corev1.ConfigMapKeySelector `json:"configmap,omitempty"`
-
 	// ServiceType is the service type of cn service
 	// +optional
 	// +kubebuilder:default=ClusterIP
@@ -33,8 +27,6 @@ type CNSetBasic struct {
 	// +optional
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 }
-
-type CNInitialConfig struct{}
 
 // TODO: figure out what status should be exposed
 type CNSetStatus struct {
