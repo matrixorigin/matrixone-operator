@@ -7,7 +7,9 @@ import (
 	"go.uber.org/multierr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var _ recon.Actor[*v1alpha1.MatrixOneCluster] = &MatrixOneClusterActor{}
@@ -104,21 +106,21 @@ func (r *MatrixOneClusterActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixOneC
 
 func logSetKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
-		Name:      mo.Name + "-log",
+		Name:      mo.Name,
 		Namespace: mo.Namespace,
 	}
 }
 
 func dnSetKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
-		Name:      mo.Name + "-dn",
+		Name:      mo.Name,
 		Namespace: mo.Namespace,
 	}
 }
 
 func tpSetKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
-		Name:      mo.Name + "-cn",
+		Name:      mo.Name + "-tp",
 		Namespace: mo.Namespace,
 	}
 }
@@ -128,4 +130,13 @@ func apSetKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
 		Name:      mo.Name + "-ap",
 		Namespace: mo.Namespace,
 	}
+}
+
+func (r *MatrixOneClusterActor) Reconcile(mgr manager.Manager) error {
+	return recon.Setup[*v1alpha1.MatrixOneCluster](&v1alpha1.MatrixOneCluster{}, "matrixonecluster", mgr, r,
+		recon.WithBuildFn(func(b *builder.Builder) {
+			b.Owns(&v1alpha1.LogSet{}).
+				Owns(&v1alpha1.DNSet{}).
+				Owns(&v1alpha1.CNSet{})
+		}))
 }

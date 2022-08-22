@@ -50,21 +50,18 @@ func (c *CNSetActor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[
 	cn := ctx.Obj
 
 	svc := &corev1.Service{}
-	err, foundSvc := util.IsFound(ctx.Get(client.ObjectKey{
-		Namespace: common.GetNamespace(cn),
-		Name:      common.GetName(cn)}, svc))
+	err, foundSvc := util.IsFound(ctx.Get(client.ObjectKey{Namespace: cn.Namespace, Name: svcName(cn)}, svc))
 	if err != nil {
-		return nil, errors.Wrap(err, "get dn service discovery service")
+		return nil, errors.Wrap(err, "get cn service")
 	}
 
 	sts := &kruise.StatefulSet{}
-	err, foundCs := util.IsFound(ctx.Get(client.ObjectKey{
-		Namespace: common.GetNamespace(cn), Name: common.GetName(cn)}, sts))
+	err, foundSts := util.IsFound(ctx.Get(client.ObjectKey{Namespace: cn.Namespace, Name: stsName(cn)}, sts))
 	if err != nil {
-		return nil, errors.Wrap(err, "get dn service cloneset")
+		return nil, errors.Wrap(err, "get cn statefulset")
 	}
 
-	if !foundCs || !foundSvc {
+	if !foundSts || !foundSvc {
 		return c.Create, nil
 	}
 
@@ -95,14 +92,14 @@ func (c *CNSetActor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error)
 	cn := ctx.Obj
 
 	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{
-		Name: common.GetHeadlessSvcName(cn),
+		Name: headlessSvcName(cn),
 	}}, &kruise.StatefulSet{ObjectMeta: metav1.ObjectMeta{
-		Name: common.GetName(cn),
+		Name: stsName(cn),
 	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
-		Name: common.GetDiscoverySvcName(cn),
+		Name: svcName(cn),
 	}}}
 	for _, obj := range objs {
-		obj.SetNamespace(common.GetNamespace(cn))
+		obj.SetNamespace(cn.Namespace)
 		if err := util.Ignore(apierrors.IsNotFound, ctx.Delete(obj)); err != nil {
 			return false, err
 		}
@@ -156,8 +153,8 @@ func (c *CNSetActor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return nil
 }
 
-func (c *CNSetActor) Reconcile(mgr manager.Manager, cn *v1alpha1.CNSet) error {
-	err := recon.Setup[*v1alpha1.CNSet](cn, "cnset", mgr, c,
+func (c *CNSetActor) Reconcile(mgr manager.Manager) error {
+	err := recon.Setup[*v1alpha1.CNSet](&v1alpha1.CNSet{}, "cnset", mgr, c,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&kruise.StatefulSet{}).
 				Owns(&corev1.Service{})

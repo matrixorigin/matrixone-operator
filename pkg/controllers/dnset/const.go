@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	dnPortName = "dn-service"
+	serviceType = "DN"
 )
 
 // dn service entrypoint script

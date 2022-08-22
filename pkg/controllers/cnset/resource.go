@@ -25,20 +25,27 @@ import (
 )
 
 func buildHeadlessSvc(cn *v1alpha1.CNSet) *corev1.Service {
-	return common.GetHeadlessService(cn, getCNServicePort())
+	return common.HeadlessServiceTemplate(cn, headlessSvcName(cn))
 }
 
 func buildSvc(cn *v1alpha1.CNSet) *corev1.Service {
-	return common.GetDiscoveryService(cn, getCNServicePort(), cn.Spec.ServiceType)
+	return &corev1.Service{
+		ObjectMeta: common.ObjMetaTemplate(cn, svcName(cn)),
+		Spec: corev1.ServiceSpec{
+			Selector: common.SubResourceLabels(cn),
+			Type:     cn.GetServiceType(),
+			Ports:    getCNServicePort(),
+		},
+	}
 }
 
 func buildCNSet(cn *v1alpha1.CNSet) *kruise.StatefulSet {
-	return common.GetStatefulSet(cn)
+	return common.StatefulSetTemplate(cn, stsName(cn), headlessSvcName(cn))
 }
 
 func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, cloneSet *kruise.StatefulSet) {
 	if cn.Spec.CacheVolume != nil {
-		dataPVC := common.GetPersistentVolumeClaim(cn.Spec.CacheVolume.Size, cn.Spec.CacheVolume.StorageClassName)
+		dataPVC := common.PersistentVolumeClaimTemplate(cn.Spec.CacheVolume.Size, cn.Spec.CacheVolume.StorageClassName, common.DataVolume)
 		tpls := []corev1.PersistentVolumeClaim{dataPVC}
 		cn.Spec.Overlay.AppendVolumeClaims(&tpls)
 		cloneSet.Spec.VolumeClaimTemplates = tpls
@@ -98,8 +105,8 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet) (*corev1.ConfigMap, error) {
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.GetConfigName(cn),
-			Namespace: common.GetNamespace(cn),
+			Name:      configMapName(cn),
+			Namespace: cn.Namespace,
 			Labels:    common.SubResourceLabels(cn),
 		},
 		Data: map[string]string{

@@ -26,6 +26,8 @@ const (
 	HeadlessSvcEnvKey = "HEADLESS_SERVICE_NAME"
 	NamespaceEnvKey   = "NAMESPACE"
 	PodIPEnvKey       = "POD_IP"
+
+	logSuffix = "-log"
 )
 
 // syncReplicas controls the real replicas field of the logset pods
@@ -52,7 +54,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 	}
 	mainRef.Image = ls.Spec.Image
 	mainRef.Resources = ls.Spec.Resources
-	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", configPath, Entrypoint)}
+	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", configPath, entrypoint)}
 	mainRef.VolumeMounts = []corev1.VolumeMount{
 		{Name: dataVolume, MountPath: dataPath},
 		{Name: bootstrapVolume, ReadOnly: true, MountPath: bootstrapPath},
@@ -153,9 +155,14 @@ func buildHeadlessSvc(ls *v1alpha1.LogSet) *corev1.Service {
 }
 
 func stsName(ls *v1alpha1.LogSet) string {
-	return ls.Name
+	return resourceName(ls)
 }
 
 func headlessSvcName(ls *v1alpha1.LogSet) string {
-	return ls.Name
+	return resourceName(ls) + "-headless"
+}
+
+func resourceName(ls *v1alpha1.LogSet) string {
+	return ls.Name + logSuffix
+
 }
