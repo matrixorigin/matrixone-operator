@@ -55,7 +55,7 @@ func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 		Env: []corev1.EnvVar{
 			util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 			util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
-			{Name: common.HeadlessSvcEnvKey, Value: common.GetHeadlessSvcName(dn)},
+			{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
 		},
 	}
 	dn.Spec.Overlay.OverlayMainContainer(&main)
@@ -64,7 +64,6 @@ func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 		ReadinessGates: []corev1.PodReadinessGate{{
 			ConditionType: pub.InPlaceUpdateReady,
 		}},
-		Subdomain:    common.GetHeadlessSvcName(dn),
 		NodeSelector: dn.Spec.NodeSelector,
 	}
 	common.SyncTopology(dn.Spec.TopologyEvenSpread, &podSpec)
@@ -80,7 +79,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		conf = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
 
-	conf.Set([]string{"service-type"}, common.DNService)
+	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
 	conf.Set([]string{"fileservice"}, []map[string]interface{}{
 		common.GetLocalFilesService(),
@@ -103,7 +102,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	}
 
 	return &corev1.ConfigMap{
-		ObjectMeta: common.GetConfigMapObjMeta(dn),
+		ObjectMeta: common.ObjMetaTemplate(dn, configMapName(dn)),
 		Data: map[string]string{
 			common.ConfigFile: s,
 			common.Entrypoint: buff.String(),
@@ -112,22 +111,16 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 }
 
 func buildHeadlessSvc(dn *v1alpha1.DNSet) *corev1.Service {
-	ports := getDNServicePort()
-	return common.GetHeadlessService(dn, ports)
-}
-
-func buildSvc(dn *v1alpha1.DNSet) *corev1.Service {
-	ports := getDNServicePort()
-	return common.GetDiscoveryService(dn, ports, dn.Spec.ServiceType)
+	return common.HeadlessServiceTemplate(dn, headlessSvcName(dn))
 }
 
 func buildDNSet(dn *v1alpha1.DNSet) *kruise.StatefulSet {
-	return common.GetStatefulSet(dn)
+	return common.StatefulSetTemplate(dn, stsName(dn), headlessSvcName(dn))
 }
 
 func syncPersistentVolumeClaim(dn *v1alpha1.DNSet, cloneSet *kruise.StatefulSet) {
 	if dn.Spec.CacheVolume != nil {
-		dataPVC := common.GetPersistentVolumeClaim(dn.Spec.CacheVolume.Size, dn.Spec.CacheVolume.StorageClassName)
+		dataPVC := common.PersistentVolumeClaimTemplate(dn.Spec.CacheVolume.Size, dn.Spec.CacheVolume.StorageClassName, common.DataVolume)
 		tpls := []corev1.PersistentVolumeClaim{dataPVC}
 		dn.Spec.Overlay.AppendVolumeClaims(&tpls)
 		cloneSet.Spec.VolumeClaimTemplates = tpls

@@ -2,6 +2,8 @@ package logset
 
 import (
 	"k8s.io/apimachinery/pkg/api/equality"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -86,7 +88,7 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 		})
 	}
 	ls.Status.Discovery = &v1alpha1.LogSetDiscovery{
-		Port:    LogServicePort,
+		Port:    logServicePort,
 		Address: discoverySvcAddress(ls),
 	}
 
@@ -221,4 +223,13 @@ func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) e
 	syncPodMeta(ctx.Obj, sts)
 	syncPodSpec(ctx.Obj, sts)
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
+}
+
+func (r *LogSetActor) Reconcile(mgr manager.Manager) error {
+	return recon.Setup[*v1alpha1.LogSet](&v1alpha1.LogSet{}, "logset", mgr, r,
+		recon.WithBuildFn(func(b *builder.Builder) {
+			// watch all changes on the owned statefulset since we need perform failover if there is a pod failure
+			b.Owns(&kruisev1.StatefulSet{}).
+				Owns(&corev1.Service{})
+		}))
 }

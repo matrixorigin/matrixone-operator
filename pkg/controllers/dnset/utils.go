@@ -18,23 +18,28 @@ import (
 	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	corev1 "k8s.io/api/core/v1"
 )
 
-func getDNServicePort() []corev1.ServicePort {
-	return []corev1.ServicePort{
-		{
-			Name: dnPortName,
-			Port: common.DNServicePort,
-		},
-	}
-}
+const (
+	nameSuffix = "-dn"
+)
 
 func getListenAddress() string {
 	return fmt.Sprintf("%s:%d", common.ListenAddress, common.DNServicePort)
 }
 
-func getHaKeeperDiscoveryAddr() string {
-	lg := &v1alpha1.LogSet{}
-	return common.GetDiscoveryAdr(lg)
+func configMapName(dn *v1alpha1.DNSet) string {
+	return resourceName(dn) + "-config"
+}
+
+func stsName(dn *v1alpha1.DNSet) string {
+	return resourceName(dn)
+}
+
+func headlessSvcName(dn *v1alpha1.DNSet) string {
+	return resourceName(dn) + "-headless"
+}
+
+func resourceName(dn *v1alpha1.DNSet) string {
+	return dn.Name + nameSuffix
 }

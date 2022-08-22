@@ -13,14 +13,14 @@ import (
 )
 
 const (
-	ConfigFile = "logservice.toml"
-	Entrypoint = "start.sh"
+	configFile = "logservice.toml"
+	entrypoint = "start.sh"
 
-	RaftPort       = 32000
-	LogServicePort = 32001
-	GossipPort     = 32002
+	raftPort       = 32000
+	logServicePort = 32001
+	gossipPort     = 32002
 
-	ServiceTypeLog = "LOG"
+	serviceTypeLog = "LOG"
 )
 
 // Since HA requires instance-based heterogeneous configuration (e.g. instance UUID and advertised addresses), we need a start script to build these configurations based on
@@ -87,7 +87,7 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 		conf = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
 	// 1. build base config file
-	conf.Set([]string{"service-type"}, ServiceTypeLog)
+	conf.Set([]string{"service-type"}, serviceTypeLog)
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentId(ls))
 	conf.Set([]string{"logservice", "gossip-seed-addresses"}, gossipSeeds(ls))
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, HaKeeperAdds(ls))
@@ -100,10 +100,10 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	// 2. build the start script
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
-		RaftPort:          RaftPort,
-		LogServicePort:    LogServicePort,
-		GossipPort:        GossipPort,
-		ConfigFilePath:    fmt.Sprintf("%s/%s", configPath, ConfigFile),
+		RaftPort:          raftPort,
+		LogServicePort:    logServicePort,
+		GossipPort:        gossipPort,
+		ConfigFilePath:    fmt.Sprintf("%s/%s", configPath, configFile),
 		BootstrapFilePath: fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
 	})
 	if err != nil {
@@ -117,8 +117,8 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 			Labels:    common.SubResourceLabels(ls),
 		},
 		Data: map[string]string{
-			ConfigFile: s,
-			Entrypoint: buff.String(),
+			configFile: s,
+			entrypoint: buff.String(),
 		},
 	}, nil
 }
@@ -128,7 +128,7 @@ func HaKeeperAdds(ls *v1alpha1.LogSet) []string {
 	var seeds []string
 	for i := int32(0); i < ls.Spec.Replicas; i++ {
 		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
-		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, LogServicePort))
+		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, logServicePort))
 	}
 	return seeds
 }
@@ -138,7 +138,7 @@ func gossipSeeds(ls *v1alpha1.LogSet) []string {
 	var seeds []string
 	for i := int32(0); i < ls.Spec.Replicas; i++ {
 		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
-		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, GossipPort))
+		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, gossipPort))
 	}
 	return seeds
 }
@@ -148,5 +148,5 @@ func deploymentId(ls *v1alpha1.LogSet) uint64 {
 }
 
 func configMapName(ls *v1alpha1.LogSet) string {
-	return ls.Name + "-config"
+	return resourceName(ls) + "-config"
 }

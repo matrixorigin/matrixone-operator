@@ -15,15 +15,42 @@
 package cnset
 
 import (
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	corev1 "k8s.io/api/core/v1"
+)
+
+const (
+	porName    = "service"
+	nameSuffix = "-cn"
 )
 
 func getCNServicePort() []corev1.ServicePort {
 	return []corev1.ServicePort{
 		{
-			Name: cnPortName,
+			Name: porName,
 			Port: common.CNServicePort,
 		},
 	}
+}
+
+func headlessSvcName(cn *v1alpha1.CNSet) string {
+	return resourceName(cn) + "-headless"
+}
+
+func svcName(cn *v1alpha1.CNSet) string {
+	return resourceName(cn)
+}
+
+func stsName(cn *v1alpha1.CNSet) string {
+	return resourceName(cn)
+}
+
+func configMapName(cn *v1alpha1.CNSet) string {
+	return resourceName(cn) + "-config"
+
+}
+
+func resourceName(cn *v1alpha1.CNSet) string {
+	return cn.Name + nameSuffix
 }

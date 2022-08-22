@@ -20,10 +20,10 @@ func buildDiscoveryService(ls *v1alpha1.LogSet) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			// TODO(aylei): determine haKeeper discovery service port
 			Ports: []corev1.ServicePort{{
-				Port: LogServicePort,
+				Port: logServicePort,
 			}},
 			// service type might need to be configurable since the components
-			// might not placed in a same k8s cluster
+			// might not place in a same k8s cluster
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: common.SubResourceLabels(ls),
 		},
@@ -31,7 +31,7 @@ func buildDiscoveryService(ls *v1alpha1.LogSet) *corev1.Service {
 }
 
 func discoverySvcName(ls *v1alpha1.LogSet) string {
-	return ls.Name + "-discovery"
+	return resourceName(ls) + "-discovery"
 }
 
 func discoverySvcAddress(ls *v1alpha1.LogSet) string {

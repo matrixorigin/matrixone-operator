@@ -61,11 +61,18 @@ type CNSet struct {
 	Status CNSetStatus `json:"status,omitempty"`
 }
 
-func (d *CNSet) GetDependencies() []recon.Dependency {
+func (s *CNSet) GetServiceType() corev1.ServiceType {
+	if s.Spec.ServiceType == "" {
+		return corev1.ServiceTypeClusterIP
+	}
+	return s.Spec.ServiceType
+}
+
+func (s *CNSet) GetDependencies() []recon.Dependency {
 	var deps []recon.Dependency
-	if d.Deps.LogSet != nil {
+	if s.Deps.LogSet != nil {
 		deps = append(deps, &recon.ObjectDependency[*LogSet]{
-			ObjectRef: d.Deps.LogSet,
+			ObjectRef: s.Deps.LogSet,
 			ReadyFunc: func(l *LogSet) bool {
 				return recon.IsReady(&l.Status)
 			},
@@ -74,12 +81,12 @@ func (d *CNSet) GetDependencies() []recon.Dependency {
 	return deps
 }
 
-func (d *CNSet) SetCondition(condition metav1.Condition) {
-	d.Status.SetCondition(condition)
+func (s *CNSet) SetCondition(condition metav1.Condition) {
+	s.Status.SetCondition(condition)
 }
 
-func (d *CNSet) GetConditions() []metav1.Condition {
-	return d.Status.GetConditions()
+func (s *CNSet) GetConditions() []metav1.Condition {
+	return s.Status.GetConditions()
 }
 
 //+kubebuilder:object:root=true
