@@ -96,7 +96,7 @@ func main() {
 	cnSetActor := &cnset.CNSetActor{}
 	err = cnSetActor.Reconcile(mgr)
 	if err != nil {
-		setupLog.Error(err, "unable to setup  dn service controller")
+		setupLog.Error(err, "unable to setup  cn service controller")
 		os.Exit(1)
 	}
 

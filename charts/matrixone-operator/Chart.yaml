@@ -4,3 +4,5 @@ description: Matrixone Kubernetes Operator
 type: application
 version: 0.1.0
 appVersion: 0.1.0
+kubeVersion: ">=1.19.0-0"
+icon: https://raw.githubusercontent.com/matrixorigin/artwork/main/docs/overview/logo.png

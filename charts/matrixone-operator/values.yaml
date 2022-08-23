@@ -2,6 +2,85 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+
+########################################
+#        open kruise                   #
+########################################
+crds:
+  managed: true
+
+# values for kruise installation
+installation:
+  namespace: kruise-system
+  createNamespace: true
+  roleListGroups:
+    - '*'
+
+featureGates: ""
+
+manager:
+  # settings for log print
+  log:
+    # log level for kruise-manager
+    level: "4"
+
+  replicas: 2
+  image:
+    repository: openkruise/kruise-manager
+    tag: v1.2.0
+  webhook:
+    port: 9876
+  metrics:
+    port: 8080
+  healthProbe:
+    port: 8000
+  pprofAddr: "localhost:8090"
+
+  resyncPeriod: "0"
+
+  # resources of kruise-manager container
+  resources:
+    limits:
+      cpu: 200m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  hostNetwork: false
+
+  nodeAffinity: {}
+  nodeSelector: {}
+  tolerations: []
+
+webhookConfiguration:
+  failurePolicy:
+    pods: Ignore
+  timeoutSeconds: 30
+
+daemon:
+  log:
+    # log level for kruise-daemon
+    level: "4"
+
+  port: 10221
+  pprofAddr: "localhost:10222"
+
+  socketLocation: "/var/run"
+  socketFile: ""
+
+  nodeSelector: {}
+  resources:
+    limits:
+      cpu: 50m
+      memory: 128Mi
+    requests:
+      cpu: "0"
+      memory: "0"
+
+########################################
+#        matrixone operator            #
+########################################
 env:
   RECONCILE_WAIT: "10s"            # Reconciliation delay
   WATCH_NAMESPACE: ""              # Namespace to watch or empty string to watch all namespaces
