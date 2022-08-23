@@ -6,9 +6,6 @@ kind: RoleBinding
 kind: ClusterRoleBinding
 {{- end }}
 metadata:
-{{- if .Values.env.WATCH_NAMESPACE }}
-  namespace: {{ .Values.env.WATCH_NAMESPACE }}
-{{- end }}
   name: {{ template "matrixone-operator.fullname" . }}
   labels:
     {{- include "matrixone-operator.labels" . | nindent 4 }}

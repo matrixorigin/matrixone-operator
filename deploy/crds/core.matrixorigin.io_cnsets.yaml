@@ -81,29 +81,9 @@ spec:
               config:
                 description: Config is the raw config for pods
                 type: string
-              configmap:
-                description: ConfigMap is reference to a key in a config map
-                properties:
-                  key:
-                    description: The key to select.
-                    type: string
-                  name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      TODO: Add other useful fields. apiVersion, kind, uid?'
-                    type: string
-                  optional:
-                    description: Specify whether the ConfigMap or its key must be
-                      defined
-                    type: boolean
-                required:
-                - key
-                type: object
-                x-kubernetes-map-type: atomic
               image:
                 description: Image is the docker image of the main container
                 type: string
-              initialConfig:
-                type: object
               nodeSelector:
                 additionalProperties:
                   type: string

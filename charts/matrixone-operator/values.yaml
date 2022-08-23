@@ -4,7 +4,7 @@
 
 
 ########################################
-#        open kruise                   #
+#         openkruise                   #
 ########################################
 crds:
   managed: true
@@ -39,13 +39,13 @@ manager:
   resyncPeriod: "0"
 
   # resources of kruise-manager container
-  resources:
-    limits:
-      cpu: 200m
-      memory: 512Mi
-    requests:
-      cpu: 100m
-      memory: 256Mi
+  resources: {}
+#    limits:
+#      cpu: 200m
+#      memory: 512Mi
+#    requests:
+#      cpu: 100m
+#      memory: 256Mi
 
   hostNetwork: false
 
@@ -88,10 +88,10 @@ env:
 replicaCount: 1
 
 image:
-  repository: matrixorigin/matrixone-operator
+  repository: wanglei1995/matrixone-operator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "test"
 
 imagePullSecrets: []
 nameOverride: ""

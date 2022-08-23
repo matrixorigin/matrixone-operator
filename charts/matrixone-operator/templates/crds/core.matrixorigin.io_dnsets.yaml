@@ -81,26 +81,9 @@ spec:
               config:
                 description: Config is the raw config for pods
                 type: string
-              format:
-                default: json
-                description: 'Format log format method: json, console'
-                type: string
               image:
                 description: Image is the docker image of the main container
                 type: string
-              initialConfig:
-                properties:
-                  storageBackend:
-                    type: string
-                type: object
-              level:
-                default: info
-                description: 'Level log level: debug,info,warning'
-                type: string
-              maxSize:
-                default: 512
-                description: MaxSize log file max size
-                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -6499,14 +6482,6 @@ spec:
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
-              serviceType:
-                default: ClusterIP
-                description: ServiceType is the service type of dn service
-                enum:
-                - ClusterIP
-                - NodePort
-                - LoadBalancer
-                type: string
               topologySpread:
                 description: This will be overridden by .overlay.TopologySpreadConstraints
                 items:
