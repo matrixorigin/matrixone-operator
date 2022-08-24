@@ -140,11 +140,9 @@ kind:
 load:
 	kind load docker-image --name mo matrixorigin/matrixone-operator:latest
 
-# helm package
-helm-pkg: charts
+# helm dependency
+helm-dep:
 	helm dependency build charts/matrixone-operator
-	helm package charts/matrixone-operator
-	mv matrixone-operator-0.1.0.tgz packages
 
 # install tools
 $(TOOLS_BIN_DIR):
