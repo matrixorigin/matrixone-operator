@@ -3,8 +3,7 @@
 # Declare variables to be passed into your templates.
 
 env:
-  RECONCILE_WAIT: "10s"            # Reconciliation delay
-  WATCH_NAMESPACE: ""              # Namespace to watch or empty string to watch all namespaces
+  WATCH_NAMESPACE: ""
 
 replicaCount: 1
 
@@ -12,7 +11,7 @@ image:
   repository: matrixorigin/matrixone-operator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "test"
 
 imagePullSecrets: []
 nameOverride: ""

@@ -8,8 +8,8 @@ RUN go env -w GOPROXY=${PROXY}
 
 COPY go.mod go.mod
 COPY go.sum go.sum
-COPY pkg/apis/go.mod pkg/apis/go.mod
-COPY pkg/apis/go.sum pkg/apis/go.sum
+COPY api/go.mod api/go.mod
+COPY api/go.sum api/go.sum
 COPY runtime/go.mod runtime/go.mod
 COPY runtime/go.sum runtime/go.sum
 

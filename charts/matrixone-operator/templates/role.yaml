@@ -18,6 +18,7 @@ rules:
     resources:
       - pods
       - services
+      - configmaps
       - persistentvolumeclaims
     verbs:
       - list
@@ -34,17 +35,27 @@ rules:
       - create
       - patch
   - apiGroups:
-      - apps
+      - apps.kruise.io
     resources:
       - statefulsets
     verbs:
+      - get
       - list
       - watch
       - create
+      - patch
       - update
       - delete
   - apiGroups:
-      - matrixone.matrixorigin.cn
+      - apps.kruise.io
+    resources:
+      - statefulsets/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - core.matrixorigin.io
     resources:
       - matrixoneclusters
     verbs:
@@ -56,11 +67,75 @@ rules:
       - patch
       - delete
   - apiGroups:
-      - matrixone.matrixorigin.cn
+      - core.matrixorigin.io
     resources:
       - matrixoneclusters/status
     verbs:
       - get
       - update
       - patch
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - logsets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - logsets/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - cnsets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - cnsets/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - dnsets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - dnsets/status
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
 {{- end }}
