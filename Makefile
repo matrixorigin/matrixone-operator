@@ -142,6 +142,7 @@ load:
 
 # helm package
 helm-pkg: charts
+	helm dependency build charts/matrixone-operator
 	helm package charts/matrixone-operator
 	mv matrixone-operator-0.1.0.tgz packages
 
