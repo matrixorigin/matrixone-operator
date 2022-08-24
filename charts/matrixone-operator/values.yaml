@@ -81,9 +81,6 @@ daemon:
 ########################################
 #        matrixone operator            #
 ########################################
-env:
-  RECONCILE_WAIT: "10s"            # Reconciliation delay
-  WATCH_NAMESPACE: ""              # Namespace to watch or empty string to watch all namespaces
 
 replicaCount: 1
 
