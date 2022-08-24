@@ -6,3 +6,7 @@ version: 0.1.0
 appVersion: 0.1.0
 kubeVersion: ">=1.19.0-0"
 icon: https://raw.githubusercontent.com/matrixorigin/artwork/main/docs/overview/logo.png
+dependencies:
+  - name: kruise
+    version: "1.2.0"
+    repository: "https://openkruise.github.io/charts/"
