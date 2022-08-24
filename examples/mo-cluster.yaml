@@ -20,11 +20,17 @@ spec:
         path: aylei-test/mo-logset
     volume:
       size: 10Gi
+    nodeSelector:
+      kubernetes.io/arch: amd64
   dn:
     replicas: 2
     cacheVolume:
       size: 10Gi
+    nodeSelector:
+      kubernetes.io/arch: amd64
   tp:
     replicas: 2
     cacheVolume:
       size: 10Gi
+    nodeSelector:
+      kubernetes.io/arch: amd64
