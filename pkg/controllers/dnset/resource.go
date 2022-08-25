@@ -118,12 +118,12 @@ func buildDNSet(dn *v1alpha1.DNSet) *kruise.StatefulSet {
 	return common.StatefulSetTemplate(dn, stsName(dn), headlessSvcName(dn))
 }
 
-func syncPersistentVolumeClaim(dn *v1alpha1.DNSet, cloneSet *kruise.StatefulSet) {
+func syncPersistentVolumeClaim(dn *v1alpha1.DNSet, sts *kruise.StatefulSet) {
 	if dn.Spec.CacheVolume != nil {
 		dataPVC := common.PersistentVolumeClaimTemplate(dn.Spec.CacheVolume.Size, dn.Spec.CacheVolume.StorageClassName, common.DataVolume)
 		tpls := []corev1.PersistentVolumeClaim{dataPVC}
 		dn.Spec.Overlay.AppendVolumeClaims(&tpls)
-		cloneSet.Spec.VolumeClaimTemplates = tpls
+		sts.Spec.VolumeClaimTemplates = tpls
 	}
 }
 
