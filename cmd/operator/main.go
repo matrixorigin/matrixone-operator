@@ -69,14 +69,20 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
+		Host:                   "0.0.0.0",
 		Port:                   9443,
+		MetricsBindAddress:     metricsAddr,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "0c8ab548.matrixorigin.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	if err := v1alpha1.RegisterWebhooks(mgr); err != nil {
+		setupLog.Error(err, "unable to set up webhook")
 		os.Exit(1)
 	}
 

@@ -1,3 +1,16 @@
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  name: {{ template "matrixone-operator.name" . }}-certs
+  labels:
+    {{- include "matrixone-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+data:
+{{ ( include "matrixone-operator.gen-certs" . ) | indent 2 }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -45,6 +58,10 @@ spec:
                   fieldPath: metadata.name
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          - name: certs
+            mountPath: /tmp/k8s-webhook-server/serving-certs
+            readOnly: true
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -57,3 +74,7 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+      - name: certs
+        secret:
+          secretName: {{ template "matrixone-operator.name" . }}-certs

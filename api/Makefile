@@ -1,12 +1,12 @@
 # This Makefile is an aid for ../Makefile and does not supposed to be used independently
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= crd:crdVersions=v1 
+CRD_OPTIONS ?= crd:crdVersions=v1
 
 .PHONY: manifests
 ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=../deploy/crds output:webhook:artifacts:config=../deploy/webhook
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=../charts/matrixone-operator/templates/crds/ output:webhook:artifacts:config=../charts/matrixone-operator/templates/crds/webhook
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role paths="./..." output:crd:artifacts:config=../charts/matrixone-operator/templates/crds/
 
 
 .PHONY: generate

@@ -13,14 +13,16 @@ func (r *DNSet) setupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:path=/mutate-core-matrixorigin-io-v1alpha1-dnset,mutating=true,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=dnsets,verbs=create;update,versions=v1,name=mdnset.kb.io,admissionReviewVersions={v1,v1beta1}
+// +kubebuilder:webhook:path=/mutate-core-matrixorigin-io-v1alpha1-dnset,mutating=true,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=dnsets,verbs=create;update,versions=v1alpha1,name=mdnset.kb.io,admissionReviewVersions={v1,v1beta1}
+
 var _ webhook.Defaulter = &DNSet{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *DNSet) Default() {
 }
 
-// +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-dnset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=dnsets,verbs=create;update,versions=v1,name=vdnset.kb.io,admissionReviewVersions={v1,v1beta1}
+// +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-dnset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=dnsets,verbs=create;update,versions=v1alpha1,name=vdnset.kb.io,admissionReviewVersions={v1,v1beta1}
+
 var _ webhook.Validator = &DNSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type

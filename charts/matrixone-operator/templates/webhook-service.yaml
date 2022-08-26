@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: webhook-service
+spec:
+  selector:
+    {{- include "matrixone-operator.selectorLabels" . | nindent 6 }}
+  type: ClusterIP
+  ports:
+    - port: 443
+      name: webhook
+      targetPort: 9443
