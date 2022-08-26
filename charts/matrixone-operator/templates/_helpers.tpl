@@ -61,3 +61,15 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Generate certificates for webhook server
+*/}}
+{{- define "matrixone-operator.gen-certs" -}}
+{{- $altNames := list ( printf "%s.%s" "webhook-service" .Release.Namespace ) ( printf "%s.%s.svc" "webhook-service" .Release.Namespace ) -}}
+{{- $ca := genCA "matrixone-operator-ca" 3650 -}}
+{{- $cert := genSignedCert "webhook-service" nil $altNames 3650 $ca -}}
+caBundle: {{ $ca.Cert | b64enc }}
+tls.crt: {{ $cert.Cert | b64enc }}
+tls.key: {{ $cert.Key | b64enc }}
+{{- end -}}

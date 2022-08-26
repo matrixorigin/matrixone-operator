@@ -1,0 +1,8 @@
+resources:
+- manifests.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: '{{ .Release.Namespace }}'
+
+configurations:
+- kustomizeconfig.yaml
