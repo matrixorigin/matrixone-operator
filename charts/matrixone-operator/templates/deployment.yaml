@@ -5,7 +5,9 @@ metadata:
   name: {{ template "matrixone-operator.name" . }}-certs
   labels:
     {{- include "matrixone-operator.labels" . | nindent 4 }}
-
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 data:
 {{ ( include "matrixone-operator.gen-certs" . ) | indent 2 }}
 ---
