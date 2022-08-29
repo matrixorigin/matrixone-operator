@@ -1,7 +1,7 @@
+# mac
 .DS_Store
-vendor/
-cover.out
-**/bin/
+
+# editor
 .vscode
 .idea/
 
