@@ -112,7 +112,7 @@ vet:
 	go vet ./...
 
 # helm lint
-lint:
+helm-lint:
 	helm lint charts/matrixone-operator
 
 # golangci-lint
@@ -141,9 +141,9 @@ load:
 	kind load docker-image --name mo matrixorigin/matrixone-operator:latest
 
 # helm package
-helm-pkg: charts
-	helm package charts/matrixone-operator
-	mv matrixone-operator-0.1.0.tgz packages
+helm-pkg: manifests generate helm-lint
+	helm dependency build charts/matrixone-operator
+	helm package -u charts/matrixone-operator -d charts/
 
 # install tools
 $(TOOLS_BIN_DIR):

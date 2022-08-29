@@ -20,3 +20,4 @@ go.work.sum
 # Helm
 Chart.lock
 charts/matrixone-operator/charts/
+*.tgz
