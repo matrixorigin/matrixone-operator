@@ -181,6 +181,7 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 			return none, errors.Wrap(err, "error waiting dependencies to be ready")
 		}
 		if !ready {
+			ctx.Log.Info("dependency not ready, requeue")
 			return requeue, nil
 		}
 		ctx.Dep = depHolder.(T)
@@ -193,9 +194,7 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 
 	action, err := r.actor.Observe(ctx)
 	if err != nil {
-		ctx.Event.EmitEventGeneric(reconcileFail, "failed to observe status", err)
-		// TODO(aylei): we might also need to update the error to .status?
-		return none, errors.Wrap(err, "error observing object status diff")
+		return r.processActorError(ctx, err)
 	}
 
 	cond, isConditional := any(obj).(Conditional)
@@ -224,11 +223,35 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 
 	log.V(Debug).Info("execute reconcile action", "action", action)
 	if err := action(ctx); err != nil {
-		ctx.Event.EmitEventGeneric(reconcileFail, fmt.Sprintf("failed to execute action %s", action), err)
-		return none, errors.Wrap(err, "error executing reconcile action")
+		return r.processActorError(ctx, err)
 	}
 	// Always requeue after a successful action to check what should be done next
 	return requeue, nil
+}
+
+func (r *Reconciler[T]) processActorError(ctx *Context[T], err error) (recon.Result, error) {
+	// 1. record error details
+	obj := ctx.Obj
+	if cond, isConditional := any(obj).(Conditional); isConditional {
+		cond.SetCondition(metav1.Condition{
+			Type:    ConditionTypeSynced,
+			Status:  metav1.ConditionFalse,
+			Message: fmt.Sprintf("Last error: %s", err.Error()),
+		})
+	}
+	if err := ctx.Update(ctx.Obj); err != nil {
+		return none, err
+	}
+
+	// 2. check whether resync is requested
+	if resync, ok := err.(*ReSync); ok {
+		// resync error
+		ctx.Log.V(Debug).Info("actor request resync, detail: %s", resync.Error())
+		return recon.Result{Requeue: true, RequeueAfter: resync.RequeueAfter}, nil
+	}
+	// other errors
+	ctx.Event.EmitEventGeneric(reconcileFail, "failed calling actions", err)
+	return none, errors.Wrap(err, "error calling actions")
 }
 
 func (r *Reconciler[T]) waitDependencies(ctx *Context[T], dt Dependant) (bool, error) {

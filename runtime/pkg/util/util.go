@@ -94,6 +94,19 @@ func FieldRefEnv(key string, field string) corev1.EnvVar {
 	}
 }
 
+// UpsertByKey insert an element to the list or update an existing element in list with same key.
+// UpsertByKey assumes the no duplicate key and will only update the first element with the same key if
+// there are duplicate keys in the list.
+func UpsertByKey[K comparable, V any](list []V, elem V, keyFunc func(V) K) []V {
+	for i, o := range list {
+		if keyFunc(o) == keyFunc(elem) {
+			list[i] = elem
+			return list
+		}
+	}
+	return append(list, elem)
+}
+
 func Upsert[E comparable](list []E, elem E) []E {
 	for _, o := range list {
 		if o == elem {
@@ -101,6 +114,10 @@ func Upsert[E comparable](list []E, elem E) []E {
 		}
 	}
 	return append(list, elem)
+}
+
+func EnvVarKey(v corev1.EnvVar) string {
+	return v.Name
 }
 
 func PodOrdinal(name string) (int, error) {

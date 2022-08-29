@@ -40,7 +40,7 @@ func syncPodMeta(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 	dn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 }
 
-func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
+func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
 	main := corev1.Container{
 		Name:      v1alpha1.ContainerMain,
 		Image:     dn.Spec.Image,
@@ -66,6 +66,8 @@ func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 		}},
 		NodeSelector: dn.Spec.NodeSelector,
 	}
+
+	common.SetStorageProviderConfig(sp, &podSpec)
 	common.SyncTopology(dn.Spec.TopologyEvenSpread, &podSpec)
 
 	dn.Spec.Overlay.OverlayPodSpec(&podSpec)
@@ -140,7 +142,7 @@ func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) erro
 	}
 
 	syncPodMeta(ctx.Obj, sts)
-	syncPodSpec(ctx.Obj, sts)
+	syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }

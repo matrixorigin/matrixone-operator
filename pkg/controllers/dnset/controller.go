@@ -107,8 +107,9 @@ func (d *DNSetActor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	dnSet := buildDNSet(dn)
 	syncReplicas(dn, dnSet)
 	syncPodMeta(dn, dnSet)
-	syncPodSpec(dn, dnSet)
+	syncPodSpec(dn, dnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	syncPersistentVolumeClaim(dn, dnSet)
+
 	configMap, err := buildDNSetConfigMap(dn, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err

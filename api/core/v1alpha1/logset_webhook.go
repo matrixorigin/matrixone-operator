@@ -31,14 +31,16 @@ func (r *LogSet) Default() {
 	if r.Spec.InitialConfig.HAKeeperReplicas == nil {
 		if r.Spec.Replicas >= minHAReplicas {
 			r.Spec.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
+		} else {
+			r.Spec.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
 		}
-		r.Spec.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
 	}
 	if r.Spec.InitialConfig.LogShardReplicas == nil {
 		if r.Spec.Replicas >= minHAReplicas {
 			r.Spec.InitialConfig.LogShardReplicas = pointer.Int(minHAReplicas)
+		} else {
+			r.Spec.InitialConfig.LogShardReplicas = pointer.Int(singleReplica)
 		}
-		r.Spec.InitialConfig.LogShardReplicas = pointer.Int(singleReplica)
 	}
 	if r.Spec.InitialConfig.LogShards == nil {
 		r.Spec.InitialConfig.LogShards = pointer.Int(defaultShardNum)

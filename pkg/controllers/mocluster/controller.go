@@ -22,6 +22,11 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	// sync specs
 	ls := &v1alpha1.LogSet{
 		ObjectMeta: logSetKey(mo),
+		Spec: v1alpha1.LogSetSpec{
+			LogSetBasic: v1alpha1.LogSetBasic{
+				InitialConfig: mo.Spec.LogService.InitialConfig,
+			},
+		},
 	}
 	dn := &v1alpha1.DNSet{
 		ObjectMeta: dnSetKey(mo),
@@ -33,7 +38,9 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	}
 	errs := multierr.Combine(
 		recon.CreateOwnedOrUpdate(ctx, ls, func() error {
-			ls.Spec.LogSetBasic = mo.Spec.LogService
+			ls.Spec.LogSetBasic.PodSet = mo.Spec.LogService.PodSet
+			ls.Spec.LogSetBasic.SharedStorage = mo.Spec.LogService.SharedStorage
+			ls.Spec.LogSetBasic.Volume = mo.Spec.LogService.Volume
 			ls.Spec.Image = mo.LogSetImage()
 			return nil
 		}),

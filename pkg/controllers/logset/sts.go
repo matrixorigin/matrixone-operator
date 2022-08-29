@@ -66,6 +66,11 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 		util.FieldRefEnv(PodIPEnvKey, "status.podIP"),
 		{Name: HeadlessSvcEnvKey, Value: headlessSvcName(ls)},
 	}
+	// logset does not use s3 yet
+	//if s3config := ls.Spec.SharedStorage.S3; s3config != nil {
+	//	if s3config.SecretRef != nil {
+	//	}
+	//}
 	ls.Spec.Overlay.OverlayMainContainer(mainRef)
 
 	specRef.Containers = []corev1.Container{*mainRef}
