@@ -32,6 +32,8 @@ const (
 const (
 	// TODO(aylei): should be configurable
 	storeDownTimeout = 5 * time.Minute
+
+	reSyncAfter = 15 * time.Second
 )
 
 var _ recon.Actor[*v1alpha1.LogSet] = &LogSetActor{}
@@ -74,7 +76,6 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 	}
 	collectStoreStatus(ls, podList.Items)
 
-	collectStoreStatus(ls, podList.Items)
 	if len(ls.Status.AvailableStores) >= int(ls.Spec.Replicas) {
 		ls.Status.SetCondition(metav1.Condition{
 			Type:   recon.ConditionTypeReady,
@@ -105,7 +106,10 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return r.with(sts).Update, nil
 	}
-	return nil, nil
+	if recon.IsReady(&ls.Status.ConditionalStatus) {
+		return nil, nil
+	}
+	return nil, recon.ErrReSync("logset is not ready", reSyncAfter)
 }
 
 func (r *LogSetActor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {

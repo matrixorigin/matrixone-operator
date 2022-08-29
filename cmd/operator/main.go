@@ -81,9 +81,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := v1alpha1.RegisterWebhooks(mgr); err != nil {
-		setupLog.Error(err, "unable to set up webhook")
-		os.Exit(1)
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := v1alpha1.RegisterWebhooks(mgr); err != nil {
+			setupLog.Error(err, "unable to set up webhook")
+			os.Exit(1)
+		}
 	}
 
 	logSetActor := &logset.LogSetActor{}

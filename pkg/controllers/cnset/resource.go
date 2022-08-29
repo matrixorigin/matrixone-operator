@@ -61,7 +61,7 @@ func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	cn.Spec.Overlay.OverlayPodMeta(&sts.Spec.Template.ObjectMeta)
 }
 
-func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
+func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
 	specRef := &sts.Spec.Template.Spec
 
 	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
@@ -88,6 +88,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 		ConditionType: pub.InPlaceUpdateReady,
 	}}
 	specRef.NodeSelector = cn.Spec.NodeSelector
+	common.SetStorageProviderConfig(sp, specRef)
 	common.SyncTopology(cn.Spec.TopologyEvenSpread, specRef)
 	cn.Spec.Overlay.OverlayPodSpec(specRef)
 }

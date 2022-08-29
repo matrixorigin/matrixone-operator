@@ -52,6 +52,9 @@ const (
 	NamespaceLabelKey = "matrixorigin.io/namespace"
 
 	FileBackendType = "DISK"
+
+	AWSAccessKeyID     = "AWS_ACCESS_KEY_ID"
+	AWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
 )
 
 // SubResourceLabels generate labels for sub-resources
@@ -74,6 +77,23 @@ func SyncTopology(domains []string, podSpec *corev1.PodSpec) {
 		})
 	}
 	podSpec.TopologySpreadConstraints = constraints
+}
+
+func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1.PodSpec) {
+	for i, _ := range podSpec.Containers {
+		if s3p := sp.S3; s3p != nil {
+			if s3p.SecretRef != nil {
+				for _, key := range []string{AWSAccessKeyID, AWSSecretAccessKey} {
+					podSpec.Containers[i].Env = util.UpsertByKey(podSpec.Containers[i].Env, corev1.EnvVar{Name: key, ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: *s3p.SecretRef,
+							Key:                  key,
+						},
+					}}, util.EnvVarKey)
+				}
+			}
+		}
+	}
 }
 
 // SyncConfigMap syncs the desired configmap for pods, which will cause rolling-update if the
