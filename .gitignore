@@ -21,3 +21,4 @@ go.work.sum
 Chart.lock
 charts/matrixone-operator/charts/
 *.tgz
+e2e*.xml

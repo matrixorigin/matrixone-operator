@@ -1,0 +1,48 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: MatrixOneCluster
+metadata:
+  creationTimestamp: "2022-08-31T13:38:16Z"
+  finalizers:
+  - matrixorigin.io/matrixonecluster
+  generation: 1
+  name: test
+  namespace: e2e-1661952863754578000
+  resourceVersion: "1452"
+  uid: 82425f85-f4e0-4e16-88c2-c5aa676994e5
+spec:
+  dn:
+    cacheVolume:
+      size: 100Mi
+    replicas: 1
+    resources: {}
+  imageRepository: aylei/mo-service
+  logService:
+    initialConfig: {}
+    replicas: 3
+    resources: {}
+    sharedStorage: {}
+    volume:
+      size: 100Mi
+  tp:
+    cacheVolume:
+      size: 100Mi
+    replicas: 2
+    resources: {}
+    serviceType: ClusterIP
+  version: 0.1.7
+status:
+  conditions:
+  - lastTransitionTime: "2022-08-31T13:38:16Z"
+    message: the object is synced
+    reason: empty
+    status: "True"
+    type: Synced
+  dn: {}
+  logService:
+    conditions:
+    - lastTransitionTime: "2022-08-31T13:38:16Z"
+      message: the object is reconciling
+      reason: empty
+      status: "False"
+      type: Synced
+  tp: {}
