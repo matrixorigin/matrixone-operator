@@ -125,7 +125,7 @@ func (r *LogSetActor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	sts := buildStatefulSet(ls, svc)
 	syncReplicas(ls, sts)
 	syncPodMeta(ls, sts)
-	syncPodSpec(ls, sts)
+	syncPodSpec(ls, &sts.Spec.Template.Spec)
 	syncPersistentVolumeClaim(ls, sts)
 	discovery := buildDiscoveryService(ls)
 
@@ -225,7 +225,7 @@ func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) e
 		return err
 	}
 	syncPodMeta(ctx.Obj, sts)
-	syncPodSpec(ctx.Obj, sts)
+	syncPodSpec(ctx.Obj, &sts.Spec.Template.Spec)
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }
 

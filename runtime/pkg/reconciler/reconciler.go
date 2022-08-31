@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/strings/slices"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"time"
 
@@ -160,12 +162,11 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 		return forget, errors.Wrap(util.Ignore(kerr.IsNotFound, err), "failed to get object")
 	}
 	ctx := &Context[T]{
-		Context:    goCtx,
-		Obj:        obj,
-		Client:     r.Client,
-		Log:        log,
-		Event:      &EmitEventWrapper{EventRecorder: r.recorder, subject: obj},
-		reconciler: r,
+		Context: goCtx,
+		Obj:     obj,
+		Client:  r.Client,
+		Log:     log,
+		Event:   &EmitEventWrapper{EventRecorder: r.recorder, subject: obj},
 	}
 
 	// optionally transit to deleting state
@@ -188,7 +189,7 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 	}
 
 	// ensure finalizer before any action to guarantee completeness of finalizing
-	if err := ctx.ensureFinalizer(ctx, obj); err != nil {
+	if err := r.ensureFinalizer(ctx, obj); err != nil {
 		return none, errors.Wrap(err, "error adding finalizer to object")
 	}
 
@@ -269,7 +270,7 @@ func (r *Reconciler[T]) waitDependencies(ctx *Context[T], dt Dependant) (bool, e
 }
 
 func (r *Reconciler[T]) finalize(ctx *Context[T]) (recon.Result, error) {
-	if !ctx.hasFinalizer() {
+	if !r.hasFinalizer(ctx.Obj) {
 		// Finalizer work of current reconciler is done or not needed, the object might
 		// wait other reconcilers to complete there finalizer work, ignore.
 		return forget, nil
@@ -284,7 +285,7 @@ func (r *Reconciler[T]) finalize(ctx *Context[T]) (recon.Result, error) {
 		return requeue, nil
 	}
 	ctx.Log.Info("resource finalizing complete, remove finalizer")
-	if err := ctx.removeFinalizer(); err != nil {
+	if err := r.removeFinalizer(ctx, ctx.Obj); err != nil {
 		ctx.Event.EmitEventGeneric(finalizeFail, "failed to remove finalizer", err)
 		return requeue, errors.Wrap(err, "error removing finalizer")
 	}
@@ -327,6 +328,24 @@ func (r *Reconciler[T]) trySetCondition(obj client.Object, c metav1.Condition) {
 
 func (r *Reconciler[T]) finalizer() string {
 	return fmt.Sprintf("%s/%s", finalizerPrefix, r.name)
+}
+
+func (c *Reconciler[T]) hasFinalizer(obj T) bool {
+	return slices.Contains(obj.GetFinalizers(), c.finalizer())
+}
+
+func (c *Reconciler[T]) removeFinalizer(ctx *Context[T], obj T) error {
+	if controllerutil.RemoveFinalizer(obj, c.finalizer()) {
+		return ctx.Update(obj)
+	}
+	return nil
+}
+
+func (c *Reconciler[T]) ensureFinalizer(ctx *Context[T], obj T) error {
+	if controllerutil.AddFinalizer(obj, c.finalizer()) {
+		return ctx.Update(obj)
+	}
+	return nil
 }
 
 func synced(b bool) metav1.Condition {

@@ -73,6 +73,11 @@ func (c *CNSetActor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return c.with(sts).Update, nil
 	}
+	// TODO: collect cn status
+	cn.Status.SetCondition(metav1.Condition{
+		Type:   recon.ConditionTypeReady,
+		Status: metav1.ConditionTrue,
+	})
 
 	return nil, nil
 

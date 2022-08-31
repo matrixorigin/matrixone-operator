@@ -3,6 +3,8 @@ kind: MutatingWebhookConfiguration
 metadata:
   creationTimestamp: null
   name: mutating-webhook-configuration
+  annotations:
+    matrixorigin.io/ca-injection: 'y'
 webhooks:
 - admissionReviewVersions:
   - v1
@@ -98,6 +100,8 @@ kind: ValidatingWebhookConfiguration
 metadata:
   creationTimestamp: null
   name: validating-webhook-configuration
+  annotations:
+    matrixorigin.io/ca-injection: 'y'
 webhooks:
 - admissionReviewVersions:
   - v1

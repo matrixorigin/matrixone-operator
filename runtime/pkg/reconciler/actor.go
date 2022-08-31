@@ -21,7 +21,6 @@ import (
 	"runtime"
 
 	"github.com/go-logr/logr"
-	"golang.org/x/exp/slices"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -64,8 +63,6 @@ type Context[T client.Object] struct {
 	// TODO(aylei): add tracing
 	Event EventEmitter
 	Log   logr.Logger
-
-	reconciler *Reconciler[T]
 }
 
 // TODO(aylei): add logging and tracing when operate upon kube-api
@@ -120,7 +117,7 @@ func (c *Context[T]) Patch(obj client.Object, mutateFn func() error, opts ...cli
 // CreateOwned create the given object with an OwnerReference to the currently reconciling
 // controller object (ctx.Obj)
 func (c *Context[T]) CreateOwned(obj client.Object, opts ...client.CreateOption) error {
-	if err := controllerutil.SetControllerReference(c.Obj, obj, c.reconciler.Scheme()); err != nil {
+	if err := controllerutil.SetControllerReference(c.Obj, obj, c.Client.Scheme()); err != nil {
 		return err
 	}
 	return c.Client.Create(c, obj, opts...)
@@ -134,22 +131,4 @@ func (c *Context[T]) Exist(objKey client.ObjectKey, kind client.Object) (bool, e
 		return false, err
 	}
 	return true, nil
-}
-
-func (c *Context[T]) hasFinalizer() bool {
-	return slices.Contains(c.Obj.GetFinalizers(), c.reconciler.finalizer())
-}
-
-func (c *Context[T]) removeFinalizer() error {
-	if controllerutil.RemoveFinalizer(c.Obj, c.reconciler.finalizer()) {
-		return c.Client.Update(c, c.Obj)
-	}
-	return nil
-}
-
-func (c *Context[T]) ensureFinalizer(ctx context.Context, obj T) error {
-	if controllerutil.AddFinalizer(c.Obj, c.reconciler.finalizer()) {
-		return c.Client.Update(c, obj)
-	}
-	return nil
 }

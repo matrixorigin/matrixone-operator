@@ -10,8 +10,7 @@ replicaCount: 1
 image:
   repository: matrixorigin/matrixone-operator
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "test"
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""

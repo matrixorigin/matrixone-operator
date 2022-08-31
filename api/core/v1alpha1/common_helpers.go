@@ -21,6 +21,9 @@ func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
 }
 
 func (c *ConditionalStatus) GetConditions() []metav1.Condition {
+	if c == nil {
+		return nil
+	}
 	return c.Conditions
 }
 

@@ -139,4 +139,15 @@ rules:
       - update
       - patch
       - delete
+  - apiGroups:
+    - admissionregistration.k8s.io
+    resources:
+    - mutatingwebhookconfigurations
+    - validatingwebhookconfigurations
+    verbs:
+    - get
+    - update
+    - list
+    - patch
+    - watch
 {{- end }}

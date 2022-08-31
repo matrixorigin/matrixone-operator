@@ -127,14 +127,9 @@ op-build: generate manifests pkg
 op-push:
 	docker push ${IMG}
 
-# local e2e test on kind
-e2e:
-	./hack/kind-e2e.sh
-
-# start a kind clsuter
-kind:
-	kind create cluster --config test/kind-config.yml
-	kubectl apply -f test/kind-rbac.yml
+# local kind e2e
+kind-e2e: ginkgo
+	GINKGO=$(GINKGO) ./hack/kind-e2e.sh
 
 # kind load images
 load:
@@ -145,6 +140,18 @@ helm-pkg: manifests generate helm-lint
 	helm dependency build charts/matrixone-operator
 	helm package -u charts/matrixone-operator -d charts/
 
+.PHONY: mockgen
+generate-mockgen: mockgen ## General gomock(https://github.com/golang/mock) files
+	$(MOCKGEN) -source=./runtime/pkg/reconciler/event.go -package fake > ./runtime/pkg/fake/event.go
+
+MOCKGEN = $(shell pwd)/bin/mockgen
+mockgen: ## Download mockgen locally if necessary
+	$(call go-get-tool,$(MOCKGEN),github.com/golang/mock/mockgen@v1.6.0)
+
+GINKGO = $(shell pwd)/bin/ginkgo
+ginkgo:
+	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo@v1.6.0)
+
 # install tools
 $(TOOLS_BIN_DIR):
 	mkdir -p $(TOOLS_BIN_DIR)
@@ -152,3 +159,13 @@ $(TOOLS_BIN_DIR):
 $(TOOLING): $(TOOLS_BIN_DIR)
 	@echo Installing tools from tools/tools.go
 	@cat tools/tools.go | grep _ | awk -F'"' '{print $$2}' | GOBIN=$(TOOLS_BIN_DIR) xargs -tI % go install -mod=readonly -modfile=tools/go.mod %
+
+# go-get-tool will 'go get' any package $2 and install it to $1.
+PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+define go-get-tool
+@[ -f $(1) ] || { \
+set -e ;\
+echo "Downloading $(2)" ;\
+GOBIN=$(PROJECT_DIR)/bin go install $(2); \
+}
+endef
