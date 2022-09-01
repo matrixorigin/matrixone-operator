@@ -167,6 +167,16 @@ func HeadlessServiceTemplate(obj client.Object, name string) *corev1.Service {
 
 }
 
+func ServiceTemplate(obj client.Object, name string, st corev1.ServiceType) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: ObjMetaTemplate(obj, name),
+		Spec: corev1.ServiceSpec{
+			Type:     st,
+			Selector: SubResourceLabels(obj),
+		},
+	}
+}
+
 // ObjMetaTemplate get object metadata
 func ObjMetaTemplate[T client.Object](obj T, name string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
@@ -205,6 +215,25 @@ func StatefulSetTemplate(obj client.Object, name string, svcName string) *kruise
 			},
 		},
 	}
+}
+
+// DeploymentTemplate return a deployment as template
+func DeploymentTemplate(obj client.Object, name string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: ObjMetaTemplate(obj, name),
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: SubResourceLabels(obj),
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      SubResourceLabels(obj),
+					Annotations: map[string]string{},
+				},
+			},
+		},
+	}
+
 }
 
 // PersistentVolumeClaimTemplate returns a persistent volume claim object

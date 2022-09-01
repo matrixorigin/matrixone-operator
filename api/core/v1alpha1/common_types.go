@@ -53,6 +53,9 @@ type MainContainerOverlay struct {
 	Args []string `json:"args,omitempty"`
 
 	// +optional
+	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
+
+	// +optional
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
 
 	// +optional
@@ -73,6 +76,9 @@ type MainContainerOverlay struct {
 
 	// +optional
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+
+	// +optional
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 
 	// +optional
 	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`

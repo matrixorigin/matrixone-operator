@@ -48,10 +48,9 @@ type MatrixOneClusterSpec struct {
 	// +required
 	ImageRepository string `json:"imageRepository,omitempty"`
 
-	// WebUIEnabled indicates whether deploy the MO web-ui,
-	// default to true.
+	// WebUI is the default web ui pod of this cluster
 	// +optional
-	WebUIEnabled *bool `json:"webUIEnabled,omitempty"`
+	WebUISpec WebUISpec `json:"webUI,omitempty"`
 }
 
 // MatrixOneClusterStatus defines the observed state of MatrixOneCluster
