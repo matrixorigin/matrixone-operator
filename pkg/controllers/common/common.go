@@ -167,16 +167,6 @@ func HeadlessServiceTemplate(obj client.Object, name string) *corev1.Service {
 
 }
 
-func ServiceTemplate(obj client.Object, name string, st corev1.ServiceType) *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: ObjMetaTemplate(obj, name),
-		Spec: corev1.ServiceSpec{
-			Type:     st,
-			Selector: SubResourceLabels(obj),
-		},
-	}
-}
-
 // ObjMetaTemplate get object metadata
 func ObjMetaTemplate[T client.Object](obj T, name string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{

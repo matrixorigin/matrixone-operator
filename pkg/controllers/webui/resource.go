@@ -81,5 +81,13 @@ func buildWebUI(wi *v1alpha1.WebUI) *appsv1.Deployment {
 }
 
 func buildService(wi *v1alpha1.WebUI) *corev1.Service {
-	return common.ServiceTemplate(wi, webUIName(wi), wi.Spec.ServiceType)
+	return &corev1.Service{
+		ObjectMeta: common.ObjMetaTemplate(wi, webUIName(wi)),
+		Spec: corev1.ServiceSpec{
+			Type:     wi.Spec.ServiceType,
+			Selector: common.SubResourceLabels(wi),
+			// TODO: webui service ports config
+			Ports: []corev1.ServicePort{},
+		},
+	}
 }

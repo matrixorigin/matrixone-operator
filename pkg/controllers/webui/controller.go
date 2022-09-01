@@ -13,7 +13,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 type WebUIActor struct{}
@@ -108,4 +110,17 @@ func (w *WebUIActor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
 
 func (r *WithResource) Update(ctx *recon.Context[*v1alpha1.WebUI]) error {
 	return ctx.Update(r.dp)
+}
+
+func (w *WebUIActor) Reconcile(mgr manager.Manager) error {
+	err := recon.Setup[*v1alpha1.WebUI](&v1alpha1.WebUI{}, "webui", mgr, w,
+		recon.WithBuildFn(func(b *builder.Builder) {
+			b.Owns(&appsv1.Deployment{}).
+				Owns(&corev1.Service{})
+		}))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
