@@ -36,6 +36,10 @@ type MatrixOneClusterSpec struct {
 	// LogService is the default LogService pod set of this cluster
 	LogService LogSetBasic `json:"logService"`
 
+	// WebUI is the default web ui pod of this cluster
+	// +optional
+	WebUI WebUIBasic `json:"webUI,omitempty"`
+
 	// Version is the version of the cluster, which translated
 	// to the docker image tag used for each component.
 	// default to the recommended version of the operator
@@ -47,10 +51,6 @@ type MatrixOneClusterSpec struct {
 	// registry.
 	// +required
 	ImageRepository string `json:"imageRepository,omitempty"`
-
-	// WebUI is the default web ui pod of this cluster
-	// +optional
-	WebUISpec WebUISpec `json:"webUI,omitempty"`
 }
 
 // MatrixOneClusterStatus defines the observed state of MatrixOneCluster
@@ -62,6 +62,10 @@ type MatrixOneClusterStatus struct {
 	AP *CNSetStatus `json:"ap,omitempty"`
 	// DN is the DN set status
 	DN *DNSetStatus `json:"dn,omitempty"`
+
+	// Webui is the webui service status
+	Webui *WebUIStatus `json:"webui,omitempty"`
+
 	// LogService is the LogService status
 	LogService *LogSetStatus `json:"logService,omitempty"`
 }
@@ -75,6 +79,7 @@ type MatrixOneClusterStatus struct {
 // +kubebuilder:printcolumn:name="DN",type="integer",JSONPath=".spec.dn.replicas"
 // +kubebuilder:printcolumn:name="TP",type="integer",JSONPath=".spec.tp.replicas"
 // +kubebuilder:printcolumn:name="AP",type="integer",JSONPath=".spec.ap.replicas"
+// +kubebuilder:printcolumn:name="webui",type="integer",JSONPath=".spec.webui.replicas"
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type MatrixOneCluster struct {

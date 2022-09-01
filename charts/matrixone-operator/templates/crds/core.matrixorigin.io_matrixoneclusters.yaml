@@ -434,10 +434,72 @@ spec:
                   to the docker image tag used for each component. default to the
                   recommended version of the operator
                 type: string
-              webUIEnabled:
-                description: WebUIEnabled indicates whether deploy the MO web-ui,
-                  default to true.
-                type: boolean
+              webUI:
+                description: WebUI is the default web ui pod of this cluster
+                properties:
+                  config:
+                    description: Config is the raw config for pods
+                    type: string
+                  image:
+                    description: Image is the docker image of the main container
+                    type: string
+                  maxSurge:
+                    format: int32
+                    type: integer
+                  maxUnavailable:
+                    format: int32
+                    type: integer
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  replicas:
+                    description: Replicas is the desired number of pods of this set
+                    format: int32
+                    type: integer
+                  resources:
+                    description: Resources is the resource requirement of the main
+                      conainer
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  serviceType:
+                    default: ClusterIP
+                    description: ServiceType is the service type of cn service
+                    enum:
+                    - ClusterIP
+                    - NodePort
+                    - LoadBalancer
+                    type: string
+                  topologySpread:
+                    description: This will be overridden by .overlay.TopologySpreadConstraints
+                    items:
+                      type: string
+                    type: array
+                required:
+                - replicas
+                type: object
             required:
             - dn
             - logService

@@ -62,7 +62,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			return nil
 		}),
 		recon.CreateOwnedOrUpdate(ctx, webui, func() error {
-			webui.Spec = mo.Spec.WebUISpec
+			webui.Spec.WebUIBasic = mo.Spec.WebUI
 			return nil
 		}),
 	)
