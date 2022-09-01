@@ -746,6 +746,11 @@ func (in *MatrixOneClusterStatus) DeepCopyInto(out *MatrixOneClusterStatus) {
 		*out = new(DNSetStatus)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Webui != nil {
+		in, out := &in.Webui, &out.Webui
+		*out = new(WebUIStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.LogService != nil {
 		in, out := &in.LogService, &out.LogService
 		*out = new(LogSetStatus)
