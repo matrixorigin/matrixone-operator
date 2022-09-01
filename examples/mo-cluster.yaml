@@ -4,20 +4,17 @@ metadata:
   name: mo
 spec:
   imageRepository: aylei/mo-service
-  version: 0.1.7
+  version: 0.1.8
   logService:
     resources:
       requests:
         cpu: 1
-    initialConfig:
-      logShards: 1
-      dnShards: 1
-      haKeeperReplicas: 3
-      logShardReplicas: 3
     replicas: 3
     sharedStorage:
       s3:
         path: aylei-test/mo-logset
+        secretRef:
+          name: aws
     volume:
       size: 10Gi
     nodeSelector:

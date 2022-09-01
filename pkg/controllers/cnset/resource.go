@@ -43,12 +43,12 @@ func buildCNSet(cn *v1alpha1.CNSet) *kruise.StatefulSet {
 	return common.StatefulSetTemplate(cn, stsName(cn), headlessSvcName(cn))
 }
 
-func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, cloneSet *kruise.StatefulSet) {
+func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	if cn.Spec.CacheVolume != nil {
 		dataPVC := common.PersistentVolumeClaimTemplate(cn.Spec.CacheVolume.Size, cn.Spec.CacheVolume.StorageClassName, common.DataVolume)
 		tpls := []corev1.PersistentVolumeClaim{dataPVC}
 		cn.Spec.Overlay.AppendVolumeClaims(&tpls)
-		cloneSet.Spec.VolumeClaimTemplates = tpls
+		sts.Spec.VolumeClaimTemplates = tpls
 	}
 }
 
@@ -61,7 +61,7 @@ func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	cn.Spec.Overlay.OverlayPodMeta(&sts.Spec.Template.ObjectMeta)
 }
 
-func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
+func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
 	specRef := &sts.Spec.Template.Spec
 
 	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
@@ -88,6 +88,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 		ConditionType: pub.InPlaceUpdateReady,
 	}}
 	specRef.NodeSelector = cn.Spec.NodeSelector
+	common.SetStorageProviderConfig(sp, specRef)
 	common.SyncTopology(cn.Spec.TopologyEvenSpread, specRef)
 	cn.Spec.Overlay.OverlayPodSpec(specRef)
 }

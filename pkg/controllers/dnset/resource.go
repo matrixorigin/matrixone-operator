@@ -40,7 +40,7 @@ func syncPodMeta(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 	dn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 }
 
-func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
+func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
 	main := corev1.Container{
 		Name:      v1alpha1.ContainerMain,
 		Image:     dn.Spec.Image,
@@ -66,6 +66,8 @@ func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 		}},
 		NodeSelector: dn.Spec.NodeSelector,
 	}
+
+	common.SetStorageProviderConfig(sp, &podSpec)
 	common.SyncTopology(dn.Spec.TopologyEvenSpread, &podSpec)
 
 	dn.Spec.Overlay.OverlayPodSpec(&podSpec)
@@ -82,11 +84,11 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
 	conf.Set([]string{"fileservice"}, []map[string]interface{}{
-		common.GetLocalFilesService(),
+		common.GetLocalFilesService(common.DataPath),
 		common.S3FileServiceConfig(ls),
 	})
 	conf.Set([]string{"dn", "Txn", "Storage"}, getTxnStorageConfig(dn))
-	conf.Set([]string{"dn", "HaKeeper", "hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+	conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
@@ -118,12 +120,12 @@ func buildDNSet(dn *v1alpha1.DNSet) *kruise.StatefulSet {
 	return common.StatefulSetTemplate(dn, stsName(dn), headlessSvcName(dn))
 }
 
-func syncPersistentVolumeClaim(dn *v1alpha1.DNSet, cloneSet *kruise.StatefulSet) {
+func syncPersistentVolumeClaim(dn *v1alpha1.DNSet, sts *kruise.StatefulSet) {
 	if dn.Spec.CacheVolume != nil {
 		dataPVC := common.PersistentVolumeClaimTemplate(dn.Spec.CacheVolume.Size, dn.Spec.CacheVolume.StorageClassName, common.DataVolume)
 		tpls := []corev1.PersistentVolumeClaim{dataPVC}
 		dn.Spec.Overlay.AppendVolumeClaims(&tpls)
-		cloneSet.Spec.VolumeClaimTemplates = tpls
+		sts.Spec.VolumeClaimTemplates = tpls
 	}
 }
 
@@ -140,7 +142,7 @@ func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) erro
 	}
 
 	syncPodMeta(ctx.Obj, sts)
-	syncPodSpec(ctx.Obj, sts)
+	syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }

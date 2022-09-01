@@ -104,24 +104,25 @@ func (d *DNSetActor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	dn := ctx.Obj
 
 	hSvc := buildHeadlessSvc(dn)
-	dnCloneSet := buildDNSet(dn)
-	syncReplicas(dn, dnCloneSet)
-	syncPodMeta(dn, dnCloneSet)
-	syncPodSpec(dn, dnCloneSet)
-	syncPersistentVolumeClaim(dn, dnCloneSet)
+	dnSet := buildDNSet(dn)
+	syncReplicas(dn, dnSet)
+	syncPodMeta(dn, dnSet)
+	syncPodSpec(dn, dnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+	syncPersistentVolumeClaim(dn, dnSet)
+
 	configMap, err := buildDNSetConfigMap(dn, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err
 	}
 
-	if err := common.SyncConfigMap(ctx, &dnCloneSet.Spec.Template.Spec, configMap); err != nil {
+	if err := common.SyncConfigMap(ctx, &dnSet.Spec.Template.Spec, configMap); err != nil {
 		return err
 	}
 
 	// create all resources
 	err = lo.Reduce[client.Object, error]([]client.Object{
 		hSvc,
-		dnCloneSet,
+		dnSet,
 	}, func(errs error, o client.Object, _ int) error {
 		err := ctx.CreateOwned(o)
 		return multierr.Append(errs, util.Ignore(apierrors.IsAlreadyExists, err))

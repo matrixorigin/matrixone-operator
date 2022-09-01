@@ -16,13 +16,17 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/dnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mocluster"
+	hookctrl "github.com/matrixorigin/matrixone-operator/pkg/controllers/webhook"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap/zapcore"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -53,11 +57,15 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var webhookCertDir string
+	var caFile string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&webhookCertDir, "webhook-certificate-directory", "/tmp/k8s-webhook-server/serving-certs", "the directory that provide certificates for the webhook server")
+	flag.StringVar(&caFile, "ca-file", "caBundle", "the filename of caBundle")
 	opts := &zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
@@ -69,55 +77,60 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
+		Host:                   "0.0.0.0",
 		Port:                   9443,
+		MetricsBindAddress:     metricsAddr,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "0c8ab548.matrixorigin.io",
+		WebhookServer: &webhook.Server{
+			CertDir: webhookCertDir,
+		},
 	})
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+	exitIf(err, "failed to start manager")
+
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		err := v1alpha1.RegisterWebhooks(mgr)
+		exitIf(err, "unable to set up webhook")
+
+		caBundle, err := os.ReadFile(fmt.Sprintf("%s/%s", webhookCertDir, caFile))
+		exitIf(err, "unable to read caBundle of wehbook server")
+		err = hookctrl.Setup(hookctrl.WebhookTypeMutating, mgr, caBundle)
+		exitIf(err, "unable to setup mutating webhook controller")
+		err = hookctrl.Setup(hookctrl.WebhookTypeValidating, mgr, caBundle)
+		exitIf(err, "unable to setup validating webhook controller")
 	}
 
 	logSetActor := &logset.LogSetActor{}
-	if err := logSetActor.Reconcile(mgr); err != nil {
-		setupLog.Error(err, "unable to set up log service controller")
-		os.Exit(1)
-	}
+	err = logSetActor.Reconcile(mgr)
+	exitIf(err, "unable to set up log service controller")
 
 	dnSetActor := &dnset.DNSetActor{}
 	err = dnSetActor.Reconcile(mgr)
-	if err != nil {
-		setupLog.Error(err, "unable to set up dn service controller")
-		os.Exit(1)
-	}
+	exitIf(err, "unable to set up dn service controller")
 
 	cnSetActor := &cnset.CNSetActor{}
 	err = cnSetActor.Reconcile(mgr)
-	if err != nil {
-		setupLog.Error(err, "unable to setup  cn service controller")
-		os.Exit(1)
-	}
+	exitIf(err, "unable to setup  cn service controller")
 
 	moActor := &mocluster.MatrixOneClusterActor{}
-	if err := moActor.Reconcile(mgr); err != nil {
-		setupLog.Error(err, "unable to set up matrixone cluster controller")
-		os.Exit(1)
-	}
+	err = moActor.Reconcile(mgr)
+	exitIf(err, "unable to set up matrixone cluster controller")
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
-	}
+	err = mgr.AddHealthzCheck("healthz", healthz.Ping)
+	exitIf(err, "unable to set up health check")
+	err = mgr.AddReadyzCheck("readyz", healthz.Ping)
+	exitIf(err, "unable to set up ready check")
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+	err = mgr.Start(ctrl.SetupSignalHandler())
+	exitIf(err, "problem running manager")
+}
+
+func exitIf(err error, msg string) {
+	if err != nil {
+		setupLog.Error(err, msg)
 		os.Exit(1)
 	}
+	return
 }

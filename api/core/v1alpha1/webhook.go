@@ -14,6 +14,15 @@ func RegisterWebhooks(mgr ctrl.Manager) error {
 	if err := (&MatrixOneCluster{}).setupWebhookWithManager(mgr); err != nil {
 		return err
 	}
+	if err := (&LogSet{}).setupWebhookWithManager(mgr); err != nil {
+		return err
+	}
+	if err := (&DNSet{}).setupWebhookWithManager(mgr); err != nil {
+		return err
+	}
+	if err := (&CNSet{}).setupWebhookWithManager(mgr); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -22,7 +22,8 @@ func (r *LogSet) setupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:path=/mutate-core-matrixorigin-io-v1alpha1-logset,mutating=true,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=logsets,verbs=create;update,versions=v1,name=mlogset.kb.io,admissionReviewVersions={v1,v1beta1}
+// +kubebuilder:webhook:path=/mutate-core-matrixorigin-io-v1alpha1-logset,mutating=true,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=logsets,verbs=create;update,versions=v1alpha1,name=mlogset.kb.io,admissionReviewVersions={v1,v1beta1}
+
 var _ webhook.Defaulter = &LogSet{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
@@ -30,14 +31,16 @@ func (r *LogSet) Default() {
 	if r.Spec.InitialConfig.HAKeeperReplicas == nil {
 		if r.Spec.Replicas >= minHAReplicas {
 			r.Spec.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
+		} else {
+			r.Spec.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
 		}
-		r.Spec.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
 	}
 	if r.Spec.InitialConfig.LogShardReplicas == nil {
 		if r.Spec.Replicas >= minHAReplicas {
 			r.Spec.InitialConfig.LogShardReplicas = pointer.Int(minHAReplicas)
+		} else {
+			r.Spec.InitialConfig.LogShardReplicas = pointer.Int(singleReplica)
 		}
-		r.Spec.InitialConfig.LogShardReplicas = pointer.Int(singleReplica)
 	}
 	if r.Spec.InitialConfig.LogShards == nil {
 		r.Spec.InitialConfig.LogShards = pointer.Int(defaultShardNum)
@@ -47,7 +50,8 @@ func (r *LogSet) Default() {
 	}
 }
 
-// +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-logset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=logsets,verbs=create;update,versions=v1,name=vlogset.kb.io,admissionReviewVersions={v1,v1beta1}
+// +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-logset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=logsets,verbs=create;update,versions=v1alpha1,name=vlogset.kb.io,admissionReviewVersions={v1,v1beta1}
+
 var _ webhook.Validator = &LogSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type

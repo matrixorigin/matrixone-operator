@@ -15,6 +15,7 @@
 package cnset
 
 import (
+	"encoding/json"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
@@ -72,6 +73,11 @@ func (c *CNSetActor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return c.with(sts).Update, nil
 	}
+	// TODO: collect cn status
+	cn.Status.SetCondition(metav1.Condition{
+		Type:   recon.ConditionTypeReady,
+		Status: metav1.ConditionTrue,
+	})
 
 	return nil, nil
 
@@ -126,8 +132,11 @@ func (c *CNSetActor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	svc := buildSvc(cn)
 	syncReplicas(cn, cnSet)
 	syncPodMeta(cn, cnSet)
-	syncPodSpec(cn, cnSet)
+	b, _ := json.Marshal(ctx.Dep)
+	ctx.Log.Info("dep logset", "logset", string(b))
+	syncPodSpec(cn, cnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	syncPersistentVolumeClaim(cn, cnSet)
+
 	configMap, err := buildCNSetConfigMap(cn)
 	if err != nil {
 		return err
@@ -172,7 +181,6 @@ func syncPods(ctx *recon.Context[*v1alpha1.CNSet], sts *kruise.StatefulSet) erro
 	}
 
 	syncPodMeta(ctx.Obj, sts)
-	syncPodSpec(ctx.Obj, sts)
-
+	syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }

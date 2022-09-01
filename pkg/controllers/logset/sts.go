@@ -41,11 +41,9 @@ func syncPodMeta(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 }
 
 // syncPodSpec controls pod spec of the underlying logset pods
-func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
+func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 	// we should sync the spec as fine-grained as possible since not all fields in spec are managed by
 	// current controller (e.g. some fields might be populated by the defaulting logic of api-server)
-	specRef := &sts.Spec.Template.Spec
-
 	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
 		return c.Name == v1alpha1.ContainerMain
 	})
@@ -66,6 +64,11 @@ func syncPodSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 		util.FieldRefEnv(PodIPEnvKey, "status.podIP"),
 		{Name: HeadlessSvcEnvKey, Value: headlessSvcName(ls)},
 	}
+	// logset does not use s3 yet
+	//if s3config := ls.Spec.SharedStorage.S3; s3config != nil {
+	//	if s3config.SecretRef != nil {
+	//	}
+	//}
 	ls.Spec.Overlay.OverlayMainContainer(mainRef)
 
 	specRef.Containers = []corev1.Container{*mainRef}
@@ -110,6 +113,7 @@ func buildStatefulSet(ls *v1alpha1.LogSet, headlessSvc *corev1.Service) *kruisev
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ls.Namespace,
 			Name:      stsName(ls),
+			Labels:    common.SubResourceLabels(ls),
 		},
 		Spec: kruisev1.StatefulSetSpec{
 			ServiceName: headlessSvc.Name,
@@ -164,5 +168,4 @@ func headlessSvcName(ls *v1alpha1.LogSet) string {
 
 func resourceName(ls *v1alpha1.LogSet) string {
 	return ls.Name + logSuffix
-
 }
