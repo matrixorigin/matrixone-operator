@@ -226,11 +226,11 @@ func PersistentVolumeClaimTemplate(size resource.Quantity, sc *string, name stri
 }
 
 // GetLocalFilesService  get local file service config
-func GetLocalFilesService() map[string]interface{} {
+func GetLocalFilesService(path string) map[string]interface{} {
 	return map[string]interface{}{
 		"name":     LocalService,
 		"backend":  FileBackendType,
-		"data-dir": DataPath,
+		"data-dir": path,
 	}
 }
 
