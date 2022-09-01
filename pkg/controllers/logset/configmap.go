@@ -68,6 +68,8 @@ while true; do
     fi
 done
 
+touch /var/lib/logservice/thisisalocalfileservicedir
+
 echo "/mo-service -cfg ${conf}"
 exec /mo-service -cfg ${conf}
 `))
@@ -91,6 +93,10 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentId(ls))
 	conf.Set([]string{"logservice", "gossip-seed-addresses"}, gossipSeeds(ls))
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, HaKeeperAdds(ls))
+	conf.Set([]string{"fileservice"}, []map[string]interface{}{
+		common.GetLocalFilesService(dataPath),
+		common.S3FileServiceConfig(ls),
+	})
 	// conf.Set([]string{"hakeeper-client", "discovery-address"}, fmt.Sprintf("%s:%d", discoverySvcAddress(ls), LogServicePort))
 	s, err := conf.ToString()
 	if err != nil {

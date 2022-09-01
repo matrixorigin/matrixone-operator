@@ -84,11 +84,11 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
 	conf.Set([]string{"fileservice"}, []map[string]interface{}{
-		common.GetLocalFilesService(),
+		common.GetLocalFilesService(common.DataPath),
 		common.S3FileServiceConfig(ls),
 	})
 	conf.Set([]string{"dn", "Txn", "Storage"}, getTxnStorageConfig(dn))
-	conf.Set([]string{"dn", "HaKeeper", "hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+	conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err

@@ -2,7 +2,6 @@ package logset
 
 import (
 	"fmt"
-
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/pkg/errors"
