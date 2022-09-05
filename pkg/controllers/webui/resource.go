@@ -20,15 +20,9 @@ func syncPodMeta(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 
 func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 	main := corev1.Container{
-		Image:           wi.Spec.Image,
-		ImagePullPolicy: wi.Spec.Overlay.ImagePullPolicy,
-		Name:            v1alpha1.ContainerMain,
-		Resources:       wi.Spec.Resources,
-		LivenessProbe:   wi.Spec.Overlay.LivenessProbe,
-		ReadinessProbe:  wi.Spec.Overlay.ReadinessProbe,
-		StartupProbe:    wi.Spec.Overlay.StartupProbe,
-		Lifecycle:       wi.Spec.Overlay.Lifecycle,
-		SecurityContext: wi.Spec.Overlay.ContainerSecurityContext,
+		Image:     wi.Spec.Image,
+		Name:      v1alpha1.ContainerMain,
+		Resources: wi.Spec.Resources,
 	}
 
 	podSpec := corev1.PodSpec{
@@ -47,6 +41,7 @@ func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 	common.SyncTopology(wi.Spec.TopologyEvenSpread, &podSpec)
 	dp.Spec.Template.Spec = podSpec
 	dp.Spec.Strategy = updateStrategy
+	wi.Spec.Overlay.OverlayPodSpec(&podSpec)
 }
 
 func getRollingUpdateStrategy(wi *v1alpha1.WebUI) *appsv1.RollingUpdateDeployment {

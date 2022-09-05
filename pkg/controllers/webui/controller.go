@@ -80,6 +80,7 @@ func (w *WebUIActor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error)
 			return false, nil
 		}
 	}
+
 	return true, nil
 }
 
