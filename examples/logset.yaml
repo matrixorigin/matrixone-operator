@@ -3,7 +3,7 @@ kind: LogSet
 metadata:
   name: logset
 spec:
-  image: aylei/mo-service:v0.6.0-alpha1
+  image: matrixorigin/matrixone:nightly-bf9930da
   replicas: 3
   sharedStorage:
     s3:
