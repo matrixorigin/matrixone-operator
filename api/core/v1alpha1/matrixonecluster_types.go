@@ -79,7 +79,7 @@ type MatrixOneClusterStatus struct {
 // +kubebuilder:printcolumn:name="DN",type="integer",JSONPath=".spec.dn.replicas"
 // +kubebuilder:printcolumn:name="TP",type="integer",JSONPath=".spec.tp.replicas"
 // +kubebuilder:printcolumn:name="AP",type="integer",JSONPath=".spec.ap.replicas"
-// +kubebuilder:printcolumn:name="ui",type="integer",JSONPath=".spec.webui.replicas"
+// +kubebuilder:printcolumn:name="UI",type="integer",JSONPath=".spec.webui.replicas"
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type MatrixOneCluster struct {
