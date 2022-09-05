@@ -4,7 +4,7 @@ metadata:
   name: mo
 spec:
   imageRepository: aylei/mo-service
-  version: 0.1.9
+  version: v0.6.0-alpha1
   logService:
     resources:
       requests:
@@ -17,17 +17,11 @@ spec:
           name: aws
     volume:
       size: 10Gi
-    nodeSelector:
-      kubernetes.io/arch: amd64
   dn:
     replicas: 2
     cacheVolume:
       size: 10Gi
-    nodeSelector:
-      kubernetes.io/arch: amd64
   tp:
     replicas: 2
     cacheVolume:
       size: 10Gi
-    nodeSelector:
-      kubernetes.io/arch: amd64

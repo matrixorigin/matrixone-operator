@@ -3,7 +3,7 @@ kind: LogSet
 metadata:
   name: logset
 spec:
-  image: aylei/mo-service:0.1.7
+  image: aylei/mo-service:v0.6.0-alpha1
   replicas: 3
   sharedStorage:
     s3:
@@ -14,8 +14,6 @@ spec:
   resources:
     requests:
       cpu: 1
-  nodeSelector:
-    kubernetes.io/arch: amd64
   initialConfig:
     logShards: 1
     dnShards: 1
