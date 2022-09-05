@@ -6528,8 +6528,6 @@ spec:
                       the desired volume, the default storageclass of the cluster
                       would be used if no specified.
                     type: string
-                required:
-                - size
                 type: object
             required:
             - replicas

@@ -48,3 +48,11 @@ func validateMainContainer(c *MainContainer, parent *field.Path) field.ErrorList
 	}
 	return errs
 }
+
+func validateVolume(v *Volume, parent *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	if v.Size.IsZero() {
+		errs = append(errs, field.Invalid(parent.Child("size"), v.Size, "size must not be zero"))
+	}
+	return errs
+}

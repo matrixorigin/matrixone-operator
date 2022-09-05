@@ -59,7 +59,6 @@ func TestMarshal(t *testing.T) {
 		Config: NewTomlConfig(map[string]interface{}{}),
 	}
 	s.Config.Set([]string{"sk"}, "v")
-	s.Config.Set([]string{"ik"}, int64(1))
 
 	data, err := json.Marshal(s)
 	g.Expect(err).Should(BeNil())

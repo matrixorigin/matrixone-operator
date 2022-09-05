@@ -92,6 +92,7 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	conf.Set([]string{"service-type"}, serviceTypeLog)
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentId(ls))
 	conf.Set([]string{"logservice", "gossip-seed-addresses"}, gossipSeeds(ls))
+	conf.Set([]string{"logservice", "logservice-listen-address"}, fmt.Sprintf("0.0.0.0:%d", logServicePort))
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, HaKeeperAdds(ls))
 	conf.Set([]string{"fileservice"}, []map[string]interface{}{
 		common.GetLocalFilesService(dataPath),
@@ -146,6 +147,7 @@ func gossipSeeds(ls *v1alpha1.LogSet) []string {
 		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
 		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, gossipPort))
 	}
+	seeds = append(seeds, "no-such-host:33001")
 	return seeds
 }
 

@@ -20,8 +20,12 @@ var _ webhook.Defaulter = &CNSet{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *CNSet) Default() {
-	if r.Spec.ServiceType == "" {
-		r.Spec.ServiceType = corev1.ServiceTypeClusterIP
+	r.Spec.CNSetBasic.Default()
+}
+
+func (r *CNSetBasic) Default() {
+	if r.ServiceType == "" {
+		r.ServiceType = corev1.ServiceTypeClusterIP
 	}
 }
 
@@ -33,6 +37,7 @@ var _ webhook.Validator = &CNSet{}
 func (r *CNSet) ValidateCreate() error {
 	var errs field.ErrorList
 	errs = append(errs, validateLogSetRef(&r.Deps.LogSetRef, field.NewPath("deps"))...)
+	errs = append(errs, r.Spec.CNSetBasic.ValidateCreate()...)
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
 	return invalidOrNil(errs, r)
 }
@@ -46,4 +51,12 @@ func (r *CNSet) ValidateUpdate(old runtime.Object) error {
 
 func (r *CNSet) ValidateDelete() error {
 	return nil
+}
+
+func (r *CNSetBasic) ValidateCreate() field.ErrorList {
+	var errs field.ErrorList
+	if r.CacheVolume != nil {
+		errs = append(errs, validateVolume(r.CacheVolume, field.NewPath("spec").Child("cacheVolume"))...)
+	}
+	return errs
 }
