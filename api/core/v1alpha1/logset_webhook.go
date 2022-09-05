@@ -28,25 +28,29 @@ var _ webhook.Defaulter = &LogSet{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *LogSet) Default() {
-	if r.Spec.InitialConfig.HAKeeperReplicas == nil {
-		if r.Spec.Replicas >= minHAReplicas {
-			r.Spec.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
+	r.Spec.LogSetBasic.Default()
+}
+
+func (r *LogSetBasic) Default() {
+	if r.InitialConfig.HAKeeperReplicas == nil {
+		if r.Replicas >= minHAReplicas {
+			r.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
 		} else {
-			r.Spec.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
+			r.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
 		}
 	}
-	if r.Spec.InitialConfig.LogShardReplicas == nil {
-		if r.Spec.Replicas >= minHAReplicas {
-			r.Spec.InitialConfig.LogShardReplicas = pointer.Int(minHAReplicas)
+	if r.InitialConfig.LogShardReplicas == nil {
+		if r.Replicas >= minHAReplicas {
+			r.InitialConfig.LogShardReplicas = pointer.Int(minHAReplicas)
 		} else {
-			r.Spec.InitialConfig.LogShardReplicas = pointer.Int(singleReplica)
+			r.InitialConfig.LogShardReplicas = pointer.Int(singleReplica)
 		}
 	}
-	if r.Spec.InitialConfig.LogShards == nil {
-		r.Spec.InitialConfig.LogShards = pointer.Int(defaultShardNum)
+	if r.InitialConfig.LogShards == nil {
+		r.InitialConfig.LogShards = pointer.Int(defaultShardNum)
 	}
-	if r.Spec.InitialConfig.DNShards == nil {
-		r.Spec.InitialConfig.DNShards = pointer.Int(defaultShardNum)
+	if r.InitialConfig.DNShards == nil {
+		r.InitialConfig.DNShards = pointer.Int(defaultShardNum)
 	}
 }
 
@@ -56,21 +60,14 @@ var _ webhook.Validator = &LogSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *LogSet) ValidateCreate() error {
-	var errs field.ErrorList
+	errs := r.Spec.LogSetBasic.ValidateCreate()
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
-	errs = append(errs, r.validateInitialConfig()...)
 	return invalidOrNil(errs, r)
 }
 
 func (r *LogSet) ValidateUpdate(o runtime.Object) error {
 	old := o.(*LogSet)
-	if err := r.ValidateCreate(); err != nil {
-		return err
-	}
-	var errs field.ErrorList
-	if !equality.Semantic.DeepEqual(old.Spec.InitialConfig, r.Spec.InitialConfig) {
-		errs = append(errs, field.Invalid(field.NewPath("spec").Child("initialConfig"), nil, "initialConfig is immutable"))
-	}
+	errs := r.Spec.LogSetBasic.ValidateUpdate(&old.Spec.LogSetBasic)
 	return invalidOrNil(errs, r)
 }
 
@@ -78,27 +75,65 @@ func (r *LogSet) ValidateDelete() error {
 	return nil
 }
 
-func (r *LogSet) validateInitialConfig() field.ErrorList {
+func (r *LogSetBasic) ValidateCreate() field.ErrorList {
+	var errs field.ErrorList
+	errs = append(errs, validateVolume(&r.Volume, field.NewPath("spec").Child("volume"))...)
+	errs = append(errs, r.validateInitialConfig()...)
+	errs = append(errs, r.validateSharedStorage()...)
+	return errs
+}
+
+func (r *LogSetBasic) ValidateUpdate(old *LogSetBasic) field.ErrorList {
+	if err := r.ValidateCreate(); err != nil {
+		return err
+	}
+	var errs field.ErrorList
+	if !equality.Semantic.DeepEqual(old.InitialConfig, r.InitialConfig) {
+		errs = append(errs, field.Invalid(field.NewPath("spec").Child("initialConfig"), nil, "initialConfig is immutable"))
+	}
+	return errs
+}
+
+func (r *LogSetBasic) validateSharedStorage() field.ErrorList {
+	var errs field.ErrorList
+	parent := field.NewPath("spec").Child("sharedStorage")
+	var storageFound bool
+	if r.SharedStorage.S3 != nil {
+		if storageFound {
+			errs = append(errs, field.Invalid(parent, nil, "more than 1 shared storage provider configured"))
+		}
+		storageFound = true
+		if r.SharedStorage.S3.Path == "" {
+			errs = append(errs, field.Invalid(parent, nil, "path must be set for S3 storage"))
+		}
+	}
+	if !storageFound {
+		errs = append(errs, field.Invalid(parent, nil, "no shared storage provider configured"))
+	}
+	return errs
+}
+
+func (r *LogSetBasic) validateInitialConfig() field.ErrorList {
 	var errs field.ErrorList
 	parent := field.NewPath("spec").Child("initialConfig")
 
-	if hrs := r.Spec.InitialConfig.HAKeeperReplicas; hrs == nil {
+	if hrs := r.InitialConfig.HAKeeperReplicas; hrs == nil {
 		errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must be set"))
-	} else if *hrs > int(r.Spec.Replicas) {
+	} else if *hrs > int(r.Replicas) {
 		errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must not larger then logservice replicas"))
 	}
 
-	if lrs := r.Spec.InitialConfig.LogShardReplicas; lrs == nil {
+	if lrs := r.InitialConfig.LogShardReplicas; lrs == nil {
 		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must be set"))
-	} else if *lrs > int(r.Spec.Replicas) {
+	} else if *lrs > int(r.Replicas) {
 		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must not larger then logservice replicas"))
 	}
 
-	if lss := r.Spec.InitialConfig.LogShards; lss == nil {
+	if lss := r.InitialConfig.LogShards; lss == nil {
 		errs = append(errs, field.Invalid(parent.Child("logShards"), lss, "logShards must be set"))
 	}
 
-	if dss := r.Spec.InitialConfig.DNShards; dss == nil {
+	if dss := r.InitialConfig.DNShards; dss == nil {
 		errs = append(errs, field.Invalid(parent.Child("dnShards"), dss, "dnShards must be set"))
 	}
 	return errs

@@ -137,7 +137,7 @@ type Overlay struct {
 type Volume struct {
 	// Size is the desired storage size of the volume
 	// +required
-	Size resource.Quantity `json:"size"`
+	Size resource.Quantity `json:"size,omitempty"`
 
 	// StorageClassName reference to the storageclass of the desired volume,
 	// the default storageclass of the cluster would be used if no specified.
