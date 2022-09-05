@@ -38,7 +38,7 @@ type MatrixOneClusterSpec struct {
 
 	// WebUI is the default web ui pod of this cluster
 	// +optional
-	WebUI WebUIBasic `json:"webui,omitempty"`
+	WebUI *WebUIBasic `json:"webui,omitempty"`
 
 	// Version is the version of the cluster, which translated
 	// to the docker image tag used for each component.
