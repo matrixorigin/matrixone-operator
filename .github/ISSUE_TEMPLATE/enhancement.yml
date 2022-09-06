@@ -15,7 +15,6 @@ body:
       label: What would you like to be added ?
       description: |
         A concise description of what you're expecting/suggesting.
-      render: Markdown
     validations:
       required: true
   - type: textarea

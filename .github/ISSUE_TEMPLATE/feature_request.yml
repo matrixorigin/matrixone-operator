@@ -33,7 +33,6 @@ body:
     attributes:
       label: Documentation, Adoption, Use Case, Migration Strategy
       description: If you can, explain some scenarios how users might use this, situations it would be helpful in. Any API designs, mockups, or diagrams are also helpful.
-      render: Markdown
     validations:
       required: false
   - type: textarea
