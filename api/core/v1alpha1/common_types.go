@@ -75,6 +75,9 @@ type MainContainerOverlay struct {
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 
 	// +optional
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
+
+	// +optional
 	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`
 }
 

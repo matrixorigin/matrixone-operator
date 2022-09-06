@@ -36,6 +36,11 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		ObjectMeta: tpSetKey(mo),
 		Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
 	}
+
+	webui := &v1alpha1.WebUI{
+		ObjectMeta: webUIKey(mo),
+	}
+
 	errs := multierr.Combine(
 		recon.CreateOwnedOrUpdate(ctx, ls, func() error {
 			ls.Spec.LogSetBasic.PodSet = mo.Spec.LogService.PodSet
@@ -54,6 +59,10 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			tp.Spec.CNSetBasic = mo.Spec.TP
 			tp.Spec.Image = mo.TpSetImage()
 			tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
+			return nil
+		}),
+		recon.CreateOwnedOrUpdate(ctx, webui, func() error {
+			webui.Spec.WebUIBasic = *mo.Spec.WebUI
 			return nil
 		}),
 	)
@@ -94,6 +103,7 @@ func (r *MatrixOneClusterActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixOneC
 		&v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)},
 		&v1alpha1.CNSet{ObjectMeta: tpSetKey(mo)},
 		&v1alpha1.CNSet{ObjectMeta: apSetKey(mo)},
+		&v1alpha1.WebUI{ObjectMeta: webUIKey(mo)},
 	}
 	existAny := false
 	for _, obj := range objs {
@@ -139,11 +149,19 @@ func apSetKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
 	}
 }
 
+func webUIKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      mo.Name,
+		Namespace: mo.Namespace,
+	}
+}
+
 func (r *MatrixOneClusterActor) Reconcile(mgr manager.Manager) error {
 	return recon.Setup[*v1alpha1.MatrixOneCluster](&v1alpha1.MatrixOneCluster{}, "matrixonecluster", mgr, r,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&v1alpha1.LogSet{}).
 				Owns(&v1alpha1.DNSet{}).
-				Owns(&v1alpha1.CNSet{})
+				Owns(&v1alpha1.CNSet{}).
+				Owns(&v1alpha1.WebUI{})
 		}))
 }

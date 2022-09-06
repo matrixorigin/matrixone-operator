@@ -23,6 +23,9 @@ func RegisterWebhooks(mgr ctrl.Manager) error {
 	if err := (&CNSet{}).setupWebhookWithManager(mgr); err != nil {
 		return err
 	}
+	if err := (&WebUI{}).setupWebhookWithManager(mgr); err != nil {
+		return err
+	}
 	return nil
 }
 

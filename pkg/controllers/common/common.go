@@ -207,6 +207,25 @@ func StatefulSetTemplate(obj client.Object, name string, svcName string) *kruise
 	}
 }
 
+// DeploymentTemplate return a deployment as template
+func DeploymentTemplate(obj client.Object, name string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: ObjMetaTemplate(obj, name),
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: SubResourceLabels(obj),
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      SubResourceLabels(obj),
+					Annotations: map[string]string{},
+				},
+			},
+		},
+	}
+
+}
+
 // PersistentVolumeClaimTemplate returns a persistent volume claim object
 func PersistentVolumeClaimTemplate(size resource.Quantity, sc *string, name string) corev1.PersistentVolumeClaim {
 	return corev1.PersistentVolumeClaim{
