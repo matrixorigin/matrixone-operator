@@ -45,8 +45,7 @@ func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 }
 
 func getRollingUpdateStrategy(wi *v1alpha1.WebUI) *appsv1.RollingUpdateDeployment {
-	if wi.Spec.UpdateStrategy.MaxSurge != nil &&
-		wi.Spec.UpdateStrategy.MaxUnavailable != nil {
+	if wi.Spec.UpdateStrategy != nil {
 		return &appsv1.RollingUpdateDeployment{
 			MaxUnavailable: &intstr.IntOrString{
 				IntVal: *wi.Spec.UpdateStrategy.MaxUnavailable,
@@ -82,7 +81,12 @@ func buildService(wi *v1alpha1.WebUI) *corev1.Service {
 			Type:     wi.Spec.ServiceType,
 			Selector: common.SubResourceLabels(wi),
 			// TODO: webui service ports config
-			Ports: []corev1.ServicePort{},
+			Ports: []corev1.ServicePort{
+				{
+					Name: "webui",
+					Port: 80,
+				},
+			},
 		},
 	}
 }

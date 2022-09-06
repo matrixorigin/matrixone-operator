@@ -27,7 +27,14 @@ type WebUIBasic struct {
 }
 
 type RollingUpdateStrategy struct {
-	MaxSurge       *int32 `json:"maxSurge,omitempty"`
+	// MaxSurge is an optional field that specifies the maximum number of Pods that
+	// can be created over the desired number of Pods.
+	// +optional
+	MaxSurge *int32 `json:"maxSurge,omitempty"`
+
+	// MaxUnavailableis an optional field that specifies the maximum number of Pods that
+	// can be unavailable during the update process.
+	// +optional
 	MaxUnavailable *int32 `json:"maxUnavailable,omitempty"`
 }
 
