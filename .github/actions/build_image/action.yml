@@ -15,7 +15,7 @@ runs:
       uses: docker/setup-qemu-action@master
       with:
         image: tonistiigi/binfmt:latest
-        platforms: ${{ inputs.platforms }} 
+        platforms: ${{ inputs.platforms }}
 
     - name: setup docker buildx
       id: buildx
@@ -36,14 +36,14 @@ runs:
       with:
         builder: ${{ steps.buildx.outputs.name }}
         context: .
-        file: images/operator/Dockerfile
-        platforms: ${{ inputs.platforms }} 
+        file: Dockerfile
+        platforms: ${{ inputs.platforms }}
         push: false
         tags: "latest"
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new
         outputs: type=oci,dest=/tmp/matrixone-operator.tar
-    
+
     - name: upload image artifact
       if: ${{ inputs.platforms == 'linux/amd64' }}
       uses: actions/upload-artifact@v2
