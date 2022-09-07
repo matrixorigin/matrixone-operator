@@ -1,3 +1,16 @@
+// Copyright 2022 Matrix Origin
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package common
 
 import (
@@ -80,7 +93,7 @@ func SyncTopology(domains []string, podSpec *corev1.PodSpec) {
 }
 
 func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1.PodSpec) {
-	for i, _ := range podSpec.Containers {
+	for i := range podSpec.Containers {
 		if s3p := sp.S3; s3p != nil {
 			if s3p.SecretRef != nil {
 				for _, key := range []string{AWSAccessKeyID, AWSSecretAccessKey} {

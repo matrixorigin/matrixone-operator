@@ -32,19 +32,20 @@ function e2e::cleanup() {
 }
 
 CLUSTER=${CLUSTER:-mo}
+MO_VERSION=${MO_VERSION:-"nightly-bf9930da"}
 
 trap "e2e::cleanup ${CLUSTER}" EXIT
 
 echo "> Create kind cluster"
+export KUBECONFIG=$(mktemp)
+echo $KUBECONFIG
 kind create cluster --name ${CLUSTER} --config test/kind-config.yml
-KUBECONFIG=$(mktemp)
-kind get kubeconfig --name ${CLUSTER} > $KUBECONFIG
 kubectl apply -f test/kind-rbac.yml
-make op-build
-make load
+make build
+kind load docker-image --name ${CLUSTER} matrixorigin/matrixone-operator:latest
 
 echo "> Prepare e2e images"
-e2e::prepare_image ${CLUSTER} aylei/mo-service:0.1.7
+e2e::prepare_image ${CLUSTER} matrixorigin/matrixone:${MO_VERSION}
 e2e::prepare_image ${CLUSTER} openkruise/kruise-manager:v1.2.0
 
 echo "> Install mo operator"
@@ -58,4 +59,4 @@ echo "> Wait webhook certificate injected"
 sleep 30
 
 echo "> Run e2e test"
-KUBECONFIG=$KUBECONFIG $GINKGO -stream -slowSpecThreshold=3000 ./test/e2e/...
+$GINKGO -stream -slowSpecThreshold=3000 ./test/e2e/... -- -mo-version=${MO_VERSION}

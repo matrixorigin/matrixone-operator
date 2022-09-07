@@ -3,7 +3,7 @@ name: test_workflows
 on:
   pull_request:
     branches:
-      - non-exist
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event-name }}
@@ -19,34 +19,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  build_binary:
-    runs-on: ${{ matrix.os }}
-    needs: checks
-    name: build_binary_test
-    strategy:
-      matrix:
-        os:
-          - macos-latest
-          - ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: build_binary
-        uses: ./.github/actions/build_binary
-
-  # FIXME(aylei): disable arm64 build temporarily since build using QUME is extremely slow
-  # ref: https://github.com/actions/virtual-environments/issues/2536#issuecomment-769027088
-  # build_image_arm64:
-  #   name: build_image_arm64
-  #   needs: checks
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - name: build_image
-  #       uses: ./.github/actions/build_image
-  #       with:
-  #         platforms: linux/arm64
-
   build_image_amd64:
     name: build_image_amd64
     needs: checks
@@ -58,20 +30,21 @@ jobs:
         with:
           platforms: linux/amd64
 
-  e2e_kind:
-    name: e2e_kind_test
-    needs: ["build_image_amd64"]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: e2e_kind
-        uses: ./.github/actions/e2e_kind
+# TODO: merge e2e and helm check in CI
+#  e2e_kind:
+#    name: e2e_kind_test
+#    needs: ["build_image_amd64"]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#      - name: e2e_kind
+#        uses: ./.github/actions/e2e_kind
 
-  helm_pkg_check:
-    name: helm_pkg_check
-    needs: ["build_image_amd64"]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: helm_check
-        uses: ./.github/actions/helm_check
+#  helm_pkg_check:
+#    name: helm_pkg_check
+#    needs: ["build_image_amd64"]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#      - name: helm_check
+#        uses: ./.github/actions/helm_check
