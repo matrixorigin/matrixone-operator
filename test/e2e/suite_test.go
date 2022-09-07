@@ -34,6 +34,8 @@ var namespacePrefix string
 
 // all nodes
 var kubeconfig string
+var moVersion string
+var moImageRepo string
 var kubeCli client.Client
 var ctx context.Context
 var logger *zap.SugaredLogger
@@ -47,6 +49,8 @@ func TestMain(m *testing.M) {
 	flags := flag.CommandLine
 	flags.StringVar(&kubeconfig, "kube-config", os.Getenv("KUBECONFIG"), "the kubeconfig path to access infra apiserver")
 	flags.StringVar(&namespacePrefix, "namespace", "e2e", "the namespace prefix to run e2e test")
+	flags.StringVar(&moVersion, "mo-version", "latest", "the version of mo to run e2e test")
+	flags.StringVar(&moImageRepo, "mo-image-repo", "matrixorigin/matrixone", "the image repository of mo to run e2e test")
 	flag.Parse()
 
 	RegisterFailHandler(Fail)

@@ -37,10 +37,6 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
 	}
 
-	webui := &v1alpha1.WebUI{
-		ObjectMeta: webUIKey(mo),
-	}
-
 	errs := multierr.Combine(
 		recon.CreateOwnedOrUpdate(ctx, ls, func() error {
 			ls.Spec.LogSetBasic.PodSet = mo.Spec.LogService.PodSet
@@ -61,10 +57,6 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
 			return nil
 		}),
-		recon.CreateOwnedOrUpdate(ctx, webui, func() error {
-			webui.Spec.WebUIBasic = *mo.Spec.WebUI
-			return nil
-		}),
 	)
 	if mo.Spec.AP != nil {
 		ap := &v1alpha1.CNSet{
@@ -77,6 +69,15 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			return nil
 		}))
 		mo.Status.AP = &ap.Status
+	}
+	if mo.Spec.WebUI != nil {
+		webui := &v1alpha1.WebUI{
+			ObjectMeta: webUIKey(mo),
+		}
+		errs = multierr.Append(errs, recon.CreateOwnedOrUpdate(ctx, webui, func() error {
+			webui.Spec.WebUIBasic = *mo.Spec.WebUI
+			return nil
+		}))
 	}
 	if errs != nil {
 		return nil, errs

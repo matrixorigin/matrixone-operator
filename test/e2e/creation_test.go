@@ -50,12 +50,15 @@ var _ = Describe("Cluster creation test", func() {
 					Volume: v1alpha1.Volume{
 						Size: resource.MustParse("100Mi"),
 					},
-					SharedStorage: v1alpha1.SharedStorageProvider{},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
+							Path: "test/bucket",
+						},
+					},
 					InitialConfig: v1alpha1.InitialConfig{},
 				},
-				Version: "0.1.7",
-				// TODO: use authoritative image repository
-				ImageRepository: "aylei/mo-service",
+				Version:         moVersion,
+				ImageRepository: moImageRepo,
 			},
 		}
 		Expect(kubeCli.Create(ctx, mo)).To(Succeed())
