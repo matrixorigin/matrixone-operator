@@ -77,10 +77,27 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	// FIXME: start CN when mo code is ready
 	mainRef.Command = []string{"tail", "-f", "/dev/null"}
 	// mainRef.Command = []string{"/mo-service", "-cfg", fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile)}
-	mainRef.VolumeMounts = []corev1.VolumeMount{
-		{Name: common.DataVolume, MountPath: common.DataPath},
-		{Name: common.ConfigVolume, ReadOnly: true, MountPath: common.ConfigPath},
+
+	var volumeMountsList []corev1.VolumeMount
+
+	dataVolume := corev1.VolumeMount{
+		Name:      common.DataVolume,
+		MountPath: common.DataPath,
 	}
+
+	configVolume := corev1.VolumeMount{
+		Name:      common.ConfigVolume,
+		ReadOnly:  true,
+		MountPath: common.ConfigPath,
+	}
+
+	if cn.Spec.CacheVolume != nil {
+		volumeMountsList = append(volumeMountsList, dataVolume)
+	}
+
+	volumeMountsList = append(volumeMountsList, configVolume)
+
+	mainRef.VolumeMounts = volumeMountsList
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)
 
 	specRef.Containers = []corev1.Container{*mainRef}

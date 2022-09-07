@@ -40,38 +40,54 @@ func syncPodMeta(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 	dn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 }
 
-func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
-	main := corev1.Container{
-		Name:      v1alpha1.ContainerMain,
-		Image:     dn.Spec.Image,
-		Resources: dn.Spec.Resources,
-		Command: []string{
-			"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint),
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{Name: common.DataVolume, MountPath: common.DataPath},
-			{Name: common.ConfigVolume, ReadOnly: true, MountPath: common.ConfigPath},
-		},
-		Env: []corev1.EnvVar{
-			util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
-			util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
-			{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
-		},
+func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
+
+	specRef := &sts.Spec.Template.Spec
+	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
+		return c.Name == v1alpha1.ContainerMain
+	})
+	if mainRef == nil {
+		mainRef = &corev1.Container{Name: v1alpha1.ContainerMain}
 	}
-	dn.Spec.Overlay.OverlayMainContainer(&main)
-	podSpec := corev1.PodSpec{
-		Containers: []corev1.Container{main},
-		ReadinessGates: []corev1.PodReadinessGate{{
-			ConditionType: pub.InPlaceUpdateReady,
-		}},
-		NodeSelector: dn.Spec.NodeSelector,
+	mainRef.Image = dn.Spec.Image
+	mainRef.Resources = dn.Spec.Resources
+
+	mainRef.Command = []string{
+		"/bin/sh",
+		fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint),
 	}
 
-	common.SetStorageProviderConfig(sp, &podSpec)
-	common.SyncTopology(dn.Spec.TopologyEvenSpread, &podSpec)
+	var volumeMountsList []corev1.VolumeMount
 
-	dn.Spec.Overlay.OverlayPodSpec(&podSpec)
-	cs.Spec.Template.Spec = podSpec
+	dataVolume := corev1.VolumeMount{
+		Name:      common.DataVolume,
+		MountPath: common.DataPath,
+	}
+
+	configVolume := corev1.VolumeMount{
+		Name:      common.ConfigVolume,
+		ReadOnly:  true,
+		MountPath: common.ConfigPath,
+	}
+
+	if dn.Spec.CacheVolume != nil {
+		volumeMountsList = append(volumeMountsList, dataVolume)
+	}
+
+	volumeMountsList = append(volumeMountsList, configVolume)
+	mainRef.VolumeMounts = volumeMountsList
+
+	dn.Spec.Overlay.OverlayMainContainer(mainRef)
+
+	specRef.Containers = []corev1.Container{*mainRef}
+	specRef.ReadinessGates = []corev1.PodReadinessGate{{
+		ConditionType: pub.InPlaceUpdateReady,
+	}}
+
+	specRef.NodeSelector = dn.Spec.NodeSelector
+	common.SetStorageProviderConfig(sp, specRef)
+	common.SyncTopology(dn.Spec.TopologyEvenSpread, specRef)
+	dn.Spec.Overlay.OverlayPodSpec(specRef)
 }
 
 // buildDNSetConfigMap return dn set configmap

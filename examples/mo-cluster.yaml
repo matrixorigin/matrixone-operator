@@ -10,6 +10,11 @@ spec:
       requests:
         cpu: 1
     replicas: 3
+    initialConfig:
+      logShards: 1
+      dnShards: 1
+      haKeeperReplicas: 3
+      logShardReplicas: 3
     sharedStorage:
       s3:
         path: aylei-test/mo-logset
@@ -19,12 +24,8 @@ spec:
       size: 10Gi
   dn:
     replicas: 2
-    cacheVolume:
-      size: 10Gi
   tp:
     replicas: 2
-    cacheVolume:
-      size: 10Gi
   webui:
     image: wanglei4687/webui:test
     replicas: 1
