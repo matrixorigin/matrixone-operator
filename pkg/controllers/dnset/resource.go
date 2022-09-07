@@ -56,24 +56,23 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 		fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint),
 	}
 
-	var volumeMountsList []corev1.VolumeMount
+	volumeMountsList := []corev1.VolumeMount{
+		{
+			Name:      common.ConfigVolume,
+			ReadOnly:  true,
+			MountPath: common.ConfigPath,
+		},
+	}
 
 	dataVolume := corev1.VolumeMount{
 		Name:      common.DataVolume,
 		MountPath: common.DataPath,
 	}
 
-	configVolume := corev1.VolumeMount{
-		Name:      common.ConfigVolume,
-		ReadOnly:  true,
-		MountPath: common.ConfigPath,
-	}
-
 	if dn.Spec.CacheVolume != nil {
 		volumeMountsList = append(volumeMountsList, dataVolume)
 	}
-
-	volumeMountsList = append(volumeMountsList, configVolume)
+	
 	mainRef.VolumeMounts = volumeMountsList
 
 	dn.Spec.Overlay.OverlayMainContainer(mainRef)
