@@ -1,3 +1,16 @@
+// Copyright 2022 Matrix Origin
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package e2e
 
 import (
@@ -50,12 +63,15 @@ var _ = Describe("Cluster creation test", func() {
 					Volume: v1alpha1.Volume{
 						Size: resource.MustParse("100Mi"),
 					},
-					SharedStorage: v1alpha1.SharedStorageProvider{},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
+							Path: "test/bucket",
+						},
+					},
 					InitialConfig: v1alpha1.InitialConfig{},
 				},
-				Version: "0.1.7",
-				// TODO: use authoritative image repository
-				ImageRepository: "aylei/mo-service",
+				Version:         moVersion,
+				ImageRepository: moImageRepo,
 			},
 		}
 		Expect(kubeCli.Create(ctx, mo)).To(Succeed())

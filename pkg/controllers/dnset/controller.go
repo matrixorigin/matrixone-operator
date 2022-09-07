@@ -33,20 +33,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-type DNSetActor struct{}
+type Actor struct{}
 
-var _ recon.Actor[*v1alpha1.DNSet] = &DNSetActor{}
+var _ recon.Actor[*v1alpha1.DNSet] = &Actor{}
 
 type WithResources struct {
-	*DNSetActor
+	*Actor
 	sts *kruise.StatefulSet
 }
 
-func (d *DNSetActor) with(sts *kruise.StatefulSet) *WithResources {
-	return &WithResources{DNSetActor: d, sts: sts}
+func (d *Actor) with(sts *kruise.StatefulSet) *WithResources {
+	return &WithResources{Actor: d, sts: sts}
 }
 
-func (d *DNSetActor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1alpha1.DNSet], error) {
+func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1alpha1.DNSet], error) {
 	dn := ctx.Obj
 
 	sts := &kruise.StatefulSet{}
@@ -72,7 +72,7 @@ func (d *DNSetActor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[
 	return nil, nil
 }
 
-func (d *DNSetActor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error) {
+func (d *Actor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error) {
 	dn := ctx.Obj
 
 	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{
@@ -99,7 +99,7 @@ func (d *DNSetActor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error)
 	return true, nil
 }
 
-func (d *DNSetActor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
+func (d *Actor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	klog.V(recon.Info).Info("create dn set...")
 	dn := ctx.Obj
 
@@ -145,7 +145,7 @@ func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	return ctx.Update(r.sts)
 }
 
-func (d *DNSetActor) Reconcile(mgr manager.Manager) error {
+func (d *Actor) Reconcile(mgr manager.Manager) error {
 	err := recon.Setup[*v1alpha1.DNSet](&v1alpha1.DNSet{}, "dnset", mgr, d,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&kruise.StatefulSet{}).

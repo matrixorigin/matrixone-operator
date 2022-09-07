@@ -1,3 +1,16 @@
+// Copyright 2022 Matrix Origin
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package logset
 
 import (
@@ -16,7 +29,7 @@ const (
 
 type bootstrapReplica struct {
 	Ordinal   int `json:"ordinal"`
-	ReplicaId int `json:"replicaId"`
+	ReplicaID int `json:"replicaId"`
 }
 
 // buildBootstrapConfig build the configmap that contains bootstrap information for log service
@@ -70,7 +83,7 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 		}
 		replicas = append(replicas, bootstrapReplica{
 			Ordinal:   i,
-			ReplicaId: rid,
+			ReplicaID: rid,
 		})
 	}
 	serialized, err := json.Marshal(replicas)
@@ -89,7 +102,7 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 func encodeSeeds(brs []bootstrapReplica) []string {
 	var seeds []string
 	for _, r := range brs {
-		seeds = append(seeds, fmt.Sprintf("%d:%s", r.ReplicaId, encodeOrdinal(r.Ordinal)))
+		seeds = append(seeds, fmt.Sprintf("%d:%s", r.ReplicaID, encodeOrdinal(r.Ordinal)))
 	}
 	return seeds
 }

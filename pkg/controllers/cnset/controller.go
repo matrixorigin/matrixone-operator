@@ -34,20 +34,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-type CNSetActor struct{}
+type Actor struct{}
 
-var _ recon.Actor[*v1alpha1.CNSet] = &CNSetActor{}
+var _ recon.Actor[*v1alpha1.CNSet] = &Actor{}
 
 type WithResources struct {
-	*CNSetActor
+	*Actor
 	sts *kruise.StatefulSet
 }
 
-func (c *CNSetActor) with(sts *kruise.StatefulSet) *WithResources {
-	return &WithResources{CNSetActor: c, sts: sts}
+func (c *Actor) with(sts *kruise.StatefulSet) *WithResources {
+	return &WithResources{Actor: c, sts: sts}
 }
 
-func (c *CNSetActor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1alpha1.CNSet], error) {
+func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1alpha1.CNSet], error) {
 	cn := ctx.Obj
 
 	svc := &corev1.Service{}
@@ -94,7 +94,7 @@ func (c *WithResources) Update(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return ctx.Update(c.sts)
 }
 
-func (c *CNSetActor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
+func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 	cn := ctx.Obj
 
 	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{
@@ -123,7 +123,7 @@ func (c *CNSetActor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error)
 	return true, nil
 }
 
-func (c *CNSetActor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
+func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	klog.V(recon.Info).Info("dn set create...")
 	cn := ctx.Obj
 
@@ -162,7 +162,7 @@ func (c *CNSetActor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return nil
 }
 
-func (c *CNSetActor) Reconcile(mgr manager.Manager) error {
+func (c *Actor) Reconcile(mgr manager.Manager) error {
 	err := recon.Setup[*v1alpha1.CNSet](&v1alpha1.CNSet{}, "cnset", mgr, c,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&kruise.StatefulSet{}).

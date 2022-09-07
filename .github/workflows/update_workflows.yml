@@ -3,7 +3,7 @@ name: update_workflows
 on:
   push:
     branches:
-      - non-exist
+      - main
   release:
     types:
       - published
@@ -21,7 +21,7 @@ jobs:
         uses: docker/setup-qemu-action@master
         with:
           image: tonistiigi/binfmt:latest
-          platforms:  linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64
 
       - name: Set up Docker Buildx
         id: buildx
@@ -39,7 +39,7 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
-          file: images/operator/Dockerfile
+          file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: matrixorigin/matrixone-operator:latest
