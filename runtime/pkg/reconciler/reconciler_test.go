@@ -15,12 +15,59 @@
 package reconciler
 
 import (
+	"context"
+	"github.com/google/go-cmp/cmp"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	recon "sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"testing"
 
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+var _ recon.Reconciler = &Reconciler[client.Object]{}
+
+func TestReconciler(t *testing.T) {
+	type args struct {
+		m manager.Manager
+		a Actor[*corev1.Pod]
+	}
+
+	type want struct {
+		result recon.Result
+		err    error
+	}
+
+	cases := map[string]struct {
+		args args
+		want want
+	}{
+		"ReachDesiredState": {
+			args: args{},
+			want: want{
+				result: recon.Result{Requeue: false},
+			},
+		},
+		"ErrorOnObserve": {},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			r, err := newReconciler(&corev1.Pod{}, "test", tc.args.m, tc.args.a, &options{})
+			g.Expect(err).To(Succeed())
+			got, err := r.Reconcile(context.Background(), recon.Request{})
+			if diff := cmp.Diff(tc.want.err, err); diff != "" {
+				t.Errorf("\n%s\nr.Reconcile(...): -want error, +got error:\n%s", name, diff)
+			}
+			if diff := cmp.Diff(tc.want.result, got); diff != "" {
+				t.Errorf("\n%s\nr.Reconcile(...): -want, +got:\n%s", name, diff)
+			}
+		})
+	}
+}
 
 func TestSetupObjectFactory(t *testing.T) {
 	g := NewGomegaWithT(t)
