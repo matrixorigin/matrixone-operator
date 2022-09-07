@@ -3,7 +3,7 @@ name: test_workflows
 on:
   pull_request:
     branches:
-      - not-exist
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event-name }}
@@ -30,20 +30,21 @@ jobs:
         with:
           platforms: linux/amd64
 
-  e2e_kind:
-    name: e2e_kind_test
-    needs: ["build_image_amd64"]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: e2e_kind
-        uses: ./.github/actions/e2e_kind
+# TODO: merge e2e and helm check in CI
+#  e2e_kind:
+#    name: e2e_kind_test
+#    needs: ["build_image_amd64"]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#      - name: e2e_kind
+#        uses: ./.github/actions/e2e_kind
 
-  helm_pkg_check:
-    name: helm_pkg_check
-    needs: ["build_image_amd64"]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: helm_check
-        uses: ./.github/actions/helm_check
+#  helm_pkg_check:
+#    name: helm_pkg_check
+#    needs: ["build_image_amd64"]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#      - name: helm_check
+#        uses: ./.github/actions/helm_check

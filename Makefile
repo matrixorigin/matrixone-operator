@@ -48,7 +48,7 @@ helm-pkg: manifests generate helm-lint
 
 
 # Make sure the generated files are up to date before open PR
-reviewable: ci-reviewable go-lint check-license
+reviewable: ci-reviewable go-lint check-license test
 
 ci-reviewable: generate manifests test
 	go mod tidy
@@ -79,6 +79,7 @@ go-lint: golangci-lint
 check-license: license-eye
 	$(LICENSE_EYE) -v info -c .licenserc.yml header check
 
+# TODO: include E2E
 test: api-test unit
 
 # Run unit tests

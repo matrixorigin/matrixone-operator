@@ -26,4 +26,5 @@ header:
     - 'deploy/'
     - 'third_part/'
     - '**/Dockerfile'
+    - '**/*.xml'
   comment: on-failure
