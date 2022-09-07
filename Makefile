@@ -73,11 +73,11 @@ helm-lint:
 
 # golangci-lint
 go-lint: golangci-lint
-	$(GOLANGCILINTER_BINARY) run
+	$(GOLANGCI_LINT) run
 
 # license check
-check-license: skywalking-eyes
-	$(SKYWALKING_EYES) -v info -c .licenserc.yml header check
+check-license: license-eye
+	$(LICENSE_EYE) -v info -c .licenserc.yml header check
 
 test: api-test unit
 
@@ -120,13 +120,13 @@ MOCKGEN = $(shell pwd)/bin/mockgen
 mockgen: ## Download mockgen locally if necessary
 	$(call go-get-tool,$(MOCKGEN),github.com/golang/mock/mockgen@v1.6.0)
 
-SKYWALKING_EYES = $(shell pwd)/bin/skywalking-eyes
-skywalking-eyes: ## Download license_eye locally if necessary
-	$(call go-get-tool,$(LICENSE_EYE),github.com/apache/skywalking-eyes@v0.3.0)
+LICENSE_EYE = $(shell pwd)/bin/license-eye
+license-eye: ## Download license-eye locally if necessary
+	$(call go-get-tool,$(LICENSE_EYE),github.com/apache/skywalking-eyes/cmd/license-eye@v0.4.0)
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 golangci-lint:
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint@v1.46.1)
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.1)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))

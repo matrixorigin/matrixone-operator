@@ -182,7 +182,7 @@ func TestLogSetActor_Observe(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			r := &LogSetActor{}
+			r := &Actor{}
 			mockCtrl := gomock.NewController(t)
 			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
 			ctx := fake.NewContext(tt.logset, tt.client, eventEmitter)
@@ -203,7 +203,7 @@ func TestLogSetActor_Create(t *testing.T) {
 	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &LogSetActor{}
+			r := &Actor{}
 			if err := r.Create(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Create() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -225,7 +225,7 @@ func TestLogSetActor_Finalize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &LogSetActor{}
+			r := &Actor{}
 			got, err := r.Finalize(tt.args.ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Finalize() error = %v, wantErr %v", err, tt.wantErr)
@@ -240,7 +240,7 @@ func TestLogSetActor_Finalize(t *testing.T) {
 
 func TestWithResources_Repair(t *testing.T) {
 	type fields struct {
-		LogSetActor *LogSetActor
+		LogSetActor *Actor
 		sts         *kruisev1.StatefulSet
 	}
 	type args struct {
@@ -257,8 +257,8 @@ func TestWithResources_Repair(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &WithResources{
-				LogSetActor: tt.fields.LogSetActor,
-				sts:         tt.fields.sts,
+				Actor: tt.fields.LogSetActor,
+				sts:   tt.fields.sts,
 			}
 			if err := r.Repair(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Repair() error = %v, wantErr %v", err, tt.wantErr)
@@ -269,7 +269,7 @@ func TestWithResources_Repair(t *testing.T) {
 
 func TestWithResources_Scale(t *testing.T) {
 	type fields struct {
-		LogSetActor *LogSetActor
+		LogSetActor *Actor
 		sts         *kruisev1.StatefulSet
 	}
 	type args struct {
@@ -286,8 +286,8 @@ func TestWithResources_Scale(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &WithResources{
-				LogSetActor: tt.fields.LogSetActor,
-				sts:         tt.fields.sts,
+				Actor: tt.fields.LogSetActor,
+				sts:   tt.fields.sts,
 			}
 			if err := r.Scale(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Scale() error = %v, wantErr %v", err, tt.wantErr)
@@ -298,7 +298,7 @@ func TestWithResources_Scale(t *testing.T) {
 
 func TestWithResources_Update(t *testing.T) {
 	type fields struct {
-		LogSetActor *LogSetActor
+		LogSetActor *Actor
 		sts         *kruisev1.StatefulSet
 	}
 	type args struct {
@@ -315,8 +315,8 @@ func TestWithResources_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &WithResources{
-				LogSetActor: tt.fields.LogSetActor,
-				sts:         tt.fields.sts,
+				Actor: tt.fields.LogSetActor,
+				sts:   tt.fields.sts,
 			}
 			if err := r.Update(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)

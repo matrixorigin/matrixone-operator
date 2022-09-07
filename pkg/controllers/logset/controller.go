@@ -36,20 +36,20 @@ const (
 	reSyncAfter = 15 * time.Second
 )
 
-var _ recon.Actor[*v1alpha1.LogSet] = &LogSetActor{}
+var _ recon.Actor[*v1alpha1.LogSet] = &Actor{}
 
-type LogSetActor struct{}
+type Actor struct{}
 
 type WithResources struct {
-	*LogSetActor
+	*Actor
 	sts *kruisev1.StatefulSet
 }
 
-func (r *LogSetActor) with(sts *kruisev1.StatefulSet) *WithResources {
-	return &WithResources{LogSetActor: r, sts: sts}
+func (r *Actor) with(sts *kruisev1.StatefulSet) *WithResources {
+	return &WithResources{Actor: r, sts: sts}
 }
 
-func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1alpha1.LogSet], error) {
+func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1alpha1.LogSet], error) {
 	ls := ctx.Obj
 
 	// get subresources
@@ -112,7 +112,7 @@ func (r *LogSetActor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Actio
 	return nil, recon.ErrReSync("logset is not ready", reSyncAfter)
 }
 
-func (r *LogSetActor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
+func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	ctx.Log.Info("create logset")
 	ls := ctx.Obj
 
@@ -190,7 +190,7 @@ func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	return ctx.Update(r.sts)
 }
 
-func (r *LogSetActor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
+func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
 	ls := ctx.Obj
 	// TODO(aylei): we may encode the created resources in etcd so that we don't have
 	// to maintain a hardcoded list
@@ -229,7 +229,7 @@ func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) e
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }
 
-func (r *LogSetActor) Reconcile(mgr manager.Manager) error {
+func (r *Actor) Reconcile(mgr manager.Manager) error {
 	return recon.Setup[*v1alpha1.LogSet](&v1alpha1.LogSet{}, "logset", mgr, r,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			// watch all changes on the owned statefulset since we need perform failover if there is a pod failure

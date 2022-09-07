@@ -90,7 +90,7 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	}
 	// 1. build base config file
 	conf.Set([]string{"service-type"}, serviceTypeLog)
-	conf.Set([]string{"logservice", "deployment-id"}, deploymentId(ls))
+	conf.Set([]string{"logservice", "deployment-id"}, deploymentID(ls))
 	conf.Set([]string{"logservice", "gossip-seed-addresses"}, gossipSeeds(ls))
 	conf.Set([]string{"logservice", "logservice-listen-address"}, fmt.Sprintf("0.0.0.0:%d", logServicePort))
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, HaKeeperAdds(ls))
@@ -151,7 +151,7 @@ func gossipSeeds(ls *v1alpha1.LogSet) []string {
 	return seeds
 }
 
-func deploymentId(ls *v1alpha1.LogSet) uint64 {
+func deploymentID(ls *v1alpha1.LogSet) uint64 {
 	return xxhash.Sum64String(ls.Name) >> 1
 }
 

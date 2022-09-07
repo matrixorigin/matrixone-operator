@@ -18,20 +18,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-type WebUIActor struct{}
+type Actor struct{}
 
-var _ recon.Actor[*v1alpha1.WebUI] = &WebUIActor{}
+var _ recon.Actor[*v1alpha1.WebUI] = &Actor{}
 
 type WithResource struct {
-	*WebUIActor
+	*Actor
 	dp *appsv1.Deployment
 }
 
-func (w *WebUIActor) with(dp *appsv1.Deployment) *WithResource {
-	return &WithResource{WebUIActor: w, dp: dp}
+func (w *Actor) with(dp *appsv1.Deployment) *WithResource {
+	return &WithResource{Actor: w, dp: dp}
 }
 
-func (w *WebUIActor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1alpha1.WebUI], error) {
+func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1alpha1.WebUI], error) {
 	wi := ctx.Obj
 
 	dp := &appsv1.Deployment{}
@@ -57,7 +57,7 @@ func (w *WebUIActor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[
 	return nil, nil
 }
 
-func (w *WebUIActor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error) {
+func (w *Actor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error) {
 	wi := ctx.Obj
 
 	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{
@@ -84,7 +84,7 @@ func (w *WebUIActor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error)
 	return true, nil
 }
 
-func (w *WebUIActor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
+func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
 	klog.V(recon.Info).Info("create webui service")
 	wi := ctx.Obj
 
@@ -113,7 +113,7 @@ func (r *WithResource) Update(ctx *recon.Context[*v1alpha1.WebUI]) error {
 	return ctx.Update(r.dp)
 }
 
-func (w *WebUIActor) Reconcile(mgr manager.Manager) error {
+func (w *Actor) Reconcile(mgr manager.Manager) error {
 	err := recon.Setup[*v1alpha1.WebUI](&v1alpha1.WebUI{}, "webui", mgr, w,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&appsv1.Deployment{}).

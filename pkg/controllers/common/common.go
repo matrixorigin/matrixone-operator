@@ -80,7 +80,7 @@ func SyncTopology(domains []string, podSpec *corev1.PodSpec) {
 }
 
 func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1.PodSpec) {
-	for i, _ := range podSpec.Containers {
+	for i := range podSpec.Containers {
 		if s3p := sp.S3; s3p != nil {
 			if s3p.SecretRef != nil {
 				for _, key := range []string{AWSAccessKeyID, AWSSecretAccessKey} {

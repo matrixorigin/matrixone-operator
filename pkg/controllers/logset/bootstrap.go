@@ -16,7 +16,7 @@ const (
 
 type bootstrapReplica struct {
 	Ordinal   int `json:"ordinal"`
-	ReplicaId int `json:"replicaId"`
+	ReplicaID int `json:"replicaId"`
 }
 
 // buildBootstrapConfig build the configmap that contains bootstrap information for log service
@@ -70,7 +70,7 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 		}
 		replicas = append(replicas, bootstrapReplica{
 			Ordinal:   i,
-			ReplicaId: rid,
+			ReplicaID: rid,
 		})
 	}
 	serialized, err := json.Marshal(replicas)
@@ -89,7 +89,7 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 func encodeSeeds(brs []bootstrapReplica) []string {
 	var seeds []string
 	for _, r := range brs {
-		seeds = append(seeds, fmt.Sprintf("%d:%s", r.ReplicaId, encodeOrdinal(r.Ordinal)))
+		seeds = append(seeds, fmt.Sprintf("%d:%s", r.ReplicaID, encodeOrdinal(r.Ordinal)))
 	}
 	return seeds
 }
