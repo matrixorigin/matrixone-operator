@@ -46,36 +46,24 @@ func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 		NodeSelector: wi.Spec.NodeSelector,
 	}
 
-	updateStrategy := appsv1.DeploymentStrategy{
-		Type:          "RollingUpdate",
-		RollingUpdate: getRollingUpdateStrategy(wi),
+	if wi.Spec.UpdateStrategy.MaxSurge != nil && wi.Spec.UpdateStrategy.MaxUnavailable != nil {
+		updateStrategy := appsv1.DeploymentStrategy{
+			Type: "RollingUpdate",
+			RollingUpdate: &appsv1.RollingUpdateDeployment{
+				MaxUnavailable: &intstr.IntOrString{
+					IntVal: *wi.Spec.UpdateStrategy.MaxUnavailable,
+				},
+				MaxSurge: &intstr.IntOrString{
+					IntVal: *wi.Spec.UpdateStrategy.MaxSurge,
+				},
+			},
+		}
+		dp.Spec.Strategy = updateStrategy
 	}
 
 	common.SyncTopology(wi.Spec.TopologyEvenSpread, &podSpec)
 	dp.Spec.Template.Spec = podSpec
-	dp.Spec.Strategy = updateStrategy
 	wi.Spec.Overlay.OverlayPodSpec(&podSpec)
-}
-
-func getRollingUpdateStrategy(wi *v1alpha1.WebUI) *appsv1.RollingUpdateDeployment {
-	if wi.Spec.UpdateStrategy != nil {
-		return &appsv1.RollingUpdateDeployment{
-			MaxUnavailable: &intstr.IntOrString{
-				IntVal: *wi.Spec.UpdateStrategy.MaxUnavailable,
-			},
-			MaxSurge: &intstr.IntOrString{
-				IntVal: *wi.Spec.UpdateStrategy.MaxSurge,
-			},
-		}
-	}
-	return &appsv1.RollingUpdateDeployment{
-		MaxUnavailable: &intstr.IntOrString{
-			IntVal: int32(25),
-		},
-		MaxSurge: &intstr.IntOrString{
-			IntVal: int32(25),
-		},
-	}
 }
 
 func syncPods(ctx *recon.Context[*v1alpha1.WebUI], dp *appsv1.Deployment) {

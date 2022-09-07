@@ -438,18 +438,6 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
-                  maxSurge:
-                    description: MaxSurge is an optional field that specifies the
-                      maximum number of Pods that can be created over the desired
-                      number of Pods.
-                    format: int32
-                    type: integer
-                  maxUnavailable:
-                    description: MaxUnavailableis an optional field that specifies
-                      the maximum number of Pods that can be unavailable during the
-                      update process.
-                    format: int32
-                    type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -498,6 +486,22 @@ spec:
                     items:
                       type: string
                     type: array
+                  updateStrategy:
+                    description: UpdateStrategy rolling update strategy
+                    properties:
+                      maxSurge:
+                        description: MaxSurge is an optional field that specifies
+                          the maximum number of Pods that can be created over the
+                          desired number of Pods.
+                        format: int32
+                        type: integer
+                      maxUnavailable:
+                        description: MaxUnavailable an optional field that specifies
+                          the maximum number of Pods that can be unavailable during
+                          the update process.
+                        format: int32
+                        type: integer
+                    type: object
                 required:
                 - replicas
                 type: object

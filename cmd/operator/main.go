@@ -17,6 +17,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/dnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
@@ -25,7 +27,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/webui"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap/zapcore"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
