@@ -24,6 +24,7 @@ runs:
       shell: bash
       run: make verify
 
+    # disable action cache due to https://github.com/golangci/golangci-lint-action/issues/244
     - name: golangci_lint
       uses: golangci/golangci-lint-action@v3.1.0
       with:
