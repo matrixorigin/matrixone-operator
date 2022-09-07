@@ -72,7 +72,7 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	if dn.Spec.CacheVolume != nil {
 		volumeMountsList = append(volumeMountsList, dataVolume)
 	}
-	
+
 	mainRef.VolumeMounts = volumeMountsList
 
 	dn.Spec.Overlay.OverlayMainContainer(mainRef)
