@@ -133,7 +133,6 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	syncReplicas(cn, cnSet)
 	syncPodMeta(cn, cnSet)
 	b, _ := json.Marshal(ctx.Dep)
-	ctx.Log.Info("dep logset", "logset", string(b))
 	syncPodSpec(cn, cnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	syncPersistentVolumeClaim(cn, cnSet)
 

@@ -31,8 +31,8 @@ const (
 	pollInterval           = 15 * time.Second
 )
 
-var _ = Describe("Cluster creation test", func() {
-	It("Should create cluster successfully", func() {
+var _ = Describe("MatrixOneCluster test", func() {
+	It("Should reconcile the cluster properly", func() {
 		By("Create cluster")
 		mo := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -88,6 +88,9 @@ var _ = Describe("Cluster creation test", func() {
 			}
 			return nil
 		}, createClusterTimeout, pollInterval).Should(Succeed())
+
+		By("Rolling-update cluster")
+		// TODO
 
 		By("Teardown cluster")
 		Expect(kubeCli.Delete(ctx, mo)).To(Succeed())
