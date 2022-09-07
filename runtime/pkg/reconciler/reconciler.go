@@ -66,8 +66,6 @@ var (
 	none    = recon.Result{Requeue: true}
 )
 
-var _ recon.Reconciler = &Reconciler[client.Object]{}
-
 type Reconciler[T client.Object] struct {
 	*options
 	client.Client
@@ -111,33 +109,24 @@ func WithBuildFn(buildFn func(*builder.Builder)) ApplyOption {
 // Manager represents the kubernetes cluster.
 // Actor implements the logic of the reconciliation.
 func Setup[T client.Object](tpl T, name string, mgr ctrl.Manager, actor Actor[T], applyOpts ...ApplyOption) error {
-	// 1. build reconciler
-	options := &options{
+	opts := &options{
 		recorder: mgr.GetEventRecorderFor(name),
 		logger:   mgr.GetLogger(),
 	}
 	for _, applyOpt := range applyOpts {
-		applyOpt(options)
+		applyOpt(opts)
 	}
-	r := &Reconciler[T]{
-		options: options,
-		Client:  mgr.GetClient(),
-
-		name:  name,
-		actor: actor,
-	}
-
-	// 2. resolve go type to GVK and build the factory of T
-	if err := r.setupObjectFactory(mgr.GetScheme(), tpl); err != nil {
+	r, err := newReconciler(tpl, name, mgr, actor, opts)
+	if err != nil {
 		return err
 	}
 
-	// 3. register reconciler to the target kubernetes cluster
+	// register reconciler to the target kubernetes cluster
 	// TODO(aylei): figure out what sub-resources should be owned here
 	obj := r.newT()
 	bld := ctrl.NewControllerManagedBy(mgr)
-	if options.buildFn != nil {
-		options.buildFn(bld)
+	if opts.buildFn != nil {
+		opts.buildFn(bld)
 	}
 	// ignore status change
 	filter := predicate.Or(
@@ -149,6 +138,23 @@ func Setup[T client.Object](tpl T, name string, mgr ctrl.Manager, actor Actor[T]
 		WithOptions(r.ctrlOpts).
 		For(obj, builder.WithPredicates(filter)).
 		Complete(r)
+}
+
+func newReconciler[T client.Object](tpl T, name string, mgr ctrl.Manager, actor Actor[T], opts *options) (*Reconciler[T], error) {
+	r := &Reconciler[T]{
+		options: opts,
+		Client:  mgr.GetClient(),
+
+		name:  name,
+		actor: actor,
+	}
+
+	// resolve go type to GVK and build the factory of T
+	if err := r.setupObjectFactory(mgr.GetScheme(), tpl); err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (recon.Result, error) {

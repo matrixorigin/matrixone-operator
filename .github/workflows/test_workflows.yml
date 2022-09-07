@@ -19,32 +19,10 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  build_image_amd64:
-    name: build_image_amd64
-    needs: checks
+  e2e:
+    name: e2e
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: build_image
-        uses: ./.github/actions/build_image
-        with:
-          platforms: linux/amd64
-
-# TODO: merge e2e and helm check in CI
-#  e2e_kind:
-#    name: e2e_kind_test
-#    needs: ["build_image_amd64"]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v3
-#      - name: e2e_kind
-#        uses: ./.github/actions/e2e_kind
-
-#  helm_pkg_check:
-#    name: helm_pkg_check
-#    needs: ["build_image_amd64"]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v3
-#      - name: helm_check
-#        uses: ./.github/actions/helm_check
+      - name: run
+        uses: ./.github/actions/e2e

@@ -39,7 +39,7 @@ trap "e2e::cleanup ${CLUSTER}" EXIT
 echo "> Create kind cluster"
 export KUBECONFIG=$(mktemp)
 echo $KUBECONFIG
-kind create cluster --name ${CLUSTER} --config test/kind-config.yml
+kind create cluster --name ${CLUSTER}
 kubectl apply -f test/kind-rbac.yml
 make build
 kind load docker-image --name ${CLUSTER} matrixorigin/matrixone-operator:latest
