@@ -1,3 +1,16 @@
+// Copyright 2022 Matrix Origin
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package mocluster
 
 import (
@@ -37,10 +50,6 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
 	}
 
-	webui := &v1alpha1.WebUI{
-		ObjectMeta: webUIKey(mo),
-	}
-
 	errs := multierr.Combine(
 		recon.CreateOwnedOrUpdate(ctx, ls, func() error {
 			ls.Spec.LogSetBasic.PodSet = mo.Spec.LogService.PodSet
@@ -61,10 +70,6 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
 			return nil
 		}),
-		recon.CreateOwnedOrUpdate(ctx, webui, func() error {
-			webui.Spec.WebUIBasic = *mo.Spec.WebUI
-			return nil
-		}),
 	)
 	if mo.Spec.AP != nil {
 		ap := &v1alpha1.CNSet{
@@ -77,6 +82,15 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			return nil
 		}))
 		mo.Status.AP = &ap.Status
+	}
+	if mo.Spec.WebUI != nil {
+		webui := &v1alpha1.WebUI{
+			ObjectMeta: webUIKey(mo),
+		}
+		errs = multierr.Append(errs, recon.CreateOwnedOrUpdate(ctx, webui, func() error {
+			webui.Spec.WebUIBasic = *mo.Spec.WebUI
+			return nil
+		}))
 	}
 	if errs != nil {
 		return nil, errs

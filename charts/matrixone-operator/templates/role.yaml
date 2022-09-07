@@ -29,6 +29,18 @@ rules:
       - delete
       - patch
   - apiGroups:
+    - "apps"
+    resources:
+    - deployments
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - patch
+    - update
+    - delete
+  - apiGroups:
       - ""
     resources:
       - events
@@ -131,6 +143,30 @@ rules:
       - core.matrixorigin.io
     resources:
       - dnsets/status
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - webuis
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - webuis/status
     verbs:
       - get
       - list

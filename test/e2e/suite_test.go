@@ -1,3 +1,16 @@
+// Copyright 2022 Matrix Origin
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package e2e
 
 import (
@@ -34,6 +47,8 @@ var namespacePrefix string
 
 // all nodes
 var kubeconfig string
+var moVersion string
+var moImageRepo string
 var kubeCli client.Client
 var ctx context.Context
 var logger *zap.SugaredLogger
@@ -47,6 +62,8 @@ func TestMain(m *testing.M) {
 	flags := flag.CommandLine
 	flags.StringVar(&kubeconfig, "kube-config", os.Getenv("KUBECONFIG"), "the kubeconfig path to access infra apiserver")
 	flags.StringVar(&namespacePrefix, "namespace", "e2e", "the namespace prefix to run e2e test")
+	flags.StringVar(&moVersion, "mo-version", "latest", "the version of mo to run e2e test")
+	flags.StringVar(&moImageRepo, "mo-image-repo", "matrixorigin/matrixone", "the image repository of mo to run e2e test")
 	flag.Parse()
 
 	RegisterFailHandler(Fail)

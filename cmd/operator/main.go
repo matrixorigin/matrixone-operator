@@ -96,25 +96,25 @@ func main() {
 
 		caBundle, err := os.ReadFile(fmt.Sprintf("%s/%s", webhookCertDir, caFile))
 		exitIf(err, "unable to read caBundle of wehbook server")
-		err = hookctrl.Setup(hookctrl.WebhookTypeMutating, mgr, caBundle)
+		err = hookctrl.Setup(hookctrl.TypeMutating, mgr, caBundle)
 		exitIf(err, "unable to setup mutating webhook controller")
-		err = hookctrl.Setup(hookctrl.WebhookTypeValidating, mgr, caBundle)
+		err = hookctrl.Setup(hookctrl.TypeValidating, mgr, caBundle)
 		exitIf(err, "unable to setup validating webhook controller")
 	}
 
-	logSetActor := &logset.LogSetActor{}
+	logSetActor := &logset.Actor{}
 	err = logSetActor.Reconcile(mgr)
 	exitIf(err, "unable to set up log service controller")
 
-	dnSetActor := &dnset.DNSetActor{}
+	dnSetActor := &dnset.Actor{}
 	err = dnSetActor.Reconcile(mgr)
 	exitIf(err, "unable to set up dn service controller")
 
-	cnSetActor := &cnset.CNSetActor{}
+	cnSetActor := &cnset.Actor{}
 	err = cnSetActor.Reconcile(mgr)
 	exitIf(err, "unable to setup  cn service controller")
 
-	webuiActor := &webui.WebUIActor{}
+	webuiActor := &webui.Actor{}
 	err = webuiActor.Reconcile(mgr)
 	exitIf(err, "unable to setup webui service controller")
 
