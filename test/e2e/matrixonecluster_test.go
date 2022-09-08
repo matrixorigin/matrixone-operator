@@ -14,6 +14,9 @@
 package e2e
 
 import (
+	"strings"
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
@@ -27,8 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 const (
