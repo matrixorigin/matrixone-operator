@@ -83,6 +83,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		}))
 		mo.Status.AP = &ap.Status
 	}
+
 	if mo.Spec.WebUI != nil {
 		webui := &v1alpha1.WebUI{
 			ObjectMeta: webUIKey(mo),
@@ -91,6 +92,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			webui.Spec.WebUIBasic = *mo.Spec.WebUI
 			return nil
 		}))
+		mo.Status.Webui = &webui.Status
 	}
 	if errs != nil {
 		return nil, errs
