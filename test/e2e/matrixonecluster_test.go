@@ -90,7 +90,6 @@ var _ = Describe("MatrixOneCluster test", func() {
 		}, createClusterTimeout, pollInterval).Should(Succeed())
 
 		By("Rolling-update cluster")
-		// TODO
 
 		By("Teardown cluster")
 		Expect(kubeCli.Delete(ctx, mo)).To(Succeed())
