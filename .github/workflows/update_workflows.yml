@@ -8,7 +8,6 @@ on:
     types:
       - published
 
-
 jobs:
   push_image:
     runs-on: ubuntu-latest
@@ -23,10 +22,11 @@ jobs:
         with:
           images: |
             matrixorigin/matrixone-operator
-        tags: |
-          type=ref,event=branch
-          type=sha
-          type=semver,pattern={{version}}
+          tags: |
+            type=ref,event=branch
+            type=sha
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
