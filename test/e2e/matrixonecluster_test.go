@@ -14,19 +14,27 @@
 package e2e
 
 import (
+	"strings"
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
+	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
+	"go.uber.org/multierr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 const (
 	createClusterTimeout   = 5 * time.Minute
+	rollingUpdateTimeout   = 5 * time.Minute
 	teardownClusterTimeout = 5 * time.Minute
 	pollInterval           = 15 * time.Second
 )
@@ -77,8 +85,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		Expect(kubeCli.Create(ctx, mo)).To(Succeed())
 
 		Eventually(func() error {
-			err := kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo)
-			if err != nil {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo); err != nil {
 				logger.Errorw("error get mo cluster status", "cluster", mo.Name, "error", err)
 				return err
 			}
@@ -88,8 +95,87 @@ var _ = Describe("MatrixOneCluster test", func() {
 			}
 			return nil
 		}, createClusterTimeout, pollInterval).Should(Succeed())
+		Eventually(func() error {
+			podList := &corev1.PodList{}
+			if err := kubeCli.List(ctx, podList); err != nil {
+				logger.Errorw("error list pods", "cluster", mo.Name, "error", err)
+				return err
+			}
+			var logN, dnN, cnN int32
+			for _, pod := range podList.Items {
+				switch pod.Labels[common.ComponentLabelKey] {
+				case "LogSet":
+					logN++
+				case "DNSet":
+					dnN++
+				case "CNSet":
+					cnN++
+				}
+			}
+			if logN >= mo.Spec.LogService.Replicas && dnN >= mo.Spec.DN.Replicas && cnN >= mo.Spec.TP.Replicas {
+				return nil
+			}
+			logger.Infow("wait enough pods running", "log pods count", logN, "cn pods count", cnN, "dn pods count", dnN)
+			return errWait
+		}, createClusterTimeout, pollInterval).Should(Succeed())
 
-		By("Rolling-update cluster")
+		By("Rolling-update cluster config")
+		configTemplate := v1alpha1.NewTomlConfig(map[string]interface{}{
+			"log": map[string]interface{}{
+				"level": "info",
+			},
+		})
+		mo.Spec.LogService.Config = configTemplate.DeepCopy()
+		mo.Spec.DN.Config = configTemplate.DeepCopy()
+		mo.Spec.TP.Config = configTemplate.DeepCopy()
+		Expect(kubeCli.Update(ctx, mo)).To(Succeed())
+		verifyConfig := func(pods []corev1.Pod, comp string) error {
+			var configMapName string
+			for _, pod := range pods {
+				if pod.Labels[common.ComponentLabelKey] != comp {
+					continue
+				}
+				configVolume := util.FindFirst(pod.Spec.Volumes, util.WithVolumeName("config"))
+				// for all pods of the same component, we verify:
+				if configMapName == "" {
+					configMapName = configVolume.ConfigMap.Name
+				}
+				if configMapName != configVolume.ConfigMap.Name {
+					return errors.New("rolling-update of pods' configmap do not complete, wait")
+				}
+			}
+			cm := &corev1.ConfigMap{}
+			// now that all pods have the same configmap, we verify whether the configmap is the desired new one
+			if err := kubeCli.Get(ctx, client.ObjectKey{Namespace: mo.Namespace, Name: configMapName}, cm); err != nil {
+				return errors.New("pods are being rolling-updated")
+			}
+			var foundConfig bool
+			for _, data := range cm.Data {
+				if strings.Contains(data, "level = \"info\"") {
+					foundConfig = true
+				}
+			}
+			if foundConfig {
+				return nil
+			}
+			return errors.New("configmap does not update to date")
+		}
+		Eventually(func() error {
+			podList := &corev1.PodList{}
+			if err := kubeCli.List(ctx, podList); err != nil {
+				logger.Errorw("error list pods", "cluster", mo.Name, "error", err)
+				return err
+			}
+			var errs error
+			for _, comp := range []string{"LogSet", "DNSet", "CNSet"} {
+				errs = multierr.Append(errs, verifyConfig(podList.Items, comp))
+			}
+			if errs != nil {
+				logger.Infow("wait for cluster rolling update complete", "error", errs)
+				return errs
+			}
+			return nil
+		}, rollingUpdateTimeout, pollInterval).Should(Succeed())
 
 		By("Teardown cluster")
 		Expect(kubeCli.Delete(ctx, mo)).To(Succeed())
