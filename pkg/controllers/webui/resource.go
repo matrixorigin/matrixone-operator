@@ -17,6 +17,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
+	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"github.com/openkruise/kruise-api/apps/pub"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,51 +33,50 @@ func syncPodMeta(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 }
 
 func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
-	main := corev1.Container{
-		Image:     wi.Spec.Image,
-		Name:      v1alpha1.ContainerMain,
-		Resources: wi.Spec.Resources,
+	specRef := &dp.Spec.Template.Spec
+	var updateStrategy appsv1.DeploymentStrategy
+
+	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
+		return c.Name == v1alpha1.ContainerMain
+	})
+	if mainRef == nil {
+		mainRef = &corev1.Container{Name: v1alpha1.ContainerMain}
 	}
 
-	podSpec := corev1.PodSpec{
-		Containers: []corev1.Container{main},
-		ReadinessGates: []corev1.PodReadinessGate{{
-			ConditionType: pub.InPlaceUpdateReady,
-		}},
-		NodeSelector: wi.Spec.NodeSelector,
-	}
+	mainRef.Image = wi.Spec.Image
+	mainRef.Resources = wi.Spec.Resources
 
-	updateStrategy := appsv1.DeploymentStrategy{
-		Type:          "RollingUpdate",
-		RollingUpdate: getRollingUpdateStrategy(wi),
-	}
-
-	common.SyncTopology(wi.Spec.TopologyEvenSpread, &podSpec)
-	dp.Spec.Template.Spec = podSpec
-	dp.Spec.Strategy = updateStrategy
-	wi.Spec.Overlay.OverlayPodSpec(&podSpec)
-}
-
-func getRollingUpdateStrategy(wi *v1alpha1.WebUI) *appsv1.RollingUpdateDeployment {
-	if wi.Spec.UpdateStrategy.MaxSurge != nil &&
-		wi.Spec.UpdateStrategy.MaxUnavailable != nil {
-		return &appsv1.RollingUpdateDeployment{
-			MaxUnavailable: &intstr.IntOrString{
-				IntVal: *wi.Spec.UpdateStrategy.MaxUnavailable,
-			},
-			MaxSurge: &intstr.IntOrString{
-				IntVal: *wi.Spec.UpdateStrategy.MaxSurge,
-			},
+	maxUnavailable := &intstr.IntOrString{}
+	maxSurge := &intstr.IntOrString{}
+	if wi.Spec.UpdateStrategy.MaxUnavailable != nil {
+		maxUnavailable = &intstr.IntOrString{
+			IntVal: *wi.Spec.UpdateStrategy.MaxUnavailable,
 		}
 	}
-	return &appsv1.RollingUpdateDeployment{
-		MaxUnavailable: &intstr.IntOrString{
-			IntVal: int32(25),
-		},
-		MaxSurge: &intstr.IntOrString{
-			IntVal: int32(25),
+	if wi.Spec.UpdateStrategy.MaxSurge != nil {
+		maxSurge = &intstr.IntOrString{
+			IntVal: *wi.Spec.UpdateStrategy.MaxSurge,
+		}
+	}
+
+	updateStrategy = appsv1.DeploymentStrategy{
+		Type: "RollingUpdate",
+		RollingUpdate: &appsv1.RollingUpdateDeployment{
+			MaxUnavailable: maxUnavailable,
+			MaxSurge:       maxSurge,
 		},
 	}
+
+	dp.Spec.Strategy = updateStrategy
+	wi.Spec.Overlay.OverlayMainContainer(mainRef)
+
+	specRef.Containers = []corev1.Container{*mainRef}
+	specRef.ReadinessGates = []corev1.PodReadinessGate{{
+		ConditionType: pub.InPlaceUpdateReady,
+	}}
+	specRef.NodeSelector = wi.Spec.NodeSelector
+	common.SyncTopology(wi.Spec.TopologyEvenSpread, specRef)
+	wi.Spec.Overlay.OverlayPodSpec(specRef)
 }
 
 func syncPods(ctx *recon.Context[*v1alpha1.WebUI], dp *appsv1.Deployment) {
@@ -95,7 +95,12 @@ func buildService(wi *v1alpha1.WebUI) *corev1.Service {
 			Type:     wi.Spec.ServiceType,
 			Selector: common.SubResourceLabels(wi),
 			// TODO: webui service ports config
-			Ports: []corev1.ServicePort{},
+			Ports: []corev1.ServicePort{
+				{
+					Name: "webui",
+					Port: 80,
+				},
+			},
 		},
 	}
 }

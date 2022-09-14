@@ -94,7 +94,7 @@ e2e: ginkgo
 	GINKGO=$(GINKGO) ./hack/kind-e2e.sh
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests
+run: generate fmt vet manifests install
 	go run cmd/operator/main.go
 
 # Install CRDs into a cluster

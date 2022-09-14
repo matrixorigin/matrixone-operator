@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +15,11 @@ package v1alpha1
 
 import (
 	"bytes"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"reflect"
 
+	"github.com/mohae/deepcopy"
 	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 )
@@ -304,18 +304,7 @@ func (c *TomlConfig) DeepCopyJsonObject() *TomlConfig {
 	if c.MP == nil {
 		return NewTomlConfig(nil)
 	}
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	dec := gob.NewDecoder(&buf)
-	if err := enc.Encode(c.MP); err != nil {
-		// impossible path
-		panic(err)
-	}
-	MP := map[string]interface{}{}
-	if err := dec.Decode(&MP); err != nil {
-		// impossible path
-		panic(err)
-	}
+	MP := deepcopy.Copy(c.MP).(map[string]interface{})
 	return NewTomlConfig(MP)
 }
 
