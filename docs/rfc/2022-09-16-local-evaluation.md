@@ -27,9 +27,6 @@ Second, Start playground docker container
 
 ```shell
 docker run -rm -it -v ~/.aws:/root/.aws  matrixorigin/matrixone-operator:playground /bin/bash
-
-# quick start
-docker run -rm -it -v ~/.aws:/root/.aws matrixorigin/matrixone-operator:playground /bin/bash modev start
 ```
 
 Then, Start a matrixone cluster 
