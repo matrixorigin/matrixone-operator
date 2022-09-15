@@ -42,7 +42,9 @@ function start() {
 	kind create cluster
 	kubectl create ns matrixone
 	kubectl create ns matrixone-operator
-	helm install matrixone-operator matrixone-operator/matrixone-operator --version 0.1.0
+	helm install matrixone-operator matrixone-operator/matrixone-operator --version 0.1.0 -n matrixone-operator
+	kubectl apply -f https://raw.githubusercontent.com/wanglei4687/matrixone-operator/main/examples/mo-cluster.yaml -n matrixone
+	
 }
 ```
 
