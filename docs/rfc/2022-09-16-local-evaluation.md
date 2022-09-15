@@ -42,7 +42,6 @@ function start() {
 	kind create cluster
 	kubectl create ns matrixone
 	kubectl create ns matrixone-operator
-	helm repo add https://matrixorigin.github.io/matrixone-operator/charts
 	helm install matrixone-operator matrixone-operator/matrixone-operator --version 0.1.0
 }
 ```
