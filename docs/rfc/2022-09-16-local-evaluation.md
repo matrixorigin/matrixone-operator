@@ -13,7 +13,7 @@ image based on `docker:22.06-rc-dind`
 - kind
 - helm
 - helm repo (operator, minio)
-- modev
+- modev (command line tools)
 
 ## Start a matrixone cluster
 
