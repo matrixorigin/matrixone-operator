@@ -12,7 +12,7 @@ image based on `docker:22.06-rc-dind`
 - kubectl
 - kind
 - helm
-- helm repo (operator)
+- helm repo (operator, minio)
 - modev
 
 ## Start a matrixone cluster
@@ -26,7 +26,8 @@ docker pull matrixorigin/matrixone-operator:playground
 Second, Start playground docker container
 
 ```shell
-docker run -rm -it -v ~/.aws:/root/.aws  matrixorigin/matrixone-operator:playground /bin/bash
+docker run -d --name playground --privileged -it -v ~/.aws:/root/.aws  matrixorigin/matrixone-operator:playground
+docker exec -it playground /bin/sh
 ```
 
 Then, Start a matrixone cluster 
