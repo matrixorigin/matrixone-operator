@@ -178,6 +178,10 @@ func syncPods(ctx *recon.Context[*v1alpha1.CNSet], sts *kruise.StatefulSet) erro
 	}
 
 	syncPodMeta(ctx.Obj, sts)
-	syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+
+	if ctx.Dep != nil {
+		syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+	}
+
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }
