@@ -15,6 +15,8 @@
 package cnset
 
 import (
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
@@ -31,6 +33,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
+
+const (
+	ReasonNotEnoughReadyStores = "NoEnoughReadyStores"
+	storeDownTimeOut           = 1 * time.Minute
+	reSyncAfter                = 10 * time.Second
 )
 
 type Actor struct{}
@@ -65,6 +73,30 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return c.Create, nil
 	}
 
+	podList := &corev1.PodList{}
+	err = ctx.List(podList, client.InNamespace(cn.Namespace), client.MatchingLabels(common.SubResourceLabels(cn)))
+	if err != nil {
+		return nil, errors.Wrap(err, "list cndset pods")
+	}
+
+	if len(cn.Status.AvailableStores) >= int(cn.Spec.Replicas) {
+		cn.Status.SetCondition(metav1.Condition{
+			Type:   recon.ConditionTypeReady,
+			Status: metav1.ConditionTrue,
+		})
+	} else {
+		cn.Status.SetCondition(metav1.Condition{
+			Type:   recon.ConditionTypeReady,
+			Status: metav1.ConditionFalse,
+			Reason: ReasonNotEnoughReadyStores,
+		})
+	}
+
+	switch {
+	case len(cn.StoresFailedFor(storeDownTimeOut)) > 0:
+		return c.with(sts).Repair, nil
+	}
+
 	origin := sts.DeepCopy()
 	if err := syncPods(ctx, sts); err != nil {
 		return nil, err
@@ -72,13 +104,12 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return c.with(sts).Update, nil
 	}
-	// TODO: collect cn status
-	cn.Status.SetCondition(metav1.Condition{
-		Type:   recon.ConditionTypeReady,
-		Status: metav1.ConditionTrue,
-	})
 
-	return nil, nil
+	if recon.IsReady(&cn.Status.ConditionalStatus) {
+		return nil, nil
+	}
+
+	return nil, recon.ErrReSync("cnset is not ready", reSyncAfter)
 
 }
 
@@ -91,6 +122,21 @@ func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
 
 func (c *WithResources) Update(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return ctx.Update(c.sts)
+}
+
+func (c *WithResources) Repair(ctx *recon.Context[*v1alpha1.CNSet]) error {
+	toRepair := ctx.Obj.StoresFailedFor(storeDownTimeOut)
+	if len(toRepair) == 0 {
+		return nil
+	}
+
+	// repair one at a time
+	ordinal, err := util.PodOrdinal(toRepair[0].PodName)
+	if err != nil {
+		return errors.Wrapf(err, "error parse ordinal from pod name %s", toRepair[0].PodName)
+	}
+	c.sts.Spec.ReserveOrdinals = util.Upsert(c.sts.Spec.ReserveOrdinals, ordinal)
+	return nil
 }
 
 func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {

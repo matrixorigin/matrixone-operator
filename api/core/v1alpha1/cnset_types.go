@@ -42,8 +42,16 @@ type CNSetBasic struct {
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 }
 
+type CNStore struct {
+	PodName            string      `json:"podName,omitempty"`
+	Phase              string      `json:"phase,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+}
+
 // TODO: figure out what status should be exposed
 type CNSetStatus struct {
+	AvailableStores   []CNStore `json:"availableStores,omitempty"`
+	FailedStores      []CNStore `json:"failedStores,omitempty"`
 	ConditionalStatus `json:",inline"`
 }
 
