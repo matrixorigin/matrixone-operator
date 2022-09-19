@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,23 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/json"
 )
+
+func TestDeepCopy(t *testing.T) {
+	c := NewTomlConfig(map[string]interface{}{
+		"id":   1,
+		"name": "Alice",
+		"pets": []string{"Dog", "Cat"},
+		"profile": map[string]interface{}{
+			"k1": "v1",
+			"nested": map[string]interface{}{
+				"k2": 2,
+			},
+		},
+	})
+	copied := c.DeepCopy()
+	g := NewGomegaWithT(t)
+	g.Expect(copied).To(Equal(c))
+}
 
 func TestOperation(t *testing.T) {
 	g := NewGomegaWithT(t)

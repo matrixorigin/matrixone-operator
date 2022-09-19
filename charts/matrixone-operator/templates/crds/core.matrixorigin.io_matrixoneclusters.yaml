@@ -438,12 +438,6 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
-                  maxSurge:
-                    format: int32
-                    type: integer
-                  maxUnavailable:
-                    format: int32
-                    type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -492,6 +486,22 @@ spec:
                     items:
                       type: string
                     type: array
+                  updateStrategy:
+                    description: UpdateStrategy rolling update strategy
+                    properties:
+                      maxSurge:
+                        description: MaxSurge is an optional field that specifies
+                          the maximum number of Pods that can be created over the
+                          desired number of Pods.
+                        format: int32
+                        type: integer
+                      maxUnavailable:
+                        description: MaxUnavailable an optional field that specifies
+                          the maximum number of Pods that can be unavailable during
+                          the update process.
+                        format: int32
+                        type: integer
+                    type: object
                 required:
                 - replicas
                 type: object
@@ -650,6 +660,18 @@ spec:
               dn:
                 description: DN is the DN set status
                 properties:
+                  availableStores:
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
+                      type: object
+                    type: array
                   conditions:
                     items:
                       description: "Condition contains details for one aspect of the
@@ -719,6 +741,18 @@ spec:
                       - reason
                       - status
                       - type
+                      type: object
+                    type: array
+                  failedStores:
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
                       type: object
                     type: array
                 type: object
