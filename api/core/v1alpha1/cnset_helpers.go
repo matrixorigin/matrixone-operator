@@ -19,7 +19,7 @@ import "time"
 func (cn *CNSet) StoresFailedFor(d time.Duration) []CNStore {
 	var stores []CNStore
 
-	for _, store := range cn.Status.FailedStore {
+	for _, store := range cn.Status.FailedStores {
 		if time.Now().Sub(store.LastTransitionTime.Time) >= d {
 			stores = append(stores, store)
 		}
