@@ -15,6 +15,8 @@
 package cnset
 
 import (
+	"fmt"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
@@ -62,6 +64,7 @@ func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 }
 
 func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
+	fmt.Println("cn syncPodsSpec")
 	specRef := &sts.Spec.Template.Spec
 
 	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
