@@ -79,20 +79,21 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, errors.Wrap(err, "list cnset pods")
 	}
 
-	klog.V(recon.Info).Info("Check available stores...")
 	if len(cn.Status.AvailableStores) >= int(cn.Spec.Replicas) {
-		klog.V(recon.Info).Info("cn set condition true")
 		cn.Status.SetCondition(metav1.Condition{
-			Type:   recon.ConditionTypeReady,
-			Status: metav1.ConditionTrue,
+			Type:    recon.ConditionTypeReady,
+			Status:  metav1.ConditionTrue,
+			Message: "Available Stores Ready",
 		})
 	} else {
-		klog.V(recon.Info).Info("cn set condition false")
+
 		cn.Status.SetCondition(metav1.Condition{
-			Type:   recon.ConditionTypeReady,
-			Status: metav1.ConditionFalse,
-			Reason: ReasonNotEnoughReadyStores,
+			Type:    recon.ConditionTypeReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  ReasonNotEnoughReadyStores,
+			Message: "Available Stores not ready",
 		})
+
 	}
 
 	switch {
@@ -114,8 +115,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, nil
 	}
 
-	return nil, nil
-
+	return nil, recon.ErrReSync("cnset is not ready", reSyncAfter)
 }
 
 func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
