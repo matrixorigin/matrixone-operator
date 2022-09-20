@@ -76,7 +76,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	podList := &corev1.PodList{}
 	err = ctx.List(podList, client.InNamespace(cn.Namespace), client.MatchingLabels(common.SubResourceLabels(cn)))
 	if err != nil {
-		return nil, errors.Wrap(err, "list cndset pods")
+		return nil, errors.Wrap(err, "list cnset pods")
 	}
 
 	if len(cn.Status.AvailableStores) >= int(cn.Spec.Replicas) {
@@ -95,6 +95,8 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	switch {
 	case len(cn.StoresFailedFor(storeDownTimeOut)) > 0:
 		return c.with(sts).Repair, nil
+	case cn.Spec.Replicas != *sts.Spec.Replicas:
+		return c.with(sts).Scale, nil
 	}
 
 	origin := sts.DeepCopy()
