@@ -85,7 +85,6 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 			Message: "Available Stores Ready",
 		})
 	} else {
-
 		cn.Status.SetCondition(metav1.Condition{
 			Type:    recon.ConditionTypeReady,
 			Status:  metav1.ConditionFalse,
