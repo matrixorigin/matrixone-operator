@@ -15,7 +15,7 @@ function e2e::kubectl_wait_appear() {
     local MAX_WAIT=5
     while true; do
         kubectl get $@ 2>/dev/null | grep NAME && break
-        if [[ ${WAIT_N} -lt ${MAX_WAIT} ]]; then
+        if [ ${WAIT_N} -lt ${MAX_WAIT} ]; then
             WAIT_N=$((WAIT_N+1))
             echo "Waiting for $@ to be created, sleeping for ${WAIT_N} seconds"
             sleep ${WAIT_N}
