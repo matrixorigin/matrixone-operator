@@ -10,6 +10,11 @@ spec:
       requests:
         cpu: 1
     replicas: 3
+    initialConfig:
+      logShards: 1
+      dnShards: 1
+      haKeeperReplicas: 3
+      logShardReplicas: 3
     sharedStorage:
       s3:
         path: aylei-test/mo-logset
