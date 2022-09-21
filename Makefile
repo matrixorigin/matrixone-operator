@@ -2,7 +2,7 @@ SHELL=/usr/bin/env bash -o pipefail
 
 # Image URL to use all building/pushing image targets
 IMG ?= "matrixorigin/matrixone-operator:latest"
-PROXY ?= https://goproxy.cn,direct
+PROXY ?= "https://proxy.golang.org,direct"
 BRANCH ?= main
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
