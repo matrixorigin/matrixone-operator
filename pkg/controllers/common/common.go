@@ -16,6 +16,7 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/cespare/xxhash"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
@@ -175,6 +176,9 @@ func HeadlessServiceTemplate(obj client.Object, name string) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			ClusterIP: corev1.ClusterIPNone,
 			Selector:  SubResourceLabels(obj),
+			// Need to propagate SRV DNS records for the sts Pods
+			// for the purpose of peer discovery
+			PublishNotReadyAddresses: true,
 		},
 	}
 
