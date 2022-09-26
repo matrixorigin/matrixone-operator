@@ -16,6 +16,7 @@ package e2e
 import (
 	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -70,6 +71,22 @@ var _ = Describe("MatrixOneCluster test", func() {
 				return errWait
 			}
 			return nil
+		}, createLogSetTimeout, pollInterval).Should(Succeed())
+
+		By("Logset Scale")
+		l.Spec.Replicas = 4
+		Expect(kubeCli.Update(ctx, l)).To(Succeed())
+		Eventually(func() error {
+			podList := &corev1.PodList{}
+			if err := kubeCli.List(ctx, podList, client.InNamespace(l.Namespace), client.MatchingLabels(common.SubResourceLabels(l))); err != nil {
+				logger.Errorw("error list pods", "logset", l.Name, "error", err)
+				return err
+			}
+			if len(podList.Items) == 4 {
+				return nil
+			}
+			logger.Infow("wait enough pods running", "log pods count", len(podList.Items), "expect", l.Spec.Replicas)
+			return errWait
 		}, createClusterTimeout, pollInterval).Should(Succeed())
 
 		By("Logset failover")

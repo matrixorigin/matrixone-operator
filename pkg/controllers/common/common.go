@@ -71,6 +71,9 @@ const (
 	// NamespaceLabelKey is the label key for cluster-scope resources
 	NamespaceLabelKey = "matrixorigin.io/namespace"
 
+	ActionRequiredLabelKey   = "matrixorigin.io/action-required"
+	ActionRequiredLabelValue = "True"
+
 	AWSAccessKeyID     = "AWS_ACCESS_KEY_ID"
 	AWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
 )
@@ -150,7 +153,7 @@ func ensureConfigMap(kubeCli recon.KubeClient, currentCm string, desired *corev1
 	if err := addConfigMapDigest(c); err != nil {
 		return "", err
 	}
-	// config not changed, nothing to do
+	// config digest not changed
 	if c.Name == currentCm {
 		return currentCm, nil
 	}
