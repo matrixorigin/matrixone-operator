@@ -17,8 +17,7 @@ import "time"
 
 const (
 	objSuffix = "-webui"
-	svcSuffix = "-svc"
 
-	reSyncAfter       = 10 * time.Second
-	NotEnoughReplicas = "notEnoughReplicas"
+	reSyncAfter     = 10 * time.Second
+	ReplicasFailure = "replicasFailure"
 )
