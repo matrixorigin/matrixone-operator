@@ -82,15 +82,6 @@ spec:
                 description: Overlay allows advanced customization of the pod spec
                   in the set
                 properties:
-                  ImagePullPolicy:
-                    default: IfNotPresent
-                    description: ImagePullPolicy is the pull policy of MatrixOne image.
-                      The default value is the same as the default of Kubernetes.
-                    enum:
-                    - Always
-                    - Never
-                    - IfNotPresent
-                    type: string
                   affinity:
                     description: Affinity is a group of affinity scheduling rules.
                     properties:
@@ -1165,6 +1156,15 @@ spec:
                           type: string
                       type: object
                     type: array
+                  imagePullPolicy:
+                    default: IfNotPresent
+                    description: ImagePullPolicy is the pull policy of MatrixOne image.
+                      The default value is the same as the default of Kubernetes.
+                    enum:
+                    - Always
+                    - Never
+                    - IfNotPresent
+                    type: string
                   imagePullSecrets:
                     items:
                       description: LocalObjectReference contains enough information

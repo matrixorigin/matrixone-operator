@@ -14,10 +14,11 @@
 package logset
 
 import (
+	"time"
+
 	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -38,8 +39,6 @@ const (
 
 	IDRangeStart int = 131072
 	IDRangeEnd   int = 262144
-
-	ReasonNoEnoughReadyStores = "NoEnoughReadyStores"
 )
 
 const (
@@ -98,7 +97,7 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		ls.Status.SetCondition(metav1.Condition{
 			Type:   recon.ConditionTypeReady,
 			Status: metav1.ConditionFalse,
-			Reason: ReasonNoEnoughReadyStores,
+			Reason: common.ReasonNotEnoughReadyStores,
 		})
 	}
 	ls.Status.Discovery = &v1alpha1.LogSetDiscovery{
