@@ -6630,6 +6630,9 @@ spec:
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
+              role:
+                description: '[TP, AP], default to TP'
+                type: string
               serviceType:
                 default: ClusterIP
                 description: ServiceType is the service type of cn service

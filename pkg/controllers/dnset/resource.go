@@ -84,11 +84,13 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
 	conf.Set([]string{"fileservice"}, []map[string]interface{}{
-		common.GetLocalFilesService(common.DataPath),
+		common.LocalFilesServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir)),
 		common.S3FileServiceConfig(ls),
+		common.ETLFileServiceConfig(ls),
 	})
 	conf.Set([]string{"dn", "Txn", "Storage"}, getTxnStorageConfig(dn))
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+	conf.Set([]string{"cn", "Engine", "type"}, "memory")
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
@@ -96,7 +98,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
-		DNServicePort:  common.CNServicePort,
+		DNServicePort:  common.DNServicePort,
 		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
 	})
 	if err != nil {

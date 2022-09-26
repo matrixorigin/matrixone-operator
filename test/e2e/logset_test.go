@@ -52,7 +52,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 					},
 					SharedStorage: v1alpha1.SharedStorageProvider{
 						S3: &v1alpha1.S3Provider{
-							Path: "test/bucket",
+							Path: "mo-e2e/logset",
 						},
 					},
 				},
