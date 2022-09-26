@@ -6650,8 +6650,20 @@ spec:
             - replicas
             type: object
           status:
-            description: 'TODO: figure out what status should be exposed'
+            description: Figure out what status should be exposed
             properties:
+              availableStores:
+                items:
+                  properties:
+                    lastTransition:
+                      format: date-time
+                      type: string
+                    phase:
+                      type: string
+                    podName:
+                      type: string
+                  type: object
+                type: array
               conditions:
                 items:
                   description: "Condition contains details for one aspect of the current
@@ -6718,6 +6730,18 @@ spec:
                   - reason
                   - status
                   - type
+                  type: object
+                type: array
+              failedStores:
+                items:
+                  properties:
+                    lastTransition:
+                      format: date-time
+                      type: string
+                    phase:
+                      type: string
+                    podName:
+                      type: string
                   type: object
                 type: array
             type: object
