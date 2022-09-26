@@ -517,6 +517,18 @@ spec:
               ap:
                 description: AP is the AP set status
                 properties:
+                  availableStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
+                      type: object
+                    type: array
                   conditions:
                     items:
                       description: "Condition contains details for one aspect of the
@@ -586,6 +598,18 @@ spec:
                       - reason
                       - status
                       - type
+                      type: object
+                    type: array
+                  failedStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
                       type: object
                     type: array
                 type: object
@@ -870,6 +894,18 @@ spec:
               tp:
                 description: TP is the TP set status
                 properties:
+                  availableStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
+                      type: object
+                    type: array
                   conditions:
                     items:
                       description: "Condition contains details for one aspect of the
@@ -939,6 +975,18 @@ spec:
                       - reason
                       - status
                       - type
+                      type: object
+                    type: array
+                  failedStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
                       type: object
                     type: array
                 type: object
