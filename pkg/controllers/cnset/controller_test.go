@@ -75,6 +75,22 @@ func TestCNSetActor_Observe(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
 			ctx := fake.NewContext(tt.cnset, tt.client, eventEmitter)
+			ctx.Dep = tt.cnset.DeepCopy()
+			ctx.Dep.Deps.LogSet = &v1alpha1.LogSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test",
+				},
+				Spec: v1alpha1.LogSetSpec{
+					LogSetBasic: v1alpha1.LogSetBasic{
+						SharedStorage: v1alpha1.SharedStorageProvider{
+							S3: &v1alpha1.S3Provider{
+								Path: "bucket/dir",
+							},
+						},
+					},
+				},
+			}
 			action, err := r.Observe(ctx)
 			tt.expect(g, action, err)
 		})

@@ -108,8 +108,9 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	conf.Set([]string{"logservice", "logservice-listen-address"}, fmt.Sprintf("0.0.0.0:%d", logServicePort))
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, HaKeeperAdds(ls))
 	conf.Set([]string{"fileservice"}, []map[string]interface{}{
-		common.GetLocalFilesService(dataPath),
+		common.LocalFilesServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir)),
 		common.S3FileServiceConfig(ls),
+		common.ETLFileServiceConfig(ls),
 	})
 	// conf.Set([]string{"hakeeper-client", "discovery-address"}, fmt.Sprintf("%s:%d", discoverySvcAddress(ls), LogServicePort))
 	s, err := conf.ToString()
