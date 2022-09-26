@@ -71,20 +71,23 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return c.with(sts).Update, nil
 	}
-	// collect cn status
 
+	// collect cn status
 	podList := &corev1.PodList{}
 	err = ctx.List(podList, client.InNamespace(cn.Namespace), client.MatchingLabels(common.SubResourceLabels(cn)))
 	if err != nil {
 		return nil, errors.Wrap(err, "list cnset pods")
 	}
 
+	collectStoreStatus(cn, podList.Items)
+
 	if len(cn.Status.AvailableStores) >= int(cn.Spec.Replicas) {
 		cn.Status.SetCondition(metav1.Condition{
 			Type:    recon.ConditionTypeReady,
 			Status:  metav1.ConditionTrue,
-			Message: "cn  stores ready",
+			Message: "cn stores ready",
 		})
+
 	} else {
 		cn.Status.SetCondition(metav1.Condition{
 			Type:    recon.ConditionTypeReady,
@@ -107,7 +110,6 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 
 	return nil, recon.ErrReSync("cnset is not ready", reSyncAfter)
-
 }
 
 func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {

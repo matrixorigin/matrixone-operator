@@ -15,6 +15,7 @@
 package cnset
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -30,6 +31,7 @@ func collectStoreStatus(cn *v1alpha1.CNSet, pods []corev1.Pod) {
 	}
 	for _, store := range cn.Status.AvailableStores {
 		previousStore[store.PodName] = store
+		fmt.Println("cn pod name", store.PodName)
 	}
 	var failed []v1alpha1.CNStore
 	var available []v1alpha1.CNStore
