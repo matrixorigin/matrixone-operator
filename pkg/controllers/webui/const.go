@@ -13,6 +13,12 @@
 // limitations under the License.
 package webui
 
+import "time"
+
 const (
 	objSuffix = "-webui"
+	svcSuffix = "-svc"
+
+	reSyncAfter       = 10 * time.Second
+	NotEnoughReplicas = "notEnoughReplicas"
 )

@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package webui
 
 import (
@@ -47,6 +48,12 @@ func (w *Actor) with(dp *appsv1.Deployment) *WithResource {
 func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1alpha1.WebUI], error) {
 	wi := ctx.Obj
 
+	svc := &corev1.Service{}
+	err, foundSvc := util.IsFound(ctx.Get(client.ObjectKey{Namespace: wi.Namespace, Name: webuiSvcName(wi)}, svc))
+	if err != nil {
+		return nil, errors.Wrap(err, "get webui service")
+	}
+
 	dp := &appsv1.Deployment{}
 	err, foundDp := util.IsFound(ctx.Get(client.ObjectKey{
 		Namespace: wi.Namespace,
@@ -56,7 +63,7 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 		return nil, errors.Wrap(err, "get webui deployment")
 	}
 
-	if !foundDp {
+	if !foundDp || !foundSvc {
 		return w.Create, nil
 
 	}
@@ -67,7 +74,26 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 		return w.with(dp).Update, nil
 	}
 
-	return nil, nil
+	// Webui Service status
+	wiS := wi.DeepCopyObject()
+	for _, condition := range wiS.(*appsv1.Deployment).Status.Conditions {
+		if condition.Type == appsv1.DeploymentReplicaFailure {
+			wi.Status.SetCondition(metav1.Condition{
+				Type:    recon.ConditionTypeReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  NotEnoughReplicas,
+				Message: "webui have not enough replicas",
+			})
+		} else {
+			wi.Status.SetCondition(metav1.Condition{
+				Type:    recon.ConditionTypeReady,
+				Status:  metav1.ConditionTrue,
+				Message: "webui is ready",
+			})
+		}
+	}
+
+	return nil, recon.ErrReSync("webui is not ready", reSyncAfter)
 }
 
 func (w *Actor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error) {
