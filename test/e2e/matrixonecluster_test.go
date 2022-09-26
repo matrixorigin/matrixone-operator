@@ -73,7 +73,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 					},
 					SharedStorage: v1alpha1.SharedStorageProvider{
 						S3: &v1alpha1.S3Provider{
-							Path: "test/bucket",
+							Path: "mo-e2e/mocluster",
 						},
 					},
 					InitialConfig: v1alpha1.InitialConfig{},
@@ -190,6 +190,6 @@ var _ = Describe("MatrixOneCluster test", func() {
 				return err
 			}
 			return nil
-		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+		}, teardownClusterTimeout, pollInterval).Should(Succeed(), "cluster should be teardown")
 	})
 })

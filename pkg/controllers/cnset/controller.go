@@ -123,7 +123,7 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 }
 
 func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
-	klog.V(recon.Info).Info("dn set create...")
+	klog.V(recon.Info).Info("cn set create...")
 	cn := ctx.Obj
 
 	hSvc := buildHeadlessSvc(cn)
@@ -134,7 +134,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	syncPodSpec(cn, cnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	syncPersistentVolumeClaim(cn, cnSet)
 
-	configMap, err := buildCNSetConfigMap(cn)
+	configMap, err := buildCNSetConfigMap(cn, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 	return nil
 }
 func syncPods(ctx *recon.Context[*v1alpha1.CNSet], sts *kruise.StatefulSet) error {
-	cm, err := buildCNSetConfigMap(ctx.Obj)
+	cm, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err
 	}

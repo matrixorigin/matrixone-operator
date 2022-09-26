@@ -167,6 +167,8 @@ type SharedStorageProvider struct {
 	S3 *S3Provider `json:"s3,omitempty"`
 }
 
+type MemProvider struct{}
+
 type S3Provider struct {
 	// Path is the s3 storage path in <bucket-name>/<folder> format, e.g. "my-bucket/my-folder"
 	// +required
