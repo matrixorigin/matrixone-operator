@@ -16,6 +16,8 @@ package logset
 import (
 	"bytes"
 	"fmt"
+	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
+	"golang.org/x/exp/slices"
 	"text/template"
 
 	"github.com/cespare/xxhash"
@@ -27,6 +29,7 @@ import (
 
 const (
 	configFile = "logservice.toml"
+	gossipFile = "gossip.toml"
 	entrypoint = "start.sh"
 
 	raftPort       = 32000
@@ -59,6 +62,11 @@ EOF
 
 # build instance config
 sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+
+# insert gossip config
+gossipTmp=$(mktemp)
+sed "/\[logservice\]/d" {{ .GossipFilePath }} > ${gossipTmp}
+sed -i "/\[logservice\]/r ${gossipTmp}" ${conf}
 
 # append bootstrap config
 sed "/\[logservice\]/d" {{ .BootstrapFilePath }} >> ${conf}
@@ -93,6 +101,26 @@ type model struct {
 	GossipPort        int
 	ConfigFilePath    string
 	BootstrapFilePath string
+	GossipFilePath    string
+}
+
+// buildGossipSeedsConfigMap build the gossip seeds configmap for log service, which will not trigger rolling-update
+func buildGossipSeedsConfigMap(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) (*corev1.ConfigMap, error) {
+	conf := v1alpha1.NewTomlConfig(map[string]interface{}{})
+	conf.Set([]string{"logservice", "gossip-seed-addresses"}, gossipSeeds(ls, sts))
+	c, err := conf.ToString()
+	if err != nil {
+		return nil, err
+	}
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ls.Namespace,
+			Name:      gossipConfigMapName(ls),
+		},
+		Data: map[string]string{
+			gossipFile: c,
+		},
+	}, nil
 }
 
 // buildConfigMap build the configmap for log service
@@ -104,15 +132,14 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	// 1. build base config file
 	conf.Set([]string{"service-type"}, serviceTypeLog)
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentID(ls))
-	conf.Set([]string{"logservice", "gossip-seed-addresses"}, gossipSeeds(ls))
 	conf.Set([]string{"logservice", "logservice-listen-address"}, fmt.Sprintf("0.0.0.0:%d", logServicePort))
-	conf.Set([]string{"hakeeper-client", "service-addresses"}, HaKeeperAdds(ls))
+	// conf.Set([]string{"hakeeper-client", "service-addresses"}, HaKeeperAdds(ls))
 	conf.Set([]string{"fileservice"}, []map[string]interface{}{
 		common.LocalFilesServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir)),
 		common.S3FileServiceConfig(ls),
 		common.ETLFileServiceConfig(ls),
 	})
-	// conf.Set([]string{"hakeeper-client", "discovery-address"}, fmt.Sprintf("%s:%d", discoverySvcAddress(ls), LogServicePort))
+	conf.Set([]string{"hakeeper-client", "discovery-address"}, fmt.Sprintf("%s:%d", discoverySvcAddress(ls), logServicePort))
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
@@ -126,6 +153,7 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 		GossipPort:        gossipPort,
 		ConfigFilePath:    fmt.Sprintf("%s/%s", configPath, configFile),
 		BootstrapFilePath: fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
+		GossipFilePath:    fmt.Sprintf("%s/%s", gossipPath, gossipFile),
 	})
 	if err != nil {
 		return nil, err
@@ -154,14 +182,20 @@ func HaKeeperAdds(ls *v1alpha1.LogSet) []string {
 	return seeds
 }
 
-func gossipSeeds(ls *v1alpha1.LogSet) []string {
-	// TODO: consider hole in asts ordinals
+func gossipSeeds(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) []string {
 	var seeds []string
-	for i := int32(0); i < ls.Spec.Replicas; i++ {
+	r := *sts.Spec.Replicas
+	i := 0
+	for count := int32(0); count < r; i++ {
+		if slices.Contains(sts.Spec.ReserveOrdinals, i) {
+			// skip reserve ordinals
+			continue
+		}
 		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
 		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, gossipPort))
+		// a valid replica found, count it
+		count++
 	}
-	seeds = append(seeds, "no-such-host:33001")
 	return seeds
 }
 
@@ -171,4 +205,8 @@ func deploymentID(ls *v1alpha1.LogSet) uint64 {
 
 func configMapName(ls *v1alpha1.LogSet) string {
 	return resourceName(ls) + "-config"
+}
+
+func gossipConfigMapName(ls *v1alpha1.LogSet) string {
+	return resourceName(ls) + "-gossip"
 }
