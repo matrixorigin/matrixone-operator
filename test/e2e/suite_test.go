@@ -18,14 +18,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
-	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
+	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
@@ -49,6 +50,7 @@ var namespacePrefix string
 var kubeconfig string
 var moVersion string
 var moImageRepo string
+var imagePullSecret string
 var kubeCli client.Client
 var ctx context.Context
 var logger *zap.SugaredLogger
