@@ -78,7 +78,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		Expect(kubeCli.Update(ctx, l)).To(Succeed())
 		Eventually(func() error {
 			podList := &corev1.PodList{}
-			if err := kubeCli.List(ctx, podList, client.InNamespace(l.Namespace), client.MatchingLabels(common.SubResourceLabels(l))); err != nil {
+			if err := kubeCli.List(ctx, podList, client.MatchingLabels(map[string]string{common.InstanceLabelKey: l.Name})); err != nil {
 				logger.Errorw("error list pods", "logset", l.Name, "error", err)
 				return err
 			}
