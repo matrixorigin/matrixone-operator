@@ -32,7 +32,7 @@ function e2e::cleanup() {
 }
 
 CLUSTER=${CLUSTER:-mo}
-MO_VERSION=${MO_VERSION:-"nightly-20eeb7c9"}
+MO_VERSION=${MO_VERSION:-"nightly-7e879c92"}
 
 trap "e2e::cleanup ${CLUSTER}" EXIT
 

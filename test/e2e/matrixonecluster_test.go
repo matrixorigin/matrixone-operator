@@ -14,6 +14,9 @@
 package e2e
 
 import (
+	"fmt"
+	"github.com/matrixorigin/matrixone-operator/test/e2e/sql"
+	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	"strings"
 	"time"
 
@@ -23,7 +26,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,10 +39,12 @@ const (
 	rollingUpdateTimeout   = 5 * time.Minute
 	teardownClusterTimeout = 5 * time.Minute
 	pollInterval           = 15 * time.Second
+	portForwardTimeout     = 10 * time.Second
+	sqlTestTimeout         = 5 * time.Minute
 )
 
 var _ = Describe("MatrixOneCluster test", func() {
-	It("Should reconcile the cluster properly", func() {
+	FIt("Should reconcile the cluster properly", func() {
 		By("Create cluster")
 		mo := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -58,6 +62,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 				},
 				DN: v1alpha1.DNSetBasic{
 					PodSet: v1alpha1.PodSet{
+						// test multiple DN replicas
 						Replicas: 1,
 					},
 					CacheVolume: &v1alpha1.Volume{
@@ -103,6 +108,9 @@ var _ = Describe("MatrixOneCluster test", func() {
 			}
 			var logN, dnN, cnN int32
 			for _, pod := range podList.Items {
+				if !util.IsPodReady(&pod) {
+					continue
+				}
 				switch pod.Labels[common.ComponentLabelKey] {
 				case "LogSet":
 					logN++
@@ -119,12 +127,22 @@ var _ = Describe("MatrixOneCluster test", func() {
 			return errWait
 		}, createClusterTimeout, pollInterval).Should(Succeed())
 
+		By("End to end SQL")
+		pfh, err := e2eutil.PortForward(restConfig, mo.Namespace, mo.Name+"-tp-cn-0", 6001, 6001)
+		Expect(err).To(BeNil())
+		Expect(pfh.Ready(portForwardTimeout)).To(Succeed(), "port-forward should complete within timeout")
+		Eventually(func() error {
+			return sql.MySQLDialectSmokeTest(fmt.Sprintf("dump:111@tcp(127.0.0.1:6001)/test"))
+		}, sqlTestTimeout, pollInterval).Should(Succeed(), "SQL smoke test should succeed")
+		pfh.Stop()
+
 		By("Rolling-update cluster config")
 		configTemplate := v1alpha1.NewTomlConfig(map[string]interface{}{
 			"log": map[string]interface{}{
 				"level": "info",
 			},
 		})
+		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo)).To(Succeed())
 		mo.Spec.LogService.Config = configTemplate.DeepCopy()
 		mo.Spec.DN.Config = configTemplate.DeepCopy()
 		mo.Spec.TP.Config = configTemplate.DeepCopy()
@@ -141,13 +159,15 @@ var _ = Describe("MatrixOneCluster test", func() {
 					configMapName = configVolume.ConfigMap.Name
 				}
 				if configMapName != configVolume.ConfigMap.Name {
-					return errors.New("rolling-update of pods' configmap do not complete, wait")
+					logger.Info("rolling-update of pods' configmap do not complete, wait")
+					return errWait
 				}
 			}
 			cm := &corev1.ConfigMap{}
 			// now that all pods have the same configmap, we verify whether the configmap is the desired new one
 			if err := kubeCli.Get(ctx, client.ObjectKey{Namespace: mo.Namespace, Name: configMapName}, cm); err != nil {
-				return errors.New("pods are being rolling-updated")
+				logger.Info("pods are being rolling-updated")
+				return errWait
 			}
 			var foundConfig bool
 			for _, data := range cm.Data {
@@ -158,7 +178,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 			if foundConfig {
 				return nil
 			}
-			return errors.New("configmap does not update to date")
+			logger.Info("configmap does not update to date")
+			return errWait
 		}
 		Eventually(func() error {
 			podList := &corev1.PodList{}
