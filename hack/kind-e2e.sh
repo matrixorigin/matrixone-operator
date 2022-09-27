@@ -15,7 +15,7 @@ function e2e::kubectl_wait_appear() {
     local MAX_WAIT=5
     while true; do
         kubectl get $@ 2>/dev/null | grep NAME && break
-        if [[ ${WAIT_N} -lt ${MAX_WAIT} ]]; then
+        if [ ${WAIT_N} -lt ${MAX_WAIT} ]; then
             WAIT_N=$((WAIT_N+1))
             echo "Waiting for $@ to be created, sleeping for ${WAIT_N} seconds"
             sleep ${WAIT_N}
@@ -32,7 +32,7 @@ function e2e::cleanup() {
 }
 
 CLUSTER=${CLUSTER:-mo}
-MO_VERSION=${MO_VERSION:-"nightly-bf9930da"}
+MO_VERSION=${MO_VERSION:-"nightly-20eeb7c9"}
 
 trap "e2e::cleanup ${CLUSTER}" EXIT
 
@@ -57,6 +57,11 @@ kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=30s
 
 echo "> Wait webhook certificate injected"
 sleep 30
+
+#if [[ ! -z ${AWS_ACCESS_KEY_ID+undefined-guard} ]] ; then
+#  echo "> Ensure S3 credentials"
+#  kubectl create secret generic aws --from-literal=AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} --from-literal=AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+#fi
 
 echo "> Run e2e test"
 $GINKGO -stream -slowSpecThreshold=3000 ./test/e2e/... -- -mo-version=${MO_VERSION}

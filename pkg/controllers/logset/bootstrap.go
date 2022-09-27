@@ -24,7 +24,11 @@ import (
 )
 
 const (
-	bootstrapFile = "bootstrap.toml"
+	bootstrapFile    = "bootstrap.toml"
+	bootstrapAnnoKey = "logset.matrixorigin.io/bootstrap"
+
+	idRangeStart int = 131072
+	idRangeEnd   int = 262144
 )
 
 type bootstrapReplica struct {
@@ -65,7 +69,7 @@ func buildBootstrapConfig(ctx *recon.Context[*v1alpha1.LogSet]) (*corev1.ConfigM
 
 func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error) {
 	var replicas []bootstrapReplica
-	previousDecision, hasBootstrapped := ctx.Obj.GetAnnotations()[BootstrapAnnoKey]
+	previousDecision, hasBootstrapped := ctx.Obj.GetAnnotations()[bootstrapAnnoKey]
 	if hasBootstrapped {
 		if err := json.Unmarshal([]byte(previousDecision), &replicas); err != nil {
 			return nil, errors.Wrap(err, "error deserialize boostrap replicas")
@@ -77,9 +81,9 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 	n := *ctx.Obj.Spec.InitialConfig.HAKeeperReplicas
 	// pick first N pods as initial HAKeeperReplicas
 	for i := 0; i < n; i++ {
-		rid := IDRangeStart + i
-		if rid > IDRangeEnd {
-			return nil, errors.Errorf("ReplicaID %d exceed range, max allowed: %d", rid, IDRangeEnd)
+		rid := idRangeStart + i
+		if rid > idRangeEnd {
+			return nil, errors.Errorf("ReplicaID %d exceed range, max allowed: %d", rid, idRangeEnd)
 		}
 		replicas = append(replicas, bootstrapReplica{
 			Ordinal:   i,
@@ -93,7 +97,7 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 	if ctx.Obj.Annotations == nil {
 		ctx.Obj.Annotations = map[string]string{}
 	}
-	ctx.Obj.Annotations[BootstrapAnnoKey] = string(serialized)
+	ctx.Obj.Annotations[bootstrapAnnoKey] = string(serialized)
 	return replicas, ctx.Update(ctx.Obj)
 }
 

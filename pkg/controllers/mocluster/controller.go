@@ -102,14 +102,47 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	mo.Status.LogService = &ls.Status
 	mo.Status.DN = &dn.Status
 	mo.Status.TP = &tp.Status
-	if recon.IsReady(mo.Status.TP) {
-		mo.Status.ConditionalStatus.SetCondition(metav1.Condition{
-			Type:   recon.ConditionTypeReady,
-			Status: metav1.ConditionTrue,
-		})
-	}
-
+	mo.Status.ConditionalStatus.SetCondition(readyCondition(mo))
+	mo.Status.ConditionalStatus.SetCondition(syncedCondition(mo))
 	return nil, nil
+}
+
+func readyCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
+	c := metav1.Condition{Type: recon.ConditionTypeReady}
+	switch {
+	case !recon.IsReady(mo.Status.LogService):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "LogServiceNotReady"
+	case !recon.IsReady(mo.Status.DN):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "DNSetNotReady"
+	case !recon.IsReady(mo.Status.TP):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "TPSetNotReady"
+	default:
+		c.Status = metav1.ConditionTrue
+		c.Reason = "AllSetsReady"
+	}
+	return c
+}
+
+func syncedCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
+	c := metav1.Condition{Type: recon.ConditionTypeSynced}
+	switch {
+	case !recon.IsSynced(mo.Status.LogService):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "LogServiceNotSynced"
+	case !recon.IsSynced(mo.Status.DN):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "DNSetNotSynced"
+	case !recon.IsSynced(mo.Status.TP):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "TPSetNotSynced"
+	default:
+		c.Status = metav1.ConditionTrue
+		c.Reason = "AllSetsSynced"
+	}
+	return c
 }
 
 func (r *MatrixOneClusterActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (bool, error) {

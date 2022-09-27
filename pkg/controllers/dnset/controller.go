@@ -36,9 +36,8 @@ import (
 )
 
 const (
-	ReasonNoEnoughReadyStores = "NoEnoughReadyStores"
-	storeDownTimeout          = 1 * time.Minute
-	reSyncAfter               = 10 * time.Second
+	storeDownTimeout = 1 * time.Minute
+	reSyncAfter      = 10 * time.Second
 )
 
 type Actor struct{}
@@ -92,7 +91,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		dn.Status.SetCondition(metav1.Condition{
 			Type:   recon.ConditionTypeReady,
 			Status: metav1.ConditionFalse,
-			Reason: ReasonNoEnoughReadyStores,
+			Reason: common.ReasonNotEnoughReadyStores,
 		})
 	}
 

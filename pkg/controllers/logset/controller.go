@@ -14,10 +14,12 @@
 package logset
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"time"
+
 	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -34,19 +36,12 @@ import (
 )
 
 const (
-	BootstrapAnnoKey = "logset.matrixorigin.io/bootstrap"
-
-	IDRangeStart int = 131072
-	IDRangeEnd   int = 262144
-
-	ReasonNoEnoughReadyStores = "NoEnoughReadyStores"
-)
-
-const (
 	// TODO(aylei): should be configurable
 	storeDownTimeout = 5 * time.Minute
+	reSyncAfter      = 15 * time.Second
 
-	reSyncAfter = 15 * time.Second
+	// failoverDeletionFinalizer hold the pod that chosen to be deleted until human confirmation
+	failoverDeletionFinalizer = "matrixorigin.io/confirm-deletion"
 )
 
 var _ recon.Actor[*v1alpha1.LogSet] = &Actor{}
@@ -98,7 +93,7 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		ls.Status.SetCondition(metav1.Condition{
 			Type:   recon.ConditionTypeReady,
 			Status: metav1.ConditionFalse,
-			Reason: ReasonNoEnoughReadyStores,
+			Reason: common.ReasonNotEnoughReadyStores,
 		})
 	}
 	ls.Status.Discovery = &v1alpha1.LogSetDiscovery{
@@ -119,10 +114,10 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return r.with(sts).Update, nil
 	}
-	if recon.IsReady(&ls.Status.ConditionalStatus) {
+	if recon.IsReady(&ls.Status.ConditionalStatus) && len(ls.Status.FailedStores) == 0 {
 		return nil, nil
 	}
-	return nil, recon.ErrReSync("logset is not ready", reSyncAfter)
+	return nil, recon.ErrReSync("logset is not ready or has unready members", reSyncAfter)
 }
 
 func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
@@ -141,7 +136,10 @@ func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	syncPodSpec(ls, &sts.Spec.Template.Spec)
 	syncPersistentVolumeClaim(ls, sts)
 	discovery := buildDiscoveryService(ls)
-
+	gconfig, err := buildGossipSeedsConfigMap(ls, sts)
+	if err != nil {
+		return err
+	}
 	// sync the config
 	cm, err := buildConfigMap(ls)
 	if err != nil {
@@ -154,6 +152,7 @@ func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	// create all resources
 	err = lo.Reduce[client.Object, error]([]client.Object{
 		bc,
+		gconfig,
 		svc,
 		sts,
 		discovery,
@@ -172,10 +171,15 @@ func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 // Scale scale-out/in the log set pods to match the desired state
 // TODO(aylei): special treatment for scale-in
 func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.LogSet]) error {
-	return ctx.Patch(r.sts, func() error {
+	err := ctx.Patch(r.sts, func() error {
 		syncReplicas(ctx.Obj, r.sts)
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	// also update gossip config after scale
+	return updateGossipConfig(ctx, r.sts)
 }
 
 // Repair repairs failed log set pods to match the desired state
@@ -188,13 +192,36 @@ func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
 		ctx.Log.Info("majority failure might happen, wait for human intervention")
 		return nil
 	}
+	candidate := toRepair[0]
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ctx.Obj.Namespace,
+			Name:      candidate.PodName,
+		},
+	}
+	// FIXME: we might have to make this behavior configurable
+	err := ctx.Patch(pod, func() error {
+		controllerutil.AddFinalizer(pod, failoverDeletionFinalizer)
+		// mark the pod as need external action and cleanup all old labels
+		pod.Labels = map[string]string{
+			common.ActionRequiredLabelKey: common.ActionRequiredLabelValue,
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.Wrap(err, "cannot orphan the victim pod")
+	}
 	// repair one at a time
-	ordinal, err := util.PodOrdinal(toRepair[0].PodName)
+	ordinal, err := util.PodOrdinal(candidate.PodName)
 	if err != nil {
 		return errors.Wrapf(err, "error parse ordinal from pod name %s", toRepair[0].PodName)
 	}
 	r.sts.Spec.ReserveOrdinals = util.Upsert(r.sts.Spec.ReserveOrdinals, ordinal)
-	return nil
+	if err := ctx.Update(r.sts); err != nil {
+		return err
+	}
+	// also update gossip config after failover
+	return updateGossipConfig(ctx, r.sts)
 }
 
 // Update rolling-update the log set pods to match the desired state
@@ -230,6 +257,18 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+func updateGossipConfig(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) error {
+	gossipCM, err := buildGossipSeedsConfigMap(ctx.Obj, sts)
+	if err != nil {
+		return err
+	}
+	o := gossipCM.DeepCopy()
+	return recon.CreateOwnedOrUpdate(ctx, o, func() error {
+		o.Data = gossipCM.Data
+		return nil
+	})
 }
 
 func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) error {
