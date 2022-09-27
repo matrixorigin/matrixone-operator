@@ -13,6 +13,11 @@
 // limitations under the License.
 package webui
 
+import "time"
+
 const (
 	objSuffix = "-webui"
+
+	reSyncAfter     = 10 * time.Second
+	ReplicasFailure = "replicasFailure"
 )
