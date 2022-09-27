@@ -17,6 +17,7 @@ package dnset
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
@@ -144,7 +145,10 @@ func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) erro
 	}
 
 	syncPodMeta(ctx.Obj, sts)
-	syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+	if ctx.Dep != nil {
+		syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+
+	}
 
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }
