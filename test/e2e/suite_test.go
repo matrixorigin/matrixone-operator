@@ -22,6 +22,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/rest"
 	"math/rand"
 	"os"
 	"testing"
@@ -46,6 +47,7 @@ var errWait = fmt.Errorf("wait for condition met")
 var namespacePrefix string
 
 // all nodes
+var restConfig *rest.Config
 var kubeconfig string
 var moVersion string
 var moImageRepo string
@@ -118,7 +120,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	}(baseLog)
 	logger = baseLog.Sugar()
 
-	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	restConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 	Expect(err).To(Succeed())
 	Expect(v1alpha1.AddToScheme(scheme.Scheme)).To(Succeed())
 	Expect(kruisev1.AddToScheme(scheme.Scheme)).To(Succeed())
