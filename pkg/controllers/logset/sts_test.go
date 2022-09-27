@@ -98,6 +98,7 @@ func Test_syncPodSpec(t *testing.T) {
 					{Name: "data", MountPath: "/var/lib/logservice"},
 					{Name: "bootstrap", ReadOnly: true, MountPath: "/etc/bootstrap"},
 					{Name: "config", ReadOnly: true, MountPath: "/etc/logservice"},
+					{Name: "gossip", ReadOnly: true, MountPath: "/etc/gossip"},
 				},
 				Env: []corev1.EnvVar{{
 					Name: "POD_NAME",
@@ -133,6 +134,14 @@ func Test_syncPodSpec(t *testing.T) {
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "test-log-bootstrap"},
+						DefaultMode:          pointer.Int32(0644),
+					},
+				},
+			}, {
+				Name: "gossip",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "test-log-gossip"},
 						DefaultMode:          pointer.Int32(0644),
 					},
 				},

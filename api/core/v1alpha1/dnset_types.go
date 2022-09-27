@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,8 +34,16 @@ type DNSetBasic struct {
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 }
 
+type DNStore struct {
+	PodName            string      `json:"podName,omitempty"`
+	Phase              string      `json:"phase,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+}
+
 // TODO: figure out what status should be exposed
 type DNSetStatus struct {
+	AvailableStores   []DNStore `json:"availableStores,omitempty"`
+	FailedStores      []DNStore `json:"failedStores,omitempty"`
 	ConditionalStatus `json:",inline"`
 }
 

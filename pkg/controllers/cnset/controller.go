@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -72,14 +71,45 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return c.with(sts).Update, nil
 	}
-	// TODO: collect cn status
-	cn.Status.SetCondition(metav1.Condition{
-		Type:   recon.ConditionTypeReady,
-		Status: metav1.ConditionTrue,
-	})
 
-	return nil, nil
+	// collect cn status
+	podList := &corev1.PodList{}
+	err = ctx.List(podList, client.InNamespace(cn.Namespace), client.MatchingLabels(common.SubResourceLabels(cn)))
+	if err != nil {
+		return nil, errors.Wrap(err, "list cnset pods")
+	}
 
+	collectStoreStatus(cn, podList.Items)
+
+	if len(cn.Status.AvailableStores) >= int(cn.Spec.Replicas) {
+		cn.Status.SetCondition(metav1.Condition{
+			Type:    recon.ConditionTypeReady,
+			Status:  metav1.ConditionTrue,
+			Message: "cn stores ready",
+		})
+
+	} else {
+		cn.Status.SetCondition(metav1.Condition{
+			Type:    recon.ConditionTypeReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  common.ReasonNotEnoughReadyStores,
+			Message: "cn stores not ready",
+		})
+
+	}
+
+	switch {
+	case len(cn.StoresFailedFor(storeDownTimeOut)) > 0:
+		return c.with(sts).Repair, nil
+	case cn.Spec.Replicas != *sts.Spec.Replicas:
+		return c.with(sts).Scale, nil
+	}
+
+	if recon.IsReady(&cn.Status.ConditionalStatus) {
+		return nil, nil
+	}
+
+	return nil, recon.ErrReSync("cnset is not ready", reSyncAfter)
 }
 
 func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
@@ -91,6 +121,22 @@ func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
 
 func (c *WithResources) Update(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return ctx.Update(c.sts)
+}
+
+func (c *WithResources) Repair(ctx *recon.Context[*v1alpha1.CNSet]) error {
+	toRepair := ctx.Obj.StoresFailedFor(storeDownTimeOut)
+	if len(toRepair) == 0 {
+		return nil
+	}
+
+	// repair one at a time
+	ordinal, err := util.PodOrdinal(toRepair[0].PodName)
+	if err != nil {
+		return errors.Wrapf(err, "error parse ordinal from pod name %s", toRepair[0].PodName)
+	}
+	c.sts.Spec.ReserveOrdinals = util.Upsert(c.sts.Spec.ReserveOrdinals, ordinal)
+
+	return nil
 }
 
 func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
@@ -123,7 +169,6 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 }
 
 func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
-	klog.V(recon.Info).Info("dn set create...")
 	cn := ctx.Obj
 
 	hSvc := buildHeadlessSvc(cn)
@@ -134,7 +179,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	syncPodSpec(cn, cnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	syncPersistentVolumeClaim(cn, cnSet)
 
-	configMap, err := buildCNSetConfigMap(cn)
+	configMap, err := buildCNSetConfigMap(cn, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err
 	}
@@ -153,7 +198,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 		return multierr.Append(errs, util.Ignore(apierrors.IsAlreadyExists, err))
 	}, nil)
 	if err != nil {
-		return errors.Wrap(err, "create dn service")
+		return errors.Wrap(err, "create cn service")
 	}
 
 	return nil
@@ -172,12 +217,16 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 	return nil
 }
 func syncPods(ctx *recon.Context[*v1alpha1.CNSet], sts *kruise.StatefulSet) error {
-	cm, err := buildCNSetConfigMap(ctx.Obj)
+	cm, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err
 	}
 
 	syncPodMeta(ctx.Obj, sts)
-	syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+
+	if ctx.Dep != nil {
+		syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+	}
+
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }

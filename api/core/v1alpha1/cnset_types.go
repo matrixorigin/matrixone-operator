@@ -20,11 +20,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type CNRole string
+
+const (
+	CNRoleTP CNRole = "TP"
+	CNRoleAP CNRole = "AP"
+)
+
 type CNSetSpec struct {
 	CNSetBasic `json:",inline"`
 
 	// +optional
 	Overlay *Overlay `json:"overlay,omitempty"`
+
+	// [TP, AP], default to TP
+	// +optional
+	Role CNRole `json:"role,omitempty"`
 }
 
 type CNSetBasic struct {
@@ -42,9 +53,17 @@ type CNSetBasic struct {
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 }
 
-// TODO: figure out what status should be exposed
+// Figure out what status should be exposed
 type CNSetStatus struct {
+	AvailableStores   []CNStore `json:"availableStores,omitempty"`
+	FailedStores      []CNStore `json:"failedStores,omitempty"`
 	ConditionalStatus `json:",inline"`
+}
+
+type CNStore struct {
+	PodName            string      `json:"podName,omitempty"`
+	Phase              string      `json:"phase,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransition,omitempty"`
 }
 
 type CNSetDeps struct {

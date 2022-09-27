@@ -15,6 +15,8 @@
 package dnset
 
 import (
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
@@ -33,6 +35,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+const (
+	storeDownTimeout = 1 * time.Minute
+	reSyncAfter      = 10 * time.Second
+)
+
 type Actor struct{}
 
 var _ recon.Actor[*v1alpha1.DNSet] = &Actor{}
@@ -49,6 +56,12 @@ func (d *Actor) with(sts *kruise.StatefulSet) *WithResources {
 func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1alpha1.DNSet], error) {
 	dn := ctx.Obj
 
+	svc := &corev1.Service{}
+	err, foundSvc := util.IsFound(ctx.Get(client.ObjectKey{Namespace: dn.Namespace, Name: headlessSvcName(dn)}, svc))
+	if err != nil {
+		return nil, errors.Wrap(err, "get dn service")
+	}
+
 	sts := &kruise.StatefulSet{}
 	err, foundSts := util.IsFound(ctx.Get(client.ObjectKey{
 		Namespace: dn.Namespace,
@@ -58,18 +71,51 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return nil, errors.Wrap(err, "get dn service statefulset")
 	}
 
-	if !foundSts {
+	if !foundSts || !foundSvc {
 		return d.Create, nil
+	}
+
+	podList := &corev1.PodList{}
+	err = ctx.List(podList, client.InNamespace(dn.Namespace), client.MatchingLabels(common.SubResourceLabels(dn)))
+	if err != nil {
+		return nil, errors.Wrap(err, "list dn pods")
+	}
+	collectStoreStatus(dn, podList.Items)
+
+	if len(dn.Status.AvailableStores) >= int(dn.Spec.Replicas) {
+		dn.Status.SetCondition(metav1.Condition{
+			Type:   recon.ConditionTypeReady,
+			Status: metav1.ConditionTrue,
+		})
+	} else {
+		dn.Status.SetCondition(metav1.Condition{
+			Type:   recon.ConditionTypeReady,
+			Status: metav1.ConditionFalse,
+			Reason: common.ReasonNotEnoughReadyStores,
+		})
+	}
+
+	switch {
+	case len(dn.StoresFailedFor(storeDownTimeout)) > 0:
+		return d.with(sts).Repair, nil
+	case dn.Spec.Replicas != *sts.Spec.Replicas:
+		return d.with(sts).Scale, nil
 	}
 
 	origin := sts.DeepCopy()
 	if err := syncPods(ctx, sts); err != nil {
 		return nil, err
 	}
+
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return d.with(sts).Update, nil
 	}
-	return nil, nil
+
+	if recon.IsReady(&dn.Status.ConditionalStatus) {
+		return nil, nil
+	}
+
+	return nil, recon.ErrReSync("dnset is not ready", reSyncAfter)
 }
 
 func (d *Actor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error) {
@@ -143,6 +189,21 @@ func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.DNSet]) error {
 
 func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	return ctx.Update(r.sts)
+}
+
+func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.DNSet]) error {
+	toRepair := ctx.Obj.StoresFailedFor(storeDownTimeout)
+	if len(toRepair) == 0 {
+		return nil
+	}
+
+	// repair one at a time
+	ordinal, err := util.PodOrdinal(toRepair[0].PodName)
+	if err != nil {
+		return errors.Wrapf(err, "error parse ordinal from pod name %s", toRepair[0].PodName)
+	}
+	r.sts.Spec.ReserveOrdinals = util.Upsert(r.sts.Spec.ReserveOrdinals, ordinal)
+	return nil
 }
 
 func (d *Actor) Reconcile(mgr manager.Manager) error {
