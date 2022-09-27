@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"k8s.io/client-go/rest"
 	"math/rand"
 	"os"
 	"testing"
@@ -25,15 +26,15 @@ import (
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
-	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
+	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
@@ -47,10 +48,10 @@ var errWait = fmt.Errorf("wait for condition met")
 var namespacePrefix string
 
 // all nodes
+var restConfig *rest.Config
 var kubeconfig string
 var moVersion string
 var moImageRepo string
-var imagePullSecret string
 var kubeCli client.Client
 var ctx context.Context
 var logger *zap.SugaredLogger
