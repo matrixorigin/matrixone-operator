@@ -94,3 +94,5 @@ require (
 )
 
 replace github.com/matrixorigin/matrixone-operator/api => ./api
+
+replace github.com/matrixorigin/matrixone-operator/runtime => ./runtime

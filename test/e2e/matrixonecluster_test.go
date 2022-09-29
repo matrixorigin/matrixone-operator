@@ -14,7 +14,6 @@
 package e2e
 
 import (
-	"fmt"
 	"github.com/matrixorigin/matrixone-operator/test/e2e/sql"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	"strings"
@@ -131,8 +130,14 @@ var _ = Describe("MatrixOneCluster test", func() {
 		pfh, err := e2eutil.PortForward(restConfig, mo.Namespace, mo.Name+"-tp-cn-0", 6001, 6001)
 		Expect(err).To(BeNil())
 		Expect(pfh.Ready(portForwardTimeout)).To(Succeed(), "port-forward should complete within timeout")
+		logger.Info("run SQL smoke test")
 		Eventually(func() error {
-			return sql.MySQLDialectSmokeTest(fmt.Sprintf("dump:111@tcp(127.0.0.1:6001)/test"))
+			err := sql.MySQLDialectSmokeTest("dump:111@tcp(127.0.0.1:6001)/test?timeout=5s")
+			if err != nil {
+				logger.Infow("error running sql", "error", err)
+				return errWait
+			}
+			return nil
 		}, sqlTestTimeout, pollInterval).Should(Succeed(), "SQL smoke test should succeed")
 		pfh.Stop()
 
