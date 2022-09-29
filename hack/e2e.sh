@@ -58,7 +58,7 @@ function e2e::idc-install() {
 
 function e2e::idc-check() {
   echo "> E2E idc check"
-  nse2e=$(kubectl get ns --no-headers=true  | awk  '/^e2e/{print $1}')
+  nse2e=$(kubectl get ns --no-headers=true | awk  '/^e2e/{print $1}')
 
   if [[ $nse2e != "" ]]; then
     echo "Find e2e namespace $nse2e"
@@ -126,7 +126,7 @@ function e2e::idc-workflow() {
 
 function e2e::start() {
   echo "> Start e2e workflow"
-
+#  ctype=$(kind get clusters | awk -v m="$CLUSTER" '/^{m}/{print $1}')
 
   if command -v kind >/dev/null 2>&1; then
     echo "Not find kind test cluster, Start kind workflow"
