@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +15,13 @@ package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"time"
 )
 
 const (
@@ -27,6 +29,8 @@ const (
 
 	minHAReplicas = 3
 	singleReplica = 1
+
+	defaultStoreFailureTimeout = 5 * time.Minute
 )
 
 func (r *LogSet) setupWebhookWithManager(mgr ctrl.Manager) error {
@@ -64,6 +68,9 @@ func (r *LogSetBasic) Default() {
 	}
 	if r.InitialConfig.DNShards == nil {
 		r.InitialConfig.DNShards = pointer.Int(defaultShardNum)
+	}
+	if r.StoreFailureTimeout == nil {
+		r.StoreFailureTimeout = &metav1.Duration{Duration: defaultStoreFailureTimeout}
 	}
 }
 

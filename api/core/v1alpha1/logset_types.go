@@ -44,6 +44,17 @@ type LogSetBasic struct {
 	// InitialConfig is immutable
 	// +optional
 	InitialConfig InitialConfig `json:"initialConfig"`
+
+	// StoreFailureTimeout is the timeout to fail-over the logset Pod after a failure of it is observed
+	// +optional
+	StoreFailureTimeout *metav1.Duration `json:"storeFailureTimeout,omitempty"`
+}
+
+func (l *LogSetBasic) GetStoreFailureTimeout() metav1.Duration {
+	if l.StoreFailureTimeout == nil {
+		return metav1.Duration{Duration: defaultStoreFailureTimeout}
+	}
+	return *l.StoreFailureTimeout
 }
 
 type InitialConfig struct {

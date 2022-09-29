@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/go-logr/logr v1.2.0
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.8
 	github.com/matrixorigin/matrixone-operator/api v0.0.0-20220926063007-e629f86256d2
@@ -57,6 +58,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
+	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
@@ -92,3 +94,5 @@ require (
 )
 
 replace github.com/matrixorigin/matrixone-operator/api => ./api
+
+replace github.com/matrixorigin/matrixone-operator/runtime => ./runtime

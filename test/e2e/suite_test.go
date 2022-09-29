@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+
 	"k8s.io/client-go/rest"
 	"math/rand"
 	"os"
@@ -121,7 +122,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	}(baseLog)
 	logger = baseLog.Sugar()
 
-	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	restConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 	Expect(err).To(Succeed())
 	Expect(v1alpha1.AddToScheme(scheme.Scheme)).To(Succeed())
 	Expect(kruisev1.AddToScheme(scheme.Scheme)).To(Succeed())

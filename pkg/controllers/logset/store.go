@@ -22,6 +22,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// TODO: maybe configurable?
+	logsetMinReadySeconds = 15
+)
+
 func collectStoreStatus(ls *v1alpha1.LogSet, pods []corev1.Pod) {
 	previousStore := map[string]v1alpha1.LogStore{}
 	for _, store := range ls.Status.FailedStores {
@@ -38,7 +43,7 @@ func collectStoreStatus(ls *v1alpha1.LogSet, pods []corev1.Pod) {
 			Phase:              v1alpha1.StorePhaseUp,
 			LastTransitionTime: metav1.Time{Time: time.Now()},
 		}
-		if !util.IsPodReady(&pod) {
+		if !util.IsPodAvailable(&pod, logsetMinReadySeconds, metav1.Time{Time: time.Now()}) {
 			store.Phase = v1alpha1.StorePhaseDown
 		}
 		// update last transition time

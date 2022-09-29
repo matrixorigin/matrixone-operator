@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT=$(cd $(dirname ${BASH_SOURCE[0]})/.. && pwd)
-cd ${ROOT}
+cd "${ROOT}"
 
 CLUSTER=${CLUSTER:-"e2e-mo-kind"}
 MO_VERSION=${MO_VERSION:-"nightly-20eeb7c9"}
@@ -12,8 +12,8 @@ OPNAMESPACE=${OPNAMESPACE:-"idc-e2e-matrixone-operator"}
 TESTNAMESPACE=${TESTNAMESPACE:-"e2e"}
 
 function e2e::prepare_image() {
-    docker pull ${2}
-    kind load docker-image --name ${1} ${2}
+    docker pull "${2}"
+    kind load docker-image --name "${1}" "${2}"
 }
 
 function e2e::kubectl_wait_appear() {
@@ -58,17 +58,11 @@ function e2e::idc-install() {
 
 function e2e::idc-check() {
   echo "> E2E idc check"
-  nse2e=$(kubectl get ns --no-headers=true  | awk -v m="$TESTNAMESPACE" '/^{m}/{print $1}')
-  nsope2e=$(kubectl get ns --no-headers=true | awk -v m="$OPNAMESPACE" '/^{$m}/{print $1}')
-
+  nse2e=$(kubectl get ns --no-headers=true  | awk  '/^e2e/{print $1}')
 
   if [[ $nse2e != "" ]]; then
     echo "Find e2e namespace $nse2e"
     echo "Please delete e2e namespace before idc e2e, Or Waiting e2e finished"
-    exit 1
-  elif [[ $nsope2e != "" ]]; then
-    echo "Find e2e operator namespace: $nsope2e"
-    echo "Please delete idc operator namespace before idc e2e, Or waiting idc e2e finished"
     exit 1
   else
     echo "Env Check Finished, You can start e2e test"
@@ -78,7 +72,7 @@ function e2e::idc-check() {
 function e2e::ensure-kind() {
     echo "> Create kind cluster"
     export KUBECONFIG=$(mktemp)
-    echo $KUBECONFIG
+    echo "$KUBECONFIG"
     kind create cluster --name ${CLUSTER}
     kubectl apply -f test/kind-rbac.yml
     make build
@@ -132,9 +126,9 @@ function e2e::idc-workflow() {
 
 function e2e::start() {
   echo "> Start e2e workflow"
-  ctype=$(kind get clusters | awk -v m="$CLUSTER" '/^{m}/{print $1}')
 
-  if [[ $ctype == "" ]]; then
+
+  if command -v kind >/dev/null 2>&1; then
     echo "Not find kind test cluster, Start kind workflow"
     e2e::kind-workflow
   else
