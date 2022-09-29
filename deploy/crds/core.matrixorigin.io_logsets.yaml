@@ -6657,6 +6657,10 @@ spec:
                     - path
                     type: object
                 type: object
+              storeFailureTimeout:
+                description: StoreFailureTimeout is the timeout to fail-over the logset
+                  Pod after a failure of it is observed
+                type: string
               topologySpread:
                 description: This will be overridden by .overlay.TopologySpreadConstraints
                 items:

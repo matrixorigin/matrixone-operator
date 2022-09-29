@@ -18,6 +18,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
+	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -67,6 +68,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 							Path: "mo-e2e/logset",
 						},
 					},
+					StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
 				},
 			},
 		}
@@ -105,9 +107,10 @@ var _ = Describe("MatrixOneCluster test", func() {
 		}, failoverTimeout, pollInterval).Should(Succeed())
 
 		By("Logset scale")
-		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(l), l)).To(Succeed())
-		l.Spec.Replicas = 4
-		Expect(kubeCli.Update(ctx, l)).To(Succeed())
+		Expect(e2eutil.Patch(ctx, kubeCli, l, func() error {
+			l.Spec.Replicas = 4
+			return nil
+		})).To(Succeed())
 		Eventually(func() error {
 			podList := &corev1.PodList{}
 			if err := kubeCli.List(ctx, podList, client.MatchingLabels(map[string]string{common.InstanceLabelKey: l.Name})); err != nil {
