@@ -14,7 +14,9 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
+	"time"
 
 	// mysql imports mysql driver
 	_ "github.com/go-sql-driver/mysql"
@@ -27,12 +29,14 @@ func MySQLDialectSmokeTest(dsn string) error {
 	}
 	queries := []string{
 		"CREATE DATABASE IF NOT EXISTS test;",
-		"CREATE TABLE IF NOT EXISTS test.test(id INT PRIMARY KEY);",
+		"CREATE TABLE IF NOT EXISTS test.test(id INT);",
 		"INSERT INTO test.test (id) VALUES (10000), (10086);",
 		"SELECT * FROM test.test;",
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
 	for _, query := range queries {
-		if _, err := db.Exec(query); err != nil {
+		if _, err := db.QueryContext(ctx, query); err != nil {
 			return err
 		}
 	}

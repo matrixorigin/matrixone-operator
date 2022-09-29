@@ -36,9 +36,7 @@ import (
 )
 
 const (
-	// TODO(aylei): should be configurable
-	storeDownTimeout = 5 * time.Minute
-	reSyncAfter      = 15 * time.Second
+	reSyncAfter = 15 * time.Second
 
 	// failoverDeletionFinalizer hold the pod that chosen to be deleted until human confirmation
 	failoverDeletionFinalizer = "matrixorigin.io/confirm-deletion"
@@ -60,6 +58,7 @@ func (r *Actor) with(sts *kruisev1.StatefulSet) *WithResources {
 func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1alpha1.LogSet], error) {
 	ls := ctx.Obj
 
+	ctx.Log.Info("observe logset")
 	// get subresources
 	discoverySvc := &corev1.Service{}
 	err, foundDiscovery := util.IsFound(ctx.Get(client.ObjectKey{Namespace: ls.Namespace, Name: discoverySvcName(ls)}, discoverySvc))
@@ -100,9 +99,8 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		Port:    logServicePort,
 		Address: discoverySvcAddress(ls),
 	}
-
 	switch {
-	case len(ls.StoresFailedFor(storeDownTimeout)) > 0:
+	case len(ls.StoresFailedFor(ls.Spec.GetStoreFailureTimeout().Duration)) > 0:
 		return r.with(sts).Repair, nil
 	case ls.Spec.Replicas != *sts.Spec.Replicas:
 		return r.with(sts).Scale, nil
@@ -115,6 +113,7 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		return r.with(sts).Update, nil
 	}
 	if recon.IsReady(&ls.Status.ConditionalStatus) && len(ls.Status.FailedStores) == 0 {
+		ctx.Log.Info("logset synced")
 		return nil, nil
 	}
 	return nil, recon.ErrReSync("logset is not ready or has unready members", reSyncAfter)
@@ -171,6 +170,7 @@ func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 // Scale scale-out/in the log set pods to match the desired state
 // TODO(aylei): special treatment for scale-in
 func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.LogSet]) error {
+	ctx.Log.Info("scale logset")
 	err := ctx.Patch(r.sts, func() error {
 		syncReplicas(ctx.Obj, r.sts)
 		return nil
@@ -184,11 +184,12 @@ func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.LogSet]) error {
 
 // Repair repairs failed log set pods to match the desired state
 func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
-	toRepair := ctx.Obj.StoresFailedFor(storeDownTimeout)
+	ctx.Log.Info("repair logset")
+	toRepair := ctx.Obj.StoresFailedFor(ctx.Obj.Spec.GetStoreFailureTimeout().Duration)
 	if len(toRepair) == 0 {
 		return nil
 	}
-	if len(toRepair) >= (*ctx.Obj.Spec.InitialConfig.LogShardReplicas)/2 {
+	if len(toRepair) > (*ctx.Obj.Spec.InitialConfig.LogShardReplicas)/2 {
 		ctx.Log.Info("majority failure might happen, wait for human intervention")
 		return nil
 	}
