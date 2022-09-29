@@ -42,11 +42,11 @@ function e2e::idc-cleanup() {
     # Uninstall helm charts
     echo "Uninstall helm charts..."
     helm uninstall mo -n "${OPNAMESPACE}"
-    choe "Delete operator namespace"
+    echo "Delete operator namespace"
     kubectl delete ns "$OPNAMESPACE"
     # Delete test ns
     echo "Delete test namespaces..."
-    kubectl get ns --no-headers=true | awk -v m="${CLUSTER}" '/^{m}/{print $1}' | xargs  kubectl delete ns
+    kubectl get ns --no-headers=true | awk '/^e2e-/{print $1}' | xargs  kubectl delete ns
 
 }
 
