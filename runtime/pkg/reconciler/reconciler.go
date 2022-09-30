@@ -177,7 +177,6 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 
 	// optionally transit to deleting state
 	if util.WasDeleted(obj) {
-		log.V(Info).Info("finalize deleting object")
 		return r.finalize(ctx)
 	}
 
@@ -201,6 +200,7 @@ func (r *Reconciler[T]) Reconcile(goCtx context.Context, req recon.Request) (rec
 
 	action, err := r.actor.Observe(ctx)
 	if err != nil {
+		ctx.Log.Info("observe error", "error", err)
 		return r.processActorError(ctx, err)
 	}
 
@@ -246,14 +246,14 @@ func (r *Reconciler[T]) processActorError(ctx *Context[T], err error) (recon.Res
 			Message: fmt.Sprintf("Last error: %s", err.Error()),
 		})
 	}
-	if err := ctx.Update(ctx.Obj); err != nil {
+	if err := ctx.UpdateStatus(ctx.Obj); err != nil {
 		return none, err
 	}
 
 	// 2. check whether resync is requested
 	if resync, ok := err.(*ReSync); ok {
 		// resync error
-		ctx.Log.V(Debug).Info("actor request resync, detail: %s", resync.Error())
+		ctx.Log.V(Debug).Info("actor request resync", "detail", resync.Error())
 		return recon.Result{Requeue: true, RequeueAfter: resync.RequeueAfter}, nil
 	}
 	// other errors

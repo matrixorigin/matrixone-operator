@@ -25,7 +25,7 @@ COPY cluster.yml cluster.yml
 COPY config.yml config.yml
 
 VOLUME /var/lib/docker
-EXPOSE 2375 2376 6001
+EXPOSE 2375 2376 6001 80
 
 ENTRYPOINT ["/start.sh"]
 CMD []

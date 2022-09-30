@@ -1,12 +1,8 @@
-kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-featureGates:
-  "CSIMigration": true
-runtimeConfig:
-  "api/alpha": "false"
+kind: Cluster
 networking:
   serviceSubnet: "10.96.0.0/12"
-node:
+nodes:
   - role: control-plane
     extraPortMappings:
       - containerPort: 6001
