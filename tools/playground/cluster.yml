@@ -1,0 +1,46 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: MatrixOneCluster
+metadata:
+  name: mo
+spec:
+  imageRepository: matrixorigin/matrixone
+  version: nightly-bf9930da
+  logService:
+    resources:
+      requests:
+        cpu: 1
+    replicas: 3
+    initialConfig:
+      logShards: 1
+      dnShards: 1
+      haKeeperReplicas: 3
+      logShardReplicas: 3
+    sharedStorage:
+      s3:
+        path: aylei-test/mo-logset
+        secretRef:
+          name: aws
+    volume:
+      size: 10Gi
+  dn:
+    replicas: 2
+    cacheVolume:
+      size: 10Gi
+  tp:
+    serviceType: NodePort
+    replicas: 2
+    cacheVolume:
+      size: 10Gi
+  webui:
+    image: matrixorigin/webui:test
+    replicas: 1
+    updateStrategy:
+      maxUnavailable: 25
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws
+data:
+  AWS_ACCESS_KEY_ID: 111
+  AWS_SECRET_ACCESS_KEY: 222
