@@ -90,6 +90,9 @@ api-test:
 	cd api && make test
 
 # Run e2e tests
+e2e-kind: ginkgo
+	GINKGO=$(GINKGO) ./hack/kind-e2e.sh
+
 e2e: ginkgo
 	GINKGO=$(GINKGO) ./hack/e2e.sh
 
