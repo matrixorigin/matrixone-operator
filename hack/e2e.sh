@@ -2,22 +2,24 @@
 
 set -euo pipefail
 
-CLUSTER=${CLUSTER:-"e2e-mo-kind"}
+
+OPNAMESPACE=${OPNAMESPACE:-"mo-system"}
 MO_VERSION=${MO_VERSION:-"nightly-20eeb7c9"}
 IMAGE_REPO=${IMAGE_REPO:-"matrixorigin/matrixone"}
-OPNAMESPACE=${OPNAMESPACE:-"e2e-matrixone-operator"}
-TESTNAMESPACE=${TESTNAMESPACE:-"e2e"}
 
 function e2e::check() {
+  CMD=pgrep
+  PPROC=ginkgo
+  crds=$(kubectl get crds --no-headers=true | awk '/matrixorigin/{print $1}')
   echo "> E2E check"
-  nse2e=$(kubectl get ns --no-headers=true | awk  '/^e2e/{print $1}')
-
-  if [[ $nse2e != "" ]]; then
-    echo "Find e2e namespace $nse2e"
-    echo "Please delete e2e namespace before idc e2e, Or Waiting e2e finished"
+  if [ -n "`$CMD $PPROC`" ]; then
+    echo "Already running e2e test, Wait for E2E Ready or Kill it"
+    exit 1
+  elif [[ $crds != "" ]]; then
+    echo "Please delete old CRDS"
     exit 1
   else
-    echo "Env Check Finished, You can start e2e test"
+    echo "Can run e2e test"
   fi
 }
 
@@ -46,9 +48,7 @@ function e2e::cleanup() {
     helm uninstall mo -n "${OPNAMESPACE}"
     echo "Delete operator namespace"
     kubectl delete ns "$OPNAMESPACE"
-#    # Delete test ns
-#    echo "Delete test namespaces..."
-#    kubectl get ns --no-headers=true | awk '/^e2e-/{print $1}' | xargs  kubectl delete ns
+
 }
 
 function e2e::workflow() {
