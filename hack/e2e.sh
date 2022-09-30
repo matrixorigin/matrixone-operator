@@ -41,8 +41,22 @@ function e2e::install() {
   sleep 30
 }
 
+function e2e::deletePVC() {
+  echo "> Delete PVC"
+  test=$(kubectl get pvc --all-namespaces --no-headers=true | awk '/^e2e/{print $1}')
+
+  for value in $test
+  do
+      kubectl get pvc -n "$value" --no-headers=true | awk '/^data/{print $2}' | xargs kubectl delete pvc -n "$value"
+  done
+}
+
 function e2e::cleanup() {
     echo "> Clean"
+    e2e::deletePVC
+    echo "Delete e2e test namespace"
+    kubectl get ns --all-namespaces --no-headers=true | awk '/^e2e/{print $1}' | xargs kubectl delete ns
+    sleep 10
     # Uninstall helm charts
     echo "Uninstall helm charts..."
     helm uninstall mo -n "${OPNAMESPACE}"
@@ -66,4 +80,3 @@ function e2e::start() {
 }
 
 e2e::start
-exec "$@"

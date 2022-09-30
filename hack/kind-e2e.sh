@@ -33,3 +33,4 @@ function e2e::kind-e2e() {
 }
 
 e2e::kind-e2e
+exec "$@"
