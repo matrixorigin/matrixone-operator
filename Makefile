@@ -1,7 +1,8 @@
 SHELL=/usr/bin/env bash -o pipefail
 
 # Image URL to use all building/pushing image targets
-IMG ?= "matrixorigin/matrixone-operator:latest"
+REPO ?= "matrixorigin/matrixone-operator"
+TAG ?= "latest"
 PROXY ?= "https://proxy.golang.org,direct"
 MO_VERSION ?= "nightly-c371317c"
 MO_IMAGE_REPO ?= "matrixorigin/matrixone"
@@ -19,7 +20,7 @@ all: manager
 .PHONY: build
 # Build operator image
 build: generate manifests pkg
-	docker build -f Dockerfile . -t ${IMG} --build-arg PROXY=$(PROXY)
+	docker build -f Dockerfile . -t ${REPO}:${TAG} --build-arg PROXY=$(PROXY)
 
 # Push operator image
 push:
@@ -91,12 +92,16 @@ unit: generate fmt vet manifests
 api-test:
 	cd api && make test
 
-# Run e2e tests
+# Run kind e2e tests
 e2e-kind: ginkgo
-	MO_IMAGE_REPO=$(MO_IMAGE_REPO) MO_VERSION=$(MO_VERSION) GINKGO=$(GINKGO) ./hack/kind-e2e.sh
+	REPO=${REPO} TAG=${TAG}	MO_IMAGE_REPO=$(MO_IMAGE_REPO) MO_VERSION=$(MO_VERSION) GINKGO=$(GINKGO) ./hack/kind-e2e.sh
 
+
+# Run e2e tests
+# KUBECONFIG is your kubernetes config path, OP_IMAGE_TAG is operator image tag
+# export KUBECONFIG=<KUBECONFIG PATH> OP_IMAGE_TAG="sha-c1a16ce"
 e2e: ginkgo
-	GINKGO=$(GINKGO) ./hack/e2e.sh
+	REPO=${REPO} TAG=${TAG} MO_IMAGE_REPO=$(MO_IMAGE_REPO) MO_VERSION=$(MO_VERSION) GINKGO=$(GINKGO)  ./hack/e2e.sh
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests install

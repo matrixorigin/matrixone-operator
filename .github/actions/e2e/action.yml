@@ -22,4 +22,4 @@ runs:
     - name: Run kind test
       shell: bash
       run:  |
-        make e2e-kind
+        make e2e-kind TAG=e2e-kind
