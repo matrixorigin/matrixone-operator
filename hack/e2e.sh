@@ -47,8 +47,9 @@ function e2e::deletePVC() {
 
   for value in $test
   do
-      kubectl get pvc -n "$value" --no-headers=true | awk '/^data/{print $2}' | xargs kubectl delete pvc -n "$value"
+      kubectl get pvc -n "$value" --no-headers=true | awk '/^data/{print $1}' | xargs kubectl delete pvc -n "$value"
   done
+  sleep 5
 }
 
 function e2e::cleanup() {

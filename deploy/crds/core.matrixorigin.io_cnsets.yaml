@@ -37,6 +37,10 @@ spec:
             type: string
           deps:
             properties:
+              dnSet:
+                description: The DNSet it depends on
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               externalLogSet:
                 description: 'An external LogSet the CNSet should connected to, mutual
                   exclusive with LogSet TODO: rethink the schema of ExternalLogSet'

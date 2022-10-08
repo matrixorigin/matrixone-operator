@@ -68,6 +68,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			tp.Spec.CNSetBasic = mo.Spec.TP
 			tp.Spec.Image = mo.TpSetImage()
 			tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
+			tp.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
 			return nil
 		}),
 	)
@@ -79,6 +80,8 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		errs = multierr.Append(errs, recon.CreateOwnedOrUpdate(ctx, ap, func() error {
 			ap.Spec.CNSetBasic = *mo.Spec.AP
 			ap.Spec.Image = mo.ApSetImage()
+			ap.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
+			ap.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
 			return nil
 		}))
 		mo.Status.AP = &ap.Status
