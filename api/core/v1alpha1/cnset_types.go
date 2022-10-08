@@ -68,6 +68,12 @@ type CNStore struct {
 
 type CNSetDeps struct {
 	LogSetRef `json:",inline"`
+	// The DNSet it depends on
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:validation:Type=object
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	DNSet *DNSet `json:"dnSet,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -100,6 +106,11 @@ func (s *CNSet) GetDependencies() []recon.Dependency {
 			ObjectRef: s.Deps.LogSet,
 			ReadyFunc: func(l *LogSet) bool {
 				return recon.IsReady(&l.Status)
+			},
+		}, &recon.ObjectDependency[*DNSet]{
+			ObjectRef: s.Deps.DNSet,
+			ReadyFunc: func(s *DNSet) bool {
+				return recon.IsReady(&s.Status)
 			},
 		})
 	}

@@ -6,7 +6,10 @@ ROOT=$(cd $(dirname ${BASH_SOURCE[0]})/.. && pwd)
 cd ${ROOT}
 
 function e2e::prepare_image() {
-    docker pull ${2}
+    if [ ! $(docker image ls ${2} --format="true") ] ;
+    then
+        docker pull ${2}
+    fi
     kind load docker-image --name ${1} ${2}
 }
 
@@ -31,8 +34,13 @@ function e2e::cleanup() {
     kind delete cluster --name ${1}
 }
 
+if [[ -z ${MO_VERSION+undefined-guard} ]]; then
+  echo "MO_VERSION must be set" && exit 1
+fi
+
 CLUSTER=${CLUSTER:-mo}
-MO_VERSION=${MO_VERSION:-"nightly-20eeb7c9"}
+MO_IMAGE_REPO=${MO_IMAGE_REPO:-"matrixorigin/matrixone"}
+echo "> Run operator E2E with MO ${MO_IMAGE_REPO}:${MO_VERSION}"
 
 trap "e2e::cleanup ${CLUSTER}" EXIT
 
@@ -45,7 +53,7 @@ make build
 kind load docker-image --name ${CLUSTER} matrixorigin/matrixone-operator:latest
 
 echo "> Prepare e2e images"
-e2e::prepare_image ${CLUSTER} matrixorigin/matrixone:${MO_VERSION}
+e2e::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
 e2e::prepare_image ${CLUSTER} openkruise/kruise-manager:v1.2.0
 
 echo "> Install mo operator"
@@ -64,4 +72,4 @@ sleep 30
 #fi
 
 echo "> Run e2e test"
-$GINKGO -stream -slowSpecThreshold=3000 ./test/e2e/... -- -mo-version=${MO_VERSION}
+$GINKGO -stream -slowSpecThreshold=3000 ./test/e2e/... -- -mo-version=${MO_VERSION} -mo-image-repo=${MO_IMAGE_REPO}

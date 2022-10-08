@@ -62,7 +62,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 				DN: v1alpha1.DNSetBasic{
 					PodSet: v1alpha1.PodSet{
 						// test multiple DN replicas
-						Replicas: 1,
+						Replicas: 2,
 					},
 					CacheVolume: &v1alpha1.Volume{
 						Size: resource.MustParse("100Mi"),
@@ -132,7 +132,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		Expect(pfh.Ready(portForwardTimeout)).To(Succeed(), "port-forward should complete within timeout")
 		logger.Info("run SQL smoke test")
 		Eventually(func() error {
-			err := sql.MySQLDialectSmokeTest("dump:111@tcp(127.0.0.1:6001)/test?timeout=5s")
+			err := sql.MySQLDialectSmokeTest("dump:111@tcp(127.0.0.1:6001)/test?timeout=15s")
 			if err != nil {
 				logger.Infow("error running sql", "error", err)
 				return errWait

@@ -3,6 +3,8 @@ SHELL=/usr/bin/env bash -o pipefail
 # Image URL to use all building/pushing image targets
 IMG ?= "matrixorigin/matrixone-operator:latest"
 PROXY ?= "https://proxy.golang.org,direct"
+MO_VERSION ?= "nightly-c371317c"
+MO_IMAGE_REPO ?= "matrixorigin/matrixone"
 BRANCH ?= main
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -91,7 +93,7 @@ api-test:
 
 # Run e2e tests
 e2e: ginkgo
-	GINKGO=$(GINKGO) ./hack/kind-e2e.sh
+	MO_IMAGE_REPO=$(MO_IMAGE_REPO) MO_VERSION=$(MO_VERSION) GINKGO=$(GINKGO) ./hack/kind-e2e.sh
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests install
