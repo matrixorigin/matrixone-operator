@@ -3,6 +3,9 @@
 set -euo pipefail
 
 CLUSTER=${CLUSTER:-"mo"}
+ROOT=$(cd $(dirname ${BASH_SOURCE[0]})/.. && pwd)
+cd ${ROOT}
+source ${ROOT}/hack/lib.sh
 
 function e2e::prepare_image() {
     if [ ! $(docker image ls ${2} --format="true") ] ;
@@ -39,6 +42,10 @@ function e2e::load_image() {
 if [[ -z ${MO_VERSION+undefined-guard} ]]; then
   echo "MO_VERSION must be set" && exit 1
 fi
+
+hack::ensure_kubectl
+hack::ensure_helm
+hack::ensure_kind
 
 CLUSTER=${CLUSTER:-mo}
 MO_IMAGE_REPO=${MO_IMAGE_REPO:-"matrixorigin/matrixone"}

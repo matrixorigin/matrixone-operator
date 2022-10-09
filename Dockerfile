@@ -1,10 +1,10 @@
 FROM golang:1.18 as builder
 
-ARG PROXY="https://proxy.golang.org,direct"
+ARG GOPROXY="https://proxy.golang.org,direct"
 
 WORKDIR /workspace
 
-RUN go env -w GOPROXY=${PROXY}
+RUN go env -w GOPROXY=${GOPROXY}
 
 COPY go.mod go.mod
 COPY go.sum go.sum

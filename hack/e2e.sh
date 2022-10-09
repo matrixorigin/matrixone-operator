@@ -3,8 +3,6 @@
 #set -euo pipefail
 
 OPNAMESPACE=${OPNAMESPACE:-"mo-system"}
-MO_VERSION=${MO_VERSION:-"nightly-20eeb7c9"}
-IMAGE_REPO=${IMAGE_REPO:-"matrixorigin/matrixone"}
 
 function e2e::check() {
   CMD=pgrep
@@ -27,7 +25,7 @@ function e2e::run() {
     make ginkgo
     ./bin/ginkgo -stream -slowSpecThreshold=3000 ./test/e2e/... -- \
                 -mo-version="${MO_VERSION}" \
-                -mo-image-repo="${IMAGE_REPO}"
+                -mo-image-repo="${MO_IMAGE_REPO}"
 
 }
 
@@ -41,32 +39,22 @@ function e2e::install() {
   sleep 30
 }
 
-function e2e::delete_resource() {
+function e2e::deleteFinalizers() {
+    echo "> Delete resources"
+    ns=$(kubectl get ns --all-namespaces --no-headers=true | awk '/^e2e/{print $1}')
 
-  echo "> Delete resources"
-  ns=$(kubectl get pvc --all-namespaces --no-headers=true | awk '/^e2e/{print $1}')
-
-  ls=$(kubectl get logset -n "$value" | awk '/logset/{print $1}')
-  echo "CRD LogSet: $ls"
-  if [[ $ls != "" ]]; then
-    kubectl delete logset log -n "$ns"
-  fi
-
-  mc=$(kubectl get matrixoneclusters -n "$value" | awk '/matrixoneclusters/{print $1}')
-  echo "CRD matrixoneclusters: $mc"
-  if [[ $mc != "" ]]; then
-    kubectl delete matrixoneclusters test -n "$ns"
-  fi
-
+    for value in $ns
+    do
+        echo "namespace: $value"
+        kubectl patch pod log-log-0 --type='json' -p='[{"op":"remove", "path":"/metadata/finalizers", "values":["matrixorigin.io/confirm-deletion"]}]' -n $value
+    done
 
 }
 
 function e2e::cleanup() {
-    echo "> Clean"
-    e2e::delete_resource
-# TODO: e2e delete hanging pod
-#    echo "Delete e2e test namespace"
-#    kubectl get ns --all-namespaces --no-headers=true | awk '/^e2e/{print $1}' | xargs kubectl delete ns
+    e2e::deleteFinalizers
+    echo "Delete e2e test namespace"
+    kubectl get ns --all-namespaces --no-headers=true | awk '/^e2e/{print $1}' | xargs kubectl delete ns
     # Uninstall helm charts
     echo "Uninstall helm charts..."
     helm uninstall mo -n "${OPNAMESPACE}"

@@ -3,7 +3,7 @@ SHELL=/usr/bin/env bash -o pipefail
 # Image URL to use all building/pushing image targets
 REPO ?= "matrixorigin/matrixone-operator"
 TAG ?= "latest"
-PROXY ?= "https://proxy.golang.org,direct"
+GOPROXY ?= "https://proxy.golang.org,direct"
 MO_VERSION ?= "nightly-c371317c"
 MO_IMAGE_REPO ?= "matrixorigin/matrixone"
 BRANCH ?= main
