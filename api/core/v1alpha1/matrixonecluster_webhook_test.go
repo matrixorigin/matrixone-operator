@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,6 +23,52 @@ import (
 )
 
 var _ = Describe("MatrixOneCluster Webhook", func() {
+
+	It("should accept MatrixOneCluster of old versions", func() {
+		By("v0.6.x")
+		// DO NOT mutate the following spec.
+		// This spec is valid in mo-operator v0.6.0 and should always be accepted by
+		// the webhook for backward compatibility.
+		v06 := &MatrixOneCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mo-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: MatrixOneClusterSpec{
+				LogService: LogSetBasic{
+					PodSet: PodSet{
+						Replicas: 3,
+					},
+					Volume: Volume{
+						Size: resource.MustParse("10Gi"),
+					},
+					SharedStorage: SharedStorageProvider{
+						S3: &S3Provider{Path: "test/data"},
+					},
+				},
+				DN: DNSetBasic{
+					PodSet: PodSet{
+						Replicas: 2,
+					},
+				},
+				TP: CNSetBasic{
+					PodSet: PodSet{
+						Replicas: 2,
+					},
+				},
+				Version: "test",
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), v06.DeepCopy())).To(Succeed())
+		Expect(k8sClient.Create(context.TODO(), func() *MatrixOneCluster {
+			singleReplica := v06.DeepCopy()
+			singleReplica.Spec.LogService.Replicas = 1
+			singleReplica.Spec.DN.Replicas = 1
+			singleReplica.Spec.TP.Replicas = 1
+			singleReplica.Name = "mo-" + randomString(5)
+			return singleReplica
+		}())).To(Succeed())
+	})
 
 	It("should reject invalid MatrixOneCluster", func() {
 		tpl := &MatrixOneCluster{
@@ -131,5 +177,4 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		mutateInitialConfig.Spec.LogService.InitialConfig.HAKeeperReplicas = pointer.Int(*mutateInitialConfig.Spec.LogService.InitialConfig.HAKeeperReplicas - 1)
 		Expect(k8sClient.Update(context.TODO(), invalidReplica)).ToNot(Succeed(), "initialConfig should be immutable")
 	})
-
 })
