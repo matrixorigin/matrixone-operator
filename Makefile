@@ -2,7 +2,7 @@ SHELL=/usr/bin/env bash -o pipefail
 
 # Image URL to use all building/pushing image targets
 IMG ?= "matrixorigin/matrixone-operator:latest"
-PROXY ?= "https://proxy.golang.org,direct"
+GOPROXY ?= "https://proxy.golang.org,direct"
 MO_VERSION ?= "nightly-c371317c"
 MO_IMAGE_REPO ?= "matrixorigin/matrixone"
 BRANCH ?= main
@@ -19,7 +19,7 @@ all: manager
 .PHONY: build
 # Build operator image
 build: generate manifests pkg
-	docker build -f Dockerfile . -t ${IMG} --build-arg PROXY=$(PROXY)
+	docker build -f Dockerfile . -t ${IMG} --build-arg GOPROXY=$(GOPROXY)
 
 # Push operator image
 push:
