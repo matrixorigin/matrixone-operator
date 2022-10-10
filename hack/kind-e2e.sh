@@ -62,7 +62,7 @@ e2e::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
 e2e::prepare_image ${CLUSTER} openkruise/kruise-manager:v1.2.0
 
 echo "> Install mo operator"
-helm install mo ./charts/matrixone-operator --dependency-update --values image.tag="latest"
+helm install mo ./charts/matrixone-operator --dependency-update --set image.tag="latest"
 
 echo "> Ensure k8s cluster is ready"
 kubectl cluster-info
