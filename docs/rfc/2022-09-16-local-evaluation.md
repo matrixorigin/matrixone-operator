@@ -26,42 +26,38 @@ docker pull matrixorigin/matrixone-operator:playground
 Second, Start playground docker container
 
 ```shell
-docker run -d --name playground --privileged -it -v ~/.aws:/root/.aws  matrixorigin/matrixone-operator:playground
+docker run -d --name playground --privileged -it  -p 6001:6001 -p 6002:80 matrixorigin/matrixone-operator:playground
+```
+
+port 6001: mysql server
+port 6002: webui service
+
+Connect mysql server by mysql client
+
+```shell
+mysql -h 127.0.0.1 -P 6001 -udump -p111
+```
+
+See webui: `127.0.0.1:60021`
+
+
+### How to play operator and mo cluster
+
+```shell
 docker exec -it playground /bin/sh
 ```
 
-Then, Start a matrixone cluster 
+Then you can do some operation on container terminate
+
+You can see cluster status:
 
 ```shell
-modev start
+# show all pods status
+kubectl get po --all-namespaces
+
 ```
 
 Example of start function:
-
-```shell
-function start() {
-	kind create cluster
-	kubectl create ns matrixone
-	kubectl create ns matrixone-operator
-	helm install matrixone-operator matrixone-operator/matrixone-operator --version 0.1.0 -n matrixone-operator
-	kubectl apply -f https://raw.githubusercontent.com/wanglei4687/matrixone-operator/main/examples/mo-cluster.yaml -n matrixone
-	
-}
-```
-
-## Stop a matrixone cluster
-
-```shell
-modev stop
-```
-
-Example of stop function:
-
-```shell
-function stop() {
-	kind delete cluster
-}
-```
 
 ## Future
 
