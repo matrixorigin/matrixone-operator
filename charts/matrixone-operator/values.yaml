@@ -10,7 +10,7 @@ replicaCount: 1
 image:
   repository: matrixorigin/matrixone-operator
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: "sha-c1a16ce"
 
 imagePullSecrets: []
 nameOverride: ""
