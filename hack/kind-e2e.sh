@@ -48,8 +48,6 @@ hack::ensure_helm
 hack::ensure_kind
 
 CLUSTER=${CLUSTER:-mo}
-MO_IMAGE_REPO=${MO_IMAGE_REPO:-"matrixorigin/matrixone"}
-echo "> Run operator E2E with MO ${MO_IMAGE_REPO}:${MO_VERSION}"
 
 
 function e2e::kind-e2e() {
@@ -61,6 +59,7 @@ function e2e::kind-e2e() {
   echo "> Run e2e test"
   bash ./hack/e2e.sh
 }
+
 
 e2e::kind-e2e
 exec "$@"
