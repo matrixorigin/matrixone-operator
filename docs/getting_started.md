@@ -17,7 +17,7 @@ Verify the cluster meets the minimal version requirement:
 > kubectl version
 ```
 
-The server version should >= 1.16.
+The server version should >= 1.18.
 If you do not have existing k8s installed or your cluster does not meet the version requirement, you use `kind` to create a test one locally (follow the [offical installation guide](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) to install `kind` if you do not have kind CLI available):
 
 ```bash
@@ -119,7 +119,7 @@ You should see at least one ready `matrixone-operator` Pod.
     > kubectl -n mo get pod
     ```
    
-6. After there are enough CN pods running, you can access the cluster via the CN service:
+6. After there are CN pods running, you can access the cluster via the CN service:
 
     ```bash
     > nohup kubectl -n mo port-forward svc/mo-tp-cn 6001:6001 &
