@@ -19,7 +19,7 @@ runs:
         skipClusterCreation: true
         version: v0.15.0
 
-    - name: Run test
+    - name: Run kind test
       shell: bash
       run:  |
-        make e2e
+        make e2e-kind TAG=e2e-kind
