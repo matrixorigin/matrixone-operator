@@ -44,6 +44,7 @@ spec:
           metadata:
             type: object
           spec:
+            description: Spec is the desired state of LogSet
             properties:
               config:
                 description: Config is the raw config for pods
@@ -6796,6 +6797,8 @@ spec:
                   type: object
                 type: array
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package v1 contains API Schema definitions for the matrixone v1 API group
-//+kubebuilder:object:generate=true
-//+groupName=core.matrixorigin.io
+// Package v1alpha1 contains API Schema definitions of the matrixone v1alpha1 API group.
+// The MatrixOneCluster resource type helps you provision and manage MatrixOne clusters on Kubernetes.
+// Other resources types represent sub-resources managed by MatrixOneCluster but also allows separated usage for fine-grained control.
+// Refer to https://docs.matrixorigin.io/ for more information about MatrixOne database and matrixone-operator.
+// +kubebuilder:object:generate=true
+// +groupName=core.matrixorigin.io
 package v1alpha1
 
 import (

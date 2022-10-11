@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package v1alpha1
 
 import (
@@ -61,9 +62,11 @@ type DNSetDeps struct {
 type DNSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// Spec is the desired state of DNSet
+	Spec DNSetSpec `json:"spec"`
+	// Deps is the dependencies of DNSet
+	Deps DNSetDeps `json:"deps,omitempty"`
 
-	Spec   DNSetSpec   `json:"spec,omitempty"`
-	Deps   DNSetDeps   `json:"deps,omitempty"`
 	Status DNSetStatus `json:"status,omitempty"`
 }
 

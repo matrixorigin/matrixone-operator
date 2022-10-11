@@ -87,8 +87,11 @@ type CNSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CNSetSpec   `json:"spec,omitempty"`
-	Deps   CNSetDeps   `json:"deps,omitempty"`
+	// Spec is the desired state of CNSet
+	Spec CNSetSpec `json:"spec"`
+	// Deps is the dependencies of CNSet
+	Deps CNSetDeps `json:"deps,omitempty"`
+
 	Status CNSetStatus `json:"status,omitempty"`
 }
 

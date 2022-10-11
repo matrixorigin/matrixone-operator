@@ -58,9 +58,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: MatrixOneClusterSpec defines the desired state of MatrixOneCluster
-              Note that MatrixOneCluster does not support specify overlay for underlying
-              sets directly due to the size limitation of kubernetes apiserver
+            description: Spec is the desired state of MatrixOneCluster
             properties:
               ap:
                 description: AP is an optional CN pod set that accept MPP sub-plans
@@ -516,7 +514,7 @@ spec:
             - version
             type: object
           status:
-            description: MatrixOneClusterStatus defines the observed state of MatrixOneCluster
+            description: Status is the current state of MatrixOneCluster
             properties:
               ap:
                 description: AP is the AP set status
@@ -1070,6 +1068,8 @@ spec:
                     type: array
                 type: object
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
