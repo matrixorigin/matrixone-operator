@@ -86,7 +86,10 @@ type MatrixOneCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   MatrixOneClusterSpec   `json:"spec,omitempty"`
+	// Spec is the desired state of MatrixOneCluster
+	Spec MatrixOneClusterSpec `json:"spec"`
+
+	// Status is the current state of MatrixOneCluster
 	Status MatrixOneClusterStatus `json:"status,omitempty"`
 }
 

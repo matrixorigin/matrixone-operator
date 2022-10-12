@@ -43,6 +43,7 @@ spec:
           metadata:
             type: object
           spec:
+            description: Spec is the desired state of WebUI
             properties:
               config:
                 description: Config is the raw config for pods

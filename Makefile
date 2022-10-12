@@ -40,6 +40,10 @@ manifests:
 generate:
 	cd api && make generate
 
+.PHONY: docs
+docs:
+	cd api && make docs
+
 .PHONY: mockgen
 generate-mockgen: mockgen ## General gomock(https://github.com/golang/mock) files
 	$(MOCKGEN) -source=./runtime/pkg/reconciler/event.go -package fake > ./runtime/pkg/fake/event.go
@@ -53,7 +57,7 @@ helm-pkg: manifests generate helm-lint
 # Make sure the generated files are up to date before open PR
 reviewable: ci-reviewable go-lint check-license test
 
-ci-reviewable: generate manifests test
+ci-reviewable: generate manifests docs test
 	go mod tidy
 
 # Check whether the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action
