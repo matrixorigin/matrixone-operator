@@ -290,6 +290,48 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 	}
 }
 
+func TestMatrixOneClusterActor_Initialize(t *testing.T) {
+	s := newScheme()
+	tests := []struct {
+		name   string
+		mo     *v1alpha1.MatrixOneCluster
+		expect func(g *GomegaWithT, cli client.Client, mo *v1alpha1.MatrixOneCluster)
+	}{
+		{
+			name: "basic",
+			mo: &v1alpha1.MatrixOneCluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+			},
+			expect: func(g *GomegaWithT, cli client.Client, mo *v1alpha1.MatrixOneCluster) {
+				sec := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-credential",
+						Namespace: "test",
+					},
+				}
+				g.Expect(cli.Get(context.TODO(), client.ObjectKeyFromObject(sec), sec)).To(Succeed())
+				g.Expect(mo.Status.CredentialRef).NotTo(BeNil())
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			r := &MatrixOneClusterActor{}
+			cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(tt.mo).Build()
+			mockCtrl := gomock.NewController(t)
+			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
+			ctx := fake.NewContext(tt.mo, cli, eventEmitter)
+			err := r.Initialize(ctx)
+			g.Expect(err).To(Succeed())
+			tt.expect(g, cli, tt.mo)
+		})
+	}
+}
+
 func newScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
