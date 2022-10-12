@@ -80,7 +80,6 @@ func Test_syncPodSpec(t *testing.T) {
 						InitialConfig: v1alpha1.InitialConfig{
 							LogShards:        pointer.Int(1),
 							DNShards:         pointer.Int(1),
-							HAKeeperReplicas: pointer.Int(3),
 							LogShardReplicas: pointer.Int(3),
 						},
 					},

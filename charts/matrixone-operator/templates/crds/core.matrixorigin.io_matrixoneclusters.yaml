@@ -230,11 +230,6 @@ spec:
                           cannot be tuned after cluster creation currently. default
                           to 1
                         type: integer
-                      haKeeperReplicas:
-                        description: HAKeeperReplicas is the initial number of HAKeeper
-                          replicas, cannot be tuned after cluster creation currently.
-                          default to 3 if LogSet replicas >= 3, to 1 otherwise
-                        type: integer
                       logShardReplicas:
                         description: LogShardReplicas is the replica numbers of each
                           log shard, cannot be tuned after cluster creation currently.
@@ -683,6 +678,16 @@ spec:
                   - type
                   type: object
                 type: array
+              credentialRef:
+                description: CredentialRef is the initial credential of the mo database
+                  which can be used to connect to the database.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
               dn:
                 description: DN is the DN set status
                 properties:

@@ -36,7 +36,7 @@ import (
 const (
 	createClusterTimeout   = 5 * time.Minute
 	rollingUpdateTimeout   = 5 * time.Minute
-	teardownClusterTimeout = 5 * time.Minute
+	teardownClusterTimeout = 10 * time.Minute
 	pollInterval           = 15 * time.Second
 	portForwardTimeout     = 10 * time.Second
 	sqlTestTimeout         = 5 * time.Minute

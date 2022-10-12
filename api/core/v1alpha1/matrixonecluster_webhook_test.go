@@ -116,7 +116,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		By("reject invalid replicas")
 		invalidReplicas := tpl.DeepCopy()
 		invalidReplicas.Spec.LogService.Replicas = 2
-		invalidReplicas.Spec.LogService.InitialConfig.HAKeeperReplicas = pointer.Int(3)
+		invalidReplicas.Spec.LogService.InitialConfig.LogShardReplicas = pointer.Int(3)
 		Expect(k8sClient.Create(context.TODO(), emptySharedStorage)).ToNot(Succeed())
 	})
 
@@ -158,7 +158,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		By("defaults should be set on creation")
 		Expect(cluster.Spec.TP.ServiceType).ToNot(BeEmpty(), "CN serviceType should have default")
 		Expect(cluster.Spec.LogService.InitialConfig.LogShardReplicas).ToNot(BeNil(), "LogService initialConfig should have default")
-		Expect(*cluster.Spec.LogService.InitialConfig.HAKeeperReplicas).To(Equal(3), "default haKeeperReplicas should follow the replicas of logservice")
+		Expect(*cluster.Spec.LogService.InitialConfig.LogShardReplicas).To(Equal(3), "default logShardReplicas should follow the replicas of logservice")
 
 		By("accept valid update")
 		cluster.Spec.LogService.Replicas = 5
@@ -175,7 +175,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		Expect(k8sClient.Update(context.TODO(), invalidReplica)).ToNot(Succeed(), "logservice replicas cannot be lower than HAKeeperReplicas")
 
 		mutateInitialConfig := cluster.DeepCopy()
-		mutateInitialConfig.Spec.LogService.InitialConfig.HAKeeperReplicas = pointer.Int(*mutateInitialConfig.Spec.LogService.InitialConfig.HAKeeperReplicas - 1)
+		mutateInitialConfig.Spec.LogService.InitialConfig.LogShardReplicas = pointer.Int(*mutateInitialConfig.Spec.LogService.InitialConfig.LogShardReplicas - 1)
 		Expect(k8sClient.Update(context.TODO(), invalidReplica)).ToNot(Succeed(), "initialConfig should be immutable")
 	})
 })

@@ -408,11 +408,6 @@ func (in *InitialConfig) DeepCopyInto(out *InitialConfig) {
 		*out = new(int)
 		**out = **in
 	}
-	if in.HAKeeperReplicas != nil {
-		in, out := &in.HAKeeperReplicas, &out.HAKeeperReplicas
-		*out = new(int)
-		**out = **in
-	}
 	if in.LogShardReplicas != nil {
 		in, out := &in.LogShardReplicas, &out.LogShardReplicas
 		*out = new(int)
@@ -798,6 +793,11 @@ func (in *MatrixOneClusterSpec) DeepCopy() *MatrixOneClusterSpec {
 func (in *MatrixOneClusterStatus) DeepCopyInto(out *MatrixOneClusterStatus) {
 	*out = *in
 	in.ConditionalStatus.DeepCopyInto(&out.ConditionalStatus)
+	if in.CredentialRef != nil {
+		in, out := &in.CredentialRef, &out.CredentialRef
+		*out = new(corev1.LocalObjectReference)
+		**out = **in
+	}
 	if in.TP != nil {
 		in, out := &in.TP, &out.TP
 		*out = new(CNSetStatus)

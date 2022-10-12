@@ -78,7 +78,7 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 	}
 
 	// if the bootstrap decision has not yet been made,pick a bootstrap decision
-	n := *ctx.Obj.Spec.InitialConfig.HAKeeperReplicas
+	n := *ctx.Obj.Spec.InitialConfig.LogShardReplicas
 	// pick first N pods as initial HAKeeperReplicas
 	for i := 0; i < n; i++ {
 		rid := idRangeStart + i

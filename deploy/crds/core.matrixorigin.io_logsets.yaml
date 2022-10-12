@@ -60,11 +60,6 @@ spec:
                     description: DNShards is the initial number of DN shards, cannot
                       be tuned after cluster creation currently. default to 1
                     type: integer
-                  haKeeperReplicas:
-                    description: HAKeeperReplicas is the initial number of HAKeeper
-                      replicas, cannot be tuned after cluster creation currently.
-                      default to 3 if LogSet replicas >= 3, to 1 otherwise
-                    type: integer
                   logShardReplicas:
                     description: LogShardReplicas is the replica numbers of each log
                       shard, cannot be tuned after cluster creation currently. default
