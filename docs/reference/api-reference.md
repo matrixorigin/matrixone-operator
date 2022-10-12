@@ -181,7 +181,6 @@ _Appears in:_
 | --- | --- |
 | `logShards` _[int](#int)_ | LogShards is the initial number of log shards, cannot be tuned after cluster creation currently. default to 1 |
 | `dnShards` _[int](#int)_ | DNShards is the initial number of DN shards, cannot be tuned after cluster creation currently. default to 1 |
-| `haKeeperReplicas` _[int](#int)_ | HAKeeperReplicas is the initial number of HAKeeper replicas, cannot be tuned after cluster creation currently. default to 3 if LogSet replicas >= 3, to 1 otherwise |
 | `logShardReplicas` _[int](#int)_ | LogShardReplicas is the replica numbers of each log shard, cannot be tuned after cluster creation currently. default to 3 if LogSet replicas >= 3, to 1 otherwise |
 
 

@@ -74,6 +74,9 @@ const (
 	ActionRequiredLabelKey   = "matrixorigin.io/action-required"
 	ActionRequiredLabelValue = "True"
 
+	// LogSetOwnerKey is set to the orphaned LogSet Pod that is left by failover
+	LogSetOwnerKey = "matrixorigin.io/logset-owner"
+
 	AWSAccessKeyID     = "AWS_ACCESS_KEY_ID"
 	AWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
 )

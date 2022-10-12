@@ -6,13 +6,9 @@ OPNAMESPACE=${OPNAMESPACE:-"mo-system"}
 
 function e2e::check() {
   CMD=pgrep
-  PPROC=ginkgo
   crds=$(kubectl get crds --no-headers=true | awk '/matrixorigin/{print $1}')
   echo "> E2E check"
-  if [ -n "`$CMD $PPROC`" ]; then
-    echo "Already running e2e test, Wait for E2E Ready or Kill it"
-    exit 1
-  elif [[ $crds != "" ]]; then
+  if [[ $crds != "" ]]; then
     echo "Please delete old CRDS"
     exit 1
   else
@@ -65,8 +61,8 @@ function e2e::cleanup() {
 }
 
 function e2e::workflow() {
-  trap "e2e::cleanup" EXIT
   e2e::check
+  trap "e2e::cleanup" EXIT
   e2e::install
   e2e::run
 }

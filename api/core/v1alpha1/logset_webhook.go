@@ -50,13 +50,13 @@ func (r *LogSet) Default() {
 }
 
 func (r *LogSetBasic) Default() {
-	if r.InitialConfig.HAKeeperReplicas == nil {
-		if r.Replicas >= minHAReplicas {
-			r.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
-		} else {
-			r.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
-		}
-	}
+	//if r.InitialConfig.HAKeeperReplicas == nil {
+	//	if r.Replicas >= minHAReplicas {
+	//		r.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
+	//	} else {
+	//		r.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
+	//	}
+	//}
 	if r.InitialConfig.LogShardReplicas == nil {
 		if r.Replicas >= minHAReplicas {
 			r.InitialConfig.LogShardReplicas = pointer.Int(minHAReplicas)
@@ -138,11 +138,11 @@ func (r *LogSetBasic) validateInitialConfig() field.ErrorList {
 	var errs field.ErrorList
 	parent := field.NewPath("spec").Child("initialConfig")
 
-	if hrs := r.InitialConfig.HAKeeperReplicas; hrs == nil {
-		errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must be set"))
-	} else if *hrs > int(r.Replicas) {
-		errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must not larger then logservice replicas"))
-	}
+	//if hrs := r.InitialConfig.HAKeeperReplicas; hrs == nil {
+	//	errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must be set"))
+	//} else if *hrs > int(r.Replicas) {
+	//	errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must not larger then logservice replicas"))
+	//}
 
 	if lrs := r.InitialConfig.LogShardReplicas; lrs == nil {
 		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must be set"))

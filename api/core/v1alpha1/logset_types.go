@@ -75,7 +75,7 @@ type InitialConfig struct {
 	// cannot be tuned after cluster creation currently.
 	// default to 3 if LogSet replicas >= 3, to 1 otherwise
 	// +required
-	HAKeeperReplicas *int `json:"haKeeperReplicas,omitempty"`
+	// HAKeeperReplicas *int `json:"haKeeperReplicas,omitempty"`
 
 	// LogShardReplicas is the replica numbers of each log shard,
 	// cannot be tuned after cluster creation currently.
