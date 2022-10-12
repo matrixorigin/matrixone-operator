@@ -147,7 +147,7 @@ func (r *MatrixOneClusterActor) Initialize(ctx *recon.Context[*v1alpha1.MatrixOn
 	// 1. generate the secret
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
+			Namespace: ctx.Obj.Namespace,
 			Name:      credentialName(ctx.Obj),
 		},
 		StringData: map[string]string{
@@ -163,7 +163,6 @@ func (r *MatrixOneClusterActor) Initialize(ctx *recon.Context[*v1alpha1.MatrixOn
 	// TODO: initialize users that using the above secret after MO support ALTER USER
 
 	// 3. update the status
-	ctx.Obj.Status.SetCondition(readyCondition(ctx.Obj))
 	ctx.Obj.Status.CredentialRef = &corev1.LocalObjectReference{Name: sec.Name}
 	return ctx.UpdateStatus(ctx.Obj)
 }
