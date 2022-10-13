@@ -14,6 +14,7 @@
 package logset
 
 import (
+	"context"
 	"github.com/golang/mock/gomock"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -51,7 +52,6 @@ func TestLogSetActor_Observe(t *testing.T) {
 				InitialConfig: v1alpha1.InitialConfig{
 					LogShards:        pointer.Int(1),
 					DNShards:         pointer.Int(1),
-					HAKeeperReplicas: pointer.Int(1),
 					LogShardReplicas: pointer.Int(1),
 				},
 			},
@@ -225,28 +225,57 @@ func TestLogSetActor_Create(t *testing.T) {
 }
 
 func TestLogSetActor_Finalize(t *testing.T) {
+	s := newScheme()
 	type args struct {
 		ctx *recon.Context[*v1alpha1.LogSet]
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    bool
-		wantErr bool
+		name   string
+		logset *v1alpha1.LogSet
+		client client.Client
+		expect func(g *GomegaWithT, cli client.Client)
 	}{
-		// TODO: Add test cases.
+		{
+			name: "deleteOrpanedPod",
+			logset: &v1alpha1.LogSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+			},
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-0",
+							Namespace: "default",
+							Labels: map[string]string{
+								common.ActionRequiredLabelKey: common.ActionRequiredLabelValue,
+								common.LogSetOwnerKey:         "test",
+							},
+							Finalizers: []string{failoverDeletionFinalizer},
+						},
+					},
+				).Build(),
+			},
+			expect: func(g *GomegaWithT, cli client.Client) {
+				pods := &corev1.PodList{}
+				g.Expect(cli.List(context.TODO(), pods)).To(Succeed())
+				g.Expect(pods.Items).To(BeEmpty())
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 			r := &Actor{}
-			got, err := r.Finalize(tt.args.ctx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Finalize() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("Finalize() got = %v, want %v", got, tt.want)
-			}
+			mockCtrl := gomock.NewController(t)
+			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
+			ctx := fake.NewContext(tt.logset, tt.client, eventEmitter)
+			ok, err := r.Finalize(ctx)
+			g.Expect(ok).To(BeFalse())
+			g.Expect(err).To(Succeed())
+			tt.expect(g, tt.client)
 		})
 	}
 }

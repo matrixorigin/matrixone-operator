@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -51,7 +52,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		l := &v1alpha1.LogSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: env.Namespace,
-				Name:      "log",
+				Name:      "log-" + rand.String(6),
 			},
 			Spec: v1alpha1.LogSetSpec{
 				LogSetBasic: v1alpha1.LogSetBasic{
@@ -100,8 +101,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 		}
 		Expect(kubeCli.Update(ctx, l)).To(Succeed())
 		Eventually(func() error {
-			if err := kubeCli.Get(ctx, types.NamespacedName{Namespace: l.Namespace, Name: "log-log-3"}, &corev1.Pod{}); err != nil {
-				logger.Info("wait failover create new pod log-log-3")
+			if err := kubeCli.Get(ctx, types.NamespacedName{Namespace: l.Namespace, Name: fmt.Sprintf("%s-log-3", l.Name)}, &corev1.Pod{}); err != nil {
+				logger.Info("wait failover create new pod log-3")
 				return errWait
 			}
 			return nil
@@ -136,6 +137,23 @@ var _ = Describe("MatrixOneCluster test", func() {
 			if !apierrors.IsNotFound(err) {
 				logger.Errorw("unexpected error when get logset", "logset", l, "error", err)
 				return err
+			}
+			podList := &corev1.PodList{}
+			err = kubeCli.List(ctx, podList, client.InNamespace(l.Namespace))
+			if err != nil {
+				logger.Errorw("error list pods", "error", err)
+				return err
+			}
+			for _, pod := range podList.Items {
+				if 
+        
+        
+        
+        
+        .HasPrefix(pod.Name, l.Name) {
+					logger.Infow("Pod that belongs to the logset is not cleaned", "pod", pod.Name)
+					return errWait
+				}
 			}
 			return nil
 		}, teardownClusterTimeout, pollInterval).Should(Succeed())

@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  labels:
+    app: minio
+spec:
+  clusterIP: None
+  selector:
+    app: minio
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+spec:
+  selector:
+    matchLabels:
+      app: minio
+  serviceName: minio
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+      - name: minio
+        image: minio/minio:latest
+        args:
+        - server
+        - /storage
+        env:
+        - name: MINIO_ACCESS_KEY
+          value: "minio"
+        - name: MINIO_SECRET_KEY
+          value: "minio123"
+        ports:
+        - containerPort: 9000
+          hostPort: 9000
+        volumeMounts:
+        - name: storage
+          mountPath: "/storage"
+  volumeClaimTemplates:
+  - metadata:
+      name: storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+

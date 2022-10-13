@@ -68,6 +68,12 @@ type CNStore struct {
 
 type CNSetDeps struct {
 	LogSetRef `json:",inline"`
+	// The DNSet it depends on
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:validation:Type=object
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	DNSet *DNSet `json:"dnSet,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -81,8 +87,11 @@ type CNSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CNSetSpec   `json:"spec,omitempty"`
-	Deps   CNSetDeps   `json:"deps,omitempty"`
+	// Spec is the desired state of CNSet
+	Spec CNSetSpec `json:"spec"`
+	// Deps is the dependencies of CNSet
+	Deps CNSetDeps `json:"deps,omitempty"`
+
 	Status CNSetStatus `json:"status,omitempty"`
 }
 
@@ -100,6 +109,11 @@ func (s *CNSet) GetDependencies() []recon.Dependency {
 			ObjectRef: s.Deps.LogSet,
 			ReadyFunc: func(l *LogSet) bool {
 				return recon.IsReady(&l.Status)
+			},
+		}, &recon.ObjectDependency[*DNSet]{
+			ObjectRef: s.Deps.DNSet,
+			ReadyFunc: func(s *DNSet) bool {
+				return recon.IsReady(&s.Status)
 			},
 		})
 	}

@@ -206,6 +206,7 @@ func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
 		// mark the pod as need external action and cleanup all old labels
 		pod.Labels = map[string]string{
 			common.ActionRequiredLabelKey: common.ActionRequiredLabelValue,
+			common.LogSetOwnerKey:         ctx.Obj.Name,
 		}
 		return nil
 	})
@@ -256,6 +257,30 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
 		if exist {
 			return false, nil
 		}
+	}
+	// cleanup orphaned Pod that left by actions like failover
+	podList := &corev1.PodList{}
+	err := ctx.List(podList, client.InNamespace(ls.Namespace), client.MatchingLabels(map[string]string{
+		common.LogSetOwnerKey: ls.Name,
+	}))
+	if err != nil {
+		return false, err
+	}
+	if len(podList.Items) > 0 {
+		var errs error
+		for i := range podList.Items {
+			pod := &podList.Items[i]
+			updated := controllerutil.RemoveFinalizer(pod, failoverDeletionFinalizer)
+			if updated {
+				errs = multierr.Append(errs, ctx.Update(pod))
+			}
+			errs = multierr.Append(errs, ctx.Delete(pod))
+		}
+		if errs != nil {
+			return false, errs
+		}
+		// check whether pods are cleaned in next reconcile
+		return false, nil
 	}
 	return true, nil
 }

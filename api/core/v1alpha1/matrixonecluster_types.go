@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -56,6 +57,11 @@ type MatrixOneClusterSpec struct {
 // MatrixOneClusterStatus defines the observed state of MatrixOneCluster
 type MatrixOneClusterStatus struct {
 	ConditionalStatus `json:",inline"`
+
+	// CredentialRef is the initial credential of the mo database which can be
+	// used to connect to the database.
+	CredentialRef *corev1.LocalObjectReference `json:"credentialRef,omitempty"`
+
 	// TP is the TP set status
 	TP *CNSetStatus `json:"tp,omitempty"`
 	// AP is the AP set status
@@ -86,7 +92,10 @@ type MatrixOneCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   MatrixOneClusterSpec   `json:"spec,omitempty"`
+	// Spec is the desired state of MatrixOneCluster
+	Spec MatrixOneClusterSpec `json:"spec"`
+
+	// Status is the current state of MatrixOneCluster
 	Status MatrixOneClusterStatus `json:"status,omitempty"`
 }
 

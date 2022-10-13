@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package v1alpha1
 
 import (
@@ -74,7 +75,7 @@ type InitialConfig struct {
 	// cannot be tuned after cluster creation currently.
 	// default to 3 if LogSet replicas >= 3, to 1 otherwise
 	// +required
-	HAKeeperReplicas *int `json:"haKeeperReplicas,omitempty"`
+	// HAKeeperReplicas *int `json:"haKeeperReplicas,omitempty"`
 
 	// LogShardReplicas is the replica numbers of each log shard,
 	// cannot be tuned after cluster creation currently.
@@ -120,7 +121,9 @@ type LogSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   LogSetSpec   `json:"spec,omitempty"`
+	// Spec is the desired state of LogSet
+	Spec LogSetSpec `json:"spec"`
+
 	Status LogSetStatus `json:"status,omitempty"`
 }
 

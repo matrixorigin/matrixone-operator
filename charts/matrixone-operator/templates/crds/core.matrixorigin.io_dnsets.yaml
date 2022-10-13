@@ -36,6 +36,7 @@ spec:
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           deps:
+            description: Deps is the dependencies of DNSet
             properties:
               externalLogSet:
                 description: 'An external LogSet the CNSet should connected to, mutual
@@ -58,6 +59,7 @@ spec:
           metadata:
             type: object
           spec:
+            description: Spec is the desired state of DNSet
             properties:
               cacheVolume:
                 description: CacheVolume is the desired local cache volume for DNSet,
@@ -6734,6 +6736,8 @@ spec:
                   type: object
                 type: array
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

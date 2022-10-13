@@ -44,6 +44,7 @@ spec:
           metadata:
             type: object
           spec:
+            description: Spec is the desired state of LogSet
             properties:
               config:
                 description: Config is the raw config for pods
@@ -58,11 +59,6 @@ spec:
                   dnShards:
                     description: DNShards is the initial number of DN shards, cannot
                       be tuned after cluster creation currently. default to 1
-                    type: integer
-                  haKeeperReplicas:
-                    description: HAKeeperReplicas is the initial number of HAKeeper
-                      replicas, cannot be tuned after cluster creation currently.
-                      default to 3 if LogSet replicas >= 3, to 1 otherwise
                     type: integer
                   logShardReplicas:
                     description: LogShardReplicas is the replica numbers of each log
@@ -6796,6 +6792,8 @@ spec:
                   type: object
                 type: array
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
