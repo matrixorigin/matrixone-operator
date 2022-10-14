@@ -52,4 +52,33 @@ var _ = Describe("LogSet Webhook", func() {
 		}
 		Expect(k8sClient.Create(context.TODO(), v06)).To(Succeed())
 	})
+
+	It("should set defaults", func() {
+		tpl := &LogSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ls-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: LogSetSpec{
+				LogSetBasic: LogSetBasic{
+					PodSet: PodSet{
+						Replicas: 3,
+						MainContainer: MainContainer{
+							Image: "test",
+						},
+					},
+					Volume: Volume{
+						Size: resource.MustParse("10Gi"),
+					},
+					SharedStorage: SharedStorageProvider{
+						S3: &S3Provider{Path: "test/data"},
+					},
+				},
+			},
+		}
+		testDefaultPVCRetainPolicy := tpl.DeepCopy()
+		Expect(k8sClient.Create(context.TODO(), testDefaultPVCRetainPolicy)).To(Succeed())
+		Expect(testDefaultPVCRetainPolicy.Spec.PVCRetentionPolicy).NotTo(BeNil())
+		Expect(*testDefaultPVCRetainPolicy.Spec.PVCRetentionPolicy).To(Equal(PVCRetentionPolicyDelete))
+	})
 })

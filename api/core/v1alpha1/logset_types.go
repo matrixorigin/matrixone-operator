@@ -49,6 +49,15 @@ type LogSetBasic struct {
 	// StoreFailureTimeout is the timeout to fail-over the logset Pod after a failure of it is observed
 	// +optional
 	StoreFailureTimeout *metav1.Duration `json:"storeFailureTimeout,omitempty"`
+
+	// PVCRetentionPolicy defines the retention policy of orphaned PVCs due to cluster deletion, scale-in
+	// or failover. Available options:
+	// - Delete: delete orphaned PVCs
+	// - Retain: keep orphaned PVCs, if the corresponding Pod get created again (e.g. scale-in and scale-out, recreate the cluster),
+	// the Pod will reuse the retained PVC which contains previous data. Retained PVCs require manual cleanup if they are no longer needed.
+	// The default policy is Delete.
+	// +optional
+	PVCRetentionPolicy *PVCRetentionPolicy `json:"pvcRetentionPolicy,omitempty"`
 }
 
 func (l *LogSetBasic) GetStoreFailureTimeout() metav1.Duration {
@@ -56,6 +65,13 @@ func (l *LogSetBasic) GetStoreFailureTimeout() metav1.Duration {
 		return metav1.Duration{Duration: defaultStoreFailureTimeout}
 	}
 	return *l.StoreFailureTimeout
+}
+
+func (l *LogSetBasic) GetPVCRetentionPolicy() PVCRetentionPolicy {
+	if l.PVCRetentionPolicy == nil {
+		return PVCRetentionPolicyDelete
+	}
+	return *l.PVCRetentionPolicy
 }
 
 type InitialConfig struct {

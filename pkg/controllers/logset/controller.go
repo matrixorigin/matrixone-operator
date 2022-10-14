@@ -106,6 +106,7 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		return r.with(sts).Scale, nil
 	}
 	origin := sts.DeepCopy()
+	syncStatefulSetSpec(ls, sts)
 	if err := syncPods(ctx, sts); err != nil {
 		return nil, err
 	}
