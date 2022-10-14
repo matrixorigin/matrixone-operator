@@ -216,7 +216,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 				logger.Errorw("unexpected error when get mo cluster", "cluster", mo.Name, "error", err)
 				return err
 			}
-			var pvcList *corev1.PersistentVolumeClaimList
+			pvcList := &corev1.PersistentVolumeClaimList{}
 			err = kubeCli.List(ctx, pvcList, client.InNamespace(mo.Namespace))
 			if err != nil {
 				logger.Errorw("error list PVCs", "error", err)

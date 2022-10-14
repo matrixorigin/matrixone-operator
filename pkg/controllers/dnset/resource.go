@@ -89,9 +89,17 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		common.S3FileServiceConfig(ls),
 		common.ETLFileServiceConfig(ls),
 	})
-	conf.Set([]string{"dn", "Txn", "Storage"}, getTxnStorageConfig(dn))
+
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
-	conf.Set([]string{"cn", "Engine", "type"}, "memory")
+	engineKey := []string{"cn", "Engine", "type"}
+	if conf.Get(engineKey...) == nil {
+		// FIXME: make TAE as default
+		conf.Set(engineKey, "memory")
+	}
+	txnStorageKey := []string{"dn", "Txn", "Storage"}
+	if conf.Get(txnStorageKey...) == nil {
+		conf.Set(txnStorageKey, getTxnStorageConfig(dn))
+	}
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err

@@ -132,8 +132,11 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	})
 	cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
-	// FIXME: use TAE
-	cfg.Set([]string{"cn", "Engine", "type"}, "memory")
+	engineKey := []string{"cn", "Engine", "type"}
+	if cfg.Get(engineKey...) == nil {
+		// FIXME: make TAE as default
+		cfg.Set(engineKey, "memory")
+	}
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err
