@@ -20,6 +20,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type PVCRetentionPolicy string
+
+const (
+	PVCRetentionPolicyDelete PVCRetentionPolicy = "Delete"
+	PVCRetentionPolicyRetain PVCRetentionPolicy = "Retain"
+)
+
 const (
 	ContainerMain = "main"
 )

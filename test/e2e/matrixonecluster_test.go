@@ -14,6 +14,7 @@
 package e2e
 
 import (
+	"fmt"
 	"github.com/matrixorigin/matrixone-operator/test/e2e/sql"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	"strings"
@@ -214,6 +215,18 @@ var _ = Describe("MatrixOneCluster test", func() {
 			if !apierrors.IsNotFound(err) {
 				logger.Errorw("unexpected error when get mo cluster", "cluster", mo.Name, "error", err)
 				return err
+			}
+			var pvcList *corev1.PersistentVolumeClaimList
+			err = kubeCli.List(ctx, pvcList, client.InNamespace(mo.Namespace))
+			if err != nil {
+				logger.Errorw("error list PVCs", "error", err)
+				return errWait
+			}
+			for _, pvc := range pvcList.Items {
+				if strings.HasPrefix(pvc.Name, fmt.Sprintf("data-%s", mo.Name)) {
+					logger.Infow("pvc is not yet cleaned", "name", pvc.Name)
+					return errWait
+				}
 			}
 			return nil
 		}, teardownClusterTimeout, pollInterval).Should(Succeed(), "cluster should be teardown")
