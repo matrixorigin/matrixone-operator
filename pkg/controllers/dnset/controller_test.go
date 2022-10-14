@@ -15,6 +15,7 @@
 package dnset
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -48,7 +49,26 @@ func TestDNSetActor_Observe(t *testing.T) {
 					},
 					Replicas: 1,
 				},
+				CacheVolume: &v1alpha1.Volume{
+					Size: resource.MustParse("10Gi"),
+				},
 				// TODO: add configuration of dn
+			},
+		},
+	}
+	tplNoVolume := &v1alpha1.DNSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test",
+		},
+		Spec: v1alpha1.DNSetSpec{
+			DNSetBasic: v1alpha1.DNSetBasic{
+				PodSet: v1alpha1.PodSet{
+					MainContainer: v1alpha1.MainContainer{
+						Image: "test:latest",
+					},
+					Replicas: 3,
+				},
 			},
 		},
 	}
@@ -64,6 +84,17 @@ func TestDNSetActor_Observe(t *testing.T) {
 		{
 			name:  "create when resource not exist",
 			dnset: tpl,
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
+			},
+			expect: func(g *WithT, action recon.Action[*v1alpha1.DNSet], err error) {
+				g.Expect(err).To(BeNil())
+				g.Expect(action.String()).To(ContainSubstring("Create"))
+			},
+		},
+		{
+			name:  "create when resource not exist and no cache volume",
+			dnset: tplNoVolume,
 			client: &fake.Client{
 				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
 			},
@@ -95,7 +126,21 @@ func TestDNSetActor_Observe(t *testing.T) {
 											Image: "test:latest",
 										},
 									},
-									Volumes: []corev1.Volume{},
+								},
+							},
+							VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+								{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: labels,
+									},
+									Spec: corev1.PersistentVolumeClaimSpec{
+										AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+										Resources: corev1.ResourceRequirements{
+											Requests: map[corev1.ResourceName]resource.Quantity{
+												corev1.ResourceStorage: resource.MustParse("10Gi"),
+											},
+										},
+									},
 								},
 							},
 							ServiceName: "test-svc",

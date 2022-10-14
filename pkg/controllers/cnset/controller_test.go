@@ -15,6 +15,7 @@
 package cnset
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -48,7 +49,27 @@ func TestCNSetActor_Observe(t *testing.T) {
 					},
 					Replicas: 1,
 				},
+				CacheVolume: &v1alpha1.Volume{
+					Size: resource.MustParse("10Gi"),
+				},
 				// TODO: add configuration of cn
+
+			},
+		},
+	}
+	tplNoVolume := &v1alpha1.CNSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test",
+		},
+		Spec: v1alpha1.CNSetSpec{
+			CNSetBasic: v1alpha1.CNSetBasic{
+				PodSet: v1alpha1.PodSet{
+					MainContainer: v1alpha1.MainContainer{
+						Image: "test:latest",
+					},
+					Replicas: 3,
+				},
 			},
 		},
 	}
@@ -73,7 +94,18 @@ func TestCNSetActor_Observe(t *testing.T) {
 			},
 		},
 		{
-			name:  "update when resource not update to date",
+			name:  "create when resource not exist and no cache volume config",
+			cnset: tplNoVolume,
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
+			},
+			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], err error) {
+				g.Expect(err).To(BeNil())
+				g.Expect(action.String()).To(ContainSubstring("Create"))
+			},
+		},
+		{
+			name:  "update with volumeClaim",
 			cnset: tpl,
 			client: &fake.Client{
 				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
@@ -95,7 +127,21 @@ func TestCNSetActor_Observe(t *testing.T) {
 											Image: "test:latest",
 										},
 									},
-									Volumes: []corev1.Volume{},
+								},
+							},
+							VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+								{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: labels,
+									},
+									Spec: corev1.PersistentVolumeClaimSpec{
+										AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+										Resources: corev1.ResourceRequirements{
+											Requests: map[corev1.ResourceName]resource.Quantity{
+												corev1.ResourceStorage: resource.MustParse("10Gi"),
+											},
+										},
+									},
 								},
 							},
 							ServiceName: "test-svc",
