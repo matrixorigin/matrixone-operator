@@ -42,21 +42,6 @@ func syncPodMeta(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 }
 
 func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
-	specRef := &sts.Spec.Template.Spec
-	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
-		return c.Name == v1alpha1.ContainerMain
-	})
-	if mainRef == nil {
-		mainRef = &corev1.Container{Name: v1alpha1.ContainerMain}
-	}
-	mainRef.Image = dn.Spec.Image
-	mainRef.Resources = dn.Spec.Resources
-
-	mainRef.Command = []string{
-		"/bin/sh",
-		fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint),
-	}
-
 	volumeMountsList := []corev1.VolumeMount{
 		{
 			Name:      common.ConfigVolume,
@@ -74,19 +59,34 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 		volumeMountsList = append(volumeMountsList, dataVolume)
 	}
 
-	mainRef.VolumeMounts = volumeMountsList
+	main := corev1.Container{
+		Name:      v1alpha1.ContainerMain,
+		Image:     dn.Spec.Image,
+		Resources: dn.Spec.Resources,
+		Command: []string{
+			"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint),
+		},
+		VolumeMounts: volumeMountsList,
+		Env: []corev1.EnvVar{
+			util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
+			util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
+			{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
+		},
+	}
+	dn.Spec.Overlay.OverlayMainContainer(&main)
+	podSpec := corev1.PodSpec{
+		Containers: []corev1.Container{main},
+		ReadinessGates: []corev1.PodReadinessGate{{
+			ConditionType: pub.InPlaceUpdateReady,
+		}},
+		NodeSelector: dn.Spec.NodeSelector,
+	}
 
-	dn.Spec.Overlay.OverlayMainContainer(mainRef)
+	common.SetStorageProviderConfig(sp, &podSpec)
+	common.SyncTopology(dn.Spec.TopologyEvenSpread, &podSpec)
 
-	specRef.Containers = []corev1.Container{*mainRef}
-	specRef.ReadinessGates = []corev1.PodReadinessGate{{
-		ConditionType: pub.InPlaceUpdateReady,
-	}}
-
-	specRef.NodeSelector = dn.Spec.NodeSelector
-	common.SetStorageProviderConfig(sp, specRef)
-	common.SyncTopology(dn.Spec.TopologyEvenSpread, specRef)
-	dn.Spec.Overlay.OverlayPodSpec(specRef)
+	dn.Spec.Overlay.OverlayPodSpec(&podSpec)
+	sts.Spec.Template.Spec = podSpec
 }
 
 // buildDNSetConfigMap return dn set configmap
@@ -103,9 +103,17 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		common.S3FileServiceConfig(ls),
 		common.ETLFileServiceConfig(ls),
 	})
-	conf.Set([]string{"dn", "Txn", "Storage"}, getTxnStorageConfig(dn))
+
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
-	conf.Set([]string{"cn", "Engine", "type"}, "memory")
+	engineKey := []string{"cn", "Engine", "type"}
+	if conf.Get(engineKey...) == nil {
+		// FIXME: make TAE as default
+		conf.Set(engineKey, "memory")
+	}
+	txnStorageKey := []string{"dn", "Txn", "Storage"}
+	if conf.Get(txnStorageKey...) == nil {
+		conf.Set(txnStorageKey, getTxnStorageConfig(dn))
+	}
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err

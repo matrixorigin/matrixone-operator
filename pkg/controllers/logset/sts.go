@@ -124,6 +124,22 @@ func syncPersistentVolumeClaim(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 	sts.Spec.VolumeClaimTemplates = tpls
 }
 
+// syncStatefulSetSpec syncs the statefulset to the current desired state
+func syncStatefulSetSpec(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
+	switch ls.Spec.GetPVCRetentionPolicy() {
+	case v1alpha1.PVCRetentionPolicyDelete:
+		sts.Spec.PersistentVolumeClaimRetentionPolicy = &kruisev1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+			WhenDeleted: kruisev1.DeletePersistentVolumeClaimRetentionPolicyType,
+			WhenScaled:  kruisev1.DeletePersistentVolumeClaimRetentionPolicyType,
+		}
+	case v1alpha1.PVCRetentionPolicyRetain:
+		sts.Spec.PersistentVolumeClaimRetentionPolicy = &kruisev1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+			WhenDeleted: kruisev1.RetainPersistentVolumeClaimRetentionPolicyType,
+			WhenScaled:  kruisev1.RetainPersistentVolumeClaimRetentionPolicyType,
+		}
+	}
+}
+
 // buildStatefulSet build the initial StatefulSet object for the given logset
 func buildStatefulSet(ls *v1alpha1.LogSet, headlessSvc *corev1.Service) *kruisev1.StatefulSet {
 	sts := &kruisev1.StatefulSet{
@@ -144,10 +160,6 @@ func buildStatefulSet(ls *v1alpha1.LogSet, headlessSvc *corev1.Service) *kruisev
 			Selector: &metav1.LabelSelector{
 				MatchLabels: common.SubResourceLabels(ls),
 			},
-			PersistentVolumeClaimRetentionPolicy: &kruisev1.StatefulSetPersistentVolumeClaimRetentionPolicy{
-				WhenDeleted: kruisev1.DeletePersistentVolumeClaimRetentionPolicyType,
-				WhenScaled:  kruisev1.DeletePersistentVolumeClaimRetentionPolicyType,
-			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      common.SubResourceLabels(ls),
@@ -156,6 +168,7 @@ func buildStatefulSet(ls *v1alpha1.LogSet, headlessSvc *corev1.Service) *kruisev
 			},
 		},
 	}
+	syncStatefulSetSpec(ls, sts)
 	return sts
 }
 

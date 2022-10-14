@@ -99,10 +99,24 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	mainRef.Resources = cn.Spec.Resources
 
 	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint)}
-	mainRef.VolumeMounts = []corev1.VolumeMount{
-		{Name: common.DataVolume, MountPath: common.DataPath},
-		{Name: common.ConfigVolume, ReadOnly: true, MountPath: common.ConfigPath},
+	volumeMountsList := []corev1.VolumeMount{
+		{
+			Name:      common.ConfigVolume,
+			ReadOnly:  true,
+			MountPath: common.ConfigPath,
+		},
 	}
+
+	dataVolume := corev1.VolumeMount{
+		Name:      common.DataVolume,
+		MountPath: common.DataPath,
+	}
+
+	if cn.Spec.CacheVolume != nil {
+		volumeMountsList = append(volumeMountsList, dataVolume)
+	}
+	mainRef.VolumeMounts = volumeMountsList
+
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
@@ -133,8 +147,11 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	})
 	cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
-	// FIXME: use TAE
-	cfg.Set([]string{"cn", "Engine", "type"}, "memory")
+	engineKey := []string{"cn", "Engine", "type"}
+	if cfg.Get(engineKey...) == nil {
+		// FIXME: make TAE as default
+		cfg.Set(engineKey, "memory")
+	}
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err
