@@ -4,22 +4,25 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"time"
 )
 
 const (
@@ -27,6 +30,8 @@ const (
 
 	minHAReplicas = 3
 	singleReplica = 1
+
+	defaultStoreFailureTimeout = 5 * time.Minute
 )
 
 func (r *LogSet) setupWebhookWithManager(mgr ctrl.Manager) error {
@@ -45,13 +50,13 @@ func (r *LogSet) Default() {
 }
 
 func (r *LogSetBasic) Default() {
-	if r.InitialConfig.HAKeeperReplicas == nil {
-		if r.Replicas >= minHAReplicas {
-			r.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
-		} else {
-			r.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
-		}
-	}
+	//if r.InitialConfig.HAKeeperReplicas == nil {
+	//	if r.Replicas >= minHAReplicas {
+	//		r.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
+	//	} else {
+	//		r.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
+	//	}
+	//}
 	if r.InitialConfig.LogShardReplicas == nil {
 		if r.Replicas >= minHAReplicas {
 			r.InitialConfig.LogShardReplicas = pointer.Int(minHAReplicas)
@@ -64,6 +69,9 @@ func (r *LogSetBasic) Default() {
 	}
 	if r.InitialConfig.DNShards == nil {
 		r.InitialConfig.DNShards = pointer.Int(defaultShardNum)
+	}
+	if r.StoreFailureTimeout == nil {
+		r.StoreFailureTimeout = &metav1.Duration{Duration: defaultStoreFailureTimeout}
 	}
 }
 
@@ -130,11 +138,11 @@ func (r *LogSetBasic) validateInitialConfig() field.ErrorList {
 	var errs field.ErrorList
 	parent := field.NewPath("spec").Child("initialConfig")
 
-	if hrs := r.InitialConfig.HAKeeperReplicas; hrs == nil {
-		errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must be set"))
-	} else if *hrs > int(r.Replicas) {
-		errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must not larger then logservice replicas"))
-	}
+	//if hrs := r.InitialConfig.HAKeeperReplicas; hrs == nil {
+	//	errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must be set"))
+	//} else if *hrs > int(r.Replicas) {
+	//	errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must not larger then logservice replicas"))
+	//}
 
 	if lrs := r.InitialConfig.LogShardReplicas; lrs == nil {
 		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must be set"))

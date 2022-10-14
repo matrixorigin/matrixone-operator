@@ -58,9 +58,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: MatrixOneClusterSpec defines the desired state of MatrixOneCluster
-              Note that MatrixOneCluster does not support specify overlay for underlying
-              sets directly due to the size limitation of kubernetes apiserver
+            description: Spec is the desired state of MatrixOneCluster
             properties:
               ap:
                 description: AP is an optional CN pod set that accept MPP sub-plans
@@ -232,11 +230,6 @@ spec:
                           cannot be tuned after cluster creation currently. default
                           to 1
                         type: integer
-                      haKeeperReplicas:
-                        description: HAKeeperReplicas is the initial number of HAKeeper
-                          replicas, cannot be tuned after cluster creation currently.
-                          default to 3 if LogSet replicas >= 3, to 1 otherwise
-                        type: integer
                       logShardReplicas:
                         description: LogShardReplicas is the replica numbers of each
                           log shard, cannot be tuned after cluster creation currently.
@@ -319,6 +312,10 @@ spec:
                         - path
                         type: object
                     type: object
+                  storeFailureTimeout:
+                    description: StoreFailureTimeout is the timeout to fail-over the
+                      logset Pod after a failure of it is observed
+                    type: string
                   topologySpread:
                     description: This will be overridden by .overlay.TopologySpreadConstraints
                     items:
@@ -512,11 +509,23 @@ spec:
             - version
             type: object
           status:
-            description: MatrixOneClusterStatus defines the observed state of MatrixOneCluster
+            description: Status is the current state of MatrixOneCluster
             properties:
               ap:
                 description: AP is the AP set status
                 properties:
+                  availableStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
+                      type: object
+                    type: array
                   conditions:
                     items:
                       description: "Condition contains details for one aspect of the
@@ -588,6 +597,18 @@ spec:
                       - type
                       type: object
                     type: array
+                  failedStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
+                      type: object
+                    type: array
                 type: object
               conditions:
                 items:
@@ -657,6 +678,16 @@ spec:
                   - type
                   type: object
                 type: array
+              credentialRef:
+                description: CredentialRef is the initial credential of the mo database
+                  which can be used to connect to the database.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
               dn:
                 description: DN is the DN set status
                 properties:
@@ -870,6 +901,18 @@ spec:
               tp:
                 description: TP is the TP set status
                 properties:
+                  availableStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
+                      type: object
+                    type: array
                   conditions:
                     items:
                       description: "Condition contains details for one aspect of the
@@ -939,6 +982,18 @@ spec:
                       - reason
                       - status
                       - type
+                      type: object
+                    type: array
+                  failedStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
                       type: object
                     type: array
                 type: object
@@ -1018,6 +1073,8 @@ spec:
                     type: array
                 type: object
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

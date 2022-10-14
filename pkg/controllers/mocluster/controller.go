@@ -14,15 +14,25 @@
 package mocluster
 
 import (
+	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"go.uber.org/multierr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"time"
+)
+
+const (
+	resyncAfter = 15 * time.Second
+
+	usernameKey = "username"
+	passwordKey = "password"
 )
 
 var _ recon.Actor[*v1alpha1.MatrixOneCluster] = &MatrixOneClusterActor{}
@@ -68,6 +78,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			tp.Spec.CNSetBasic = mo.Spec.TP
 			tp.Spec.Image = mo.TpSetImage()
 			tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
+			tp.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
 			return nil
 		}),
 	)
@@ -79,6 +90,8 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		errs = multierr.Append(errs, recon.CreateOwnedOrUpdate(ctx, ap, func() error {
 			ap.Spec.CNSetBasic = *mo.Spec.AP
 			ap.Spec.Image = mo.ApSetImage()
+			ap.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
+			ap.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
 			return nil
 		}))
 		mo.Status.AP = &ap.Status
@@ -102,14 +115,94 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	mo.Status.LogService = &ls.Status
 	mo.Status.DN = &dn.Status
 	mo.Status.TP = &tp.Status
-	if recon.IsReady(mo.Status.TP) {
+	mo.Status.ConditionalStatus.SetCondition(syncedCondition(mo))
+
+	subResourcesReady := readyCondition(mo)
+
+	if mo.Status.CredentialRef == nil {
+		// cluster not initialized
+		if subResourcesReady.Status == metav1.ConditionFalse {
+			// the underlying sets are not ready, wait
+			mo.Status.ConditionalStatus.SetCondition(subResourcesReady)
+			return nil, recon.ErrReSync("wait cluster ready to complete initialization", resyncAfter)
+		}
+		// checkpoint the status before the initialize action
 		mo.Status.ConditionalStatus.SetCondition(metav1.Condition{
 			Type:   recon.ConditionTypeReady,
-			Status: metav1.ConditionTrue,
+			Status: metav1.ConditionFalse,
+			Reason: "ClusterNotInitialized",
 		})
+		return r.Initialize, nil
 	}
+	mo.Status.ConditionalStatus.SetCondition(subResourcesReady)
 
-	return nil, nil
+	if recon.IsReady(&mo.Status) {
+		return nil, nil
+	}
+	return nil, recon.ErrReSync("matrixone cluster is not ready", resyncAfter)
+}
+
+// Initialize the MO cluster
+func (r *MatrixOneClusterActor) Initialize(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) error {
+	// 1. generate the secret
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ctx.Obj.Namespace,
+			Name:      credentialName(ctx.Obj),
+		},
+		StringData: map[string]string{
+			// TODO: avoid using hardcoded username password
+			usernameKey: "dump",
+			passwordKey: "111",
+		},
+	}
+	if err := ctx.CreateOwned(sec); err != nil {
+		return err
+	}
+	// 2. initialize the cluster
+	// TODO: initialize users that using the above secret after MO support ALTER USER
+
+	// 3. update the status
+	ctx.Obj.Status.CredentialRef = &corev1.LocalObjectReference{Name: sec.Name}
+	return ctx.UpdateStatus(ctx.Obj)
+}
+
+func readyCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
+	c := metav1.Condition{Type: recon.ConditionTypeReady}
+	switch {
+	case !recon.IsReady(mo.Status.LogService):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "LogServiceNotReady"
+	case !recon.IsReady(mo.Status.DN):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "DNSetNotReady"
+	case !recon.IsReady(mo.Status.TP):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "TPSetNotReady"
+	default:
+		c.Status = metav1.ConditionTrue
+		c.Reason = "AllSetsReady"
+	}
+	return c
+}
+
+func syncedCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
+	c := metav1.Condition{Type: recon.ConditionTypeSynced}
+	switch {
+	case !recon.IsSynced(mo.Status.LogService):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "LogServiceNotSynced"
+	case !recon.IsSynced(mo.Status.DN):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "DNSetNotSynced"
+	case !recon.IsSynced(mo.Status.TP):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "TPSetNotSynced"
+	default:
+		c.Status = metav1.ConditionTrue
+		c.Reason = "AllSetsSynced"
+	}
+	return c
 }
 
 func (r *MatrixOneClusterActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (bool, error) {
@@ -180,4 +273,8 @@ func (r *MatrixOneClusterActor) Reconcile(mgr manager.Manager) error {
 				Owns(&v1alpha1.CNSet{}).
 				Owns(&v1alpha1.WebUI{})
 		}))
+}
+
+func credentialName(mo *v1alpha1.MatrixOneCluster) string {
+	return fmt.Sprintf("%s-credential", mo.Name)
 }

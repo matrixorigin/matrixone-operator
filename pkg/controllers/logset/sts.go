@@ -31,6 +31,8 @@ const (
 	dataPath     = "/var/lib/logservice"
 	configVolume = "config"
 	configPath   = "/etc/logservice"
+	gossipVolume = "gossip"
+	gossipPath   = "/etc/gossip"
 
 	bootstrapVolume = "bootstrap"
 	bootstrapPath   = "/etc/bootstrap"
@@ -70,6 +72,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 		{Name: dataVolume, MountPath: dataPath},
 		{Name: bootstrapVolume, ReadOnly: true, MountPath: bootstrapPath},
 		{Name: configVolume, ReadOnly: true, MountPath: configPath},
+		{Name: gossipVolume, ReadOnly: true, MountPath: gossipPath},
 	}
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(PodNameEnvKey, "metadata.name"),
@@ -77,11 +80,6 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 		util.FieldRefEnv(PodIPEnvKey, "status.podIP"),
 		{Name: HeadlessSvcEnvKey, Value: headlessSvcName(ls)},
 	}
-	// logset does not use s3 yet
-	//if s3config := ls.Spec.SharedStorage.S3; s3config != nil {
-	//	if s3config.SecretRef != nil {
-	//	}
-	//}
 	ls.Spec.Overlay.OverlayMainContainer(mainRef)
 
 	specRef.Containers = []corev1.Container{*mainRef}
@@ -90,11 +88,17 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 		// is required when we clean its content after bootstrap completes
 		Name:         bootstrapVolume,
 		VolumeSource: util.ConfigMapVolume(bootstrapConfigMapName(ls)),
+	}, {
+		// gossip configmap will be changed when cluster is scaled, we don't want to rolling-update
+		// the cluster when such change happens
+		Name:         gossipVolume,
+		VolumeSource: util.ConfigMapVolume(gossipConfigMapName(ls)),
 	}}
 	specRef.ReadinessGates = []corev1.PodReadinessGate{{
 		ConditionType: pub.InPlaceUpdateReady,
 	}}
 	specRef.NodeSelector = ls.Spec.NodeSelector
+	common.SetStorageProviderConfig(ls.Spec.SharedStorage, specRef)
 	common.SyncTopology(ls.Spec.TopologyEvenSpread, specRef)
 	ls.Spec.Overlay.OverlayPodSpec(specRef)
 }

@@ -1,0 +1,13 @@
+processor:
+  ignoreTypes:
+  - "(MatrixOneCluster|LogSet|CNSet|DNSet|WebUI)List$"
+  - "(MatrixOneCluster|LogSet|CNSet|DNSet|WebUI)Status$"
+  - "Value$"
+  # RE2 regular expressions describing type fields that should be excluded from the generated documentation.
+  ignoreFields:
+  - "status$"
+  - "TypeMeta$"
+
+render:
+  # Version of Kubernetes to use when generating links to Kubernetes API documentation.
+  kubernetesVersion: 1.22

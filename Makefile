@@ -1,8 +1,11 @@
 SHELL=/usr/bin/env bash -o pipefail
 
 # Image URL to use all building/pushing image targets
-IMG ?= "matrixorigin/matrixone-operator:latest"
-PROXY ?= https://goproxy.cn,direct
+REPO ?= "matrixorigin/matrixone-operator"
+TAG ?= "latest"
+GOPROXY ?= "https://proxy.golang.org,direct"
+MO_VERSION ?= "nightly-c371317c"
+MO_IMAGE_REPO ?= "matrixorigin/matrixone"
 BRANCH ?= main
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -17,7 +20,7 @@ all: manager
 .PHONY: build
 # Build operator image
 build: generate manifests pkg
-	docker build -f Dockerfile . -t ${IMG} --build-arg PROXY=$(PROXY)
+	docker build -f Dockerfile . -t ${REPO}:${TAG} --build-arg PROXY=$(PROXY)
 
 # Push operator image
 push:
@@ -37,6 +40,10 @@ manifests:
 generate:
 	cd api && make generate
 
+.PHONY: docs
+docs:
+	cd api && make docs
+
 .PHONY: mockgen
 generate-mockgen: mockgen ## General gomock(https://github.com/golang/mock) files
 	$(MOCKGEN) -source=./runtime/pkg/reconciler/event.go -package fake > ./runtime/pkg/fake/event.go
@@ -50,7 +57,7 @@ helm-pkg: manifests generate helm-lint
 # Make sure the generated files are up to date before open PR
 reviewable: ci-reviewable go-lint check-license test
 
-ci-reviewable: generate manifests test
+ci-reviewable: generate manifests docs test
 	go mod tidy
 
 # Check whether the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action
@@ -89,9 +96,16 @@ unit: generate fmt vet manifests
 api-test:
 	cd api && make test
 
+# Run kind e2e tests
+e2e-kind: ginkgo
+	REPO=${REPO} TAG=${TAG}	MO_IMAGE_REPO=$(MO_IMAGE_REPO) MO_VERSION=$(MO_VERSION) GINKGO=$(GINKGO) ./hack/kind-e2e.sh
+
+
 # Run e2e tests
+# KUBECONFIG is your kubernetes config path, OP_IMAGE_TAG is operator image tag
+# export KUBECONFIG=<KUBECONFIG PATH> OP_IMAGE_TAG="sha-c1a16ce"
 e2e: ginkgo
-	GINKGO=$(GINKGO) ./hack/kind-e2e.sh
+	REPO=${REPO} TAG=${TAG} MO_IMAGE_REPO=$(MO_IMAGE_REPO) MO_VERSION=$(MO_VERSION) GINKGO=$(GINKGO)  ./hack/e2e.sh
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests install

@@ -20,11 +20,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type CNRole string
+
+const (
+	CNRoleTP CNRole = "TP"
+	CNRoleAP CNRole = "AP"
+)
+
 type CNSetSpec struct {
 	CNSetBasic `json:",inline"`
 
 	// +optional
 	Overlay *Overlay `json:"overlay,omitempty"`
+
+	// [TP, AP], default to TP
+	// +optional
+	Role CNRole `json:"role,omitempty"`
 }
 
 type CNSetBasic struct {
@@ -42,13 +53,27 @@ type CNSetBasic struct {
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 }
 
-// TODO: figure out what status should be exposed
+// Figure out what status should be exposed
 type CNSetStatus struct {
+	AvailableStores   []CNStore `json:"availableStores,omitempty"`
+	FailedStores      []CNStore `json:"failedStores,omitempty"`
 	ConditionalStatus `json:",inline"`
+}
+
+type CNStore struct {
+	PodName            string      `json:"podName,omitempty"`
+	Phase              string      `json:"phase,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransition,omitempty"`
 }
 
 type CNSetDeps struct {
 	LogSetRef `json:",inline"`
+	// The DNSet it depends on
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:validation:Type=object
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	DNSet *DNSet `json:"dnSet,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -62,8 +87,11 @@ type CNSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CNSetSpec   `json:"spec,omitempty"`
-	Deps   CNSetDeps   `json:"deps,omitempty"`
+	// Spec is the desired state of CNSet
+	Spec CNSetSpec `json:"spec"`
+	// Deps is the dependencies of CNSet
+	Deps CNSetDeps `json:"deps,omitempty"`
+
 	Status CNSetStatus `json:"status,omitempty"`
 }
 
@@ -81,6 +109,11 @@ func (s *CNSet) GetDependencies() []recon.Dependency {
 			ObjectRef: s.Deps.LogSet,
 			ReadyFunc: func(l *LogSet) bool {
 				return recon.IsReady(&l.Status)
+			},
+		}, &recon.ObjectDependency[*DNSet]{
+			ObjectRef: s.Deps.DNSet,
+			ReadyFunc: func(s *DNSet) bool {
+				return recon.IsReady(&s.Status)
 			},
 		})
 	}

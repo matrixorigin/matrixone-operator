@@ -36,6 +36,7 @@ spec:
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           deps:
+            description: Deps is the dependencies of DNSet
             properties:
               externalLogSet:
                 description: 'An external LogSet the CNSet should connected to, mutual
@@ -58,6 +59,7 @@ spec:
           metadata:
             type: object
           spec:
+            description: Spec is the desired state of DNSet
             properties:
               cacheVolume:
                 description: CacheVolume is the desired local cache volume for DNSet,
@@ -90,15 +92,6 @@ spec:
                 description: Overlay allows advanced customization of the pod spec
                   in the set
                 properties:
-                  ImagePullPolicy:
-                    default: IfNotPresent
-                    description: ImagePullPolicy is the pull policy of MatrixOne image.
-                      The default value is the same as the default of Kubernetes.
-                    enum:
-                    - Always
-                    - Never
-                    - IfNotPresent
-                    type: string
                   affinity:
                     description: Affinity is a group of affinity scheduling rules.
                     properties:
@@ -1173,6 +1166,15 @@ spec:
                           type: string
                       type: object
                     type: array
+                  imagePullPolicy:
+                    default: IfNotPresent
+                    description: ImagePullPolicy is the pull policy of MatrixOne image.
+                      The default value is the same as the default of Kubernetes.
+                    enum:
+                    - Always
+                    - Never
+                    - IfNotPresent
+                    type: string
                   imagePullSecrets:
                     items:
                       description: LocalObjectReference contains enough information
@@ -6734,6 +6736,8 @@ spec:
                   type: object
                 type: array
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

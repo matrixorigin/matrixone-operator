@@ -36,7 +36,12 @@ spec:
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           deps:
+            description: Deps is the dependencies of CNSet
             properties:
+              dnSet:
+                description: The DNSet it depends on
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               externalLogSet:
                 description: 'An external LogSet the CNSet should connected to, mutual
                   exclusive with LogSet TODO: rethink the schema of ExternalLogSet'
@@ -58,6 +63,7 @@ spec:
           metadata:
             type: object
           spec:
+            description: Spec is the desired state of CNSet
             properties:
               cacheVolume:
                 description: CacheVolume is the desired local cache volume for CNSet,
@@ -90,15 +96,6 @@ spec:
                 description: Overlay allows advanced customization of the pod spec
                   in the set
                 properties:
-                  ImagePullPolicy:
-                    default: IfNotPresent
-                    description: ImagePullPolicy is the pull policy of MatrixOne image.
-                      The default value is the same as the default of Kubernetes.
-                    enum:
-                    - Always
-                    - Never
-                    - IfNotPresent
-                    type: string
                   affinity:
                     description: Affinity is a group of affinity scheduling rules.
                     properties:
@@ -1173,6 +1170,15 @@ spec:
                           type: string
                       type: object
                     type: array
+                  imagePullPolicy:
+                    default: IfNotPresent
+                    description: ImagePullPolicy is the pull policy of MatrixOne image.
+                      The default value is the same as the default of Kubernetes.
+                    enum:
+                    - Always
+                    - Never
+                    - IfNotPresent
+                    type: string
                   imagePullSecrets:
                     items:
                       description: LocalObjectReference contains enough information
@@ -6630,6 +6636,9 @@ spec:
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
+              role:
+                description: '[TP, AP], default to TP'
+                type: string
               serviceType:
                 default: ClusterIP
                 description: ServiceType is the service type of cn service
@@ -6647,8 +6656,20 @@ spec:
             - replicas
             type: object
           status:
-            description: 'TODO: figure out what status should be exposed'
+            description: Figure out what status should be exposed
             properties:
+              availableStores:
+                items:
+                  properties:
+                    lastTransition:
+                      format: date-time
+                      type: string
+                    phase:
+                      type: string
+                    podName:
+                      type: string
+                  type: object
+                type: array
               conditions:
                 items:
                   description: "Condition contains details for one aspect of the current
@@ -6717,7 +6738,21 @@ spec:
                   - type
                   type: object
                 type: array
+              failedStores:
+                items:
+                  properties:
+                    lastTransition:
+                      format: date-time
+                      type: string
+                    phase:
+                      type: string
+                    podName:
+                      type: string
+                  type: object
+                type: array
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

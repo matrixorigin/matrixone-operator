@@ -18,21 +18,24 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
-	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	"k8s.io/client-go/rest"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
+	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
@@ -46,6 +49,7 @@ var errWait = fmt.Errorf("wait for condition met")
 var namespacePrefix string
 
 // all nodes
+var restConfig *rest.Config
 var kubeconfig string
 var moVersion string
 var moImageRepo string
@@ -118,7 +122,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	}(baseLog)
 	logger = baseLog.Sugar()
 
-	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	restConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 	Expect(err).To(Succeed())
 	Expect(v1alpha1.AddToScheme(scheme.Scheme)).To(Succeed())
 	Expect(kruisev1.AddToScheme(scheme.Scheme)).To(Succeed())

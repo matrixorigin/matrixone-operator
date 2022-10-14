@@ -1,144 +1,150 @@
-# Get Started with Matrixone Operator in Kubernetes
+# Get Started with matrixone-operator
 
-Prerequisites
+`matrixone-operator` helps you manage MatrixOne(MO) clusters in Kubernetes(k8s). This document will guide you install `matirxone-operator` on your k8s and manage MO clusters using the operator.
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [Helm](https://helm.sh/)
+Prerequisites:
 
-## Create a sample Kubernetes cluster
+- Kubernetes 1.18 or later;
+   - or [Docker](https://docs.docker.com/engine/install/) and [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) if you do not have an existing k8s cluster available;
+- [kubectl 1.18 or later](https://kubernetes.io/docs/tasks/tools/);
+- [helm 3](https://helm.sh/docs/intro/install/).
 
-This section describes two ways to create a simple Kubernetes cluster. After creating a Kubernetes cluster, you can use it to test Matrixone cluster managed by Matrixone Operator. Choose whichever best matches your environment.
+## Prepare Your Kubernetes Cluster
 
-- Use [kind](https://kind.sigs.k8s.io/) to deploy a Kubernetes cluster in Docker. It is a common and recommended way.
-- Use [minikube](https://minikube.sigs.k8s.io/)  to deploy a Kubernetes cluster running locally in a VM.
+Verify the cluster meets the minimal version requirement:
 
-How to create Kubernetes cluster can see [document](./cluster.md)
+```bash
+> kubectl version
+```
 
-MacOS **Kind Example**
+The server version should >= 1.18.
+If you do not have existing k8s installed or your cluster does not meet the version requirement, you use `kind` to create a test one locally (follow the [offical installation guide](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) to install `kind` if you do not have kind CLI available):
 
-```shell
-# install kind
-brew install kind
-
-# start a kind cluster
+```bash
 kind create cluster --name mo
 ```
 
-## Deploy Matrixone Operator
+For advanced usage, you can customize you kind cluster by following [this guide](https://kind.sigs.k8s.io/docs/user/configuration/), e.g. version and node count.
 
-[Matrixone Operator helm repository](https://artifacthub.io/packages/helm/matrixone-operator/matrixone-operator)
+## Install MatrixOne Operator
 
-### Using helm charts
+1. Clone the `matrixone-operator` git repo:
 
-- Install cluster scope operator into the `matrixone-operator` namespace
-
-```shell
-# Create namespace
-kubectl create ns matrixone-operator
-
-# Add helm repository
-helm repo add matrixone https://matrixorigin.github.io/matrixone-operator
-
-# Update repo
-helm repo update
-
-# Show helm values about Matrixone Operator
-helm show values matrixone/matrixone-operator
-
-# Deploy matrixone operator into matrixone-operator namespace
-helm install mo-operator matrixone/matrixone-operator -n matrixone-operator
+```bash
+> git clone https://github.com/matrixorigin/matrixone-operator.git
 ```
 
-- Check Operator Status
+2. Create a namespace for `matrixone-operator`:
 
-```shell
-kubectl get po -n matrixone-operator
+```bash
+> kubectl create namespace mo-system
 ```
 
-Matrixone Operator is ready:
+3. Install matrixone-operator with `helm`:
 
-```txt
-NAME                                              READY   STATUS    RESTARTS   AGE
-mo-operator-matrixone-operator-5dd548755f-b7p64   1/1     Running   0          55sx
+```bash
+> helm -n mo-system install mo ./charts/matrixone-operator --dependency-update
 ```
 
-## Deploy a sample Matrixone cluster
+4. Verify the installation:
 
-- An example spec to deploy a tiny matrixone cluster is included. Install cluster into `matrixone` namespace
-
-```shell
-# Create namespace
-kubectl create ns matrixone
-
-# Deploy a sample cluster
-kubectl apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/tiny-cluster.yaml -n matrixone
+```bash
+> helm -n mo-system ls
+> kubectl -n mo-system get po
 ```
 
-- Check Matrixone cluster status
+You should see at least one ready `matrixone-operator` Pod.
 
-```shell
-kubectl get po -n matrixone
-```
+## Deploy MatrixOne Cluster
 
-Matrixone cluster is ready:
+1. MO cluster requires an external shared storage like S3 and MinIO. You can deploy a minial MinIO for test purpose if you do not have an available shared storage:
 
-```txt
-NAME   READY   STATUS    RESTARTS   AGE
-mo-0   1/1     Running   0          26s
-```
+    ```bash
+    > kubectl -n mo-system apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/minio.yaml
+    ```
 
-## Connect to a Matrixone cluster
+2. Create a namespace to deploy your MO cluster:
 
-- Connect cluster by `port-forward`
+    ```bash
+    > kubectl create ns mo
+    ```
 
-```shell
-# Port-forward 6001 -> 6001
-kubectl port-forward service/mo 6001:6001 -n matrixone
+3. Create a secret in `mo` namespace to access the MinIO instance deployed at step 1:
 
-# connect to cluster
-mysql -h 127.0.0.1 -P 6001 -udump -p111
-```
+    ```bash
+    # if you change the default AK/SK in the yaml spec at step 1, change it in this step accordingly
+    > kubectl -n mo create secret generic minio --from-literal=AWS_ACCESS_KEY_ID=minio --from-literal=AWS_SECRET_ACCESS_KEY=minio123
+    ```
 
-- Connect cluster by [tools](./tools.md)
+4. Create a YAML spec of your MO cluster, edit the fields to match your requirment:
 
-## Uninstall Matrixone resources
+    ```bash
+    > cat>mo.yaml<<EOF
+    apiVersion: core.matrixorigin.io/v1alpha1
+    kind: MatrixOneCluster
+    metadata:
+      name: mo
+    spec:
+      imageRepository: matrixorigin/matrixone
+      # Version of the MO to deploy
+      version: nightly-c371317c
+      logService:
+        replicas: 3
+        sharedStorage:
+          s3:
+            path: mo
+            # endpoint and secretRef are used to access the MinIO instance deployed at step 1
+            endpoint: minio-0.mo-system:9000
+            secretRef:
+              name: minio
+        volume:
+          size: 10Gi
+      dn:
+        replicas: 2
+        cacheVolume:
+          size: 10Gi
+      tp:
+        replicas: 2
+        cacheVolume:
+          size: 10Gi
+    EOF
+    # Create the cluster
+    > kubectl -n mo apply -f mo.yaml
+    ```
 
-- Uninstall Matrixone cluster
+5. Wait your cluster to become ready:
 
-```shell
-kubectl delete -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/tiny-cluster.yaml -n matrixone
-```
+    ```bash
+    > kubectl -n mo get matrixonecluster
+    > kubectl -n mo get pod
+    ```
 
-The Matrixone cluster should display the state when the cluster is deleted:
+6. Get the credential of the cluster from the cluster status:
 
-```txt
-kubectl get po -n matrixone
-> No resources found in matrixone namespace.
-```
+   ```bash
+   # get the secret name that contains the initial credential
+   > SECRET_NAME=$(kubectl -n mo get matrixonecluster mo --template='{{.status.credentialRef.name}}')
+   # get the 
+   > USERNAME=$(kubectl -n mo get secret ${SECRET_NAME} --template='{{.data.username}}' | base64 -d)
+   > PASSWORD=$(kubectl -n mo get secret ${SECRET_NAME} --template='{{.data.password}}' | base64 -d)
+   ```
+   
+7. After there are CN pods running, you can access the cluster via the CN service:
 
-Then delete namespace:
+    ```bash
+    > nohup kubectl -n mo port-forward svc/mo-tp-cn 6001:6001 &
+    > mysql -h 127.0.0.1 -P6001 -u${USERNAME} -p${PASSWORD}
+    ```
+   
 
-```shell
-# Delete the namespace after all matrixone pods are deleted
-kubectl delete ns matrixone
-```
+## Teardown MO cluster
 
-- Uninstall Matrixone Operator
+To teardown the cluster, delete the mo object in k8s:
 
-```shell
-helm uninstall mo-operator -n matrixone-operator
-```
-
-The Matrixone Operator should display the state when the cluster is deleted:
-
-```txt
-kubectl get po -n matrixone-operator
-> No resources found in matrixone-operator namespace.
-```
-
-Then delete namespace:
-
-```shell
-# Delete the namespace after matrixone operator pod are deleted
-kubectl delete ns matrixone-operator
+```bash
+> kubectl -n mo get matrixonecluster
+NAME   LOG   DN    TP    AP    UI    VERSION            AGE
+mo     3     2     2                 nightly-c371317c   13m
+> kubectl -n mo delete matrixonecluster mo
+matrixonecluster.core.matrixorigin.io "mo" deleted
 ```

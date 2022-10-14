@@ -44,6 +44,7 @@ spec:
           metadata:
             type: object
           spec:
+            description: Spec is the desired state of LogSet
             properties:
               config:
                 description: Config is the raw config for pods
@@ -58,11 +59,6 @@ spec:
                   dnShards:
                     description: DNShards is the initial number of DN shards, cannot
                       be tuned after cluster creation currently. default to 1
-                    type: integer
-                  haKeeperReplicas:
-                    description: HAKeeperReplicas is the initial number of HAKeeper
-                      replicas, cannot be tuned after cluster creation currently.
-                      default to 3 if LogSet replicas >= 3, to 1 otherwise
                     type: integer
                   logShardReplicas:
                     description: LogShardReplicas is the replica numbers of each log
@@ -82,15 +78,6 @@ spec:
                 description: Overlay allows advanced customization of the pod spec
                   in the set
                 properties:
-                  ImagePullPolicy:
-                    default: IfNotPresent
-                    description: ImagePullPolicy is the pull policy of MatrixOne image.
-                      The default value is the same as the default of Kubernetes.
-                    enum:
-                    - Always
-                    - Never
-                    - IfNotPresent
-                    type: string
                   affinity:
                     description: Affinity is a group of affinity scheduling rules.
                     properties:
@@ -1165,6 +1152,15 @@ spec:
                           type: string
                       type: object
                     type: array
+                  imagePullPolicy:
+                    default: IfNotPresent
+                    description: ImagePullPolicy is the pull policy of MatrixOne image.
+                      The default value is the same as the default of Kubernetes.
+                    enum:
+                    - Always
+                    - Never
+                    - IfNotPresent
+                    type: string
                   imagePullSecrets:
                     items:
                       description: LocalObjectReference contains enough information
@@ -6657,6 +6653,10 @@ spec:
                     - path
                     type: object
                 type: object
+              storeFailureTimeout:
+                description: StoreFailureTimeout is the timeout to fail-over the logset
+                  Pod after a failure of it is observed
+                type: string
               topologySpread:
                 description: This will be overridden by .overlay.TopologySpreadConstraints
                 items:
@@ -6792,6 +6792,8 @@ spec:
                   type: object
                 type: array
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

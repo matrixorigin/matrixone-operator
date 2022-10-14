@@ -17,29 +17,139 @@ package dnset
 import (
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/runtime/pkg/fake"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
+	. "github.com/onsi/gomega"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func Test_syncPods(t *testing.T) {
-	type args struct {
-		ctx *recon.Context[*v1alpha1.DNSet]
-		sts *kruisev1.StatefulSet
+func TestDNSetActor_Observe(t *testing.T) {
+	s := newScheme()
+	tpl := &v1alpha1.DNSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test",
+		},
+		Spec: v1alpha1.DNSetSpec{
+			DNSetBasic: v1alpha1.DNSetBasic{
+				PodSet: v1alpha1.PodSet{
+					MainContainer: v1alpha1.MainContainer{
+						Image: "test:latest",
+					},
+					Replicas: 1,
+				},
+				// TODO: add configuration of dn
+			},
+		},
 	}
-
+	labels := common.SubResourceLabels(tpl)
+	n := stsName(tpl)
+	svc := headlessSvcName(tpl)
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{}
+		name   string
+		dnset  *v1alpha1.DNSet
+		client client.Client
+		expect func(g *WithT, action recon.Action[*v1alpha1.DNSet], err error)
+	}{
+		{
+			name:  "create when resource not exist",
+			dnset: tpl,
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
+			},
+			expect: func(g *WithT, action recon.Action[*v1alpha1.DNSet], err error) {
+				g.Expect(err).To(BeNil())
+				g.Expect(action.String()).To(ContainSubstring("Create"))
+			},
+		},
+		{
+			name:  "update when resource not update to date",
+			dnset: tpl,
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
+					&kruisev1.StatefulSet{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      n,
+							Namespace: "default",
+						},
+						Spec: kruisev1.StatefulSetSpec{
+							Replicas: pointer.Int32(1),
+							Template: corev1.PodTemplateSpec{
+								ObjectMeta: metav1.ObjectMeta{
+									Labels: labels,
+								},
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{
+										{
+											Name:  "main",
+											Image: "test:latest",
+										},
+									},
+									Volumes: []corev1.Volume{},
+								},
+							},
+							ServiceName: "test-svc",
+						},
+					},
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      svc,
+							Namespace: "default",
+						},
+					},
+				).Build(),
+			},
+			expect: func(g *WithT, action recon.Action[*v1alpha1.DNSet], err error) {
+				g.Expect(err).To(BeNil())
+				g.Expect(action.String()).To(ContainSubstring("Update"))
+			},
+		},
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := syncPods(tt.args.ctx, tt.args.sts); (err != nil) != tt.wantErr {
-				t.Errorf("syncPods() error = %v, wantErr %v", err, tt.wantErr)
+			g := NewGomegaWithT(t)
+			r := &Actor{}
+			mockCtrl := gomock.NewController(t)
+			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
+			ctx := fake.NewContext(tt.dnset, tt.client, eventEmitter)
+			ctx.Dep = tt.dnset.DeepCopy()
+			ctx.Dep.Deps.LogSet = &v1alpha1.LogSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test",
+				},
+				Spec: v1alpha1.LogSetSpec{
+					LogSetBasic: v1alpha1.LogSetBasic{
+						SharedStorage: v1alpha1.SharedStorageProvider{
+							S3: &v1alpha1.S3Provider{
+								Path: "bucket/dir",
+							},
+						},
+					},
+				},
 			}
+			action, err := r.Observe(ctx)
+			tt.expect(g, action, err)
 		})
 	}
+}
 
+func newScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kruisev1.AddToScheme(scheme))
+
+	return scheme
 }

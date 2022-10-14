@@ -47,10 +47,10 @@ threshold=30
 while true; do
     sleep ${period}
     elapseTime=$(( elapseTime+period ))
-    if [[ ${elapseTime} -ge ${threshold} ]]; then
+    if [ ${elapseTime} -ge ${threshold} ]; then
         echo "waiting for dns resolvable timeout" >&2 && exit 1
     fi
-    if nslookup ${ADDR} 2>/dev/null; then
+    if nslookup ${ADDR} >/dev/null; then
         break
     else
         echo "waiting pod dns name ${ADDR} resolvable" >&2

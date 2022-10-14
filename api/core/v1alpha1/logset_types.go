@@ -4,13 +4,14 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package v1alpha1
 
 import (
@@ -44,6 +45,17 @@ type LogSetBasic struct {
 	// InitialConfig is immutable
 	// +optional
 	InitialConfig InitialConfig `json:"initialConfig"`
+
+	// StoreFailureTimeout is the timeout to fail-over the logset Pod after a failure of it is observed
+	// +optional
+	StoreFailureTimeout *metav1.Duration `json:"storeFailureTimeout,omitempty"`
+}
+
+func (l *LogSetBasic) GetStoreFailureTimeout() metav1.Duration {
+	if l.StoreFailureTimeout == nil {
+		return metav1.Duration{Duration: defaultStoreFailureTimeout}
+	}
+	return *l.StoreFailureTimeout
 }
 
 type InitialConfig struct {
@@ -63,7 +75,7 @@ type InitialConfig struct {
 	// cannot be tuned after cluster creation currently.
 	// default to 3 if LogSet replicas >= 3, to 1 otherwise
 	// +required
-	HAKeeperReplicas *int `json:"haKeeperReplicas,omitempty"`
+	// HAKeeperReplicas *int `json:"haKeeperReplicas,omitempty"`
 
 	// LogShardReplicas is the replica numbers of each log shard,
 	// cannot be tuned after cluster creation currently.
@@ -109,7 +121,9 @@ type LogSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   LogSetSpec   `json:"spec,omitempty"`
+	// Spec is the desired state of LogSet
+	Spec LogSetSpec `json:"spec"`
+
 	Status LogSetStatus `json:"status,omitempty"`
 }
 

@@ -16,6 +16,8 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/cespare/xxhash"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
@@ -39,23 +41,28 @@ const (
 	HeadlessSvcEnvKey = "HEADLESS_SERVICE_NAME"
 	NamespaceEnvKey   = "NAMESPACE"
 
-	DataPath      = "/var/lib/matrixone/data"
-	DataVolume    = "data"
-	ConfigVolume  = "config"
+	// DataPath is the default path where the data volume will be mounted to
+	DataPath = "/var/lib/matrixone/data"
+	// DataDir is the default directory under data path that will be used to store the data of mo disk backend
+	DataDir       = "data"
 	ConfigPath    = "/etc/matrixone/config"
 	ConfigFile    = "config.toml"
+	DataVolume    = "data"
+	ConfigVolume  = "config"
 	Entrypoint    = "start.sh"
 	ListenAddress = "0.0.0.0"
 
-	S3Service    FileType = "s3"
-	LocalService FileType = "local"
-	MinioService FileType = "minio"
-	NFSService   FileType = "nfs"
+	S3Service    FileType = "S3"
+	LocalService FileType = "LOCAL"
+	ETLService   FileType = "ETL"
+
+	DiskBackendType = "DISK"
+	S3BackendType   = "S3"
+	MEMBackendType  = "MEM"
 
 	MemoryEngine BackendType = "MEM"
 	TAEEngine    BackendType = "TAE"
 
-	HakeeperPort  = 32001
 	DNServicePort = 41010
 	CNServicePort = 6001
 
@@ -64,7 +71,11 @@ const (
 	// NamespaceLabelKey is the label key for cluster-scope resources
 	NamespaceLabelKey = "matrixorigin.io/namespace"
 
-	FileBackendType = "DISK"
+	ActionRequiredLabelKey   = "matrixorigin.io/action-required"
+	ActionRequiredLabelValue = "True"
+
+	// LogSetOwnerKey is set to the orphaned LogSet Pod that is left by failover
+	LogSetOwnerKey = "matrixorigin.io/logset-owner"
 
 	AWSAccessKeyID     = "AWS_ACCESS_KEY_ID"
 	AWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
@@ -92,6 +103,7 @@ func SyncTopology(domains []string, podSpec *corev1.PodSpec) {
 	podSpec.TopologySpreadConstraints = constraints
 }
 
+// SetStorageProviderConfig set inject configuration of storage provider to Pods
 func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1.PodSpec) {
 	for i := range podSpec.Containers {
 		if s3p := sp.S3; s3p != nil {
@@ -144,7 +156,7 @@ func ensureConfigMap(kubeCli recon.KubeClient, currentCm string, desired *corev1
 	if err := addConfigMapDigest(c); err != nil {
 		return "", err
 	}
-	// config not changed, nothing to do
+	// config digest not changed
 	if c.Name == currentCm {
 		return currentCm, nil
 	}
@@ -175,6 +187,9 @@ func HeadlessServiceTemplate(obj client.Object, name string) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			ClusterIP: corev1.ClusterIPNone,
 			Selector:  SubResourceLabels(obj),
+			// Need to propagate SRV DNS records for the sts Pods
+			// for the purpose of peer discovery
+			PublishNotReadyAddresses: true,
 		},
 	}
 
@@ -257,35 +272,56 @@ func PersistentVolumeClaimTemplate(size resource.Quantity, sc *string, name stri
 	}
 }
 
-// GetLocalFilesService  get local file service config
-func GetLocalFilesService(path string) map[string]interface{} {
+// LocalFilesServiceConfig returns a local file service config
+func LocalFilesServiceConfig(path string) map[string]interface{} {
 	return map[string]interface{}{
 		"name":     LocalService,
-		"backend":  FileBackendType,
+		"backend":  DiskBackendType,
 		"data-dir": path,
 	}
 }
 
+// S3FileServiceConfig returns an S3 file service config based on the shared storage provider
 func S3FileServiceConfig(l *v1alpha1.LogSet) map[string]interface{} {
 	return map[string]interface{}{
-		"name":     S3Service,
-		"backend":  FileBackendType,
-		"data-dir": DataPath,
+		"name":    S3Service,
+		"backend": MEMBackendType,
 	}
+	// FIXME: use TAE and S3
+	// return sharedFileServiceConfig(l, S3Service, "data")
 }
 
-// FileServiceConfig config common file service(local, s3 etc.) for all sets
-func FileServiceConfig(fsPath, fsType string) (res map[string]interface{}) {
-	switch fsType {
-	case string(LocalService):
-		// local file service
-		res = map[string]interface{}{
-			"name":     fsType,
-			"backend":  LocalService,
-			"data-dir": fsPath,
-		}
-	case string(S3Service):
+// ETLFileServiceConfig returns an ETL file service config based on the shared storage provider
+func ETLFileServiceConfig(l *v1alpha1.LogSet) map[string]interface{} {
+	return map[string]interface{}{
+		"name":     ETLService,
+		"backend":  "DISK-ETL",
+		"data-dir": "store",
 	}
+	// FIXME: use TAE and S3
+	// return sharedFileServiceConfig(l, ETLService, "etl")
+}
 
-	return res
+func sharedFileServiceConfig(l *v1alpha1.LogSet, name FileType, dir string) map[string]interface{} {
+	m := map[string]interface{}{
+		"name":    name,
+		"backend": S3BackendType,
+	}
+	if s3 := l.Spec.SharedStorage.S3; s3 != nil {
+		s3Config := map[string]interface{}{}
+		if s3.Endpoint != "" {
+			s3Config["endpoint"] = s3.Endpoint
+		} else {
+			s3Config["endpoint"] = "s3.us-west-2.amazonaws.com"
+		}
+		paths := strings.SplitN(s3.Path, "/", 2)
+		s3Config["bucket"] = paths[0]
+		keyPrefix := dir
+		if len(paths) > 1 {
+			keyPrefix = fmt.Sprintf("%s/%s", strings.Trim(paths[1], "/"), dir)
+		}
+		s3Config["key-prefix"] = keyPrefix
+		m["s3"] = s3Config
+	}
+	return m
 }

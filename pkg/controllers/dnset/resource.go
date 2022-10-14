@@ -17,6 +17,7 @@ package dnset
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
@@ -98,11 +99,13 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
 	conf.Set([]string{"fileservice"}, []map[string]interface{}{
-		common.GetLocalFilesService(common.DataPath),
+		common.LocalFilesServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir)),
 		common.S3FileServiceConfig(ls),
+		common.ETLFileServiceConfig(ls),
 	})
 	conf.Set([]string{"dn", "Txn", "Storage"}, getTxnStorageConfig(dn))
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+	conf.Set([]string{"cn", "Engine", "type"}, "memory")
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
@@ -110,7 +113,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
-		DNServicePort:  common.CNServicePort,
+		DNServicePort:  common.DNServicePort,
 		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
 	})
 	if err != nil {
@@ -156,7 +159,10 @@ func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) erro
 	}
 
 	syncPodMeta(ctx.Obj, sts)
-	syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+	if ctx.Dep != nil {
+		syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+
+	}
 
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
 }

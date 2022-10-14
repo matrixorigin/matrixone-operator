@@ -4,13 +4,14 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package v1alpha1
 
 import (
@@ -76,7 +77,7 @@ type MainContainerOverlay struct {
 	// +optional
 	// +kubebuilder:default=IfNotPresent
 	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
-	ImagePullPolicy corev1.PullPolicy `json:"ImagePullPolicy,omitempty"`
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	// +optional
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
@@ -166,6 +167,8 @@ type SharedStorageProvider struct {
 	// mutual-exclusive with other providers.
 	S3 *S3Provider `json:"s3,omitempty"`
 }
+
+type MemProvider struct{}
 
 type S3Provider struct {
 	// Path is the s3 storage path in <bucket-name>/<folder> format, e.g. "my-bucket/my-folder"
