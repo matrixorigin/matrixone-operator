@@ -16,6 +16,9 @@ package e2e
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	. "github.com/onsi/ginkgo"
@@ -26,17 +29,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 const (
-	createCNSetTimeout = 5 * time.Minute
+	createDNSetTimeout = 5 * time.Minute
 )
 
 var _ = Describe("MatrixOneCluster test", func() {
 	It("Should reconcile the cluster properly", func() {
-		By("Create cnset")
+		By("Create dnset")
 		l := &v1alpha1.LogSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: env.Namespace,
@@ -65,7 +66,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		d := &v1alpha1.DNSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: env.Namespace,
-				Name:      "dn",
+				Name:      "dn-" + rand.String(6),
 			},
 			Spec: v1alpha1.DNSetSpec{
 				DNSetBasic: v1alpha1.DNSetBasic{
@@ -91,79 +92,43 @@ var _ = Describe("MatrixOneCluster test", func() {
 				},
 			},
 		}
-		c := &v1alpha1.CNSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: env.Namespace,
-				Name:      "cn-" + rand.String(6),
-			},
-			Spec: v1alpha1.CNSetSpec{
-				Role: v1alpha1.CNRoleTP,
-				CNSetBasic: v1alpha1.CNSetBasic{
-					PodSet: v1alpha1.PodSet{
-						Replicas: 1,
-						MainContainer: v1alpha1.MainContainer{
-							Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
-						},
-					},
-					CacheVolume: &v1alpha1.Volume{
-						Size: resource.MustParse("100Mi"),
-					},
-				},
-			},
-			Deps: v1alpha1.CNSetDeps{
-				LogSetRef: v1alpha1.LogSetRef{
-					LogSet: &v1alpha1.LogSet{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "log",
-							Namespace: env.Namespace,
-						},
-					},
-				},
-				DNSet: &v1alpha1.DNSet{ObjectMeta: metav1.ObjectMeta{
-					Name:      "dn",
-					Namespace: env.Namespace,
-				}},
-			},
-		}
 		Expect(kubeCli.Create(ctx, l)).To(Succeed())
 		Expect(kubeCli.Create(ctx, d)).To(Succeed())
-		Expect(kubeCli.Create(ctx, c)).To(Succeed())
 
 		Eventually(func() error {
-			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(c), c); err != nil {
-				logger.Errorw("error get cnset status", "cnset", c.Name, "error", err)
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(d), d); err != nil {
+				logger.Errorw("error get dnset status", "dnset", d.Name, "error", err)
 				return err
 			}
-			if !recon.IsReady(&c.Status.ConditionalStatus) {
-				logger.Infow("wait cnset ready", "cnset", c.Name)
+			if !recon.IsReady(&d.Status.ConditionalStatus) {
+				logger.Infow("wait dnset ready", "dnset", d.Name)
 				return errWait
 			}
 			return nil
-		}, createCNSetTimeout, pollInterval).Should(Succeed())
+		}, createDNSetTimeout, pollInterval).Should(Succeed())
 
-		By("Teardown cnset")
-		Expect(kubeCli.Delete(ctx, c)).To(Succeed())
+		By("Teardown dnset")
 		Expect(kubeCli.Delete(ctx, d)).To(Succeed())
 		Expect(kubeCli.Delete(ctx, l)).To(Succeed())
 		Eventually(func() error {
-			err := kubeCli.Get(ctx, client.ObjectKeyFromObject(c), c)
+			err := kubeCli.Get(ctx, client.ObjectKeyFromObject(d), d)
 			if err == nil {
-				logger.Infow("wait cnset teardown", "cnset", c.Name)
+				logger.Infow("wait dnset teardown", "dnset", d.Name)
 				return errWait
 			}
 			if !apierrors.IsNotFound(err) {
-				logger.Errorw("unexpected error when get cnset", "cnset", c, "error", err)
+				logger.Errorw("unexpected error when get dnset", "dnset", d, "error", err)
 				return err
 			}
 			podList := &corev1.PodList{}
-			err = kubeCli.List(ctx, podList, client.InNamespace(c.Namespace))
+			err = kubeCli.List(ctx, podList, client.InNamespace(d.Namespace))
 			if err != nil {
 				logger.Errorw("error list pods", "error", err)
 				return err
 			}
 			for _, pod := range podList.Items {
-				if strings.HasPrefix(pod.Name, c.Name) {
-					logger.Infow("Pod that belongs to the cnset is not cleaned", "pod", pod.Name)
+				if strings.HasPrefix(pod.Name, d.Name) {
+					logger.Infow("Pod that belongs to the dnset is not cleaned", "pod", pod.Name)
 					return errWait
 				}
 			}
