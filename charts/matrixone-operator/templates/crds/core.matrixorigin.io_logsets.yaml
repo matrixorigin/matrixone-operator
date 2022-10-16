@@ -6588,6 +6588,15 @@ spec:
                       type: object
                     type: array
                 type: object
+              pvcRetentionPolicy:
+                description: 'PVCRetentionPolicy defines the retention policy of orphaned
+                  PVCs due to cluster deletion, scale-in or failover. Available options:
+                  - Delete: delete orphaned PVCs - Retain: keep orphaned PVCs, if
+                  the corresponding Pod get created again (e.g. scale-in and scale-out,
+                  recreate the cluster), the Pod will reuse the retained PVC which
+                  contains previous data. Retained PVCs require manual cleanup if
+                  they are no longer needed. The default policy is Delete.'
+                type: string
               replicas:
                 description: Replicas is the desired number of pods of this set
                 format: int32

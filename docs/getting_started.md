@@ -118,12 +118,22 @@ You should see at least one ready `matrixone-operator` Pod.
     > kubectl -n mo get matrixonecluster
     > kubectl -n mo get pod
     ```
+
+6. Get the credential of the cluster from the cluster status:
+
+   ```bash
+   # get the secret name that contains the initial credential
+   > SECRET_NAME=$(kubectl -n mo get matrixonecluster mo --template='{{.status.credentialRef.name}}')
+   # get the 
+   > USERNAME=$(kubectl -n mo get secret ${SECRET_NAME} --template='{{.data.username}}' | base64 -d)
+   > PASSWORD=$(kubectl -n mo get secret ${SECRET_NAME} --template='{{.data.password}}' | base64 -d)
+   ```
    
-6. After there are CN pods running, you can access the cluster via the CN service:
+7. After there are CN pods running, you can access the cluster via the CN service:
 
     ```bash
     > nohup kubectl -n mo port-forward svc/mo-tp-cn 6001:6001 &
-    > mysql -h 127.0.0.1 -P6001 -udump -p111
+    > mysql -h 127.0.0.1 -P6001 -u${USERNAME} -p${PASSWORD}
     ```
    
 

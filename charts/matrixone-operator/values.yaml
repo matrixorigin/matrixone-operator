@@ -58,3 +58,6 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+kruise:
+  featureGates: "StatefulSetAutoDeletePVC=true"
