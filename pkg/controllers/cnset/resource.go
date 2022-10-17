@@ -28,16 +28,19 @@ import (
 	"text/template"
 )
 
+// TODO: change listen-address to service-address
 var startScriptTpl = template.Must(template.New("dn-start-script").Parse(`
 #!/bin/sh
 set -eu
 POD_NAME=${POD_NAME:-$HOSTNAME}
+ADDR="${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc"
 ORDINAL=${POD_NAME##*-}
 UUID=$(printf '00000000-0000-0000-0000-2%011x' ${ORDINAL})
 conf=$(mktemp)
 bc=$(mktemp)
 cat <<EOF > ${bc}
 uuid = "${UUID}"
+listen-address = "${ADDR}:{{ .CNServicePort }}"
 EOF
 # build instance config
 sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
@@ -48,6 +51,7 @@ exec /mo-service -cfg ${conf}
 
 type model struct {
 	ConfigFilePath string
+	CNServicePort  int
 }
 
 func buildHeadlessSvc(cn *v1alpha1.CNSet) *corev1.Service {
@@ -120,6 +124,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
+		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
 	}
 
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)
@@ -159,6 +164,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
 		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
+		CNServicePort:  common.CNServicePort,
 	})
 	if err != nil {
 		return nil, err
