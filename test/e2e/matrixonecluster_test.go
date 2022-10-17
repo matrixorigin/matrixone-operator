@@ -44,7 +44,7 @@ const (
 )
 
 var _ = Describe("MatrixOneCluster test", func() {
-	FIt("Should reconcile the cluster properly", func() {
+	It("Should reconcile the cluster properly", func() {
 		By("Create cluster")
 		mo := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{

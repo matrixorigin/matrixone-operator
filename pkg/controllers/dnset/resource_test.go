@@ -90,7 +90,7 @@ data-dir = "/test"
 name = "ETL"
 
 [hakeeper-client]
-discovery-address = "test:6001"
+service-addresses = []
 `,
 		},
 		{
@@ -160,7 +160,7 @@ data-dir = "/test"
 name = "ETL"
 
 [hakeeper-client]
-discovery-address = "test:6001"
+service-addresses = []
 `,
 		},
 	}
