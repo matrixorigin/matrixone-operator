@@ -80,7 +80,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 	if err != nil {
 		return nil, errors.Wrap(err, "list dn pods")
 	}
-	collectStoreStatus(dn, podList.Items)
+	common.CollectStoreStatus(&dn.Status.FailoverStatus, podList.Items)
 
 	if len(dn.Status.AvailableStores) >= int(dn.Spec.Replicas) {
 		dn.Status.SetCondition(metav1.Condition{
@@ -91,12 +91,12 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		dn.Status.SetCondition(metav1.Condition{
 			Type:   recon.ConditionTypeReady,
 			Status: metav1.ConditionFalse,
-			Reason: common.ReasonNotEnoughReadyStores,
+			Reason: common.ReasonNoEnoughReadyStores,
 		})
 	}
 
 	switch {
-	case len(dn.StoresFailedFor(storeDownTimeout)) > 0:
+	case len(dn.Status.StoresFailedFor(storeDownTimeout)) > 0:
 		return d.with(sts).Repair, nil
 	case dn.Spec.Replicas != *sts.Spec.Replicas:
 		return d.with(sts).Scale, nil
@@ -192,7 +192,7 @@ func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.DNSet]) error {
 }
 
 func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.DNSet]) error {
-	toRepair := ctx.Obj.StoresFailedFor(storeDownTimeout)
+	toRepair := ctx.Obj.Status.StoresFailedFor(storeDownTimeout)
 	if len(toRepair) == 0 {
 		return nil
 	}

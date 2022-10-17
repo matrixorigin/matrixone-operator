@@ -21,11 +21,12 @@ import (
 )
 
 const (
-	nameSuffix = "-dn"
+	nameSuffix    = "-dn"
+	dnServicePort = 41010
 )
 
 func getListenAddress() string {
-	return fmt.Sprintf("%s:%d", common.ListenAddress, common.DNServicePort)
+	return fmt.Sprintf("%s:%d", common.AnyIP, dnServicePort)
 }
 
 func configMapName(dn *v1alpha1.DNSet) string {

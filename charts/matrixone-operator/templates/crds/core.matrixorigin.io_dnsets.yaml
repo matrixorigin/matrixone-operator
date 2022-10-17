@@ -6641,12 +6641,11 @@ spec:
             - replicas
             type: object
           status:
-            description: 'TODO: figure out what status should be exposed'
             properties:
               availableStores:
                 items:
                   properties:
-                    lastTransitionTime:
+                    lastTransition:
                       format: date-time
                       type: string
                     phase:
@@ -6726,7 +6725,7 @@ spec:
               failedStores:
                 items:
                   properties:
-                    lastTransitionTime:
+                    lastTransition:
                       format: date-time
                       type: string
                     phase:

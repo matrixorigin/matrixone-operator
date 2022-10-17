@@ -44,7 +44,7 @@ const (
 )
 
 var _ = Describe("MatrixOneCluster test", func() {
-	It("Should reconcile the cluster properly", func() {
+	FIt("Should reconcile the cluster properly", func() {
 		By("Create cluster")
 		mo := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -77,8 +77,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 						Size: resource.MustParse("100Mi"),
 					},
 					SharedStorage: v1alpha1.SharedStorageProvider{
-						S3: &v1alpha1.S3Provider{
-							Path: "mo-e2e/mocluster",
+						FileSystem: &v1alpha1.FileSystemProvider{
+							Path: "/test",
 						},
 					},
 					InitialConfig: v1alpha1.InitialConfig{},

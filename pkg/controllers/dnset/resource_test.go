@@ -46,6 +46,17 @@ func Test_buildDNSetConfigMap(t *testing.T) {
 						Namespace: "test",
 						Name:      "test",
 					},
+					Spec: v1alpha1.LogSetSpec{LogSetBasic: v1alpha1.LogSetBasic{SharedStorage: v1alpha1.SharedStorageProvider{
+						FileSystem: &v1alpha1.FileSystemProvider{
+							Path: "/test",
+						},
+					}}},
+					Status: v1alpha1.LogSetStatus{
+						Discovery: &v1alpha1.LogSetDiscovery{
+							Port:    6001,
+							Address: "test",
+						},
+					},
 				},
 			},
 			wantConfig: `service-type = "DN"
@@ -65,20 +76,21 @@ backend = "MEM"
 
 [[fileservice]]
 backend = "DISK"
-data-dir = "/var/lib/matrixone/data/data"
+data-dir = "/var/lib/matrixone/data"
 name = "LOCAL"
 
 [[fileservice]]
-backend = "MEM"
+backend = "DISK"
+data-dir = "/test"
 name = "S3"
 
 [[fileservice]]
 backend = "DISK-ETL"
-data-dir = "store"
+data-dir = "/test"
 name = "ETL"
 
 [hakeeper-client]
-service-addresses = []
+discovery-address = "test:6001"
 `,
 		},
 		{
@@ -104,6 +116,17 @@ service-addresses = []
 						Namespace: "test",
 						Name:      "test",
 					},
+					Spec: v1alpha1.LogSetSpec{LogSetBasic: v1alpha1.LogSetBasic{SharedStorage: v1alpha1.SharedStorageProvider{
+						FileSystem: &v1alpha1.FileSystemProvider{
+							Path: "/test",
+						},
+					}}},
+					Status: v1alpha1.LogSetStatus{
+						Discovery: &v1alpha1.LogSetDiscovery{
+							Port:    6001,
+							Address: "test",
+						},
+					},
 				},
 			},
 			wantConfig: `service-type = "DN"
@@ -123,20 +146,21 @@ backend = "MEM"
 
 [[fileservice]]
 backend = "DISK"
-data-dir = "/var/lib/matrixone/data/data"
+data-dir = "/var/lib/matrixone/data"
 name = "LOCAL"
 
 [[fileservice]]
-backend = "MEM"
+backend = "DISK"
+data-dir = "/test"
 name = "S3"
 
 [[fileservice]]
 backend = "DISK-ETL"
-data-dir = "store"
+data-dir = "/test"
 name = "ETL"
 
 [hakeeper-client]
-service-addresses = []
+discovery-address = "test:6001"
 `,
 		},
 	}
