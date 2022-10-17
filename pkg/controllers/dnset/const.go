@@ -19,7 +19,9 @@ import (
 )
 
 const (
-	serviceType = "DN"
+	serviceType   = "DN"
+	dnServicePort = 41010
+	nameSuffix    = "-dn"
 )
 
 // dn service entrypoint script

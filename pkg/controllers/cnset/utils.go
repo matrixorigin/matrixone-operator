@@ -16,20 +16,36 @@ package cnset
 
 import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
-	porName    = "service"
-	nameSuffix = "-cn"
+	porName       = "service"
+	nameSuffix    = "-cn"
+	cnServicePort = 6001
 )
 
-func getCNServicePort() []corev1.ServicePort {
+func getCNServicePort(cn *v1alpha1.CNSet) []corev1.ServicePort {
+	if cn.Spec.ServiceType == corev1.ServiceTypeNodePort {
+		return []corev1.ServicePort{
+			{
+				Name: porName,
+				Port: cnServicePort,
+				TargetPort: intstr.IntOrString{
+					IntVal: cnServicePort,
+				},
+				NodePort: cn.Spec.NodePort,
+			},
+		}
+	}
 	return []corev1.ServicePort{
 		{
 			Name: porName,
-			Port: common.CNServicePort,
+			Port: cnServicePort,
+			TargetPort: intstr.IntOrString{
+				IntVal: cnServicePort,
+			},
 		},
 	}
 }

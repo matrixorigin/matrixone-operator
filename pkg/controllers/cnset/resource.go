@@ -17,6 +17,8 @@ package cnset
 import (
 	"bytes"
 	"fmt"
+	"text/template"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
@@ -25,7 +27,6 @@ import (
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"text/template"
 )
 
 // TODO: change listen-address to service-address
@@ -64,7 +65,7 @@ func buildSvc(cn *v1alpha1.CNSet) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Selector: common.SubResourceLabels(cn),
 			Type:     cn.GetServiceType(),
-			Ports:    getCNServicePort(),
+			Ports:    getCNServicePort(cn),
 		},
 	}
 }
@@ -112,6 +113,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
 	}
+
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)
 
 	specRef.Containers = []corev1.Container{*mainRef}
@@ -142,6 +144,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		// FIXME: make TAE as default
 		cfg.Set(engineKey, "memory")
 	}
+
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err
@@ -149,7 +152,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
 		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
-		CNServicePort:  common.CNServicePort,
+		CNServicePort:  cnServicePort,
 	})
 	if err != nil {
 		return nil, err

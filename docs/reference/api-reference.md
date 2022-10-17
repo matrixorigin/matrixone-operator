@@ -51,6 +51,7 @@ _Appears in:_
 | --- | --- |
 | `PodSet` _[PodSet](#podset)_ |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service |
+| `nodePort` _integer_ |  |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet, node storage will be used if not specified |
 
 

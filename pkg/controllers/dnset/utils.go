@@ -20,12 +20,8 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 )
 
-const (
-	nameSuffix = "-dn"
-)
-
 func getListenAddress() string {
-	return fmt.Sprintf("%s:%d", common.ListenAddress, common.DNServicePort)
+	return fmt.Sprintf("%s:%d", common.ListenAddress, dnServicePort)
 }
 
 func configMapName(dn *v1alpha1.DNSet) string {

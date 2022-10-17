@@ -87,6 +87,10 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  nodePort:
+                    default: 31001
+                    format: int32
+                    type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -380,6 +384,10 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  nodePort:
+                    default: 31001
+                    format: int32
+                    type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string

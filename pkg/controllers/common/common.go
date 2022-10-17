@@ -63,9 +63,6 @@ const (
 	MemoryEngine BackendType = "MEM"
 	TAEEngine    BackendType = "TAE"
 
-	DNServicePort = 41010
-	CNServicePort = 6001
-
 	InstanceLabelKey  = "matrixorigin.io/instance"
 	ComponentLabelKey = "matrixorigin.io/component"
 	// NamespaceLabelKey is the label key for cluster-scope resources

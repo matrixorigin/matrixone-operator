@@ -107,7 +107,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
-		DNServicePort:  common.DNServicePort,
+		DNServicePort:  dnServicePort,
 		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
 	})
 	if err != nil {
