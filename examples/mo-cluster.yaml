@@ -4,14 +4,16 @@ metadata:
   name: mo
 spec:
   imageRepository: matrixorigin/matrixone
-  version: nightly-43446ad2
+  version: nightly-87e5d594
   logService:
     replicas: 3
     sharedStorage:
       s3:
         type: minio
         path: matrixone
-        endpoint: minio-0.mo-system:9000
+        endpoint: http://minio-0.minio.mo-system:9000
+        secretRef:
+          name: minio
     volume:
       size: 10Gi
   dn:
