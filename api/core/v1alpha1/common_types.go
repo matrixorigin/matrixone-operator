@@ -27,6 +27,13 @@ const (
 	PVCRetentionPolicyRetain PVCRetentionPolicy = "Retain"
 )
 
+type S3ProviderType string
+
+const (
+	S3ProviderTypeAWS   S3ProviderType = "aws"
+	S3ProviderTypeMinIO S3ProviderType = "minio"
+)
+
 const (
 	ContainerMain = "main"
 )
@@ -173,15 +180,27 @@ type SharedStorageProvider struct {
 	// S3 specifies an S3 bucket as the shared storage provider,
 	// mutual-exclusive with other providers.
 	S3 *S3Provider `json:"s3,omitempty"`
+	// FileSystem specified a fileSystem path as the shared storage provider,
+	// it assumes a shared filesystem is mounted to this path and instances can
+	// safely read-write this path in current manner.
+	FileSystem *FileSystemProvider `json:"fileSystem,omitempty"`
 }
 
-type MemProvider struct{}
+type FileSystemProvider struct {
+	// Path the path that the shared fileSystem mounted to
+	// +required
+	Path string `json:"path"`
+}
 
 type S3Provider struct {
 	// Path is the s3 storage path in <bucket-name>/<folder> format, e.g. "my-bucket/my-folder"
 	// +required
 	Path string `json:"path"`
-	// Region of the S3 bucket
+	// S3ProviderType is type of this s3 provider, options: [aws, minio]
+	// default to aws
+	// +optional
+	Type *S3ProviderType `json:"type,omitempty"`
+	// Region of the bucket
 	// the default region will be inferred from the deployment environment
 	// +optional
 	Region string `json:"region,omitempty"`
@@ -193,6 +212,13 @@ type S3Provider struct {
 	// from the environment if not specified
 	// +optional
 	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
+}
+
+func (p *S3Provider) GetProviderType() S3ProviderType {
+	if p.Type == nil {
+		return S3ProviderTypeAWS
+	}
+	return *p.Type
 }
 
 // LogSetRef reference to an LogSet, either internal or external
@@ -215,4 +241,15 @@ type ExternalLogSet struct {
 	// HAKeeperEndpoint of the ExternalLogSet
 	// +required
 	HAKeeperEndpoint string `json:"haKeeperEndpoint,omitempty"`
+}
+
+type FailoverStatus struct {
+	AvailableStores []Store `json:"availableStores,omitempty"`
+	FailedStores    []Store `json:"failedStores,omitempty"`
+}
+
+type Store struct {
+	PodName            string      `json:"podName,omitempty"`
+	Phase              string      `json:"phase,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransition,omitempty"`
 }

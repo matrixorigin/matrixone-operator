@@ -75,6 +75,13 @@ func (c *TomlConfig) Del(key1 string, keyN ...string) {
 	delete(parentM, path[len(path)-1])
 }
 
+// Merge merges the given map to current config, shallow override.
+func (c *TomlConfig) Merge(mp map[string]interface{}) {
+	for k, v := range mp {
+		c.Set([]string{k}, v)
+	}
+}
+
 // Set a key by path, override existing.
 // the keyPath has at least depth 1
 func (c *TomlConfig) Set(path []string, value interface{}) {

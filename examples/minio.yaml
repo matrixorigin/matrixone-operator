@@ -26,10 +26,11 @@ spec:
     spec:
       containers:
       - name: minio
-        image: minio/minio:latest
-        args:
-        - server
-        - /storage
+        image: minio/minio:RELEASE.2022-10-08T20-11-00Z.fips
+        command:
+        - "/bin/sh"
+        - -c
+        - "mkdir -p /storage/matrixone && minio server /storage"
         env:
         - name: MINIO_ACCESS_KEY
           value: "minio"

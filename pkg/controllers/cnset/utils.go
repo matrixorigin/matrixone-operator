@@ -16,20 +16,20 @@ package cnset
 
 import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	corev1 "k8s.io/api/core/v1"
 )
 
 const (
-	porName    = "service"
-	nameSuffix = "-cn"
+	porName       = "service"
+	nameSuffix    = "-cn"
+	cnServicePort = 6001
 )
 
 func getCNServicePort() []corev1.ServicePort {
 	return []corev1.ServicePort{
 		{
 			Name: porName,
-			Port: common.CNServicePort,
+			Port: cnServicePort,
 		},
 	}
 }

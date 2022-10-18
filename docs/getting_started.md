@@ -92,7 +92,7 @@ You should see at least one ready `matrixone-operator` Pod.
         replicas: 3
         sharedStorage:
           s3:
-            path: mo
+            path: matrixone
             # endpoint and secretRef are used to access the MinIO instance deployed at step 1
             endpoint: minio-0.mo-system:9000
             secretRef:

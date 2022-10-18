@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -103,9 +104,7 @@ type InitialConfig struct {
 // TODO: figure out what status should be exposed
 type LogSetStatus struct {
 	ConditionalStatus `json:",inline"`
-
-	AvailableStores []LogStore `json:"availableStores,omitempty"`
-	FailedStores    []LogStore `json:"failedStores,omitempty"`
+	FailoverStatus    `json:",inline"`
 
 	Discovery *LogSetDiscovery `json:"discovery,omitempty"`
 	// TODO(aylei): collect LogShards, DNShards and HAKeeper status from HAKeeper
@@ -114,16 +113,13 @@ type LogSetStatus struct {
 	// DNShards
 }
 
-type LogStore struct {
-	PodName string `json:"podName,omitempty"`
-	Phase   string `json:"phase,omitempty"`
-	// lastTransitionTime is the latest timestamp a state transition occurs
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-}
-
 type LogSetDiscovery struct {
 	Port    int32  `json:"port,omitempty"`
 	Address string `json:"address,omitempty"`
+}
+
+func (l *LogSetDiscovery) String() string {
+	return fmt.Sprintf("%s:%d", l.Address, l.Port)
 }
 
 // +kubebuilder:object:root=true

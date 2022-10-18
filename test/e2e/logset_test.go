@@ -66,8 +66,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 						Size: resource.MustParse("100Mi"),
 					},
 					SharedStorage: v1alpha1.SharedStorageProvider{
-						S3: &v1alpha1.S3Provider{
-							Path: "mo-e2e/logset",
+						FileSystem: &v1alpha1.FileSystemProvider{
+							Path: "/test",
 						},
 					},
 					StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
