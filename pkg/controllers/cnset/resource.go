@@ -23,6 +23,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"text/template"
@@ -140,17 +141,17 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 }
 
 func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
+	if ls.Status.Discovery == nil {
+		return nil, errors.New("logset had not yet exposed HAKeeper discovery address")
+	}
 	cfg := cn.Spec.Config
 	if cfg == nil {
 		cfg = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
+	cfg.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage))
 	cfg.Set([]string{"service-type"}, "CN")
-	cfg.Set([]string{"fileservice"}, []map[string]interface{}{
-		common.LocalFilesServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir)),
-		common.S3FileServiceConfig(ls),
-		common.ETLFileServiceConfig(ls),
-	})
 	cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+	// cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
 	engineKey := []string{"cn", "Engine", "type"}
 	if cfg.Get(engineKey...) == nil {
@@ -164,7 +165,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
 		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
-		CNServicePort:  common.CNServicePort,
+		CNServicePort:  cnServicePort,
 	})
 	if err != nil {
 		return nil, err

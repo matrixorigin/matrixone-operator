@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 const (
@@ -159,6 +160,18 @@ func (o *Overlay) OverlayMainContainer(c *corev1.Container) {
 	//if mc.VolumeMounts != nil {
 	//	c.VolumeMounts = o.VolumeMounts
 	//}
+}
+
+func (s *FailoverStatus) StoresFailedFor(d time.Duration) []Store {
+	var stores []Store
+
+	for _, store := range s.FailedStores {
+		if time.Now().Sub(store.LastTransitionTime.Time) >= d {
+			stores = append(stores, store)
+		}
+	}
+
+	return stores
 }
 
 func findMainContainer(containers []corev1.Container) *corev1.Container {

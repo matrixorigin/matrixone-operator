@@ -89,8 +89,6 @@ while true; do
     fi
 done
 
-touch /var/lib/logservice/thisisalocalfileservicedir
-
 echo "/mo-service -cfg ${conf}"
 exec /mo-service -cfg ${conf}
 `))
@@ -130,15 +128,10 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 		conf = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
 	// 1. build base config file
+	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage))
 	conf.Set([]string{"service-type"}, serviceTypeLog)
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentID(ls))
 	conf.Set([]string{"logservice", "logservice-listen-address"}, fmt.Sprintf("0.0.0.0:%d", logServicePort))
-	// conf.Set([]string{"hakeeper-client", "service-addresses"}, HaKeeperAdds(ls))
-	conf.Set([]string{"fileservice"}, []map[string]interface{}{
-		common.LocalFilesServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir)),
-		common.S3FileServiceConfig(ls),
-		common.ETLFileServiceConfig(ls),
-	})
 	conf.Set([]string{"hakeeper-client", "discovery-address"}, fmt.Sprintf("%s:%d", discoverySvcAddress(ls), logServicePort))
 	s, err := conf.ToString()
 	if err != nil {

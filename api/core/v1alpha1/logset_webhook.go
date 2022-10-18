@@ -122,18 +122,24 @@ func (r *LogSetBasic) ValidateUpdate(old *LogSetBasic) field.ErrorList {
 func (r *LogSetBasic) validateSharedStorage() field.ErrorList {
 	var errs field.ErrorList
 	parent := field.NewPath("spec").Child("sharedStorage")
-	var storageFound bool
+	count := 0
 	if r.SharedStorage.S3 != nil {
-		if storageFound {
-			errs = append(errs, field.Invalid(parent, nil, "more than 1 shared storage provider configured"))
-		}
-		storageFound = true
+		count += 1
 		if r.SharedStorage.S3.Path == "" {
 			errs = append(errs, field.Invalid(parent, nil, "path must be set for S3 storage"))
 		}
 	}
-	if !storageFound {
+	if r.SharedStorage.FileSystem != nil {
+		count += 1
+		if r.SharedStorage.FileSystem.Path == "" {
+			errs = append(errs, field.Invalid(parent, nil, "path must be set for file-system storage"))
+		}
+	}
+	if count < 1 {
 		errs = append(errs, field.Invalid(parent, nil, "no shared storage provider configured"))
+	}
+	if count > 1 {
+		errs = append(errs, field.Invalid(parent, nil, "more than 1 storage provider configured"))
 	}
 	return errs
 }

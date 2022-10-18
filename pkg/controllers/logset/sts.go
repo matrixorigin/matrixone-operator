@@ -27,8 +27,6 @@ import (
 )
 
 const (
-	dataVolume   = "data"
-	dataPath     = "/var/lib/logservice"
 	configVolume = "config"
 	configPath   = "/etc/logservice"
 	gossipVolume = "gossip"
@@ -69,7 +67,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 	mainRef.Resources = ls.Spec.Resources
 	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", configPath, entrypoint)}
 	mainRef.VolumeMounts = []corev1.VolumeMount{
-		{Name: dataVolume, MountPath: dataPath},
+		{Name: common.DataVolume, MountPath: common.DataPath},
 		{Name: bootstrapVolume, ReadOnly: true, MountPath: bootstrapPath},
 		{Name: configVolume, ReadOnly: true, MountPath: configPath},
 		{Name: gossipVolume, ReadOnly: true, MountPath: gossipPath},
@@ -107,7 +105,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 func syncPersistentVolumeClaim(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 	dataPVC := corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: dataVolume,
+			Name: common.DataVolume,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},

@@ -94,7 +94,7 @@ func Test_syncPodSpec(t *testing.T) {
 				Resources: resource,
 				Command:   []string{"/bin/sh", "/etc/logservice/start.sh"},
 				VolumeMounts: []corev1.VolumeMount{
-					{Name: "data", MountPath: "/var/lib/logservice"},
+					{Name: "data", MountPath: "/var/lib/matrixone"},
 					{Name: "bootstrap", ReadOnly: true, MountPath: "/etc/bootstrap"},
 					{Name: "config", ReadOnly: true, MountPath: "/etc/logservice"},
 					{Name: "gossip", ReadOnly: true, MountPath: "/etc/gossip"},

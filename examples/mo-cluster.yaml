@@ -9,9 +9,8 @@ spec:
     replicas: 3
     sharedStorage:
       s3:
-        path: test/bucket
-        secretRef:
-          name: aws
+        type: minio
+        path: matrixone
         endpoint: minio-0.mo-system:9000
     volume:
       size: 10Gi

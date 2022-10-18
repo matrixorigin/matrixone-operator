@@ -6631,6 +6631,19 @@ spec:
                 description: SharedStorage is an external shared storage shared by
                   all LogService instances
                 properties:
+                  fileSystem:
+                    description: FileSystem specified a fileSystem path as the shared
+                      storage provider, it assumes a shared filesystem is mounted
+                      to this path and instances can safely read-write this path in
+                      current manner.
+                    properties:
+                      path:
+                        description: Path the path that the shared fileSystem mounted
+                          to
+                        type: string
+                    required:
+                    - path
+                    type: object
                   s3:
                     description: S3 specifies an S3 bucket as the shared storage provider,
                       mutual-exclusive with other providers.
@@ -6644,7 +6657,7 @@ spec:
                           format, e.g. "my-bucket/my-folder"
                         type: string
                       region:
-                        description: Region of the S3 bucket the default region will
+                        description: Region of the bucket the default region will
                           be inferred from the deployment environment
                         type: string
                       secretRef:
@@ -6658,6 +6671,10 @@ spec:
                             type: string
                         type: object
                         x-kubernetes-map-type: atomic
+                      type:
+                        description: 'S3ProviderType is type of this s3 provider,
+                          options: [aws, minio] default to aws'
+                        type: string
                     required:
                     - path
                     type: object
@@ -6699,9 +6716,7 @@ spec:
               availableStores:
                 items:
                   properties:
-                    lastTransitionTime:
-                      description: lastTransitionTime is the latest timestamp a state
-                        transition occurs
+                    lastTransition:
                       format: date-time
                       type: string
                     phase:
@@ -6789,9 +6804,7 @@ spec:
               failedStores:
                 items:
                   properties:
-                    lastTransitionTime:
-                      description: lastTransitionTime is the latest timestamp a state
-                        transition occurs
+                    lastTransition:
                       format: date-time
                       type: string
                     phase:

@@ -15,8 +15,9 @@
 package cnset
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/golang/mock/gomock"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -184,34 +185,17 @@ func TestCNSetActor_Observe(t *testing.T) {
 						},
 					},
 				},
+				Status: v1alpha1.LogSetStatus{
+					Discovery: &v1alpha1.LogSetDiscovery{
+						Port:    6001,
+						Address: "test",
+					},
+				},
 			}
 			action, err := r.Observe(ctx)
 			tt.expect(g, action, err)
 		})
 	}
-}
-
-func Test_syncPods(t *testing.T) {
-
-	type args struct {
-		ctx *recon.Context[*v1alpha1.CNSet]
-		sts *kruisev1.StatefulSet
-	}
-
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := syncPods(tt.args.ctx, tt.args.sts); (err != nil) != tt.wantErr {
-				t.Errorf("syncPods() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-
 }
 
 func newScheme() *runtime.Scheme {

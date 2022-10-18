@@ -35,17 +35,9 @@ type DNSetBasic struct {
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 }
 
-type DNStore struct {
-	PodName            string      `json:"podName,omitempty"`
-	Phase              string      `json:"phase,omitempty"`
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-}
-
-// TODO: figure out what status should be exposed
 type DNSetStatus struct {
-	AvailableStores   []DNStore `json:"availableStores,omitempty"`
-	FailedStores      []DNStore `json:"failedStores,omitempty"`
 	ConditionalStatus `json:",inline"`
+	FailoverStatus    `json:",inline"`
 }
 
 type DNSetDeps struct {
