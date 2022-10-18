@@ -20,7 +20,7 @@ all: manager
 .PHONY: build
 # Build operator image
 build: generate manifests pkg
-	docker build -f Dockerfile . -t ${REPO}:${TAG} --build-arg PROXY=$(PROXY)
+	docker build -f Dockerfile . -t ${REPO}:${TAG} --build-arg GOPROXY=$(GOPROXY)
 
 # Push operator image
 push:
