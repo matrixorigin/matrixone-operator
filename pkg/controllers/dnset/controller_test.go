@@ -138,6 +138,12 @@ func TestDNSetActor_Observe(t *testing.T) {
 						},
 					},
 				},
+				Status: v1alpha1.LogSetStatus{
+					Discovery: &v1alpha1.LogSetDiscovery{
+						Port:    6001,
+						Address: "test",
+					},
+				},
 			}
 			action, err := r.Observe(ctx)
 			tt.expect(g, action, err)

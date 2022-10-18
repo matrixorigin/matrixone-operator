@@ -87,8 +87,6 @@ _Appears in:_
 
 
 
-
-
 #### DNSet
 
 
@@ -152,8 +150,6 @@ _Appears in:_
 | `overlay` _[Overlay](#overlay)_ |  |
 
 
-
-
 #### ExternalLogSet
 
 
@@ -166,6 +162,10 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `haKeeperEndpoint` _string_ | HAKeeperEndpoint of the ExternalLogSet |
+
+
+
+
 
 
 #### InitialConfig
@@ -254,8 +254,6 @@ _Appears in:_
 | `overlay` _[Overlay](#overlay)_ |  |
 
 
-
-
 #### MainContainer
 
 
@@ -328,8 +326,6 @@ _Appears in:_
 | `webui` _[WebUIBasic](#webuibasic)_ | WebUI is the default web ui pod of this cluster |
 | `version` _string_ | Version is the version of the cluster, which translated to the docker image tag used for each component. default to the recommended version of the operator |
 | `imageRepository` _string_ | ImageRepository allows user to override the default image repository in order to use a docker registry proxy or private registry. |
-
-
 
 
 #### Overlay
@@ -427,6 +423,23 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `s3` _[S3Provider](#s3provider)_ | S3 specifies an S3 bucket as the shared storage provider, mutual-exclusive with other providers. |
+| `fileSystem` _[FileSystemProvider](#filesystemprovider)_ | FileSystem specified a fileSystem path as the shared storage provider, it assumes a shared filesystem is mounted to this path and instances can safely read-write this path in current manner. |
+
+
+#### Store
+
+
+
+
+
+_Appears in:_
+- [FailoverStatus](#failoverstatus)
+
+| Field | Description |
+| --- | --- |
+| `podName` _string_ |  |
+| `phase` _string_ |  |
+| `lastTransition` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ |  |
 
 
 #### TomlConfig

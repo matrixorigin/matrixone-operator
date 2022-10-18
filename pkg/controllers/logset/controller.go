@@ -81,8 +81,8 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 	if err != nil {
 		return nil, errors.Wrap(err, "list logservice pods")
 	}
-	collectStoreStatus(ls, podList.Items)
 
+	common.CollectStoreStatus(&ls.Status.FailoverStatus, podList.Items)
 	if len(ls.Status.AvailableStores) >= int(ls.Spec.Replicas) {
 		ls.Status.SetCondition(metav1.Condition{
 			Type:   recon.ConditionTypeReady,
@@ -92,7 +92,7 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		ls.Status.SetCondition(metav1.Condition{
 			Type:   recon.ConditionTypeReady,
 			Status: metav1.ConditionFalse,
-			Reason: common.ReasonNotEnoughReadyStores,
+			Reason: common.ReasonNoEnoughReadyStores,
 		})
 	}
 	ls.Status.Discovery = &v1alpha1.LogSetDiscovery{
@@ -100,7 +100,7 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		Address: discoverySvcAddress(ls),
 	}
 	switch {
-	case len(ls.StoresFailedFor(ls.Spec.GetStoreFailureTimeout().Duration)) > 0:
+	case len(ls.Status.StoresFailedFor(ls.Spec.GetStoreFailureTimeout().Duration)) > 0:
 		return r.with(sts).Repair, nil
 	case ls.Spec.Replicas != *sts.Spec.Replicas:
 		return r.with(sts).Scale, nil
@@ -186,7 +186,7 @@ func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.LogSet]) error {
 // Repair repairs failed log set pods to match the desired state
 func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	ctx.Log.Info("repair logset")
-	toRepair := ctx.Obj.StoresFailedFor(ctx.Obj.Spec.GetStoreFailureTimeout().Duration)
+	toRepair := ctx.Obj.Status.StoresFailedFor(ctx.Obj.Spec.GetStoreFailureTimeout().Duration)
 	if len(toRepair) == 0 {
 		return nil
 	}

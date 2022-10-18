@@ -30,6 +30,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"time"
+)
+
+// reconcile configuration
+const (
+	storeDownTimeOut = 1 * time.Minute
+	reSyncAfter      = 10 * time.Second
 )
 
 type Actor struct{}
@@ -79,7 +86,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, errors.Wrap(err, "list cnset pods")
 	}
 
-	collectStoreStatus(cn, podList.Items)
+	common.CollectStoreStatus(&cn.Status.FailoverStatus, podList.Items)
 
 	if len(cn.Status.AvailableStores) >= int(cn.Spec.Replicas) {
 		cn.Status.SetCondition(metav1.Condition{
@@ -92,14 +99,14 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		cn.Status.SetCondition(metav1.Condition{
 			Type:    recon.ConditionTypeReady,
 			Status:  metav1.ConditionFalse,
-			Reason:  common.ReasonNotEnoughReadyStores,
+			Reason:  common.ReasonNoEnoughReadyStores,
 			Message: "cn stores not ready",
 		})
 
 	}
 
 	switch {
-	case len(cn.StoresFailedFor(storeDownTimeOut)) > 0:
+	case len(cn.Status.StoresFailedFor(storeDownTimeOut)) > 0:
 		return c.with(sts).Repair, nil
 	case cn.Spec.Replicas != *sts.Spec.Replicas:
 		return c.with(sts).Scale, nil
@@ -124,7 +131,7 @@ func (c *WithResources) Update(ctx *recon.Context[*v1alpha1.CNSet]) error {
 }
 
 func (c *WithResources) Repair(ctx *recon.Context[*v1alpha1.CNSet]) error {
-	toRepair := ctx.Obj.StoresFailedFor(storeDownTimeOut)
+	toRepair := ctx.Obj.Status.FailoverStatus.StoresFailedFor(storeDownTimeOut)
 	if len(toRepair) == 0 {
 		return nil
 	}

@@ -16,6 +16,9 @@ package e2e
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	. "github.com/onsi/ginkgo"
@@ -26,8 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 const (
@@ -40,7 +41,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		l := &v1alpha1.LogSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: env.Namespace,
-				Name:      "log",
+				Name:      "cn",
 			},
 			Spec: v1alpha1.LogSetSpec{
 				LogSetBasic: v1alpha1.LogSetBasic{
@@ -54,8 +55,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 						Size: resource.MustParse("100Mi"),
 					},
 					SharedStorage: v1alpha1.SharedStorageProvider{
-						S3: &v1alpha1.S3Provider{
-							Path: "mo-e2e/logset",
+						FileSystem: &v1alpha1.FileSystemProvider{
+							Path: "/test",
 						},
 					},
 					StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
@@ -65,7 +66,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		d := &v1alpha1.DNSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: env.Namespace,
-				Name:      "dn",
+				Name:      "cn",
 			},
 			Spec: v1alpha1.DNSetSpec{
 				DNSetBasic: v1alpha1.DNSetBasic{
@@ -84,7 +85,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 				LogSetRef: v1alpha1.LogSetRef{
 					LogSet: &v1alpha1.LogSet{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "log",
+							Name:      "cn",
 							Namespace: env.Namespace,
 						},
 					},
@@ -114,13 +115,13 @@ var _ = Describe("MatrixOneCluster test", func() {
 				LogSetRef: v1alpha1.LogSetRef{
 					LogSet: &v1alpha1.LogSet{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "log",
+							Name:      "cn",
 							Namespace: env.Namespace,
 						},
 					},
 				},
 				DNSet: &v1alpha1.DNSet{ObjectMeta: metav1.ObjectMeta{
-					Name:      "dn",
+					Name:      "cn",
 					Namespace: env.Namespace,
 				}},
 			},

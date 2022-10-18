@@ -148,13 +148,13 @@ func TestLogSetActor_Observe(t *testing.T) {
 		name: "failover",
 		logset: func() *v1alpha1.LogSet {
 			ls := tpl.DeepCopy()
-			ls.Status = v1alpha1.LogSetStatus{
-				FailedStores: []v1alpha1.LogStore{{
+			ls.Status = v1alpha1.LogSetStatus{FailoverStatus: v1alpha1.FailoverStatus{
+				FailedStores: []v1alpha1.Store{{
 					PodName:            "test-log-0",
 					Phase:              v1alpha1.StorePhaseDown,
 					LastTransitionTime: metav1.Time{Time: now.Add(-24 * time.Hour)},
 				}},
-			}
+			}}
 			return ls
 		}(),
 		client: &fake.Client{

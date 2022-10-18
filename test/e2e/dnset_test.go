@@ -41,7 +41,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		l := &v1alpha1.LogSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: env.Namespace,
-				Name:      "log",
+				Name:      "dn",
 			},
 			Spec: v1alpha1.LogSetSpec{
 				LogSetBasic: v1alpha1.LogSetBasic{
@@ -55,8 +55,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 						Size: resource.MustParse("100Mi"),
 					},
 					SharedStorage: v1alpha1.SharedStorageProvider{
-						S3: &v1alpha1.S3Provider{
-							Path: "mo-e2e/logset",
+						FileSystem: &v1alpha1.FileSystemProvider{
+							Path: "/test",
 						},
 					},
 					StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
@@ -85,7 +85,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 				LogSetRef: v1alpha1.LogSetRef{
 					LogSet: &v1alpha1.LogSet{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "log",
+							Name:      "dn",
 							Namespace: env.Namespace,
 						},
 					},

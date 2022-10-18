@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,37 +12,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cnset
+package common
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
-func collectStoreStatus(cn *v1alpha1.CNSet, pods []corev1.Pod) {
-	previousStore := map[string]v1alpha1.CNStore{}
-	for _, store := range cn.Status.FailedStores {
+const (
+	// TODO: maybe we need to make this configurable
+	minReadySeconds = 15
+)
+
+type StoreFn func(store *v1alpha1.Store)
+
+// CollectStoreStatus is a template method to collect store status.
+// fns allows the caller to pass a list of functions set the store status according to other information (e.g. query HA Keeper)
+func CollectStoreStatus(status *v1alpha1.FailoverStatus, pods []corev1.Pod, fns ...StoreFn) {
+	previousStore := map[string]v1alpha1.Store{}
+	for _, store := range status.FailedStores {
 		previousStore[store.PodName] = store
 	}
-	for _, store := range cn.Status.AvailableStores {
+	for _, store := range status.AvailableStores {
 		previousStore[store.PodName] = store
-		fmt.Println("cn pod name", store.PodName)
 	}
-	var failed []v1alpha1.CNStore
-	var available []v1alpha1.CNStore
+	var availableStores []v1alpha1.Store
+	var failedStores []v1alpha1.Store
 	for _, pod := range pods {
-		store := v1alpha1.CNStore{
+		store := v1alpha1.Store{
 			PodName:            pod.Name,
 			Phase:              v1alpha1.StorePhaseUp,
 			LastTransitionTime: metav1.Time{Time: time.Now()},
 		}
-		if !util.IsPodReady(&pod) {
+		if !util.IsPodAvailable(&pod, minReadySeconds, metav1.Time{Time: time.Now()}) {
 			store.Phase = v1alpha1.StorePhaseDown
+		}
+		for _, fn := range fns {
+			fn(&store)
 		}
 		// update last transition time
 		if previous, ok := previousStore[store.PodName]; ok {
@@ -52,11 +61,12 @@ func collectStoreStatus(cn *v1alpha1.CNSet, pods []corev1.Pod) {
 			}
 		}
 		if store.Phase == v1alpha1.StorePhaseUp {
-			available = append(available, store)
+			availableStores = append(availableStores, store)
 		} else {
-			failed = append(failed, store)
+			failedStores = append(failedStores, store)
 		}
 	}
-	cn.Status.FailedStores = failed
-	cn.Status.AvailableStores = available
+	status.AvailableStores = availableStores
+	status.FailedStores = failedStores
+	return
 }
