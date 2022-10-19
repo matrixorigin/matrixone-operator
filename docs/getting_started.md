@@ -79,36 +79,10 @@ You should see at least one ready `matrixone-operator` Pod.
 4. Create a YAML spec of your MO cluster, edit the fields to match your requirment:
 
     ```bash
-    > cat>mo.yaml<<EOF
-    apiVersion: core.matrixorigin.io/v1alpha1
-    kind: MatrixOneCluster
-    metadata:
-      name: mo
-    spec:
-      imageRepository: matrixorigin/matrixone
-      # Version of the MO to deploy
-      version: nightly-c371317c
-      logService:
-        replicas: 3
-        sharedStorage:
-          s3:
-            path: matrixone
-            # endpoint and secretRef are used to access the MinIO instance deployed at step 1
-            endpoint: minio-0.mo-system:9000
-            secretRef:
-              name: minio
-        volume:
-          size: 10Gi
-      dn:
-        replicas: 2
-        cacheVolume:
-          size: 10Gi
-      tp:
-        replicas: 2
-        cacheVolume:
-          size: 10Gi
-    EOF
-    # Create the cluster
+    > curl https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/mo-cluster.yaml > mo.yaml
+    # edit mo.yaml to match your environment, if you're exactly following this guide so far, no change is required
+    > vim mo.yaml
+    # create the cluster
     > kubectl -n mo apply -f mo.yaml
     ```
 
