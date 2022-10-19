@@ -41,7 +41,6 @@ conf=$(mktemp)
 bc=$(mktemp)
 cat <<EOF > ${bc}
 uuid = "${UUID}"
-listen-address = "${ADDR}:{{ .CNServicePort }}"
 EOF
 # build instance config
 sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
