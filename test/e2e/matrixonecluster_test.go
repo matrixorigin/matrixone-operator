@@ -15,15 +15,12 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/matrixorigin/matrixone-operator/test/e2e/sql"
-	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
-	"strings"
-	"time"
-
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
+	"github.com/matrixorigin/matrixone-operator/test/e2e/sql"
+	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/multierr"
@@ -32,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
+	"time"
 )
 
 const (
