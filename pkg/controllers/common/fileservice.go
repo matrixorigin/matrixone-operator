@@ -35,8 +35,10 @@ const (
 	fsBackendTypeS3      = "S3"
 	fsBackendTypeMinio   = "MINIO"
 
-	AWSAccessKeyID     = "AWS_ACCESS_KEY_ID"
-	AWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
+	awsAccessKeyID     = "AWS_ACCESS_KEY_ID"
+	awsSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
+	awsRegion          = "AWS_REGION"
+	defaultAWSRegion   = "us-west-2"
 )
 
 // SetStorageProviderConfig set inject configuration of storage provider to Pods
@@ -44,7 +46,7 @@ func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1
 	for i := range podSpec.Containers {
 		if s3p := sp.S3; s3p != nil {
 			if s3p.SecretRef != nil {
-				for _, key := range []string{AWSAccessKeyID, AWSSecretAccessKey} {
+				for _, key := range []string{awsAccessKeyID, awsSecretAccessKey} {
 					podSpec.Containers[i].Env = util.UpsertByKey(podSpec.Containers[i].Env, corev1.EnvVar{Name: key, ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
 							LocalObjectReference: *s3p.SecretRef,
@@ -53,6 +55,11 @@ func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1
 					}}, util.EnvVarKey)
 				}
 			}
+			region := s3p.Region
+			if region == "" {
+				region = defaultAWSRegion
+			}
+			podSpec.Containers[i].Env = util.UpsertByKey(podSpec.Containers[i].Env, corev1.EnvVar{Name: awsRegion, Value: region}, util.EnvVarKey)
 		}
 	}
 }
@@ -93,6 +100,7 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, name, subDir str
 		if s3.Endpoint != "" {
 			s3Config["endpoint"] = s3.Endpoint
 		} else {
+			// TODO: let AWS SDK discover its own endpoint by default
 			s3Config["endpoint"] = "s3.us-west-2.amazonaws.com"
 		}
 		paths := strings.SplitN(s3.Path, "/", 2)

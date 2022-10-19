@@ -9,11 +9,9 @@ spec:
     replicas: 3
     sharedStorage:
       s3:
-        type: minio
-        path: matrixone
-        endpoint: http://minio-0.minio.mo-system:9000
+        path: maomao-moc-test/test
         secretRef:
-          name: minio
+          name: aws
     volume:
       size: 10Gi
   dn:
@@ -26,9 +24,3 @@ spec:
     # cacheVolume specifies a dedicated volume for CN's local cache
     cacheVolume:
       size: 10Gi
-
-#  # Uncomment this section to enable CN nodes for analytic processing
-#  ap:
-#    replicas: 2
-#    cacheVolume:
-#      size: 10Gi
