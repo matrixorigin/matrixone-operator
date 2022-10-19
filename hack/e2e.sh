@@ -19,7 +19,7 @@ function e2e::check() {
 function e2e::run() {
     echo "> Run e2e test"
     make ginkgo
-    ./bin/ginkgo -stream -slowSpecThreshold=3000 ./test/e2e/... -- \
+    ./bin/ginkgo -nodes=4 -stream=true -slowSpecThreshold=3000 ./test/e2e/... -- \
                 -mo-version="${MO_VERSION}" \
                 -mo-image-repo="${MO_IMAGE_REPO}"
 
@@ -35,20 +35,7 @@ function e2e::install() {
   sleep 30
 }
 
-function e2e::deleteFinalizers() {
-    echo "> Delete resources"
-    ns=$(kubectl get ns --all-namespaces --no-headers=true | awk '/^e2e/{print $1}')
-
-    for value in $ns
-    do
-        echo "namespace: $value"
-        kubectl patch pod log-log-0 --type='json' -p='[{"op":"remove", "path":"/metadata/finalizers", "values":["matrixorigin.io/confirm-deletion"]}]' -n $value
-    done
-
-}
-
 function e2e::cleanup() {
-    e2e::deleteFinalizers
     echo "Delete e2e test namespace"
     kubectl get ns --all-namespaces --no-headers=true | awk '/^e2e/{print $1}' | xargs kubectl delete ns
     # Uninstall helm charts
