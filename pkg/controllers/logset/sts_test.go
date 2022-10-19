@@ -126,6 +126,9 @@ func Test_syncPodSpec(t *testing.T) {
 				}, {
 					Name:  "HEADLESS_SERVICE_NAME",
 					Value: "test-log-headless",
+				}, {
+					Name:  "AWS_REGION",
+					Value: "us-west-2",
 				}},
 			}},
 			Volumes: []corev1.Volume{{
