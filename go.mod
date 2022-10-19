@@ -1,6 +1,6 @@
 module github.com/matrixorigin/matrixone-operator
 
-go 1.18
+go 1.19
 
 require (
 	github.com/cespare/xxhash v1.1.0
@@ -12,7 +12,7 @@ require (
 	github.com/matrixorigin/matrixone-operator/runtime v0.0.0-20220926063007-e629f86256d2
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
-	github.com/openkruise/kruise-api v1.2.0
+	github.com/openkruise/kruise-api v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/samber/lo v1.25.0
 	go.uber.org/multierr v1.8.0
