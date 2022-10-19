@@ -26,7 +26,8 @@ runs:
 
     # disable action cache due to https://github.com/golangci/golangci-lint-action/issues/244
     - name: golangci_lint
-      uses: golangci/golangci-lint-action@v3.1.0
+      uses: golangci/golangci-lint-action@v3.2.0
       with:
-        version: v1.45.2
+        version: '${{ env.golangci-lint-version }}'
         args: --timeout 10m0s
+        skip-cache: true
