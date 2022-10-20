@@ -39,3 +39,12 @@ func IsServiceReady(svc *corev1.Service) bool {
 
 	return true
 }
+
+func DiffVolumeMount(key string, list []corev1.VolumeMount) bool {
+	for _, v := range list {
+		if v.Name == key {
+			return true
+		}
+	}
+	return false
+}

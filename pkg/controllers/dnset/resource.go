@@ -17,9 +17,10 @@ package dnset
 import (
 	"bytes"
 	"fmt"
+	"text/template"
+
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
 	"github.com/pkg/errors"
-	"text/template"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"

@@ -15,12 +15,14 @@
 package dnset
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/golang/mock/gomock"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/fake"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	. "github.com/onsi/gomega"
@@ -32,6 +34,10 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	defaultConfigmapVolume = 1
 )
 
 func TestDNSetActor_Observe(t *testing.T) {
@@ -192,6 +198,86 @@ func TestDNSetActor_Observe(t *testing.T) {
 			}
 			action, err := r.Observe(ctx)
 			tt.expect(g, action, err)
+		})
+	}
+}
+
+func TestDNSetSyncPodSpec(t *testing.T) {
+	s := newScheme()
+
+	tests := []struct {
+		name   string
+		sts    *kruisev1.StatefulSet
+		dnset  *v1alpha1.DNSet
+		sp     v1alpha1.SharedStorageProvider
+		client client.Client
+	}{
+		{
+			name: "test volume mount",
+			dnset: &v1alpha1.DNSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test",
+				},
+				Spec: v1alpha1.DNSetSpec{
+					DNSetBasic: v1alpha1.DNSetBasic{
+						PodSet: v1alpha1.PodSet{
+							MainContainer: v1alpha1.MainContainer{
+								Image: "test:latest",
+							},
+							Replicas: 3,
+						},
+					},
+				},
+			},
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
+			},
+			sp:  v1alpha1.SharedStorageProvider{},
+			sts: &kruisev1.StatefulSet{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
+			ctx := fake.NewContext(tt.dnset, tt.client, eventEmitter)
+			ctx.Dep = tt.dnset.DeepCopy()
+			ctx.Dep.Deps.LogSet = &v1alpha1.LogSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test",
+				},
+				Spec: v1alpha1.LogSetSpec{
+					LogSetBasic: v1alpha1.LogSetBasic{
+						SharedStorage: v1alpha1.SharedStorageProvider{
+							S3: &v1alpha1.S3Provider{
+								Path: "bucket/dir",
+							},
+						},
+					},
+				},
+				Status: v1alpha1.LogSetStatus{
+					Discovery: &v1alpha1.LogSetDiscovery{
+						Port:    6001,
+						Address: "test",
+					},
+				},
+			}
+			syncPodSpec(tt.dnset, tt.sts, tt.sp)
+			if tt.dnset.Spec.CacheVolume == nil {
+				// if cacheVolume not set, volumeClaimTemplates should be 0
+				// dataVolumeMount should not be created.
+				if len(tt.sts.Spec.VolumeClaimTemplates) == 0 {
+					if utils.DiffVolumeMount(common.DataVolume, tt.sts.Spec.Template.Spec.Containers[0].VolumeMounts) {
+						t.Error("data volume create error")
+					}
+				} else {
+					t.Error("should not create persistent volume without cacheVolume config")
+				}
+			}
+
 		})
 	}
 }
