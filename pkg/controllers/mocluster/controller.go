@@ -115,6 +115,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	mo.Status.LogService = &ls.Status
 	mo.Status.DN = &dn.Status
 	mo.Status.TP = &tp.Status
+	mo.Status.Phase = "NotReady"
 	mo.Status.ConditionalStatus.SetCondition(syncedCondition(mo))
 
 	subResourcesReady := readyCondition(mo)
@@ -132,9 +133,13 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			Status: metav1.ConditionFalse,
 			Reason: "ClusterNotInitialized",
 		})
+		mo.Status.Phase = "Initializing"
 		return r.Initialize, nil
 	}
 	mo.Status.ConditionalStatus.SetCondition(subResourcesReady)
+	if subResourcesReady.Status == metav1.ConditionTrue {
+		mo.Status.Phase = "Ready"
+	}
 
 	if recon.IsReady(&mo.Status) {
 		return nil, nil
