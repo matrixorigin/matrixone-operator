@@ -86,6 +86,10 @@ func syncReplicas(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	sts.Spec.Replicas = &cn.Spec.Replicas
 }
 
+func syncServiceType(cn *v1alpha1.CNSet, svc *corev1.Service) {
+	svc.Spec.Type = cn.Spec.ServiceType
+}
+
 func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	cn.Spec.Overlay.OverlayPodMeta(&sts.Spec.Template.ObjectMeta)
 }
@@ -103,15 +107,30 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	mainRef.Resources = cn.Spec.Resources
 
 	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint)}
-	mainRef.VolumeMounts = []corev1.VolumeMount{
-		{Name: common.DataVolume, MountPath: common.DataPath},
-		{Name: common.ConfigVolume, ReadOnly: true, MountPath: common.ConfigPath},
+	volumeMountsList := []corev1.VolumeMount{
+		{
+			Name:      common.ConfigVolume,
+			ReadOnly:  true,
+			MountPath: common.ConfigPath,
+		},
 	}
+
+	dataVolume := corev1.VolumeMount{
+		Name:      common.DataVolume,
+		MountPath: common.DataPath,
+	}
+
+	if cn.Spec.CacheVolume != nil {
+		volumeMountsList = append(volumeMountsList, dataVolume)
+	}
+	mainRef.VolumeMounts = volumeMountsList
+
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
 	}
+
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)
 
 	specRef.Containers = []corev1.Container{*mainRef}

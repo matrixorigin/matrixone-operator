@@ -46,10 +46,11 @@ var _ recon.Actor[*v1alpha1.CNSet] = &Actor{}
 type WithResources struct {
 	*Actor
 	sts *kruise.StatefulSet
+	svc *corev1.Service
 }
 
-func (c *Actor) with(sts *kruise.StatefulSet) *WithResources {
-	return &WithResources{Actor: c, sts: sts}
+func (c *Actor) with(sts *kruise.StatefulSet, svc *corev1.Service) *WithResources {
+	return &WithResources{Actor: c, sts: sts, svc: svc}
 }
 
 func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1alpha1.CNSet], error) {
@@ -76,7 +77,13 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, err
 	}
 	if !equality.Semantic.DeepEqual(origin, sts) {
-		return c.with(sts).Update, nil
+		return c.with(sts, svc).Update, nil
+	}
+
+	// update Service of cnset
+	originSvc := svc.DeepCopy()
+	if !equality.Semantic.DeepEqual(originSvc, svc) {
+		return c.with(sts, svc).SvcUpdate, nil
 	}
 
 	// collect cn status
@@ -107,9 +114,9 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 
 	switch {
 	case len(cn.Status.StoresFailedFor(storeDownTimeOut)) > 0:
-		return c.with(sts).Repair, nil
+		return c.with(sts, svc).Repair, nil
 	case cn.Spec.Replicas != *sts.Spec.Replicas:
-		return c.with(sts).Scale, nil
+		return c.with(sts, svc).Scale, nil
 	}
 
 	if recon.IsReady(&cn.Status.ConditionalStatus) {

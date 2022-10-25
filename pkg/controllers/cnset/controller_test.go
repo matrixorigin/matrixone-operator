@@ -48,6 +48,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 					},
 					Replicas: 1,
 				},
+				ServiceType: corev1.ServiceTypeClusterIP,
 				// TODO: add configuration of cn
 			},
 		},
@@ -98,7 +99,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 									Volumes: []corev1.Volume{},
 								},
 							},
-							ServiceName: "test-svc",
+							ServiceName: svc,
 						},
 					},
 					&corev1.Service{

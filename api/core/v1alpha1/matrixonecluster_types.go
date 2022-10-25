@@ -58,6 +58,10 @@ type MatrixOneClusterSpec struct {
 type MatrixOneClusterStatus struct {
 	ConditionalStatus `json:",inline"`
 
+	// Phase is a human-readable description of current cluster condition,
+	// programmatic client should rely on ConditionalStatus rather than phase.
+	Phase string `json:"phase,omitempty"`
+
 	// CredentialRef is the initial credential of the mo database which can be
 	// used to connect to the database.
 	CredentialRef *corev1.LocalObjectReference `json:"credentialRef,omitempty"`
@@ -85,8 +89,9 @@ type MatrixOneClusterStatus struct {
 // +kubebuilder:printcolumn:name="DN",type="integer",JSONPath=".spec.dn.replicas"
 // +kubebuilder:printcolumn:name="TP",type="integer",JSONPath=".spec.tp.replicas"
 // +kubebuilder:printcolumn:name="AP",type="integer",JSONPath=".spec.ap.replicas"
-// +kubebuilder:printcolumn:name="UI",type="integer",JSONPath=".spec.webui.replicas"
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
+// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="UI",type="integer",priority=1,JSONPath=".spec.webui.replicas"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type MatrixOneCluster struct {
 	metav1.TypeMeta   `json:",inline"`
