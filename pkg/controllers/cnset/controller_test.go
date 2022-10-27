@@ -198,7 +198,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 	}
 }
 
-func TestCNSetSyncPodSpec(t *testing.T) {
+func TestCNSetVolumeMount(t *testing.T) {
 	s := newScheme()
 
 	tests := []struct {
@@ -293,12 +293,12 @@ func TestCNSetSyncPodSpec(t *testing.T) {
 			if tt.cnset.Spec.CacheVolume == nil {
 				// if cacheVolume not set, volumeClaimTemplates should be 0
 				// dataVolumeMount should not be created.
-				if len(tt.sts.Spec.VolumeClaimTemplates) == 0 {
-					if utils.DiffVolumeMount(common.DataVolume, tt.sts.Spec.Template.Spec.Containers[0].VolumeMounts) {
-						t.Error("data volume create error")
+				if !utils.CheckVolumeClaimTemplate(common.DataVolume, tt.sts.Spec.VolumeClaimTemplates) {
+					if utils.CheckVolumeMount(common.DataVolume, tt.sts.Spec.Template.Spec.Containers[0].VolumeMounts) {
+						t.Error("mo data volume create error")
 					}
 				} else {
-					t.Error("should not create persistent volume without cacheVolume config")
+					t.Error("should not have a persistent volume for cache when cacheVolume is not set")
 				}
 			}
 		})

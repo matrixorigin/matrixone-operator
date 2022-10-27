@@ -17,6 +17,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/matrixorigin/matrixone-operator/runtime/pkg/metrics"
 	"os"
 
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
@@ -27,6 +28,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/webui"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap/zapcore"
+	controllermetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -90,6 +92,17 @@ func main() {
 		},
 	})
 	exitIf(err, "failed to start manager")
+
+	collector := metrics.NewMetricsCollector("matrixone", mgr.GetClient())
+	err = collector.RegisterResource(&v1alpha1.LogSetList{})
+	exitIf(err, "unable to regist metrics of logset")
+	err = collector.RegisterResource(&v1alpha1.DNSetList{})
+	exitIf(err, "unable to regist metrics of dnset")
+	err = collector.RegisterResource(&v1alpha1.CNSetList{})
+	exitIf(err, "unable to regist metrics of cnset")
+	err = collector.RegisterResource(&v1alpha1.MatrixOneClusterList{})
+	exitIf(err, "unable to regist metrics of matrixonecluster")
+	controllermetrics.Registry.MustRegister(collector)
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		err := v1alpha1.RegisterWebhooks(mgr)

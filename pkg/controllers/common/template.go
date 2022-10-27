@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package common
 
 import (
@@ -24,15 +25,15 @@ import (
 
 const (
 	// DataVolume is the volume name of data PV
-	DataVolume = "data"
+	DataVolume = "mo-data"
 	// DataPath is the path where the data volume will be mounted to
 	DataPath = "/var/lib/matrixone"
 	// DataDir is the directory under data path that will be used to store the data of mo disk backend
 	DataDir = "data"
 
-	// InstanceLableKey labels the cluster instance name of the resource
+	// InstanceLabelKey labels the cluster instance name of the resource
 	InstanceLabelKey = "matrixorigin.io/instance"
-	// InstanceLableKey labels the component type of the resource
+	// ComponentLabelKey labels the component type of the resource
 	ComponentLabelKey = "matrixorigin.io/component"
 	// NamespaceLabelKey labels the owner namespace of cluster-scope resources
 	NamespaceLabelKey = "matrixorigin.io/namespace"
@@ -47,7 +48,7 @@ const (
 	PodNameEnvKey = "POD_NAME"
 	// HeadlessSvcEnvKey is the container environment variable to reflect the headless service name of the Pod that runs the container
 	HeadlessSvcEnvKey = "HEADLESS_SERVICE_NAME"
-	// Namespace env is the container environment variable to reflect the namespace of the Pod that runs the container
+	// NamespaceEnvKey  is the container environment variable to reflect the namespace of the Pod that runs the container
 	NamespaceEnvKey = "NAMESPACE"
 )
 
