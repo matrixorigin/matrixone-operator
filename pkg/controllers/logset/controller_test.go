@@ -15,6 +15,9 @@ package logset
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -28,8 +31,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
-	"time"
 
 	. "github.com/onsi/gomega"
 )

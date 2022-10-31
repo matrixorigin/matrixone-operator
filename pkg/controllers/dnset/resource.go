@@ -17,9 +17,10 @@ package dnset
 import (
 	"bytes"
 	"fmt"
+	"text/template"
+
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
 	"github.com/pkg/errors"
-	"text/template"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -86,7 +87,24 @@ func syncPodMeta(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 	dn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 }
 
-func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
+func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
+	volumeMountsList := []corev1.VolumeMount{
+		{
+			Name:      common.ConfigVolume,
+			ReadOnly:  true,
+			MountPath: common.ConfigPath,
+		},
+	}
+
+	dataVolume := corev1.VolumeMount{
+		Name:      common.DataVolume,
+		MountPath: common.DataPath,
+	}
+
+	if dn.Spec.CacheVolume != nil {
+		volumeMountsList = append(volumeMountsList, dataVolume)
+	}
+
 	main := corev1.Container{
 		Name:      v1alpha1.ContainerMain,
 		Image:     dn.Spec.Image,
@@ -94,10 +112,7 @@ func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet, sp v1alpha1.SharedS
 		Command: []string{
 			"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint),
 		},
-		VolumeMounts: []corev1.VolumeMount{
-			{Name: common.DataVolume, MountPath: common.DataPath},
-			{Name: common.ConfigVolume, ReadOnly: true, MountPath: common.ConfigPath},
-		},
+		VolumeMounts: volumeMountsList,
 		Env: []corev1.EnvVar{
 			util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 			util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
@@ -117,7 +132,7 @@ func syncPodSpec(dn *v1alpha1.DNSet, cs *kruise.StatefulSet, sp v1alpha1.SharedS
 	common.SyncTopology(dn.Spec.TopologyEvenSpread, &podSpec)
 
 	dn.Spec.Overlay.OverlayPodSpec(&podSpec)
-	cs.Spec.Template.Spec = podSpec
+	sts.Spec.Template.Spec = podSpec
 }
 
 // buildDNSetConfigMap return dn set configmap

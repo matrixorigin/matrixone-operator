@@ -39,3 +39,23 @@ func IsServiceReady(svc *corev1.Service) bool {
 
 	return true
 }
+
+func CheckVolumeMount(key string, list []corev1.VolumeMount) bool {
+	for _, v := range list {
+		if v.Name == key {
+			return true
+		}
+	}
+
+	return false
+}
+
+func CheckVolumeClaimTemplate(key string, list []corev1.PersistentVolumeClaim) bool {
+	for _, v := range list {
+		if v.Name == key {
+			return true
+		}
+	}
+
+	return false
+}
