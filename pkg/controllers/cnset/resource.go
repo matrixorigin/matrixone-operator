@@ -41,6 +41,7 @@ conf=$(mktemp)
 bc=$(mktemp)
 cat <<EOF > ${bc}
 uuid = "${UUID}"
+listen-address = "0.0.0.0:{{ .CNRpcPort }}"
 service-address = "${ADDR}:{{ .CNRpcPort }}"
 sql-address = "${ADDR}:{{ .CNSQLPort }}"
 EOF
