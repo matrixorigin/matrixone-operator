@@ -6608,7 +6608,9 @@ spec:
                 - LoadBalancer
                 type: string
               topologySpread:
-                description: This will be overridden by .overlay.TopologySpreadConstraints
+                description: TopologyEvenSpread specifies what topology domains the
+                  Pods in set should be evenly spread in. This will be overridden
+                  by .overlay.TopologySpreadConstraints
                 items:
                   type: string
                 type: array

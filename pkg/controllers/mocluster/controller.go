@@ -63,6 +63,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	errs := multierr.Combine(
 		recon.CreateOwnedOrUpdate(ctx, ls, func() error {
 			ls.Spec.LogSetBasic.PodSet = mo.Spec.LogService.PodSet
+			setPodSetDefault(&ls.Spec.LogSetBasic.PodSet, mo)
 			ls.Spec.LogSetBasic.SharedStorage = mo.Spec.LogService.SharedStorage
 			ls.Spec.LogSetBasic.Volume = mo.Spec.LogService.Volume
 			ls.Spec.Image = mo.LogSetImage()
@@ -70,12 +71,14 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		}),
 		recon.CreateOwnedOrUpdate(ctx, dn, func() error {
 			dn.Spec.DNSetBasic = mo.Spec.DN
+			setPodSetDefault(&dn.Spec.DNSetBasic.PodSet, mo)
 			dn.Spec.Image = mo.DnSetImage()
 			dn.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
 			return nil
 		}),
 		recon.CreateOwnedOrUpdate(ctx, tp, func() error {
 			tp.Spec.CNSetBasic = mo.Spec.TP
+			setPodSetDefault(&tp.Spec.CNSetBasic.PodSet, mo)
 			tp.Spec.Image = mo.TpSetImage()
 			tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
 			tp.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
@@ -89,6 +92,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		}
 		errs = multierr.Append(errs, recon.CreateOwnedOrUpdate(ctx, ap, func() error {
 			ap.Spec.CNSetBasic = *mo.Spec.AP
+			setPodSetDefault(&ap.Spec.CNSetBasic.PodSet, mo)
 			ap.Spec.Image = mo.ApSetImage()
 			ap.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
 			ap.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
@@ -145,6 +149,15 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		return nil, nil
 	}
 	return nil, recon.ErrReSync("matrixone cluster is not ready", resyncAfter)
+}
+
+func setPodSetDefault(ps *v1alpha1.PodSet, mo *v1alpha1.MatrixOneCluster) {
+	if ps.NodeSelector == nil {
+		ps.NodeSelector = mo.Spec.NodeSelector
+	}
+	if ps.TopologyEvenSpread == nil {
+		ps.TopologyEvenSpread = mo.Spec.TopologyEvenSpread
+	}
 }
 
 // Initialize the MO cluster
