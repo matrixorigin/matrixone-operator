@@ -51,7 +51,6 @@ type PodSet struct {
 
 	// TopologyEvenSpread specifies what topology domains the Pods in set should be
 	// evenly spread in.
-
 	// This will be overridden by .overlay.TopologySpreadConstraints
 	// +optional
 	TopologyEvenSpread []string `json:"topologySpread,omitempty"`

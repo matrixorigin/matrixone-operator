@@ -272,6 +272,30 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 		expectAction: func(g *WithT, action recon.Action[*v1alpha1.MatrixOneCluster]) {
 			g.Expect(action.String()).To(ContainSubstring("Initialize"))
 		},
+	}, {
+		name: "inheritOrOverrideGlobalNodeSelector",
+		mo: func() *v1alpha1.MatrixOneCluster {
+			m := tpl.DeepCopy()
+			m.Spec.NodeSelector = map[string]string{
+				"global-label": "global-value",
+			}
+			m.Spec.TP.NodeSelector = map[string]string{
+				"local-label": "local-value",
+			}
+			return m
+		}(),
+		objects: nil,
+		expect: func(g *WithT, _ *v1alpha1.MatrixOneCluster, err error, c client.Client) {
+			dn := &v1alpha1.DNSet{}
+			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, dn)).To(Succeed())
+			g.Expect(dn.Spec.NodeSelector).To(Equal(map[string]string{"global-label": "global-value"}))
+			ls := &v1alpha1.LogSet{}
+			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, ls)).To(Succeed())
+			g.Expect(ls.Spec.NodeSelector).To(Equal(map[string]string{"global-label": "global-value"}))
+			cn := &v1alpha1.CNSet{}
+			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test-tp"}, cn)).To(Succeed())
+			g.Expect(cn.Spec.NodeSelector).To(Equal(map[string]string{"local-label": "local-value"}))
+		},
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

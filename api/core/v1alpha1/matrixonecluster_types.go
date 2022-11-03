@@ -52,6 +52,16 @@ type MatrixOneClusterSpec struct {
 	// registry.
 	// +required
 	ImageRepository string `json:"imageRepository,omitempty"`
+
+	// TopologyEvenSpread specifies default topology policy for all components,
+	// this will be overridden by component-level config
+	// +optional
+	TopologyEvenSpread []string `json:"topologySpread,omitempty"`
+
+	// NodeSelector specifies default node selector for all components,
+	// this will be overridden by component-level config
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 // MatrixOneClusterStatus defines the observed state of MatrixOneCluster
