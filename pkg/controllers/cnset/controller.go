@@ -15,6 +15,8 @@
 package cnset
 
 import (
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
@@ -30,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"time"
 )
 
 // reconcile configuration
@@ -135,6 +136,14 @@ func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
 
 func (c *WithResources) Update(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return ctx.Update(c.sts)
+}
+
+func (c *WithResources) SvcUpdate(ctx *recon.Context[*v1alpha1.CNSet]) error {
+	return ctx.Patch(c.svc, func() error {
+		syncServiceType(ctx.Obj, c.svc)
+		return nil
+	})
+
 }
 
 func (c *WithResources) Repair(ctx *recon.Context[*v1alpha1.CNSet]) error {

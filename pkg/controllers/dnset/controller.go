@@ -15,7 +15,6 @@
 package dnset
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -113,13 +112,6 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return d.with(sts, svc).Update, nil
 	}
 
-	// update service of dnset
-	originSvc := svc.DeepCopy()
-	fmt.Println("hello")
-	if !equality.Semantic.DeepEqual(originSvc, svc) {
-		return d.with(sts, svc).SvcUpdate, nil
-	}
-
 	if recon.IsReady(&dn.Status.ConditionalStatus) {
 		return nil, nil
 	}
@@ -198,13 +190,6 @@ func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.DNSet]) error {
 
 func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	return ctx.Update(r.sts)
-}
-
-func (r *WithResources) SvcUpdate(ctx *recon.Context[*v1alpha1.DNSet]) error {
-	return ctx.Patch(r.svc, func() error {
-		sync
-		return nil
-	})
 }
 
 func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.DNSet]) error {

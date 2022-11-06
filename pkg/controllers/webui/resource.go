@@ -84,6 +84,10 @@ func syncPods(ctx *recon.Context[*v1alpha1.WebUI], dp *appsv1.Deployment) {
 	syncPodSpec(ctx.Obj, dp)
 }
 
+func syncServiceType(wi *v1alpha1.WebUI, svc *corev1.Service) {
+	svc.Spec.Type = wi.Spec.ServiceType
+}
+
 func buildWebUI(wi *v1alpha1.WebUI) *appsv1.Deployment {
 	return common.DeploymentTemplate(wi, webUIName(wi))
 }

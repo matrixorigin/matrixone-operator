@@ -74,10 +74,12 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 		return w.with(dp, svc).Update, nil
 	}
 
+	// update Service of cnset
 	originSvc := svc.DeepCopy()
 	if !equality.Semantic.DeepEqual(originSvc, svc) {
-		return w.with(dp, svc).Update, nil
+		return w.with(dp, svc).SvcUpdate, nil
 	}
+
 	// TODO: add webui status
 
 	return nil, nil
@@ -137,6 +139,14 @@ func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
 
 func (r *WithResource) Update(ctx *recon.Context[*v1alpha1.WebUI]) error {
 	return ctx.Update(r.dp)
+}
+
+func (r *WithResource) SvcUpdate(ctx *recon.Context[*v1alpha1.WebUI]) error {
+	return ctx.Patch(r.svc, func() error {
+		syncServiceType(ctx.Obj, r.svc)
+		return nil
+	})
+
 }
 
 func (w *Actor) Reconcile(mgr manager.Manager) error {
