@@ -135,7 +135,9 @@ spec:
                     - LoadBalancer
                     type: string
                   topologySpread:
-                    description: This will be overridden by .overlay.TopologySpreadConstraints
+                    description: TopologyEvenSpread specifies what topology domains
+                      the Pods in set should be evenly spread in. This will be overridden
+                      by .overlay.TopologySpreadConstraints
                     items:
                       type: string
                     type: array
@@ -204,7 +206,9 @@ spec:
                         type: object
                     type: object
                   topologySpread:
-                    description: This will be overridden by .overlay.TopologySpreadConstraints
+                    description: TopologyEvenSpread specifies what topology domains
+                      the Pods in set should be evenly spread in. This will be overridden
+                      by .overlay.TopologySpreadConstraints
                     items:
                       type: string
                     type: array
@@ -348,7 +352,9 @@ spec:
                       logset Pod after a failure of it is observed
                     type: string
                   topologySpread:
-                    description: This will be overridden by .overlay.TopologySpreadConstraints
+                    description: TopologyEvenSpread specifies what topology domains
+                      the Pods in set should be evenly spread in. This will be overridden
+                      by .overlay.TopologySpreadConstraints
                     items:
                       type: string
                     type: array
@@ -374,6 +380,18 @@ spec:
                 - sharedStorage
                 - volume
                 type: object
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: NodeSelector specifies default node selector for all
+                  components, this will be overridden by component-level config
+                type: object
+              topologySpread:
+                description: TopologyEvenSpread specifies default topology policy
+                  for all components, this will be overridden by component-level config
+                items:
+                  type: string
+                type: array
               tp:
                 description: TP is the default CN pod set that accepts client connections
                   and execute queries
@@ -445,7 +463,9 @@ spec:
                     - LoadBalancer
                     type: string
                   topologySpread:
-                    description: This will be overridden by .overlay.TopologySpreadConstraints
+                    description: TopologyEvenSpread specifies what topology domains
+                      the Pods in set should be evenly spread in. This will be overridden
+                      by .overlay.TopologySpreadConstraints
                     items:
                       type: string
                     type: array
@@ -510,7 +530,9 @@ spec:
                     - LoadBalancer
                     type: string
                   topologySpread:
-                    description: This will be overridden by .overlay.TopologySpreadConstraints
+                    description: TopologyEvenSpread specifies what topology domains
+                      the Pods in set should be evenly spread in. This will be overridden
+                      by .overlay.TopologySpreadConstraints
                     items:
                       type: string
                     type: array

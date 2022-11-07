@@ -41,6 +41,9 @@ conf=$(mktemp)
 bc=$(mktemp)
 cat <<EOF > ${bc}
 uuid = "${UUID}"
+listen-address = "0.0.0.0:{{ .CNRpcPort }}"
+service-address = "${ADDR}:{{ .CNRpcPort }}"
+sql-address = "${ADDR}:{{ .CNSQLPort }}"
 EOF
 # build instance config
 sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
@@ -51,7 +54,8 @@ exec /mo-service -cfg ${conf}
 
 type model struct {
 	ConfigFilePath string
-	CNServicePort  int
+	CNSQLPort      int
+	CNRpcPort      int
 }
 
 func buildHeadlessSvc(cn *v1alpha1.CNSet) *corev1.Service {
@@ -168,7 +172,8 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
 		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
-		CNServicePort:  cnServicePort,
+		CNSQLPort:      cnSQLPort,
+		CNRpcPort:      cnRPCPort,
 	})
 	if err != nil {
 		return nil, err

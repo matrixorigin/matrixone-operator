@@ -5,7 +5,7 @@ metadata:
   name: mo
 spec:
   imageRepository: matrixorigin/matrixone
-  version: nightly-43446ad2
+  version:  nightly-63835b83
   logService:
     replicas: 3
     initialConfig:

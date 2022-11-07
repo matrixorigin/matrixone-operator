@@ -326,6 +326,8 @@ _Appears in:_
 | `webui` _[WebUIBasic](#webuibasic)_ | WebUI is the default web ui pod of this cluster |
 | `version` _string_ | Version is the version of the cluster, which translated to the docker image tag used for each component. default to the recommended version of the operator |
 | `imageRepository` _string_ | ImageRepository allows user to override the default image repository in order to use a docker registry proxy or private registry. |
+| `topologySpread` _string array_ | TopologyEvenSpread specifies default topology policy for all components, this will be overridden by component-level config |
+| `nodeSelector` _object (keys:string, values:string)_ | NodeSelector specifies default node selector for all components, this will be overridden by component-level config |
 
 
 #### Overlay
@@ -389,7 +391,7 @@ _Appears in:_
 | --- | --- |
 | `MainContainer` _[MainContainer](#maincontainer)_ |  |
 | `replicas` _integer_ | Replicas is the desired number of pods of this set |
-| `topologySpread` _string array_ | This will be overridden by .overlay.TopologySpreadConstraints |
+| `topologySpread` _string array_ | TopologyEvenSpread specifies what topology domains the Pods in set should be evenly spread in. This will be overridden by .overlay.TopologySpreadConstraints |
 | `nodeSelector` _object (keys:string, values:string)_ |  |
 | `config` _[TomlConfig](#tomlconfig)_ | Config is the raw config for pods |
 
