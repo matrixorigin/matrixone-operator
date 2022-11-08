@@ -19,11 +19,12 @@ import (
 	"flag"
 	"fmt"
 
-	"k8s.io/client-go/rest"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	"k8s.io/client-go/rest"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"

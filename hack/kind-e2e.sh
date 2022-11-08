@@ -31,7 +31,7 @@ function e2e::ensure-kind() {
 
     echo "> Ensure k8s cluster is ready"
     kubectl cluster-info
-    kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=30s
+    kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
 }
 
 function e2e::load_image() {

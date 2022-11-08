@@ -76,6 +76,7 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 
 	// update Service of cnset
 	originSvc := svc.DeepCopy()
+	syncServiceType(ctx.Obj, svc)
 	if !equality.Semantic.DeepEqual(originSvc, svc) {
 		return w.with(dp, svc).SvcUpdate, nil
 	}

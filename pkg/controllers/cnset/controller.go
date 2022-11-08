@@ -73,6 +73,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return c.Create, nil
 	}
 
+	// update statefulset of cnset
 	origin := sts.DeepCopy()
 	if err := syncPods(ctx, sts); err != nil {
 		return nil, err
@@ -81,8 +82,9 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return c.with(sts, svc).Update, nil
 	}
 
-	// update Service of cnset
+	// update service of cnset
 	originSvc := svc.DeepCopy()
+	syncServiceType(ctx.Obj, svc)
 	if !equality.Semantic.DeepEqual(originSvc, svc) {
 		return c.with(sts, svc).SvcUpdate, nil
 	}
@@ -143,7 +145,6 @@ func (c *WithResources) SvcUpdate(ctx *recon.Context[*v1alpha1.CNSet]) error {
 		syncServiceType(ctx.Obj, c.svc)
 		return nil
 	})
-
 }
 
 func (c *WithResources) Repair(ctx *recon.Context[*v1alpha1.CNSet]) error {
