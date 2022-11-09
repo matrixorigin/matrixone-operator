@@ -62,6 +62,9 @@ type MatrixOneClusterSpec struct {
 	// this will be overridden by component-level config
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// +optional
+	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 }
 
 // MatrixOneClusterStatus defines the observed state of MatrixOneCluster
