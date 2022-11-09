@@ -20,7 +20,9 @@ import (
 	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
+	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -141,6 +143,25 @@ var _ = Describe("MatrixOneCluster test", func() {
 			}
 			return nil
 		}, createCNSetTimeout, pollInterval).Should(Succeed())
+
+		By("Update service type")
+		Expect(e2eutil.Patch(ctx, kubeCli, c, func() error {
+			c.Spec.ServiceType = corev1.ServiceTypeLoadBalancer
+			return nil
+		})).To(Succeed())
+		Eventually(func() error {
+			svcList := &corev1.ServiceList{}
+			if err := kubeCli.List(ctx, svcList, client.InNamespace(c.Namespace),
+				client.MatchingLabels(map[string]string{common.InstanceLabelKey: c.Name})); err != nil {
+				logger.Errorw("error list services", "error", err)
+				return err
+			}
+
+			if svcList.Items[0].Spec.Type == corev1.ServiceTypeLoadBalancer {
+				return nil
+			}
+			return errWait
+		}, createClusterTimeout, pollInterval).Should(Succeed())
 
 		By("Teardown cnset")
 		Expect(kubeCli.Delete(ctx, c)).To(Succeed())

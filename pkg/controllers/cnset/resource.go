@@ -90,6 +90,10 @@ func syncReplicas(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	sts.Spec.Replicas = &cn.Spec.Replicas
 }
 
+func syncServiceType(cn *v1alpha1.CNSet, svc *corev1.Service) {
+	svc.Spec.Type = cn.Spec.ServiceType
+}
+
 func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	cn.Spec.Overlay.OverlayPodMeta(&sts.Spec.Template.ObjectMeta)
 }

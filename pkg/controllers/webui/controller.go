@@ -38,11 +38,12 @@ var _ recon.Actor[*v1alpha1.WebUI] = &Actor{}
 
 type WithResource struct {
 	*Actor
-	dp *appsv1.Deployment
+	dp  *appsv1.Deployment
+	svc *corev1.Service
 }
 
-func (w *Actor) with(dp *appsv1.Deployment) *WithResource {
-	return &WithResource{Actor: w, dp: dp}
+func (w *Actor) with(dp *appsv1.Deployment, svc *corev1.Service) *WithResource {
+	return &WithResource{Actor: w, dp: dp, svc: svc}
 }
 
 func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1alpha1.WebUI], error) {
@@ -65,13 +66,19 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 
 	if !foundDp || !foundSvc {
 		return w.Create, nil
-
 	}
 
 	origin := dp.DeepCopy()
 	syncPods(ctx, dp)
 	if !equality.Semantic.DeepEqual(origin, dp) {
-		return w.with(dp).Update, nil
+		return w.with(dp, svc).Update, nil
+	}
+
+	// update Service of cnset
+	originSvc := svc.DeepCopy()
+	syncServiceType(ctx.Obj, svc)
+	if !equality.Semantic.DeepEqual(originSvc, svc) {
+		return w.with(dp, svc).SvcUpdate, nil
 	}
 
 	// TODO: add webui status
@@ -133,6 +140,14 @@ func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
 
 func (r *WithResource) Update(ctx *recon.Context[*v1alpha1.WebUI]) error {
 	return ctx.Update(r.dp)
+}
+
+func (r *WithResource) SvcUpdate(ctx *recon.Context[*v1alpha1.WebUI]) error {
+	return ctx.Patch(r.svc, func() error {
+		syncServiceType(ctx.Obj, r.svc)
+		return nil
+	})
+
 }
 
 func (w *Actor) Reconcile(mgr manager.Manager) error {

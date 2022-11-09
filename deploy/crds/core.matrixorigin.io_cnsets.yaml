@@ -6658,7 +6658,7 @@ spec:
             - replicas
             type: object
           status:
-            description: Figure out what status should be exposed
+            description: CNSetStatus Figure out what status should be exposed
             properties:
               availableStores:
                 items:
