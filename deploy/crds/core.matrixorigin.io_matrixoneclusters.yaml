@@ -215,6 +215,10 @@ spec:
                 required:
                 - replicas
                 type: object
+              imagePullPolicy:
+                description: PullPolicy describes a policy for if/when to pull a container
+                  image
+                type: string
               imageRepository:
                 description: ImageRepository allows user to override the default image
                   repository in order to use a docker registry proxy or private registry.
