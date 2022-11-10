@@ -165,10 +165,10 @@ func setPodSetDefault(ps *v1alpha1.PodSet, mo *v1alpha1.MatrixOneCluster) {
 }
 
 func setOverlay(o **v1alpha1.Overlay, mo *v1alpha1.MatrixOneCluster) {
-	if *o == nil {
-		*o = &v1alpha1.Overlay{}
-	}
 	if mo.Spec.ImagePullPolicy != nil {
+		if *o == nil {
+			*o = &v1alpha1.Overlay{}
+		}
 		(*o).ImagePullPolicy = *mo.Spec.ImagePullPolicy
 	}
 }
