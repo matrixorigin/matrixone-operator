@@ -296,6 +296,26 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test-tp"}, cn)).To(Succeed())
 			g.Expect(cn.Spec.NodeSelector).To(Equal(map[string]string{"local-label": "local-value"}))
 		},
+	}, {
+		name: "setImagePullPolicy",
+		mo: func() *v1alpha1.MatrixOneCluster {
+			m := tpl.DeepCopy()
+			policy := corev1.PullIfNotPresent
+			m.Spec.ImagePullPolicy = &policy
+			return m
+		}(),
+		objects: nil,
+		expect: func(g *WithT, _ *v1alpha1.MatrixOneCluster, err error, c client.Client) {
+			dn := &v1alpha1.DNSet{}
+			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, dn)).To(Succeed())
+			g.Expect(dn.Spec.Overlay.ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
+			ls := &v1alpha1.LogSet{}
+			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, ls)).To(Succeed())
+			g.Expect(ls.Spec.Overlay.ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
+			cn := &v1alpha1.CNSet{}
+			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test-tp"}, cn)).To(Succeed())
+			g.Expect(cn.Spec.Overlay.ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
+		},
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
