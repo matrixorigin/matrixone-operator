@@ -2,6 +2,7 @@
 
 [![LICENSE](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Language](https://img.shields.io/badge/Language-Go-blue.svg)](https://golang.org/)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/matrixone-operator)](https://artifacthub.io/packages/search?repo=matrixone-operator)
 
 MatrixOne Operator provisions and manages [MatrixOne cluster](https://github.com/matrixorigin/matrixone) on [Kubernetes](https://kubernetes.io/).
 
