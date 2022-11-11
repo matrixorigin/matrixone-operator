@@ -145,13 +145,17 @@ func TestCNSetActor_Observe(t *testing.T) {
 									},
 								},
 							},
-							ServiceName: "test-svc",
+							ServiceName: svc,
 						},
 					},
 					&corev1.Service{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      svc,
 							Namespace: "default",
+							Labels:    labels,
+						},
+						Spec: corev1.ServiceSpec{
+							Type: corev1.ServiceTypeLoadBalancer,
 						},
 					},
 				).Build(),

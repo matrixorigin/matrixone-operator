@@ -16,9 +16,10 @@ package logset
 import (
 	"bytes"
 	"fmt"
+	"text/template"
+
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"golang.org/x/exp/slices"
-	"text/template"
 
 	"github.com/cespare/xxhash"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"

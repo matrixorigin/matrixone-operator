@@ -53,7 +53,7 @@ type CNSetBasic struct {
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 }
 
-// Figure out what status should be exposed
+// CNSetStatus Figure out what status should be exposed
 type CNSetStatus struct {
 	ConditionalStatus `json:",inline"`
 	FailoverStatus    `json:",inline"`

@@ -47,10 +47,11 @@ var _ recon.Actor[*v1alpha1.DNSet] = &Actor{}
 type WithResources struct {
 	*Actor
 	sts *kruise.StatefulSet
+	svc *corev1.Service
 }
 
-func (d *Actor) with(sts *kruise.StatefulSet) *WithResources {
-	return &WithResources{Actor: d, sts: sts}
+func (d *Actor) with(sts *kruise.StatefulSet, svc *corev1.Service) *WithResources {
+	return &WithResources{Actor: d, sts: sts, svc: svc}
 }
 
 func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1alpha1.DNSet], error) {
@@ -97,9 +98,9 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 
 	switch {
 	case len(dn.Status.StoresFailedFor(storeDownTimeout)) > 0:
-		return d.with(sts).Repair, nil
+		return d.with(sts, svc).Repair, nil
 	case dn.Spec.Replicas != *sts.Spec.Replicas:
-		return d.with(sts).Scale, nil
+		return d.with(sts, svc).Scale, nil
 	}
 
 	origin := sts.DeepCopy()
@@ -108,7 +109,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 	}
 
 	if !equality.Semantic.DeepEqual(origin, sts) {
-		return d.with(sts).Update, nil
+		return d.with(sts, svc).Update, nil
 	}
 
 	if recon.IsReady(&dn.Status.ConditionalStatus) {
