@@ -59,7 +59,8 @@ func Test_buildDNSetConfigMap(t *testing.T) {
 					},
 				},
 			},
-			wantConfig: `service-type = "DN"
+			wantConfig: `data-dir = "/var/lib/matrixone/data"
+service-type = "DN"
 
 [cn]
 
@@ -129,7 +130,8 @@ service-addresses = []
 					},
 				},
 			},
-			wantConfig: `service-type = "DN"
+			wantConfig: `data-dir = "/var/lib/matrixone/data"
+service-type = "DN"
 
 [cn]
 

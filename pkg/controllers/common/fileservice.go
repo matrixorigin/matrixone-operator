@@ -77,6 +77,8 @@ func FileServiceConfig(localPath string, sp v1alpha1.SharedStorageProvider) map[
 	s3FS := sharedFileServiceConfig(sp, s3FileServiceName, "data")
 	etlFS := sharedFileServiceConfig(sp, etlFileServiceName, "etl")
 	return map[string]interface{}{
+		// some data are not accessed by fileservice and will be read/written at `data-dir` directly
+		"data-dir": localPath,
 		"fileservice": []map[string]interface{}{
 			localFS,
 			s3FS,
