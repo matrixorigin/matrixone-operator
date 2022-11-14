@@ -190,13 +190,15 @@ func Test_buildHeadlessSvc(t *testing.T) {
 		},
 		want: &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-log-headless",
-				Namespace: "default",
-				Labels:    labels,
+				Name:        "test-log-headless",
+				Namespace:   "default",
+				Labels:      labels,
+				Annotations: map[string]string{},
 			},
 			Spec: corev1.ServiceSpec{
-				ClusterIP: corev1.ClusterIPNone,
-				Selector:  labels,
+				ClusterIP:                corev1.ClusterIPNone,
+				Selector:                 labels,
+				PublishNotReadyAddresses: true,
 			},
 		},
 	}}
