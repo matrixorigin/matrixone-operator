@@ -10,7 +10,7 @@ replicaCount: 1
 image:
   repository: matrixorigin/matrixone-operator
   pullPolicy: IfNotPresent
-  tag: "sha-e9201af"
+  tag: "sha-c939c87"
 
 imagePullSecrets: []
 nameOverride: ""
