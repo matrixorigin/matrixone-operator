@@ -133,7 +133,7 @@ build-pgd:
 
 # Run playground container
 run-pgd: build-pgd
-	docker run --privileged --name playground --rm -it matrixorigin/operator-playground:latest
+	docker run --privileged --name playground -p 6001:6001 --rm -it matrixorigin/operator-playground:latest
 
 GINKGO = $(shell pwd)/bin/ginkgo
 ginkgo:

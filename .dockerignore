@@ -1,0 +1,21 @@
+.DS_Store
+vendor/
+cover.out
+**/bin/
+.vscode/
+.idea/
+.github/
+.git/
+
+
+# tools binary files
+tmp/
+
+# go workspace
+go.work
+go.work.sum
+
+# Emacs save files
+*~
+\#*\#
+.\#*
