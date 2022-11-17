@@ -2,9 +2,10 @@
 
 set -eu
 
-#nohup dockerd-entrypoint.sh &
+nohup dockerd-entrypoint.sh &
 
-#sleep 10
+# wait dockerd ready
+sleep 5
 
 # Create kind cluster 1 control plane, 3 worker nodes
 kind create cluster --config=./playground/config.yml --name playground

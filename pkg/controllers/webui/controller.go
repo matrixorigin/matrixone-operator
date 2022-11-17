@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -114,8 +113,8 @@ func (w *Actor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error) {
 }
 
 func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
-	klog.V(recon.Info).Info("create webui service")
 	wi := ctx.Obj
+	ctx.Log.Info("create webui service")
 
 	wiObj := buildWebUI(wi)
 	wiSvc := buildService(wi)

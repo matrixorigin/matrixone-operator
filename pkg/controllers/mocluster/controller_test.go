@@ -316,6 +316,20 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test-tp"}, cn)).To(Succeed())
 			g.Expect(cn.Spec.Overlay.ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
 		},
+	}, {
+		name: "syncRetentionPolicy",
+		mo: func() *v1alpha1.MatrixOneCluster {
+			m := tpl.DeepCopy()
+			policy := v1alpha1.PVCRetentionPolicyRetain
+			m.Spec.LogService.PVCRetentionPolicy = &policy
+			return m
+		}(),
+		objects: nil,
+		expect: func(g *WithT, _ *v1alpha1.MatrixOneCluster, err error, c client.Client) {
+			ls := &v1alpha1.LogSet{}
+			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, ls)).To(Succeed())
+			g.Expect(*ls.Spec.PVCRetentionPolicy).To(Equal(v1alpha1.PVCRetentionPolicyRetain))
+		},
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

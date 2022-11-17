@@ -62,11 +62,9 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 
 	errs := multierr.Combine(
 		recon.CreateOwnedOrUpdate(ctx, ls, func() error {
-			ls.Spec.LogSetBasic.PodSet = mo.Spec.LogService.PodSet
+			ls.Spec.LogSetBasic = mo.Spec.LogService
 			setPodSetDefault(&ls.Spec.LogSetBasic.PodSet, mo)
 			setOverlay(&ls.Spec.Overlay, mo)
-			ls.Spec.LogSetBasic.SharedStorage = mo.Spec.LogService.SharedStorage
-			ls.Spec.LogSetBasic.Volume = mo.Spec.LogService.Volume
 			ls.Spec.Image = mo.LogSetImage()
 			return nil
 		}),

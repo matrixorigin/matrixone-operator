@@ -172,18 +172,7 @@ func buildStatefulSet(ls *v1alpha1.LogSet, headlessSvc *corev1.Service) *kruisev
 
 // buildHeadlessSvc build the initial headless service object for the given logset
 func buildHeadlessSvc(ls *v1alpha1.LogSet) *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ls.Namespace,
-			Name:      headlessSvcName(ls),
-			Labels:    common.SubResourceLabels(ls),
-		},
-		// TODO(aylei): ports definition
-		Spec: corev1.ServiceSpec{
-			ClusterIP: corev1.ClusterIPNone,
-			Selector:  common.SubResourceLabels(ls),
-		},
-	}
+	return common.HeadlessServiceTemplate(ls, headlessSvcName(ls))
 }
 
 func stsName(ls *v1alpha1.LogSet) string {
