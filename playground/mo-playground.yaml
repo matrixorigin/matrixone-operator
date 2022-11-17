@@ -7,13 +7,9 @@ spec:
   version:  nightly-63835b83
   logService:
     replicas: 3
-    initialConfig:
-      logShards: 1
-      dnShards: 1
-      logShardReplicas: 3
     sharedStorage:
       fileSystem:
-        path: "/test"
+        path: "/mo-data"
     volume:
       size: 10Gi
   dn:
