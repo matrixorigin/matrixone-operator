@@ -1,5 +1,6 @@
 FROM docker:22.06.0-beta.0-dind
 
+# Install tools
 RUN apk update && apk add --no-cache curl bash git mysql-client
 
 # Install kubectl
@@ -17,7 +18,8 @@ RUN wget https://get.helm.sh/helm-v3.9.4-linux-amd64.tar.gz && \
     mv linux-amd64/helm /usr/local/bin/helm && \
     rm -rf linux-amd64 helm-v3.9.4-linux-amd64.tar.gz
 
-RUN helm repo add openkruise  https://openkruise.github.io/charts/
+# Add helm charts repo
+RUN helm repo add openkruise  https://openkruise.github.io/charts/ && helm repo add bitnami https://charts.bitnami.com/bitnami
 
 COPY . .
 
