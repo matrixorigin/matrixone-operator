@@ -52,6 +52,7 @@ _Appears in:_
 | `PodSet` _[PodSet](#podset)_ |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet, node storage will be used if not specified |
+| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
 
 
 #### CNSetDeps
@@ -119,6 +120,7 @@ _Appears in:_
 | --- | --- |
 | `PodSet` _[PodSet](#podset)_ |  |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for DNSet, node storage will be used if not specified |
+| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
 
 
 #### DNSetDeps
@@ -414,6 +416,22 @@ _Appears in:_
 
 
 
+#### SharedStorageCache
+
+
+
+
+
+_Appears in:_
+- [CNSetBasic](#cnsetbasic)
+- [DNSetBasic](#dnsetbasic)
+
+| Field | Description |
+| --- | --- |
+| `memoryCacheSize` _Quantity_ |  |
+| `diskCacheSize` _Quantity_ |  |
+
+
 #### SharedStorageProvider
 
 
@@ -471,6 +489,7 @@ _Appears in:_
 | --- | --- |
 | `size` _Quantity_ | Size is the desired storage size of the volume |
 | `storageClassName` _string_ | StorageClassName reference to the storageclass of the desired volume, the default storageclass of the cluster would be used if no specified. |
+| `memoryCacheSize` _Quantity_ | MemoryCacheSize specifies the memory cache size for read/write this volume |
 
 
 #### WebUI

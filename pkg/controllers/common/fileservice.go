@@ -65,17 +65,22 @@ func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1
 }
 
 // FileServiceConfig generate the fileservice config for an MO component
-func FileServiceConfig(localPath string, sp v1alpha1.SharedStorageProvider) map[string]interface{} {
+func FileServiceConfig(localPath string, sp v1alpha1.SharedStorageProvider, v *v1alpha1.Volume, cache *v1alpha1.SharedStorageCache) map[string]interface{} {
 	localFS := map[string]interface{}{
 		"name":     localFileServiceName,
 		"backend":  fsBackendTypeDisk,
 		"data-dir": localPath,
 	}
+	if v != nil && v.MemoryCacheSize != nil {
+		localFS["cache"] = map[string]string{
+			"memory-capacity": v.MemoryCacheSize.String(),
+		}
+	}
 	// MO Operator currently unifies the storage DB data and ETL data to a single shared storage
 	// for user. We may provide options to configure the shared storages of DB and ETL separately if
 	// we found it necessary in the future.
-	s3FS := sharedFileServiceConfig(sp, s3FileServiceName, "data")
-	etlFS := sharedFileServiceConfig(sp, etlFileServiceName, "etl")
+	s3FS := sharedFileServiceConfig(sp, cache, s3FileServiceName, "data")
+	etlFS := sharedFileServiceConfig(sp, cache, etlFileServiceName, "etl")
 	return map[string]interface{}{
 		// some data are not accessed by fileservice and will be read/written at `data-dir` directly
 		"data-dir": localPath,
@@ -87,7 +92,7 @@ func FileServiceConfig(localPath string, sp v1alpha1.SharedStorageProvider) map[
 	}
 }
 
-func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, name, subDir string) map[string]interface{} {
+func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.SharedStorageCache, name, subDir string) map[string]interface{} {
 	m := map[string]interface{}{
 		"name": name,
 	}
@@ -105,7 +110,7 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, name, subDir str
 			// TODO: let AWS SDK discover its own endpoint by default
 			s3Config["endpoint"] = "s3.us-west-2.amazonaws.com"
 		}
-		paths := strings.SplitN(s3.Path, "/", 2)
+		paths := strings.SplitN(strings.Trim(s3.Path, "/"), "/", 2)
 		s3Config["bucket"] = paths[0]
 		keyPrefix := subDir
 		if len(paths) > 1 {
@@ -123,5 +128,18 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, name, subDir str
 		}
 		m["data-dir"] = fs.Path
 	}
+	if cache != nil {
+		c := map[string]string{}
+		if cache.MemoryCacheSize != nil {
+			c["memory-capacity"] = cache.MemoryCacheSize.String()
+		}
+		if cache.DiskCacheSize != nil {
+			c["disk-capacity"] = cache.DiskCacheSize.String()
+		}
+		if len(c) > 0 {
+			m["cache"] = c
+		}
+	}
+
 	return m
 }

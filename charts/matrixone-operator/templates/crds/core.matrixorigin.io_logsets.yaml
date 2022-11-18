@@ -6694,6 +6694,14 @@ spec:
                 description: Volume is the local persistent volume for each LogService
                   instance
                 properties:
+                  memoryCacheSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: MemoryCacheSize specifies the memory cache size for
+                      read/write this volume
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   size:
                     anyOf:
                     - type: integer
