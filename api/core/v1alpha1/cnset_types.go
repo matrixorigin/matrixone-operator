@@ -51,6 +51,8 @@ type CNSetBasic struct {
 	// node storage will be used if not specified
 	// +optional
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
+
+	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
 }
 
 // CNSetStatus Figure out what status should be exposed

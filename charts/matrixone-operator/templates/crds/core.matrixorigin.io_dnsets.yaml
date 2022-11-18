@@ -65,6 +65,14 @@ spec:
                 description: CacheVolume is the desired local cache volume for DNSet,
                   node storage will be used if not specified
                 properties:
+                  memoryCacheSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: MemoryCacheSize specifies the memory cache size for
+                      read/write this volume
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   size:
                     anyOf:
                     - type: integer
@@ -6631,6 +6639,21 @@ spec:
                       it defaults to Limits if that is explicitly specified, otherwise
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
+                type: object
+              sharedStorageCache:
+                properties:
+                  diskCacheSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  memoryCacheSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                 type: object
               topologySpread:
                 description: TopologyEvenSpread specifies what topology domains the
