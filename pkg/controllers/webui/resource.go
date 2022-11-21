@@ -26,10 +26,12 @@ import (
 )
 
 const (
-	serverPort    = 8007
-	frontendPort  = 8001
-	frontendImage = "wanglei4687/dashboard:frontend-0.1.0"
-	backendImage  = "wanglei4687/dashboard:backend-0.1.0"
+	serverPort   = 8007
+	frontendPort = 8001
+
+	webuiRepo     = "matrixorigin/dashboard"
+	frontendImage = webuiRepo + ":frontend-0.1.0"
+	backendImage  = webuiRepo + ":backend-0.1.0"
 
 	// TODO: using credential by generated
 	rootUser     = "dump"
@@ -73,6 +75,7 @@ func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 	fi := buildFrontendService(wi)
 
 	dp.Spec.Strategy = updateStrategy
+	dp.Spec.Replicas = &wi.Spec.Replicas
 
 	specRef.Containers = []corev1.Container{bi, fi}
 	specRef.ReadinessGates = []corev1.PodReadinessGate{{

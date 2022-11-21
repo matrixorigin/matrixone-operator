@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -89,7 +88,29 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 		return w.with(dp, svc).SvcUpdate, nil
 	}
 
-	return nil, recon.ErrReSync("cnset is not ready", reSyncAfter)
+	podList := &corev1.PodList{}
+	err = ctx.List(podList, client.InNamespace(wi.Namespace), client.MatchingLabels(common.SubResourceLabels(wi)))
+	if err != nil {
+		return nil, errors.Wrap(err, "list webui pods")
+	}
+	common.CollectStoreStatus(&wi.Status.FailoverStatus, podList.Items)
+
+	if len(wi.Status.AvailableStores) >= int(wi.Spec.Replicas) {
+		wi.Status.SetCondition(metav1.Condition{
+			Type:    recon.ConditionTypeReady,
+			Status:  metav1.ConditionTrue,
+			Message: "webui pod ready",
+		})
+	} else {
+		wi.Status.SetCondition(metav1.Condition{
+			Type:    recon.ConditionTypeReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  common.ReasonNoEnoughReadyStores,
+			Message: "webui pod not ready",
+		})
+	}
+
+	return nil, recon.ErrReSync("webui is not ready", reSyncAfter)
 }
 
 func (w *Actor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error) {
@@ -120,12 +141,10 @@ func (w *Actor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error) {
 }
 
 func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
-	klog.V(recon.Info).Info("create webui service")
 	wi := ctx.Obj
 
 	wiObj := buildWebUI(wi)
 	wiSvc := buildService(wi)
-
 	syncReplicas(wi, wiObj)
 	syncPodMeta(wi, wiObj)
 	syncPodSpec(wi, wiObj)

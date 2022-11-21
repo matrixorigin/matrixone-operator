@@ -22,8 +22,8 @@ import (
 
 type WebUISpec struct {
 	WebUIBasic `json:",inline"`
-
-	// +optional
+	//
+	//// +optional
 	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
@@ -39,6 +39,9 @@ type WebUIBasic struct {
 	// UpdateStrategy rolling update strategy
 	// +optional
 	UpdateStrategy *RollingUpdateStrategy `json:"updateStrategy,omitempty"`
+
+	// +optional
+	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 }
 
 type RollingUpdateStrategy struct {
@@ -64,6 +67,7 @@ type WebUIDeps struct {
 
 type WebUIStatus struct {
 	ConditionalStatus `json:",inline"`
+	FailoverStatus    `json:",inline"`
 }
 
 // +kubebuilder:object:root=true
