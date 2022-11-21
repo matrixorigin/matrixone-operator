@@ -146,7 +146,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	}
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	// conf.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
-	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage))
+	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, dn.Spec.CacheVolume, &dn.Spec.SharedStorageCache))
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
 	txnStorageKey := []string{"dn", "Txn", "Storage", "backend"}

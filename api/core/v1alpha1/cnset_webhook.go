@@ -44,6 +44,16 @@ func (r *CNSetBasic) Default() {
 	if r.ServiceType == "" {
 		r.ServiceType = corev1.ServiceTypeClusterIP
 	}
+	if r.Resources.Requests.Memory() != nil && r.SharedStorageCache.MemoryCacheSize == nil {
+		// default memory cache size to 50% request memory
+		size := r.Resources.Requests.Memory().DeepCopy()
+		size.Set(size.Value() / 2)
+		r.SharedStorageCache.MemoryCacheSize = &size
+	}
+	if r.CacheVolume != nil && r.SharedStorageCache.DiskCacheSize == nil {
+		// default disk cache size to the cache volume size
+		r.SharedStorageCache.DiskCacheSize = &r.CacheVolume.Size
+	}
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-cnset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=cnsets,verbs=create;update,versions=v1alpha1,name=vcnset.kb.io,admissionReviewVersions={v1,v1beta1}

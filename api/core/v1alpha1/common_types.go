@@ -90,7 +90,7 @@ type MainContainerOverlay struct {
 	// +optional
 	// +kubebuilder:default=IfNotPresent
 	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
-	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	// +optional
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
@@ -173,6 +173,9 @@ type Volume struct {
 	// the default storageclass of the cluster would be used if no specified.
 	// +optional
 	StorageClassName *string `json:"storageClassName,omitempty"`
+
+	// MemoryCacheSize specifies the memory cache size for read/write this volume
+	MemoryCacheSize *resource.Quantity `json:"memoryCacheSize,omitempty"`
 }
 
 type SharedStorageProvider struct {
@@ -183,6 +186,11 @@ type SharedStorageProvider struct {
 	// it assumes a shared filesystem is mounted to this path and instances can
 	// safely read-write this path in current manner.
 	FileSystem *FileSystemProvider `json:"fileSystem,omitempty"`
+}
+
+type SharedStorageCache struct {
+	MemoryCacheSize *resource.Quantity `json:"memoryCacheSize,omitempty"`
+	DiskCacheSize   *resource.Quantity `json:"diskCacheSize,omitempty"`
 }
 
 type FileSystemProvider struct {
