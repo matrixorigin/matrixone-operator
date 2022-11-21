@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -52,6 +53,15 @@ type RollingUpdateStrategy struct {
 	MaxUnavailable *int32 `json:"maxUnavailable,omitempty"`
 }
 
+type WebUIDeps struct {
+	// The WebUI it depends on
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:validation:Type=object
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	CNSet *CNSet `json:"cnset,omitempty"`
+}
+
 type WebUIStatus struct {
 	ConditionalStatus `json:",inline"`
 }
@@ -70,6 +80,9 @@ type WebUI struct {
 	// Spec is the desired state of WebUI
 	Spec WebUISpec `json:"spec,omitempty"`
 
+	// Deps is the dependencies of WebUI
+	Deps WebUIDeps `json:"deps,omitempty"`
+
 	Status WebUIStatus `json:"status,omitempty"`
 }
 
@@ -80,6 +93,19 @@ type WebUIList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []WebUI `json:"items"`
+}
+
+func (s *WebUI) GetDependencies() []recon.Dependency {
+	var deps []recon.Dependency
+	if s.Deps.CNSet != nil {
+		deps = append(deps, &recon.ObjectDependency[*CNSet]{
+			ObjectRef: s.Deps.CNSet,
+			ReadyFunc: func(c *CNSet) bool {
+				return recon.IsReady(&c.Status)
+			},
+		})
+	}
+	return deps
 }
 
 func (s *WebUI) GetServiceType() corev1.ServiceType {

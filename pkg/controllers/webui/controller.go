@@ -16,6 +16,7 @@ package webui
 
 import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"github.com/pkg/errors"
@@ -30,6 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"time"
+)
+
+const (
+	reSyncAfter = 10 * time.Second
 )
 
 type Actor struct{}
@@ -69,7 +75,9 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 	}
 
 	origin := dp.DeepCopy()
-	syncPods(ctx, dp)
+	if err := syncPods(ctx, dp); err != nil {
+		return nil, err
+	}
 	if !equality.Semantic.DeepEqual(origin, dp) {
 		return w.with(dp, svc).Update, nil
 	}
@@ -81,9 +89,7 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 		return w.with(dp, svc).SvcUpdate, nil
 	}
 
-	// TODO: add webui status
-
-	return nil, nil
+	return nil, recon.ErrReSync("cnset is not ready", reSyncAfter)
 }
 
 func (w *Actor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error) {
@@ -119,12 +125,22 @@ func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
 
 	wiObj := buildWebUI(wi)
 	wiSvc := buildService(wi)
+
 	syncReplicas(wi, wiObj)
 	syncPodMeta(wi, wiObj)
 	syncPodSpec(wi, wiObj)
 
+	configMap, err := buildConfigMap(wi)
+	if err != nil {
+		return err
+	}
+
+	if err := common.SyncConfigMap(ctx, &wiObj.Spec.Template.Spec, configMap); err != nil {
+		return err
+	}
+
 	// create all resources
-	err := lo.Reduce[client.Object, error]([]client.Object{
+	err = lo.Reduce[client.Object, error]([]client.Object{
 		wiSvc,
 		wiObj,
 	}, func(errs error, o client.Object, _ int) error {

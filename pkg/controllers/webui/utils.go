@@ -11,10 +11,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package webui
 
 import "github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 
+const (
+	objSuffix    = "-webui"
+	configSuffix = "-config"
+)
+
 func webUIName(wi *v1alpha1.WebUI) string {
 	return wi.Name + objSuffix
+}
+
+func configMapName(wi *v1alpha1.WebUI) string {
+	return webUIName(wi) + configSuffix
 }

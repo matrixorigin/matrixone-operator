@@ -17,6 +17,8 @@ package cnset
 import (
 	"bytes"
 	"fmt"
+	"text/template"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
@@ -26,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"text/template"
 )
 
 // TODO: change listen-address to service-address
@@ -172,7 +173,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
 		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
-		CNSQLPort:      cnSQLPort,
+		CNSQLPort:      CNSQLPort,
 		CNRpcPort:      cnRPCPort,
 	})
 	if err != nil {

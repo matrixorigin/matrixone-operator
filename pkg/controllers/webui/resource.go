@@ -11,17 +11,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package webui
 
 import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"github.com/openkruise/kruise-api/apps/pub"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+const (
+	serverPort    = 8007
+	frontendPort  = 8001
+	frontendImage = "wanglei4687/dashboard:frontend-0.1.0"
+	backendImage  = "wanglei4687/dashboard:backend-0.1.0"
+
+	// TODO: using credential by generated
+	rootUser     = "dump"
+	rootPassword = "111"
 )
 
 func syncReplicas(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
@@ -35,16 +47,6 @@ func syncPodMeta(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 	specRef := &dp.Spec.Template.Spec
 	var updateStrategy appsv1.DeploymentStrategy
-
-	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
-		return c.Name == v1alpha1.ContainerMain
-	})
-	if mainRef == nil {
-		mainRef = &corev1.Container{Name: v1alpha1.ContainerMain}
-	}
-
-	mainRef.Image = wi.Spec.Image
-	mainRef.Resources = wi.Spec.Resources
 
 	maxUnavailable := &intstr.IntOrString{}
 	maxSurge := &intstr.IntOrString{}
@@ -67,10 +69,12 @@ func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 		},
 	}
 
-	dp.Spec.Strategy = updateStrategy
-	wi.Spec.Overlay.OverlayMainContainer(mainRef)
+	bi := buildBackendService(wi)
+	fi := buildFrontendService(wi)
 
-	specRef.Containers = []corev1.Container{*mainRef}
+	dp.Spec.Strategy = updateStrategy
+
+	specRef.Containers = []corev1.Container{bi, fi}
 	specRef.ReadinessGates = []corev1.PodReadinessGate{{
 		ConditionType: pub.InPlaceUpdateReady,
 	}}
@@ -79,9 +83,60 @@ func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 	wi.Spec.Overlay.OverlayPodSpec(specRef)
 }
 
-func syncPods(ctx *recon.Context[*v1alpha1.WebUI], dp *appsv1.Deployment) {
+func buildFrontendService(wi *v1alpha1.WebUI) corev1.Container {
+	c := corev1.Container{
+		Name:  getFrontendName(wi),
+		Image: frontendImage,
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          "web",
+				ContainerPort: frontendPort,
+			},
+		},
+	}
+
+	return c
+}
+
+func buildBackendService(wi *v1alpha1.WebUI) corev1.Container {
+	volumeMountsList := []corev1.VolumeMount{
+		{
+			Name:      common.ConfigVolume,
+			ReadOnly:  true,
+			MountPath: common.ConfigPath,
+		},
+	}
+	c := corev1.Container{
+		Name:  getBackendName(wi),
+		Image: backendImage,
+		Command: []string{
+			"/mocloud-metric-service",
+			"-c",
+		},
+		Args: []string{
+			common.ConfigPath + "/config.toml",
+		},
+		VolumeMounts: volumeMountsList,
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          "service",
+				ContainerPort: serverPort,
+			},
+		},
+	}
+	return c
+}
+
+func syncPods(ctx *recon.Context[*v1alpha1.WebUI], dp *appsv1.Deployment) error {
+	cm, err := buildConfigMap(ctx.Obj)
+	if err != nil {
+		return err
+	}
+
 	syncPodMeta(ctx.Obj, dp)
 	syncPodSpec(ctx.Obj, dp)
+
+	return common.SyncConfigMap(ctx, &dp.Spec.Template.Spec, cm)
 }
 
 func syncServiceType(wi *v1alpha1.WebUI, svc *corev1.Service) {
@@ -92,19 +147,60 @@ func buildWebUI(wi *v1alpha1.WebUI) *appsv1.Deployment {
 	return common.DeploymentTemplate(wi, webUIName(wi))
 }
 
+func buildConfigMap(wi *v1alpha1.WebUI) (*corev1.ConfigMap, error) {
+	conf := wi.Spec.Config
+	if conf == nil {
+		conf = v1alpha1.NewTomlConfig(map[string]interface{}{})
+	}
+	conf.Set([]string{"db", "host"}, getCNService(wi))
+	conf.Set([]string{"db", "port"}, cnset.CNSQLPort)
+	conf.Set([]string{"db", "username"}, rootUser)
+	conf.Set([]string{"db", "password"}, rootPassword)
+	conf.Set([]string{"log", "level"}, "info")
+	conf.Set([]string{"log", "format"}, "console")
+	conf.Set([]string{"server", "host"}, common.AnyIP)
+	conf.Set([]string{"server", "port"}, serverPort)
+	conf.Set([]string{"server", "tokenEffectiveTime"}, 2)
+	conf.Set([]string{"server", "mode"}, "playground")
+
+	s, err := conf.ToString()
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev1.ConfigMap{
+		ObjectMeta: common.ObjMetaTemplate(wi, configMapName(wi)),
+		Data: map[string]string{
+			common.ConfigFile: s,
+		},
+	}, nil
+
+}
+
 func buildService(wi *v1alpha1.WebUI) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: common.ObjMetaTemplate(wi, webUIName(wi)),
 		Spec: corev1.ServiceSpec{
 			Type:     wi.Spec.ServiceType,
 			Selector: common.SubResourceLabels(wi),
-			// TODO: webui service ports config
 			Ports: []corev1.ServicePort{
 				{
-					Name: "webui",
-					Port: 80,
+					Name: "web",
+					Port: frontendPort,
 				},
 			},
 		},
 	}
+}
+
+func getFrontendName(wi *v1alpha1.WebUI) string {
+	return wi.Name + "-frontend"
+}
+
+func getBackendName(wi *v1alpha1.WebUI) string {
+	return wi.Name + "-backend"
+}
+
+func getCNService(wi *v1alpha1.WebUI) string {
+	return wi.Name + "-tp-cn"
 }
