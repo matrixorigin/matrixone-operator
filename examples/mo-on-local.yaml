@@ -27,7 +27,6 @@ spec:
     cacheVolume:
       size: 10Gi
   webui:
-    image: wanglei4687/webui:test
     replicas: 1
     updateStrategy:
       maxUnavailable: 25

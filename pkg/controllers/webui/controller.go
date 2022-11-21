@@ -93,6 +93,7 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 	if err != nil {
 		return nil, errors.Wrap(err, "list webui pods")
 	}
+
 	common.CollectStoreStatus(&wi.Status.FailoverStatus, podList.Items)
 
 	if len(wi.Status.AvailableStores) >= int(wi.Spec.Replicas) {
@@ -108,6 +109,10 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 			Reason:  common.ReasonNoEnoughReadyStores,
 			Message: "webui pod not ready",
 		})
+	}
+
+	if recon.IsReady(&wi.Status.ConditionalStatus) {
+		return nil, nil
 	}
 
 	return nil, recon.ErrReSync("webui is not ready", reSyncAfter)

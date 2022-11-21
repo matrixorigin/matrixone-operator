@@ -22,8 +22,8 @@ import (
 
 type WebUISpec struct {
 	WebUIBasic `json:",inline"`
-	//
-	//// +optional
+
+	// +optional
 	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
