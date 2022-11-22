@@ -26,7 +26,8 @@ Refer to https://docs.matrixorigin.io/ for more information about MatrixOne data
 
 A CNSet is a resource that represents a set of MO's CN instances
 
-
+_Appears in:_
+- [WebUIDeps](#webuideps)
 
 | Field | Description |
 | --- | --- |
@@ -487,6 +488,7 @@ WebUI  is a resource that represents a set of MO's webui instances
 | `kind` _string_ | `WebUI`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[WebUISpec](#webuispec)_ | Spec is the desired state of WebUI |
+| `deps` _[WebUIDeps](#webuideps)_ | Deps is the dependencies of WebUI |
 
 
 #### WebUIBasic
@@ -504,6 +506,21 @@ _Appears in:_
 | `PodSet` _[PodSet](#podset)_ |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service |
 | `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy rolling update strategy |
+| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
+
+
+#### WebUIDeps
+
+
+
+
+
+_Appears in:_
+- [WebUI](#webui)
+
+| Field | Description |
+| --- | --- |
+| `cnset` _[CNSet](#cnset)_ | The WebUI it depends on |
 
 
 #### WebUISpec
