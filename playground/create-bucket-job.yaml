@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-bucket
+spec:
+  template:
+    spec:
+      containers:
+        - name: mc
+          image: minio/mc
+          command: ["/bin/sh", "-c"]
+          args:
+            - /usr/bin/mc alias set myminio http://minio:9301 minio minio123;
+              /usr/bin/mc mb myminio/matrixone;
+              /usr/bin/mc policy set public myminio/matrixone;
+      restartPolicy: Never
+  backoffLimit: 4

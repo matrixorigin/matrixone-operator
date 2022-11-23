@@ -147,6 +147,7 @@ func (w *Actor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error) {
 
 func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
 	wi := ctx.Obj
+	ctx.Log.Info("create webui service")
 
 	wiObj := buildWebUI(wi)
 	wiSvc := buildService(wi)

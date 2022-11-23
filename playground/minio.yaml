@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  labels:
+    app: minio
+spec:
+  ports:
+    - port: 9301
+      name: service
+    - port: 9400
+      name: console
+  selector:
+    app: minio
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+spec:
+  selector:
+    matchLabels:
+      app: minio
+  serviceName: minio
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:RELEASE.2022-10-08T20-11-00Z.fips
+          command: ["/bin/sh", "-c"]
+          args:
+            - "/usr/bin/docker-entrypoint.sh server --address 0.0.0.0:9301 --console-address 0.0.0.0:9400 /data"
+          env:
+            - name: MINIO_ROOT_USER
+              value: minio
+            - name: MINIO_ROOT_PASSWORD
+              value: minio123
+          ports:
+            - containerPort: 9301
+              hostPort: 9301
+          volumeMounts:
+            - name: storage
+              mountPath: "/data"
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Gi

@@ -135,6 +135,9 @@ func (o *Overlay) OverlayMainContainer(c *corev1.Container) {
 		return
 	}
 	mc := o.MainContainerOverlay
+	if mc.ImagePullPolicy != nil {
+		c.ImagePullPolicy = *o.ImagePullPolicy
+	}
 	if mc.Command != nil {
 		c.Command = mc.Command
 	}
