@@ -567,6 +567,10 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  imagePullPolicy:
+                    description: PullPolicy describes a policy for if/when to pull
+                      a container image
+                    type: string
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -1135,6 +1139,18 @@ spec:
               webui:
                 description: Webui is the webui service status
                 properties:
+                  availableStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
+                      type: object
+                    type: array
                   conditions:
                     items:
                       description: "Condition contains details for one aspect of the
@@ -1204,6 +1220,18 @@ spec:
                       - reason
                       - status
                       - type
+                      type: object
+                    type: array
+                  failedStores:
+                    items:
+                      properties:
+                        lastTransition:
+                          format: date-time
+                          type: string
+                        phase:
+                          type: string
+                        podName:
+                          type: string
                       type: object
                     type: array
                 type: object

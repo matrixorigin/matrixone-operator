@@ -16,6 +16,15 @@ package webui
 
 import "github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 
+const (
+	objSuffix    = "-webui"
+	configSuffix = "-config"
+)
+
 func webUIName(wi *v1alpha1.WebUI) string {
 	return wi.Name + objSuffix
+}
+
+func configMapName(wi *v1alpha1.WebUI) string {
+	return webUIName(wi) + configSuffix
 }

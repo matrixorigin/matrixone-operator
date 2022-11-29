@@ -22,7 +22,7 @@ import (
 const (
 	porName    = "service"
 	nameSuffix = "-cn"
-	cnSQLPort  = 6001
+	CNSQLPort  = 6001
 	cnRPCPort  = 6002
 )
 
@@ -30,7 +30,7 @@ func getCNServicePort() []corev1.ServicePort {
 	return []corev1.ServicePort{
 		{
 			Name: porName,
-			Port: cnSQLPort,
+			Port: CNSQLPort,
 		},
 	}
 }

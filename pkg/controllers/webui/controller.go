@@ -16,6 +16,7 @@ package webui
 
 import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"github.com/pkg/errors"
@@ -29,6 +30,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"time"
+)
+
+const (
+	reSyncAfter = 10 * time.Second
 )
 
 type Actor struct{}
@@ -68,7 +74,9 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 	}
 
 	origin := dp.DeepCopy()
-	syncPods(ctx, dp)
+	if err := syncPods(ctx, dp); err != nil {
+		return nil, err
+	}
 	if !equality.Semantic.DeepEqual(origin, dp) {
 		return w.with(dp, svc).Update, nil
 	}
@@ -80,9 +88,34 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 		return w.with(dp, svc).SvcUpdate, nil
 	}
 
-	// TODO: add webui status
+	podList := &corev1.PodList{}
+	err = ctx.List(podList, client.InNamespace(wi.Namespace), client.MatchingLabels(common.SubResourceLabels(wi)))
+	if err != nil {
+		return nil, errors.Wrap(err, "list webui pods")
+	}
 
-	return nil, nil
+	common.CollectStoreStatus(&wi.Status.FailoverStatus, podList.Items)
+
+	if len(wi.Status.AvailableStores) >= int(wi.Spec.Replicas) {
+		wi.Status.SetCondition(metav1.Condition{
+			Type:    recon.ConditionTypeReady,
+			Status:  metav1.ConditionTrue,
+			Message: "webui pod ready",
+		})
+	} else {
+		wi.Status.SetCondition(metav1.Condition{
+			Type:    recon.ConditionTypeReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  common.ReasonNoEnoughReadyStores,
+			Message: "webui pod not ready",
+		})
+	}
+
+	if recon.IsReady(&wi.Status.ConditionalStatus) {
+		return nil, nil
+	}
+
+	return nil, recon.ErrReSync("webui is not ready", reSyncAfter)
 }
 
 func (w *Actor) Finalize(ctx *recon.Context[*v1alpha1.WebUI]) (bool, error) {
@@ -122,8 +155,17 @@ func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
 	syncPodMeta(wi, wiObj)
 	syncPodSpec(wi, wiObj)
 
+	configMap, err := buildConfigMap(wi)
+	if err != nil {
+		return err
+	}
+
+	if err := common.SyncConfigMap(ctx, &wiObj.Spec.Template.Spec, configMap); err != nil {
+		return err
+	}
+
 	// create all resources
-	err := lo.Reduce[client.Object, error]([]client.Object{
+	err = lo.Reduce[client.Object, error]([]client.Object{
 		wiSvc,
 		wiObj,
 	}, func(errs error, o client.Object, _ int) error {

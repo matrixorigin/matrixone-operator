@@ -13,7 +13,3 @@
 // limitations under the License.
 
 package webui
-
-const (
-	objSuffix = "-webui"
-)

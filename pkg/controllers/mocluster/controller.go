@@ -106,6 +106,9 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	if mo.Spec.WebUI != nil {
 		webui := &v1alpha1.WebUI{
 			ObjectMeta: webUIKey(mo),
+			Deps: v1alpha1.WebUIDeps{
+				CNSet: &v1alpha1.CNSet{ObjectMeta: tpSetKey(mo)},
+			},
 		}
 		errs = multierr.Append(errs, recon.CreateOwnedOrUpdate(ctx, webui, func() error {
 			webui.Spec.WebUIBasic = *mo.Spec.WebUI

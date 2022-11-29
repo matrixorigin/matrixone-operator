@@ -24,3 +24,7 @@ spec:
     replicas: 1
     cacheVolume:
       size: 10Gi
+  webui:
+    replicas: 1
+    updateStrategy:
+      maxUnavailable: 25
