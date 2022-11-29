@@ -16,9 +16,9 @@ package mocluster
 import (
 	"context"
 	"github.com/golang/mock/gomock"
+	"github.com/matrixorigin/controller-runtime/pkg/fake"
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/fake"
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	. "github.com/onsi/gomega"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"

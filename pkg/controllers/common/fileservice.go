@@ -16,8 +16,8 @@ package common
 
 import (
 	"fmt"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"strings"
 )

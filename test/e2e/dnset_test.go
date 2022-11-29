@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"

@@ -15,10 +15,10 @@ package e2e
 
 import (
 	"fmt"
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/test/e2e/sql"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	. "github.com/onsi/ginkgo"

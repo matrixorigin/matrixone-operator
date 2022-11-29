@@ -17,10 +17,10 @@ package cnset
 import (
 	"time"
 
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"

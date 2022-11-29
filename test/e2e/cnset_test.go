@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -8,8 +8,8 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.8
+	github.com/matrixorigin/controller-runtime v0.0.0-20221129121820-61ecd0699036
 	github.com/matrixorigin/matrixone-operator/api v0.0.0-20220926063007-e629f86256d2
-	github.com/matrixorigin/matrixone-operator/runtime v0.0.0-20220926063007-e629f86256d2
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/openkruise/kruise-api v1.2.0
@@ -94,5 +94,3 @@ require (
 )
 
 replace github.com/matrixorigin/matrixone-operator/api => ./api
-
-replace github.com/matrixorigin/matrixone-operator/runtime => ./runtime
