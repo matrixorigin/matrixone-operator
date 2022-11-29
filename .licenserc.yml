@@ -27,4 +27,6 @@ header:
     - 'third_part/'
     - '**/Dockerfile'
     - '**/*.xml'
+    - 'playground/*'
+    - ".dockerignore"
   comment: on-failure

@@ -112,7 +112,6 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 			Reason:  common.ReasonNoEnoughReadyStores,
 			Message: "cn stores not ready",
 		})
-
 	}
 
 	switch {

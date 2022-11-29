@@ -127,6 +127,14 @@ deploy: install manifests
 undeploy: uninstall manifests
 	kustomize build deploy/ | kubectl delete -f -
 
+# Build playground image
+build-pgd:
+	 docker build -f playground/Dockerfile . -t matrixorigin/operator-playground:latest
+
+# Run playground container
+run-pgd: build-pgd
+	docker run --privileged --name playground -p 6001:6001 --rm -it matrixorigin/operator-playground:latest
+
 GINKGO = $(shell pwd)/bin/ginkgo
 ginkgo:
 	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo@v1.6.0)

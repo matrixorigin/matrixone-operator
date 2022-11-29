@@ -35,6 +35,14 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
+          deps:
+            description: Deps is the dependencies of WebUI
+            properties:
+              cnset:
+                description: The WebUI it depends on
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+            type: object
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
@@ -50,6 +58,10 @@ spec:
                 type: string
               image:
                 description: Image is the docker image of the main container
+                type: string
+              imagePullPolicy:
+                description: PullPolicy describes a policy for if/when to pull a container
+                  image
                 type: string
               nodeSelector:
                 additionalProperties:
@@ -6635,6 +6647,18 @@ spec:
             type: object
           status:
             properties:
+              availableStores:
+                items:
+                  properties:
+                    lastTransition:
+                      format: date-time
+                      type: string
+                    phase:
+                      type: string
+                    podName:
+                      type: string
+                  type: object
+                type: array
               conditions:
                 items:
                   description: "Condition contains details for one aspect of the current
@@ -6701,6 +6725,18 @@ spec:
                   - reason
                   - status
                   - type
+                  type: object
+                type: array
+              failedStores:
+                items:
+                  properties:
+                    lastTransition:
+                      format: date-time
+                      type: string
+                    phase:
+                      type: string
+                    podName:
+                      type: string
                   type: object
                 type: array
             type: object
