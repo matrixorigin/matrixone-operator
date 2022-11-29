@@ -22,10 +22,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"

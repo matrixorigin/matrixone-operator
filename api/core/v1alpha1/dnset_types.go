@@ -15,7 +15,7 @@
 package v1alpha1
 
 import (
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

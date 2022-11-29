@@ -15,9 +15,9 @@ package mocluster
 
 import (
 	"fmt"
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/util"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

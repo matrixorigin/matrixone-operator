@@ -17,7 +17,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/matrixorigin/matrixone-operator/runtime/pkg/metrics"
+	"github.com/matrixorigin/controller-runtime/pkg/metrics"
 	"os"
 
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"

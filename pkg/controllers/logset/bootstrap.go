@@ -15,8 +15,8 @@ package logset
 
 import (
 	"fmt"
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	recon "github.com/matrixorigin/matrixone-operator/runtime/pkg/reconciler"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
