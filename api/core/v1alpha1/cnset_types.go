@@ -105,7 +105,10 @@ func (s *CNSet) GetDependencies() []recon.Dependency {
 			ReadyFunc: func(l *LogSet) bool {
 				return recon.IsReady(&l.Status)
 			},
-		}, &recon.ObjectDependency[*DNSet]{
+		})
+	}
+	if s.Deps.DNSet != nil {
+		deps = append(deps, &recon.ObjectDependency[*DNSet]{
 			ObjectRef: s.Deps.DNSet,
 			ReadyFunc: func(s *DNSet) bool {
 				return recon.IsReady(&s.Status)
