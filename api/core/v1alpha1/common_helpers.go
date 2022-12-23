@@ -149,7 +149,9 @@ func (o *Overlay) OverlayMainContainer(c *corev1.Container) {
 		c.EnvFrom = mc.EnvFrom
 	}
 	if mc.Env != nil {
-		c.Env = util.UpsertListByKey()
+		c.Env = util.UpsertListByKey(c.Env, mc.Env, func(v corev1.EnvVar) string {
+			return v.Name
+		})
 	}
 	if mc.ReadinessProbe != nil {
 		c.ReadinessProbe = mc.ReadinessProbe
