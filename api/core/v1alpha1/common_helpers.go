@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"github.com/matrixorigin/controller-runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -148,7 +149,9 @@ func (o *Overlay) OverlayMainContainer(c *corev1.Container) {
 		c.EnvFrom = mc.EnvFrom
 	}
 	if mc.Env != nil {
-		c.Env = mc.Env
+		c.Env = util.UpsertListByKey(c.Env, mc.Env, func(v corev1.EnvVar) string {
+			return v.Name
+		})
 	}
 	if mc.ReadinessProbe != nil {
 		c.ReadinessProbe = mc.ReadinessProbe
