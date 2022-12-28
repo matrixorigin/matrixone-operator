@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// TODO: change listen-address to service-address
 var startScriptTpl = template.Must(template.New("dn-start-script").Parse(`
 #!/bin/sh
 set -eu
@@ -161,11 +160,6 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	// cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
-	engineKey := []string{"cn", "Engine", "type"}
-	if cfg.Get(engineKey...) == nil {
-		// FIXME: make TAE as default
-		cfg.Set(engineKey, "memory")
-	}
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err

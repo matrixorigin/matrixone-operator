@@ -74,10 +74,11 @@ func (o *Overlay) OverlayPodSpec(pod *corev1.PodSpec) {
 	if o == nil {
 		return
 	}
-	// TODO(aylei): append is not idempotent, should upsert instead
-	//if o.Volumes != nil {
-	//	pod.Volumes = o.Volumes
-	//}
+	if o.Volumes != nil {
+		pod.Volumes = util.UpsertListByKey(pod.Volumes, o.Volumes, func(v corev1.Volume) string {
+			return v.Name
+		})
+	}
 	if o.Affinity != nil {
 		pod.Affinity = o.Affinity
 	}
@@ -162,10 +163,11 @@ func (o *Overlay) OverlayMainContainer(c *corev1.Container) {
 	if mc.Lifecycle != nil {
 		c.Lifecycle = mc.Lifecycle
 	}
-	// TODO(aylei): append is not idempotent, should upsert instead
-	//if mc.VolumeMounts != nil {
-	//	c.VolumeMounts = o.VolumeMounts
-	//}
+	if mc.VolumeMounts != nil {
+		c.VolumeMounts = util.UpsertListByKey(c.VolumeMounts, o.VolumeMounts, func(v corev1.VolumeMount) string {
+			return v.Name
+		})
+	}
 }
 
 func (s *FailoverStatus) StoresFailedFor(d time.Duration) []Store {

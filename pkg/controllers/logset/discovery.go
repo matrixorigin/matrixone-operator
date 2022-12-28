@@ -29,9 +29,7 @@ func buildDiscoveryService(ls *v1alpha1.LogSet) *corev1.Service {
 			Name:      discoverySvcName(ls),
 			Labels:    common.SubResourceLabels(ls),
 		},
-		// TODO(aylei): ports definition
 		Spec: corev1.ServiceSpec{
-			// TODO(aylei): determine haKeeper discovery service port
 			Ports: []corev1.ServicePort{{
 				Port: logServicePort,
 			}},
