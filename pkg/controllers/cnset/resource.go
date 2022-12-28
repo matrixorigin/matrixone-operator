@@ -36,7 +36,11 @@ set -eu
 POD_NAME=${POD_NAME:-$HOSTNAME}
 ADDR="${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc"
 ORDINAL=${POD_NAME##*-}
-UUID=$(printf '00000000-0000-0000-0000-2%011x' ${ORDINAL})
+if [[ -z "${HOSTNAME_UUID}" ]]; then
+  UUID=$(printf '00000000-0000-0000-0000-0%011x' ${ORDINAL})
+else
+  UUID=$(echo ${ADDR} | sha256sum | od -x | head -1 | awk '{OFS="-"; print $2$3,$4,$5,$6,$7$8$9}')
+fi
 conf=$(mktemp)
 bc=$(mktemp)
 cat <<EOF > ${bc}
@@ -133,6 +137,9 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
+	}
+	if cn.Spec.DNSBasedIdentity {
+		mainRef.Env = append(mainRef.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
 	}
 
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)

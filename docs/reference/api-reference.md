@@ -398,6 +398,8 @@ _Appears in:_
 | `topologySpread` _string array_ | TopologyEvenSpread specifies what topology domains the Pods in set should be evenly spread in. This will be overridden by .overlay.TopologySpreadConstraints |
 | `nodeSelector` _object (keys:string, values:string)_ |  |
 | `config` _[TomlConfig](#tomlconfig)_ | Config is the raw config for pods |
+| `dnsBasedIdentity` _boolean_ | If enabled, use the Pod dns name as the Pod identity |
+| `clusterDomain` _string_ | ClusterDomain is the cluster-domain of current kubernetes cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ for details |
 
 
 #### RollingUpdateStrategy

@@ -60,6 +60,13 @@ type PodSet struct {
 
 	// Config is the raw config for pods
 	Config *TomlConfig `json:"config,omitempty"`
+
+	// If enabled, use the Pod dns name as the Pod identity
+	DNSBasedIdentity bool `json:"dnsBasedIdentity,omitempty"`
+
+	// ClusterDomain is the cluster-domain of current kubernetes cluster,
+	// refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ for details
+	ClusterDomain string `json:"clusterDomain,omitempty"`
 }
 
 // MainContainer is the description of the main container of a Pod
