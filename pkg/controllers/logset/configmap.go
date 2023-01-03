@@ -50,7 +50,7 @@ set -eu
 POD_NAME=${POD_NAME:-$HOSTNAME}
 ADDR="${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc"
 ORDINAL=${POD_NAME##*-}
-if [[ -z "${HOSTNAME_UUID}" ]]; then
+if [ -z "${HOSTNAME_UUID+guard}" ]; then
   UUID=$(printf '00000000-0000-0000-0000-0%011x' ${ORDINAL})
 else
   UUID=$(echo ${ADDR} | sha256sum | od -x | head -1 | awk '{OFS="-"; print $2$3,$4,$5,$6,$7$8$9}')
