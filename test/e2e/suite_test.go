@@ -29,8 +29,6 @@ import (
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
-	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap"
@@ -41,7 +39,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 )
 
 var errWait = fmt.Errorf("wait for condition met")
@@ -77,11 +74,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestE2E(t *testing.T) {
-	// Add a JUnit reporter to generate JUnit XML output for GitHub Actions.
-	junitReporter := reporters.NewJUnitReporter(fmt.Sprintf("e2e_%d.xml", config.GinkgoConfig.ParallelNode))
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"E2E Suite",
-		[]Reporter{printer.NewlineReporter{}, junitReporter})
+	RunSpecs(t, "E2E Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {

@@ -34,9 +34,14 @@ function e2e::ensure-kind() {
     kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
 }
 
-function e2e::load_image() {
-  e2e::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
-  e2e::prepare_image ${CLUSTER} openkruise/kruise-manager:v1.2.0
+function e2e::load-image() {
+    e2e::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
+    e2e::prepare_image ${CLUSTER} openkruise/kruise-manager:v1.2.0
+    e2e::prepare_image ${CLUSTER} minio/minio:RELEASE.2022-10-08T20-11-00Z.fips
+}
+
+function e2e::install-minio() {
+    kubectl -n default apply -f examples/minio.yaml
 }
 
 if [[ -z ${MO_VERSION+undefined-guard} ]]; then
@@ -51,13 +56,14 @@ CLUSTER=${CLUSTER:-mo}
 
 
 function e2e::kind-e2e() {
-  echo "> Start kind e2e test"
+    echo "> Start kind e2e test"
 
-  trap "e2e::kind-cleanup ${CLUSTER}" EXIT
-  e2e::ensure-kind
-  e2e::load_image
-  echo "> Run e2e test"
-  bash ./hack/e2e.sh
+    trap "e2e::kind-cleanup ${CLUSTER}" EXIT
+    e2e::ensure-kind
+    e2e::load-image
+    e2e::install-minio
+    echo "> Run e2e test"
+    bash ./hack/e2e.sh
 }
 
 
