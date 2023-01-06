@@ -1,4 +1,4 @@
-// Copyright 2022 Matrix Origin
+// Copyright 2023 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,6 +60,13 @@ type PodSet struct {
 
 	// Config is the raw config for pods
 	Config *TomlConfig `json:"config,omitempty"`
+
+	// If enabled, use the Pod dns name as the Pod identity
+	DNSBasedIdentity bool `json:"dnsBasedIdentity,omitempty"`
+
+	// ClusterDomain is the cluster-domain of current kubernetes cluster,
+	// refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ for details
+	ClusterDomain string `json:"clusterDomain,omitempty"`
 }
 
 // MainContainer is the description of the main container of a Pod

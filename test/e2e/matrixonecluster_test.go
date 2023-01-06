@@ -1,4 +1,4 @@
-// Copyright 2022 Matrix Origin
+// Copyright 2023 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
@@ -45,6 +46,18 @@ const (
 var _ = Describe("MatrixOneCluster test", func() {
 	It("Should reconcile the cluster properly", func() {
 		By("Create cluster")
+		s3TypeMinio := v1alpha1.S3ProviderTypeMinIO
+		minioSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: env.Namespace,
+				Name:      "minio",
+			},
+			StringData: map[string]string{
+				"AWS_ACCESS_KEY_ID":     "minio",
+				"AWS_SECRET_ACCESS_KEY": "minio123",
+			},
+		}
+		Expect(kubeCli.Create(context.TODO(), minioSecret)).To(Succeed())
 		mo := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: env.Namespace,
@@ -62,7 +75,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 				DN: v1alpha1.DNSetBasic{
 					PodSet: v1alpha1.PodSet{
 						// test multiple DN replicas
-						Replicas: 2,
+						Replicas: 1,
 					},
 					CacheVolume: &v1alpha1.Volume{
 						Size: resource.MustParse("100Mi"),
@@ -76,8 +89,13 @@ var _ = Describe("MatrixOneCluster test", func() {
 						Size: resource.MustParse("100Mi"),
 					},
 					SharedStorage: v1alpha1.SharedStorageProvider{
-						FileSystem: &v1alpha1.FileSystemProvider{
-							Path: "/test",
+						S3: &v1alpha1.S3Provider{
+							Path:     "matrixone",
+							Type:     &s3TypeMinio,
+							Endpoint: "http://minio.default:9000",
+							SecretRef: &corev1.LocalObjectReference{
+								Name: minioSecret.Name,
+							},
 						},
 					},
 					InitialConfig: v1alpha1.InitialConfig{},

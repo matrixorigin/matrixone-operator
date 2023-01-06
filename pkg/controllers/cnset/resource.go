@@ -1,4 +1,4 @@
-// Copyright 2022 Matrix Origin
+// Copyright 2023 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,14 +30,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// TODO: change listen-address to service-address
 var startScriptTpl = template.Must(template.New("dn-start-script").Parse(`
 #!/bin/sh
 set -eu
 POD_NAME=${POD_NAME:-$HOSTNAME}
 ADDR="${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc"
 ORDINAL=${POD_NAME##*-}
-UUID=$(printf '00000000-0000-0000-0000-2%011x' ${ORDINAL})
+if [ -z "${HOSTNAME_UUID+guard}" ]; then
+  UUID=$(printf '00000000-0000-0000-0000-2%011x' ${ORDINAL})
+else
+  UUID=$(echo ${ADDR} | sha256sum | od -x | head -1 | awk '{OFS="-"; print $2$3,$4,$5,$6,$7$8$9}')
+fi
 conf=$(mktemp)
 bc=$(mktemp)
 cat <<EOF > ${bc}
@@ -135,6 +138,9 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
 	}
+	if cn.Spec.DNSBasedIdentity {
+		mainRef.Env = append(mainRef.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
+	}
 
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)
 
@@ -161,11 +167,6 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	// cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
-	engineKey := []string{"cn", "Engine", "type"}
-	if cfg.Get(engineKey...) == nil {
-		// FIXME: make TAE as default
-		cfg.Set(engineKey, "memory")
-	}
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err

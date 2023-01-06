@@ -1,4 +1,4 @@
-// Copyright 2022 Matrix Origin
+// Copyright 2023 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,18 +62,8 @@ func Test_buildDNSetConfigMap(t *testing.T) {
 			wantConfig: `data-dir = "/var/lib/matrixone/data"
 service-type = "DN"
 
-[cn]
-
-[cn.Engine]
-type = "memory"
-
 [dn]
 listen-address = "0.0.0.0:41010"
-
-[dn.Txn]
-
-[dn.Txn.Storage]
-backend = "MEM"
 
 [[fileservice]]
 backend = "DISK"
@@ -140,11 +130,6 @@ type = "distributed-tae"
 
 [dn]
 listen-address = "0.0.0.0:41010"
-
-[dn.Txn]
-
-[dn.Txn.Storage]
-backend = "MEM"
 
 [[fileservice]]
 backend = "DISK"

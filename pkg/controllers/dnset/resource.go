@@ -1,4 +1,4 @@
-// Copyright 2022 Matrix Origin
+// Copyright 2023 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,11 @@ set -eu
 POD_NAME=${POD_NAME:-$HOSTNAME}
 ADDR="${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc"
 ORDINAL=${POD_NAME##*-}
-UUID=$(printf '00000000-0000-0000-0000-1%011x' ${ORDINAL})
+if [ -z "${HOSTNAME_UUID+guard}" ]; then
+  UUID=$(printf '00000000-0000-0000-0000-1%011x' ${ORDINAL})
+else
+  UUID=$(echo ${ADDR} | sha256sum | od -x | head -1 | awk '{OFS="-"; print $2$3,$4,$5,$6,$7$8$9}')
+fi
 conf=$(mktemp)
 bc=$(mktemp)
 cat <<EOF > ${bc}
@@ -119,6 +123,9 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 			{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
 		},
 	}
+	if dn.Spec.DNSBasedIdentity {
+		main.Env = append(main.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
+	}
 	dn.Spec.Overlay.OverlayMainContainer(&main)
 	podSpec := corev1.PodSpec{
 		Containers: []corev1.Container{main},
@@ -149,17 +156,6 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, dn.Spec.CacheVolume, &dn.Spec.SharedStorageCache))
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
-	txnStorageKey := []string{"dn", "Txn", "Storage", "backend"}
-	if conf.Get(txnStorageKey...) == nil {
-		// override the default txn storage
-		// TODO: remove this and use default when txn backend TAE .Destroy() is implemented
-		conf.Set(txnStorageKey, "MEM")
-	}
-	engineKey := []string{"cn", "Engine", "type"}
-	if conf.Get(engineKey...) == nil {
-		// FIXME: make TAE as default
-		conf.Set(engineKey, "memory")
-	}
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err

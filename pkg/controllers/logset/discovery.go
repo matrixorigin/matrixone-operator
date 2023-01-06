@@ -1,4 +1,4 @@
-// Copyright 2022 Matrix Origin
+// Copyright 2023 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,9 +29,7 @@ func buildDiscoveryService(ls *v1alpha1.LogSet) *corev1.Service {
 			Name:      discoverySvcName(ls),
 			Labels:    common.SubResourceLabels(ls),
 		},
-		// TODO(aylei): ports definition
 		Spec: corev1.ServiceSpec{
-			// TODO(aylei): determine haKeeper discovery service port
 			Ports: []corev1.ServicePort{{
 				Port: logServicePort,
 			}},

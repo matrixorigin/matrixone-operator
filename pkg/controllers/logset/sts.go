@@ -1,4 +1,4 @@
-// Copyright 2022 Matrix Origin
+// Copyright 2023 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -78,6 +78,9 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 		util.FieldRefEnv(PodIPEnvKey, "status.podIP"),
 		{Name: HeadlessSvcEnvKey, Value: headlessSvcName(ls)},
 	}
+	//if ls.Spec.DNSBasedIdentity {
+	//	mainRef.Env = append(mainRef.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
+	//}
 	ls.Spec.Overlay.OverlayMainContainer(mainRef)
 
 	specRef.Containers = []corev1.Container{*mainRef}

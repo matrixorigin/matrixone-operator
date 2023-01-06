@@ -46,9 +46,17 @@ spec:
           spec:
             description: Spec is the desired state of LogSet
             properties:
+              clusterDomain:
+                description: ClusterDomain is the cluster-domain of current kubernetes
+                  cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+                  for details
+                type: string
               config:
                 description: Config is the raw config for pods
                 type: string
+              dnsBasedIdentity:
+                description: If enabled, use the Pod dns name as the Pod identity
+                type: boolean
               image:
                 description: Image is the docker image of the main container
                 type: string
