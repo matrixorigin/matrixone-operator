@@ -192,12 +192,12 @@ func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
 		return nil
 	}
 	ctx.Log.Info("repair logset")
-	toRepair := ctx.Obj.Status.StoresFailedFor(ctx.Obj.Spec.GetStoreFailureTimeout().Duration)
-	if len(toRepair) == 0 {
+	if len(ctx.Obj.Status.FailedStores) > (*ctx.Obj.Spec.InitialConfig.LogShardReplicas)/2 {
+		ctx.Log.Info("majority failure might happen, wait for human intervention")
 		return nil
 	}
-	if len(toRepair) > (*ctx.Obj.Spec.InitialConfig.LogShardReplicas)/2 {
-		ctx.Log.Info("majority failure might happen, wait for human intervention")
+	toRepair := ctx.Obj.Status.StoresFailedFor(ctx.Obj.Spec.GetStoreFailureTimeout().Duration)
+	if len(toRepair) == 0 {
 		return nil
 	}
 	candidate := toRepair[0]
@@ -207,18 +207,19 @@ func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
 			Name:      candidate.PodName,
 		},
 	}
-	// FIXME: we might have to make this behavior configurable
-	err := ctx.Patch(pod, func() error {
-		controllerutil.AddFinalizer(pod, failoverDeletionFinalizer)
-		// mark the pod as need external action and cleanup all old labels
-		pod.Labels = map[string]string{
-			common.ActionRequiredLabelKey: common.ActionRequiredLabelValue,
-			common.LogSetOwnerKey:         ctx.Obj.Name,
+	if ctx.Obj.Spec.GetFailedPodStrategy() == v1alpha1.FailedPodStrategyOrphan {
+		err := ctx.Patch(pod, func() error {
+			controllerutil.AddFinalizer(pod, failoverDeletionFinalizer)
+			// mark the pod as need external action and cleanup all old labels
+			pod.Labels = map[string]string{
+				common.ActionRequiredLabelKey: common.ActionRequiredLabelValue,
+				common.LogSetOwnerKey:         ctx.Obj.Name,
+			}
+			return nil
+		})
+		if err != nil {
+			return errors.Wrap(err, "cannot orphan the victim pod")
 		}
-		return nil
-	})
-	if err != nil {
-		return errors.Wrap(err, "cannot orphan the victim pod")
 	}
 	// repair one at a time
 	ordinal, err := util.PodOrdinal(candidate.PodName)

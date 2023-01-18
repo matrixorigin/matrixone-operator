@@ -31,7 +31,7 @@ const (
 	minHAReplicas = 3
 	singleReplica = 1
 
-	defaultStoreFailureTimeout = 5 * time.Minute
+	defaultStoreFailureTimeout = 10 * time.Minute
 )
 
 func (r *LogSet) setupWebhookWithManager(mgr ctrl.Manager) error {
