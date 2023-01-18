@@ -57,6 +57,10 @@ spec:
               dnsBasedIdentity:
                 description: If enabled, use the Pod dns name as the Pod identity
                 type: boolean
+              failedPodStrategy:
+                description: FailedPodStrategy controls how to handle failed pod when
+                  failover happens, default to Delete
+                type: string
               image:
                 description: Image is the docker image of the main container
                 type: string

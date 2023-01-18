@@ -452,6 +452,11 @@ func (in *LogSetBasic) DeepCopyInto(out *LogSetBasic) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.FailedPodStrategy != nil {
+		in, out := &in.FailedPodStrategy, &out.FailedPodStrategy
+		*out = new(FailedPodStrategy)
+		**out = **in
+	}
 	if in.PVCRetentionPolicy != nil {
 		in, out := &in.PVCRetentionPolicy, &out.PVCRetentionPolicy
 		*out = new(PVCRetentionPolicy)

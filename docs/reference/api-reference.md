@@ -167,6 +167,17 @@ _Appears in:_
 | `haKeeperEndpoint` _string_ | HAKeeperEndpoint of the ExternalLogSet |
 
 
+#### FailedPodStrategy
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [LogSetBasic](#logsetbasic)
+
+
+
 
 
 
@@ -221,6 +232,7 @@ _Appears in:_
 | `sharedStorage` _[SharedStorageProvider](#sharedstorageprovider)_ | SharedStorage is an external shared storage shared by all LogService instances |
 | `initialConfig` _[InitialConfig](#initialconfig)_ | InitialConfig is the initial configuration of HAKeeper InitialConfig is immutable |
 | `storeFailureTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | StoreFailureTimeout is the timeout to fail-over the logset Pod after a failure of it is observed |
+| `failedPodStrategy` _[FailedPodStrategy](#failedpodstrategy)_ | FailedPodStrategy controls how to handle failed pod when failover happens, default to Delete |
 | `pvcRetentionPolicy` _[PVCRetentionPolicy](#pvcretentionpolicy)_ | PVCRetentionPolicy defines the retention policy of orphaned PVCs due to cluster deletion, scale-in or failover. Available options: - Delete: delete orphaned PVCs - Retain: keep orphaned PVCs, if the corresponding Pod get created again (e.g. scale-in and scale-out, recreate the cluster), the Pod will reuse the retained PVC which contains previous data. Retained PVCs require manual cleanup if they are no longer needed. The default policy is Delete. |
 
 
