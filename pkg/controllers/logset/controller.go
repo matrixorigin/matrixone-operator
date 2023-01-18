@@ -45,7 +45,9 @@ const (
 
 var _ recon.Actor[*v1alpha1.LogSet] = &Actor{}
 
-type Actor struct{}
+type Actor struct {
+	FailoverEnabled bool
+}
 
 type WithResources struct {
 	*Actor
@@ -186,6 +188,9 @@ func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.LogSet]) error {
 
 // Repair repairs failed log set pods to match the desired state
 func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
+	if !r.FailoverEnabled {
+		return nil
+	}
 	ctx.Log.Info("repair logset")
 	toRepair := ctx.Obj.Status.StoresFailedFor(ctx.Obj.Spec.GetStoreFailureTimeout().Duration)
 	if len(toRepair) == 0 {
