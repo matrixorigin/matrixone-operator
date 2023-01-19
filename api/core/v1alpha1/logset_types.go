@@ -24,6 +24,13 @@ const (
 	StorePhaseDown = "Down"
 )
 
+type FailedPodStrategy string
+
+const (
+	FailedPodStrategyOrphan FailedPodStrategy = "Orphan"
+	FailedPodStrategyDelete FailedPodStrategy = "Delete"
+)
+
 type LogSetSpec struct {
 	LogSetBasic `json:",inline"`
 
@@ -51,6 +58,9 @@ type LogSetBasic struct {
 	// +optional
 	StoreFailureTimeout *metav1.Duration `json:"storeFailureTimeout,omitempty"`
 
+	// FailedPodStrategy controls how to handle failed pod when failover happens, default to Delete
+	FailedPodStrategy *FailedPodStrategy `json:"failedPodStrategy,omitempty"`
+
 	// PVCRetentionPolicy defines the retention policy of orphaned PVCs due to cluster deletion, scale-in
 	// or failover. Available options:
 	// - Delete: delete orphaned PVCs
@@ -59,6 +69,13 @@ type LogSetBasic struct {
 	// The default policy is Delete.
 	// +optional
 	PVCRetentionPolicy *PVCRetentionPolicy `json:"pvcRetentionPolicy,omitempty"`
+}
+
+func (l *LogSetBasic) GetFailedPodStrategy() FailedPodStrategy {
+	if l.FailedPodStrategy == nil {
+		return FailedPodStrategyDelete
+	}
+	return *l.FailedPodStrategy
 }
 
 func (l *LogSetBasic) GetStoreFailureTimeout() metav1.Duration {

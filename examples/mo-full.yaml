@@ -1,0 +1,152 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: MatrixOneCluster
+metadata:
+  name: mo
+# specification of the mo-cluster, full API reference can be found here: https://github.com/matrixorigin/matrixone-operator/blob/main/docs/reference/api-reference.md#matrixoneclusterspec
+spec:
+  # image repository of matrixone container image
+  imageRepository: matrixorigin/matrixone
+  # version of matrixone cluster, which will also be used as the image tag
+  version: nightly-63835b83
+  # optional, node selector filters the node that the cluster pods can be scheduled to, default to nil
+  nodeSelector:
+    kubernetes.io/arch: amd64
+  # required, specification of the mo LogService
+  logService:
+    # required, logservice replicas, 3 is recommended for HA deployment
+    replicas: 3
+    # required, the volume specification of LogService Pods
+    volume:
+      # required, volume size, cannot be changed after cluster creation currently
+      size: 10Gi
+      # set the storage class of the volume, the default storage class of the target k8s will be used if not specified
+      storageClassName: gp3
+    # optional, the container resources of logservice pods, default to no request and no limit
+    resources:
+      # requests are the requested resources, this will also be used to schedule the LogService Pod
+      requests:
+        cpu: 4
+        memory: 12Gi
+      # limits are the resource limitation of the Pod
+      limits:
+        cpu: 4
+        memory: 12Gi
+    # optional, topologySpread ensures the pods of LogService are evenly spread by the labels listed below
+    topologySpread:
+    - kubernetes.io/hostname
+    # optional, override the cluster-level imageRepository and version
+    image: matrixorigin/matrixone:latest
+    # optional, override cluster-level node selector
+    nodeSelector: {}
+    # optional, specify the configuration of logservice pods, default to empty (use default config of logservice)
+    config: |
+      # TOML format config file below
+      [log]
+      level=debug
+    # required, configure the shared storage of the mo cluster
+    sharedStorage:
+      # use AWS S3 as shared storage
+      s3:
+        # required, the S3 path URL under which the data will be saved
+        path: matrixone/path1/path2
+        # optional, type is the provider type of the s3 service, default to aws
+        type: aws
+        # optional, secretRef specifies the secret used to access S3, must be created in advance.
+        # the environment (e.g. EC2 instance meta) will be used as credential source if not set.
+        # secretRef is required when there is no environment based auth available.
+        secretRef:
+          name: aws
+      # use an S3 compatible object storage (minio-backend) as shared storage
+#      s3:
+#        type: minio
+#        # the S3 path URL under which the data will be saved
+#        path: matrixone/path1/path2
+#        # endpoint is the minio endpoint
+#        endpoint: http://minio-0.minio.mo-system:9000
+#        # secretRef specifies the secret used to access S3, must be created in advance
+#        secretRef:
+#          name: minio
+  # required, specification of DN
+  dn:
+    # required, DN replicas
+    replicas: 1
+    # optional, cacheVolume will add an extra volume for DNs as the shared storage cache
+    cacheVolume:
+      # required, volume size, cannot be changed after cluster creation currently
+      size: 10Gi
+      # optional, set the storage class of the volume, the default storage class of the target k8s will be used if not specified
+      storageClassName: gp3
+    # optional, sharedStorageCache specify the cache config of the shared storage
+    sharedStorageCache:
+      # optional, the cache size on in memory, default to 50% of the memory request if not set
+      memoryCacheSize: 5Gi
+      # optional, the cache size on disk, default to the size of cacheVolume if not set
+      diskCacheSize: 10Gi
+    # optioanl, the container resources of logservice pods, default to no request and no limit
+    resources:
+      # requests are the requested resources, this will also be used to schedule the LogService Pod
+      requests:
+        cpu: 4
+        memory: 12Gi
+      # limits are the resource limitation of the Pod
+      limits:
+        cpu: 4
+        memory: 12Gi
+    # optional, topologySpread ensures the pods of LogService are evenly spread by the labels listed below
+    topologySpread:
+    - kubernetes.io/hostname
+    # optional, override the cluster-level imageRepository and version
+    image: matrixorigin/matrixone:latest
+    # optional, override cluster-level node selector
+    nodeSelector: {}
+    # optional, specify the configuration of logservice pods, default to empty
+    config: |
+      # TOML format config file below
+      [log]
+      level=debug
+  # required, deploy CN pods that accept user session
+  tp:
+    # CN replicas
+    replicas: 2
+    # optional, set an extra cache volume for CN pods
+    cacheVolume:
+      # required, volume size, cannot be changed after cluster creation currently
+      size: 10Gi
+      # optional, set the storage class of the volume, the default storage class of the target k8s will be used if not specified
+      storageClassName: gp3
+    # optional, sharedStorageCache specify the cache config of the shared storage
+    sharedStorageCache:
+      # optional, the cache size on in memory, default to 50% of the memory request if not set
+      memoryCacheSize: 5Gi
+      # optional, the cache size on disk, default to the size of cacheVolume if not set
+      diskCacheSize: 10Gi
+    # optioanl, the container resources of logservice pods, default to no request and no limit
+    resources:
+      # requests are the requested resources, this will also be used to schedule the LogService Pod
+      requests:
+        cpu: 4
+        memory: 12Gi
+      # limits are the resource limitation of the Pod
+      limits:
+        cpu: 4
+        memory: 12Gi
+    # optional, topologySpread ensures the pods of LogService are evenly spread by the labels listed below
+    topologySpread:
+    - kubernetes.io/hostname
+    # optional, override the cluster-level imageRepository and version
+    image: matrixorigin/matrixone:latest
+    # optional, override cluster-level node selector
+    nodeSelector: {}
+    # optional, specify the configuration of logservice pods, default to empty
+    config: |
+      # TOML format config file below
+      [log]
+      level=debug
+
+  # optional, deploy another CN group that does not accept MySQL session, this group can accept MPP pipelines to accelerate
+  # AP queries.
+  ap:
+    replicas: 2
+    cacheVolume:
+      size: 10Gi
+    # the configurable fields are same as TP

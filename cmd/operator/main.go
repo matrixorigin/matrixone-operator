@@ -63,6 +63,7 @@ func main() {
 	var probeAddr string
 	var webhookCertDir string
 	var caFile string
+	var failover bool
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -70,6 +71,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&webhookCertDir, "webhook-certificate-directory", "/tmp/k8s-webhook-server/serving-certs", "the directory that provide certificates for the webhook server")
 	flag.StringVar(&caFile, "ca-file", "caBundle", "the filename of caBundle")
+	flag.BoolVar(&failover, "failover", true, "enable failover feature-gate")
 	opts := &zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
@@ -116,7 +118,7 @@ func main() {
 		exitIf(err, "unable to setup validating webhook controller")
 	}
 
-	logSetActor := &logset.Actor{}
+	logSetActor := &logset.Actor{FailoverEnabled: failover}
 	err = logSetActor.Reconcile(mgr)
 	exitIf(err, "unable to set up log service controller")
 
