@@ -21,6 +21,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	. "github.com/onsi/gomega"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
+	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,41 +125,6 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			g.Expect(err).To(Succeed())
 		},
 	}, {
-		name: "synced",
-		mo:   tpl.DeepCopy(),
-		objects: []client.Object{
-			&v1alpha1.LogSet{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"},
-				Status: v1alpha1.LogSetStatus{
-					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
-						Type:   recon.ConditionTypeSynced,
-						Status: metav1.ConditionTrue,
-					}}},
-				},
-			},
-			&v1alpha1.DNSet{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"},
-				Status: v1alpha1.DNSetStatus{
-					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
-						Type:   recon.ConditionTypeSynced,
-						Status: metav1.ConditionTrue,
-					}}},
-				},
-			},
-			&v1alpha1.CNSet{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-tp"},
-				Status: v1alpha1.CNSetStatus{
-					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
-						Type:   recon.ConditionTypeSynced,
-						Status: metav1.ConditionTrue,
-					}}},
-				},
-			},
-		},
-		expect: func(g *WithT, mo *v1alpha1.MatrixOneCluster, err error, c client.Client) {
-			g.Expect(recon.IsSynced(&mo.Status)).To(BeTrue())
-		},
-	}, {
 		name: "DNNotReady",
 		mo:   tpl.DeepCopy(),
 		objects: []client.Object{
@@ -197,7 +163,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			g.Expect(cond.Reason).To(Equal("DNSetNotReady"))
 		},
 	}, {
-		name: "DNNotSynced",
+		name: "LogSetNotSynced",
 		mo:   tpl.DeepCopy(),
 		objects: []client.Object{
 			&v1alpha1.LogSet{
@@ -205,7 +171,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 				Status: v1alpha1.LogSetStatus{
 					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
 						Type:   recon.ConditionTypeSynced,
-						Status: metav1.ConditionTrue,
+						Status: metav1.ConditionFalse,
 					}}},
 				},
 			},
@@ -214,7 +180,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 				Status: v1alpha1.DNSetStatus{
 					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
 						Type:   recon.ConditionTypeSynced,
-						Status: metav1.ConditionFalse,
+						Status: metav1.ConditionTrue,
 					}}},
 				},
 			},
@@ -232,7 +198,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			g.Expect(recon.IsSynced(&mo.Status)).To(BeFalse())
 			cond, ok := recon.GetCondition(&mo.Status, recon.ConditionTypeSynced)
 			g.Expect(ok).To(BeTrue())
-			g.Expect(cond.Reason).To(Equal("DNSetNotSynced"))
+			g.Expect(cond.Reason).To(Equal("LogServiceNotSynced"))
 		},
 	}, {
 		name: "initializeDB",
@@ -395,5 +361,6 @@ func newScheme() *runtime.Scheme {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kruisev1.AddToScheme(scheme))
+	utilruntime.Must(kruisepolicy.AddToScheme(scheme))
 	return scheme
 }

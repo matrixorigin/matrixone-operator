@@ -60,4 +60,4 @@ tolerations: []
 affinity: {}
 
 kruise:
-  featureGates: "StatefulSetAutoDeletePVC=true"
+  featureGates: "StatefulSetAutoDeletePVC=true,PodUnavailableBudgetDeleteGate=true,PodUnavailableBudgetUpdateGate=true"

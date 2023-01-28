@@ -108,38 +108,40 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	if dn.Spec.CacheVolume != nil {
 		volumeMountsList = append(volumeMountsList, dataVolume)
 	}
-
-	main := corev1.Container{
-		Name:      v1alpha1.ContainerMain,
-		Image:     dn.Spec.Image,
-		Resources: dn.Spec.Resources,
-		Command: []string{
-			"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint),
-		},
-		VolumeMounts: volumeMountsList,
-		Env: []corev1.EnvVar{
-			util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
-			util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
-			{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
-		},
+	mainRef := util.FindFirst(sts.Spec.Template.Spec.Containers, func(c corev1.Container) bool {
+		return c.Name == v1alpha1.ContainerMain
+	})
+	if mainRef == nil {
+		mainRef = &corev1.Container{Name: v1alpha1.ContainerMain}
 	}
+
+	mainRef.Image = dn.Spec.Image
+	mainRef.Resources = dn.Spec.Resources
+	mainRef.Command = []string{
+		"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint),
+	}
+	mainRef.VolumeMounts = volumeMountsList
+	mainRef.Env = []corev1.EnvVar{
+		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
+		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
+		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
+	}
+
 	if dn.Spec.DNSBasedIdentity {
-		main.Env = append(main.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
+		mainRef.Env = append(mainRef.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
 	}
-	dn.Spec.Overlay.OverlayMainContainer(&main)
-	podSpec := corev1.PodSpec{
-		Containers: []corev1.Container{main},
-		ReadinessGates: []corev1.PodReadinessGate{{
-			ConditionType: pub.InPlaceUpdateReady,
-		}},
-		NodeSelector: dn.Spec.NodeSelector,
-	}
+	dn.Spec.Overlay.OverlayMainContainer(mainRef)
+	specRef := &sts.Spec.Template.Spec
+	specRef.Containers = []corev1.Container{*mainRef}
+	specRef.ReadinessGates = []corev1.PodReadinessGate{{
+		ConditionType: pub.InPlaceUpdateReady,
+	}}
+	specRef.NodeSelector = dn.Spec.NodeSelector
 
-	common.SetStorageProviderConfig(sp, &podSpec)
-	common.SyncTopology(dn.Spec.TopologyEvenSpread, &podSpec)
+	common.SetStorageProviderConfig(sp, specRef)
+	common.SyncTopology(dn.Spec.TopologyEvenSpread, specRef)
 
-	dn.Spec.Overlay.OverlayPodSpec(&podSpec)
-	sts.Spec.Template.Spec = podSpec
+	dn.Spec.Overlay.OverlayPodSpec(specRef)
 }
 
 // buildDNSetConfigMap return dn set configmap
