@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -57,6 +56,7 @@ func (d *Actor) with(sts *kruise.StatefulSet, svc *corev1.Service) *WithResource
 func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1alpha1.DNSet], error) {
 	dn := ctx.Obj
 
+	ctx.Log.Info("observe dnset")
 	svc := &corev1.Service{}
 	err, foundSvc := util.IsFound(ctx.Get(client.ObjectKey{Namespace: dn.Namespace, Name: headlessSvcName(dn)}, svc))
 	if err != nil {
@@ -147,7 +147,7 @@ func (d *Actor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error) {
 }
 
 func (d *Actor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
-	klog.V(recon.Info).Info("create dn set...")
+	ctx.Log.Info("create dn set")
 	dn := ctx.Obj
 
 	hSvc := buildHeadlessSvc(dn)

@@ -18,12 +18,16 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"go.uber.org/multierr"
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
+	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
 )
@@ -33,6 +37,10 @@ const (
 
 	usernameKey = "username"
 	passwordKey = "password"
+
+	maxUnavailablePod = 1
+
+	matrixoneClusterLabelKey = "matrixorigin.io/cluster"
 )
 
 var _ recon.Actor[*v1alpha1.MatrixOneCluster] = &MatrixOneClusterActor{}
@@ -41,6 +49,25 @@ type MatrixOneClusterActor struct{}
 
 func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (recon.Action[*v1alpha1.MatrixOneCluster], error) {
 	mo := ctx.Obj
+
+	maxUnavailable := intstr.FromInt(maxUnavailablePod)
+	unavailableBudget := &kruisepolicy.PodUnavailableBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: mo.Namespace,
+			Name:      mo.Name,
+		},
+	}
+	if err := recon.CreateOwnedOrUpdate(ctx, unavailableBudget, func() error {
+		unavailableBudget.Spec.Selector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				matrixoneClusterLabelKey: mo.Name,
+			},
+		}
+		unavailableBudget.Spec.MaxUnavailable = &maxUnavailable
+		return nil
+	}); err != nil {
+		return nil, errors.Wrap(err, "sync cluster unavailable budget")
+	}
 
 	// sync specs
 	ls := &v1alpha1.LogSet{
@@ -59,39 +86,52 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		ObjectMeta: tpSetKey(mo),
 		Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
 	}
-
-	errs := multierr.Combine(
-		recon.CreateOwnedOrUpdate(ctx, ls, func() error {
-			ls.Spec.LogSetBasic = mo.Spec.LogService
-			setPodSetDefault(&ls.Spec.LogSetBasic.PodSet, mo)
-			setOverlay(&ls.Spec.Overlay, mo)
-			ls.Spec.Image = mo.LogSetImage()
-			return nil
-		}),
-		recon.CreateOwnedOrUpdate(ctx, dn, func() error {
-			dn.Spec.DNSetBasic = mo.Spec.DN
-			setPodSetDefault(&dn.Spec.DNSetBasic.PodSet, mo)
-			setOverlay(&dn.Spec.Overlay, mo)
-			dn.Spec.Image = mo.DnSetImage()
-			dn.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
-			return nil
-		}),
-		recon.CreateOwnedOrUpdate(ctx, tp, func() error {
-			tp.Spec.CNSetBasic = mo.Spec.TP
-			setPodSetDefault(&tp.Spec.CNSetBasic.PodSet, mo)
-			setOverlay(&tp.Spec.Overlay, mo)
-			tp.Spec.Image = mo.TpSetImage()
-			tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
-			tp.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
-			return nil
-		}),
-	)
+	result, err := utils.CreateOwnedOrUpdate(ctx, ls, func() error {
+		ls.Spec.LogSetBasic = mo.Spec.LogService
+		setPodSetDefault(&ls.Spec.LogSetBasic.PodSet, mo)
+		setOverlay(&ls.Spec.Overlay, mo)
+		ls.Spec.Image = mo.LogSetImage()
+		return nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "sync LogSet")
+	}
+	if result == controllerutil.OperationResultUpdated {
+		// mark the logset as NotSynced to avoid race condition
+		ls.SetCondition(updatingCondition())
+		if err := ctx.UpdateStatus(ls); err != nil {
+			return nil, err
+		}
+	}
+	result, err = utils.CreateOwnedOrUpdate(ctx, dn, func() error {
+		dn.Spec.DNSetBasic = mo.Spec.DN
+		setPodSetDefault(&dn.Spec.DNSetBasic.PodSet, mo)
+		setOverlay(&dn.Spec.Overlay, mo)
+		dn.Spec.Image = mo.DnSetImage()
+		dn.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
+		return nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "sync DNSet")
+	}
+	result, err = utils.CreateOwnedOrUpdate(ctx, tp, func() error {
+		tp.Spec.CNSetBasic = mo.Spec.TP
+		setPodSetDefault(&tp.Spec.CNSetBasic.PodSet, mo)
+		setOverlay(&tp.Spec.Overlay, mo)
+		tp.Spec.Image = mo.TpSetImage()
+		tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
+		tp.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
+		return nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "sync TP CNSet")
+	}
 	if mo.Spec.AP != nil {
 		ap := &v1alpha1.CNSet{
 			ObjectMeta: apSetKey(mo),
 			Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
 		}
-		errs = multierr.Append(errs, recon.CreateOwnedOrUpdate(ctx, ap, func() error {
+		if err := recon.CreateOwnedOrUpdate(ctx, ap, func() error {
 			ap.Spec.CNSetBasic = *mo.Spec.AP
 			setPodSetDefault(&ap.Spec.CNSetBasic.PodSet, mo)
 			setOverlay(&ap.Spec.Overlay, mo)
@@ -99,7 +139,9 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			ap.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
 			ap.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
 			return nil
-		}))
+		}); err != nil {
+			return nil, errors.Wrap(err, "sync AP CNSet")
+		}
 		mo.Status.AP = &ap.Status
 	}
 
@@ -110,14 +152,13 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 				CNSet: &v1alpha1.CNSet{ObjectMeta: tpSetKey(mo)},
 			},
 		}
-		errs = multierr.Append(errs, recon.CreateOwnedOrUpdate(ctx, webui, func() error {
+		if err := recon.CreateOwnedOrUpdate(ctx, webui, func() error {
 			webui.Spec.WebUIBasic = *mo.Spec.WebUI
 			return nil
-		}))
+		}); err != nil {
+			return nil, errors.Wrap(err, "sync webUI")
+		}
 		mo.Status.Webui = &webui.Status
-	}
-	if errs != nil {
-		return nil, errs
 	}
 
 	// collect status
@@ -166,12 +207,16 @@ func setPodSetDefault(ps *v1alpha1.PodSet, mo *v1alpha1.MatrixOneCluster) {
 }
 
 func setOverlay(o **v1alpha1.Overlay, mo *v1alpha1.MatrixOneCluster) {
+	if *o == nil {
+		*o = &v1alpha1.Overlay{}
+	}
 	if mo.Spec.ImagePullPolicy != nil {
-		if *o == nil {
-			*o = &v1alpha1.Overlay{}
-		}
 		(*o).ImagePullPolicy = mo.Spec.ImagePullPolicy
 	}
+	if (*o).PodLabels == nil {
+		(*o).PodLabels = map[string]string{}
+	}
+	(*o).PodLabels[matrixoneClusterLabelKey] = mo.Name
 }
 
 // Initialize the MO cluster
@@ -309,4 +354,12 @@ func (r *MatrixOneClusterActor) Reconcile(mgr manager.Manager) error {
 
 func credentialName(mo *v1alpha1.MatrixOneCluster) string {
 	return fmt.Sprintf("%s-credential", mo.Name)
+}
+
+func updatingCondition() metav1.Condition {
+	return metav1.Condition{
+		Type:   recon.ConditionTypeSynced,
+		Status: metav1.ConditionFalse,
+		Reason: "Updating",
+	}
 }

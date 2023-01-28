@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
+	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
 	"os"
 
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
@@ -55,6 +56,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kruisev1.AddToScheme(scheme))
+	utilruntime.Must(kruisepolicy.AddToScheme(scheme))
 }
 
 func main() {

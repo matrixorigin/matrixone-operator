@@ -68,6 +68,12 @@ rules:
       - update
       - patch
   - apiGroups:
+      - policy.kruise.io
+    resources:
+      - podunavailablebudgets
+    verbs:
+      - '*'
+  - apiGroups:
       - core.matrixorigin.io
     resources:
       - matrixoneclusters
