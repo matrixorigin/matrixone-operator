@@ -85,5 +85,11 @@ func (r *CNSetBasic) ValidateCreate() field.ErrorList {
 	if r.CacheVolume != nil {
 		errs = append(errs, validateVolume(r.CacheVolume, field.NewPath("spec").Child("cacheVolume"))...)
 	}
+	if r.ServiceType == corev1.ServiceTypeExternalName {
+		errs = append(errs, field.Invalid(field.NewPath("spec").Child("serviceType"), r.ServiceType, "must be one of [ClusterIP, NodePort, LoadBalancer]"))
+	}
+	if r.NodePort != nil && r.ServiceType == corev1.ServiceTypeClusterIP {
+		errs = append(errs, field.Invalid(field.NewPath("spec").Child("nodePort"), r.NodePort, "cannot set node port when serviceType is ClusterIP"))
+	}
 	return errs
 }

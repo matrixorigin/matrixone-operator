@@ -47,6 +47,11 @@ type CNSetBasic struct {
 	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
 	ServiceType corev1.ServiceType `json:"serviceType,omitempty"`
 
+	// NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer,
+	// reconciling will fail if the node port is not available.
+	// +optional
+	NodePort *int32 `json:"service,omitempty"`
+
 	// CacheVolume is the desired local cache volume for CNSet,
 	// node storage will be used if not specified
 	// +optional

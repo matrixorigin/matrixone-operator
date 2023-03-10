@@ -57,6 +57,11 @@ func (in *CNSet) DeepCopyObject() runtime.Object {
 func (in *CNSetBasic) DeepCopyInto(out *CNSetBasic) {
 	*out = *in
 	in.PodSet.DeepCopyInto(&out.PodSet)
+	if in.NodePort != nil {
+		in, out := &in.NodePort, &out.NodePort
+		*out = new(int32)
+		**out = **in
+	}
 	if in.CacheVolume != nil {
 		in, out := &in.CacheVolume, &out.CacheVolume
 		*out = new(Volume)

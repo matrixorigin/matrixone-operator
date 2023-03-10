@@ -142,6 +142,12 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  service:
+                    description: NodePort specifies the node port to use when ServiceType
+                      is NodePort or LoadBalancer, reconciling will fail if the node
+                      port is not available.
+                    format: int32
+                    type: integer
                   serviceType:
                     default: ClusterIP
                     description: ServiceType is the service type of cn service
@@ -556,6 +562,12 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  service:
+                    description: NodePort specifies the node port to use when ServiceType
+                      is NodePort or LoadBalancer, reconciling will fail if the node
+                      port is not available.
+                    format: int32
+                    type: integer
                   serviceType:
                     default: ClusterIP
                     description: ServiceType is the service type of cn service
