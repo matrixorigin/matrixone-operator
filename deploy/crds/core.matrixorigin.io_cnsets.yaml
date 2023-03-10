@@ -104,6 +104,12 @@ spec:
               image:
                 description: Image is the docker image of the main container
                 type: string
+              nodePort:
+                description: NodePort specifies the node port to use when ServiceType
+                  is NodePort or LoadBalancer, reconciling will fail if the node port
+                  is not available.
+                format: int32
+                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -6690,12 +6696,6 @@ spec:
               role:
                 description: '[TP, AP], default to TP'
                 type: string
-              service:
-                description: NodePort specifies the node port to use when ServiceType
-                  is NodePort or LoadBalancer, reconciling will fail if the node port
-                  is not available.
-                format: int32
-                type: integer
               serviceType:
                 default: ClusterIP
                 description: ServiceType is the service type of cn service
