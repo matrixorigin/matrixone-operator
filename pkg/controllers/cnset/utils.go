@@ -20,18 +20,16 @@ import (
 )
 
 const (
-	porName    = "service"
+	portName   = "service"
 	nameSuffix = "-cn"
 	CNSQLPort  = 6001
 	cnRPCPort  = 6002
 )
 
-func getCNServicePort() []corev1.ServicePort {
-	return []corev1.ServicePort{
-		{
-			Name: porName,
-			Port: CNSQLPort,
-		},
+func getCNServicePort() corev1.ServicePort {
+	return corev1.ServicePort{
+		Name: portName,
+		Port: CNSQLPort,
 	}
 }
 

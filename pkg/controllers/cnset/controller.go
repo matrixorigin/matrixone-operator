@@ -84,7 +84,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 
 	// update service of cnset
 	originSvc := svc.DeepCopy()
-	syncServiceType(ctx.Obj, svc)
+	syncService(ctx.Obj, svc)
 	if !equality.Semantic.DeepEqual(originSvc, svc) {
 		return c.with(sts, svc).SvcUpdate, nil
 	}
@@ -141,7 +141,7 @@ func (c *WithResources) Update(ctx *recon.Context[*v1alpha1.CNSet]) error {
 
 func (c *WithResources) SvcUpdate(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return ctx.Patch(c.svc, func() error {
-		syncServiceType(ctx.Obj, c.svc)
+		syncService(ctx.Obj, c.svc)
 		return nil
 	})
 }

@@ -104,6 +104,12 @@ spec:
               image:
                 description: Image is the docker image of the main container
                 type: string
+              nodePort:
+                description: NodePort specifies the node port to use when ServiceType
+                  is NodePort or LoadBalancer, reconciling will fail if the node port
+                  is not available.
+                format: int32
+                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string

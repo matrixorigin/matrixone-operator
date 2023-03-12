@@ -20,30 +20,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
-
-func GetNamespacedName(obj client.Object) types.NamespacedName {
-	return types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
-}
-
-func GetObjName(obj client.Object) string {
-	return obj.GetName()
-}
-
-func IsDelete(obj client.Object) bool {
-	return obj != nil && !obj.GetDeletionTimestamp().IsZero()
-}
-
-func IsServiceReady(svc *corev1.Service) bool {
-	if svc == nil {
-		return false
-	}
-
-	return true
-}
 
 func CheckVolumeMount(key string, list []corev1.VolumeMount) bool {
 	for _, v := range list {

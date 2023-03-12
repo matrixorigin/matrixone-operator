@@ -163,7 +163,62 @@ var _ = Describe("MatrixOneCluster test", func() {
 			return errWait
 		}, createClusterTimeout, pollInterval).Should(Succeed())
 
+		By("Set NodePort")
+		testSvcType := corev1.ServiceTypeNodePort
+		testPort := int32(30011)
+		nodePort := &v1alpha1.CNSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: env.Namespace,
+				Name:      "cn-nodeport-" + rand.String(6),
+			},
+			Spec: v1alpha1.CNSetSpec{
+				Role: v1alpha1.CNRoleTP,
+				CNSetBasic: v1alpha1.CNSetBasic{
+					PodSet: v1alpha1.PodSet{
+						Replicas: 1,
+						MainContainer: v1alpha1.MainContainer{
+							Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
+						},
+					},
+					ServiceType: testSvcType,
+					NodePort:    &testPort,
+				},
+			},
+			Deps: v1alpha1.CNSetDeps{
+				LogSetRef: v1alpha1.LogSetRef{
+					LogSet: &v1alpha1.LogSet{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "cn",
+							Namespace: env.Namespace,
+						},
+					},
+				},
+				DNSet: &v1alpha1.DNSet{ObjectMeta: metav1.ObjectMeta{
+					Name:      "cn",
+					Namespace: env.Namespace,
+				}},
+			},
+		}
+		Expect(kubeCli.Create(ctx, nodePort)).To(Succeed())
+		nodePortSvc := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: env.Namespace,
+				Name:      fmt.Sprintf("%s-cn", nodePort.Name),
+			},
+		}
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(nodePortSvc), nodePortSvc); err != nil {
+				logger.Infow("wait node port service of cn", "cnset", nodePort.Name)
+				return err
+			}
+			return nil
+		}, createCNSetTimeout, pollInterval).Should(Succeed())
+		Expect(nodePortSvc.Spec.Type).To(Equal(testSvcType))
+		Expect(nodePortSvc.Spec.Ports).To(HaveLen(1))
+		Expect(nodePortSvc.Spec.Ports[0].NodePort).To(Equal(testPort))
+
 		By("Teardown cnset")
+		Expect(kubeCli.Delete(ctx, nodePort)).To(Succeed())
 		Expect(kubeCli.Delete(ctx, c)).To(Succeed())
 		Expect(kubeCli.Delete(ctx, d)).To(Succeed())
 		Expect(kubeCli.Delete(ctx, l)).To(Succeed())

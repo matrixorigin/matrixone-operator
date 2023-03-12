@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
+	"golang.org/x/exp/slices"
 	"text/template"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -67,14 +68,19 @@ func buildHeadlessSvc(cn *v1alpha1.CNSet) *corev1.Service {
 }
 
 func buildSvc(cn *v1alpha1.CNSet) *corev1.Service {
-	return &corev1.Service{
+	port := getCNServicePort()
+	if cn.Spec.NodePort != nil {
+		port.NodePort = *cn.Spec.NodePort
+	}
+	svc := &corev1.Service{
 		ObjectMeta: common.ObjMetaTemplate(cn, svcName(cn)),
 		Spec: corev1.ServiceSpec{
 			Selector: common.SubResourceLabels(cn),
 			Type:     cn.GetServiceType(),
-			Ports:    getCNServicePort(),
+			Ports:    []corev1.ServicePort{port},
 		},
 	}
+	return svc
 }
 
 func buildCNSet(cn *v1alpha1.CNSet) *kruise.StatefulSet {
@@ -94,8 +100,16 @@ func syncReplicas(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
 	sts.Spec.Replicas = &cn.Spec.Replicas
 }
 
-func syncServiceType(cn *v1alpha1.CNSet, svc *corev1.Service) {
+func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
 	svc.Spec.Type = cn.Spec.ServiceType
+	if cn.Spec.NodePort != nil {
+		portIndex := slices.IndexFunc(svc.Spec.Ports, func(p corev1.ServicePort) bool {
+			return p.Name == portName
+		})
+		if portIndex >= 0 {
+			svc.Spec.Ports[portIndex].NodePort = *cn.Spec.NodePort
+		}
+	}
 }
 
 func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
