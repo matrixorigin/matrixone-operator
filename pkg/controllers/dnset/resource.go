@@ -61,7 +61,7 @@ lsc=$(mktemp)
 cat <<EOF > ${lsc}
 service-address = "${ADDR}:{{ .LockServicePort }}"
 EOF
-sed -i "/\[dn.LockService\]/r ${lsc}" ${conf}
+sed -i "/\[dn.lockservice\]/r ${lsc}" ${conf}
 
 # there is a chance that the dns is not yet added to kubedns and the
 # server will crash, wait before myself to be resolvable
@@ -167,7 +167,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, dn.Spec.CacheVolume, &dn.Spec.SharedStorageCache))
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
-	conf.Set([]string{"dn", "LockService", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
+	conf.Set([]string{"dn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err

@@ -58,7 +58,7 @@ lsc=$(mktemp)
 cat <<EOF > ${lsc}
 service-address = "${ADDR}:{{ .LockServicePort }}"
 EOF
-sed -i "/\[cn.LockService\]/r ${lsc}" ${conf}
+sed -i "/\[cn.lockservice\]/r ${lsc}" ${conf}
 
 echo "/mo-service -cfg ${conf}"
 exec /mo-service -cfg ${conf}
@@ -190,7 +190,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	// cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
-	cfg.Set([]string{"cn", "LockService", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
+	cfg.Set([]string{"cn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err
