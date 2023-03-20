@@ -65,7 +65,7 @@ service-type = "DN"
 [dn]
 listen-address = "0.0.0.0:41010"
 
-[dn.LockService]
+[dn.lockservice]
 listen-address = "0.0.0.0:6003"
 
 [[fileservice]]
@@ -134,7 +134,7 @@ type = "distributed-tae"
 [dn]
 listen-address = "0.0.0.0:41010"
 
-[dn.LockService]
+[dn.lockservice]
 listen-address = "0.0.0.0:6003"
 
 [[fileservice]]
