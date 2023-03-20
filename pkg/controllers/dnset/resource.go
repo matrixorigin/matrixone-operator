@@ -56,7 +56,7 @@ EOF
 # build instance config
 sed "/\[dn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
 
-# append lock-service confisg
+# append lock-service configs
 lsc=$(mktemp)
 cat <<EOF > ${lsc}
 service-address = "${ADDR}:{{ .LockServicePort }}"
