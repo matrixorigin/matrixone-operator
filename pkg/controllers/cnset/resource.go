@@ -53,6 +53,13 @@ EOF
 # build instance config
 sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
 
+# append lock-service configs
+lsc=$(mktemp)
+cat <<EOF > ${lsc}
+service-address = "${ADDR}:{{ .LockServicePort }}"
+EOF
+sed -i "/\[cn.lockservice\]/r ${lsc}" ${conf}
+
 echo "/mo-service -cfg ${conf}"
 exec /mo-service -cfg ${conf}
 `))
@@ -61,6 +68,8 @@ type model struct {
 	ConfigFilePath string
 	CNSQLPort      int
 	CNRpcPort      int
+
+	LockServicePort int
 }
 
 func buildHeadlessSvc(cn *v1alpha1.CNSet) *corev1.Service {
@@ -181,15 +190,17 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	// cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
+	cfg.Set([]string{"cn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err
 	}
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
-		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
-		CNSQLPort:      CNSQLPort,
-		CNRpcPort:      cnRPCPort,
+		ConfigFilePath:  fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
+		CNSQLPort:       CNSQLPort,
+		CNRpcPort:       cnRPCPort,
+		LockServicePort: common.LockServicePort,
 	})
 	if err != nil {
 		return nil, err

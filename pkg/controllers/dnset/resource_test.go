@@ -65,6 +65,9 @@ service-type = "DN"
 [dn]
 listen-address = "0.0.0.0:41010"
 
+[dn.lockservice]
+listen-address = "0.0.0.0:6003"
+
 [[fileservice]]
 backend = "DISK"
 data-dir = "/var/lib/matrixone/data"
@@ -130,6 +133,9 @@ type = "distributed-tae"
 
 [dn]
 listen-address = "0.0.0.0:41010"
+
+[dn.lockservice]
+listen-address = "0.0.0.0:6003"
 
 [[fileservice]]
 backend = "DISK"
