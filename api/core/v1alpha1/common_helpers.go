@@ -15,15 +15,27 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
+	"os"
+	"path/filepath"
 	"time"
 )
 
 const (
 	reasonEmpty = "empty"
+
+	// defaultArgsFile is the field name in matrixone-operator-cm configmap, contains information of default service args
+	defaultArgsFile = "defaultArgs"
+)
+
+var (
+	// OperatorCfgPath specify which directory the matrixone-operator-cm configmap mount
+	OperatorCfgPath string
 )
 
 func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
@@ -189,4 +201,65 @@ func findMainContainer(containers []corev1.Container) *corev1.Container {
 		}
 	}
 	return nil
+}
+
+// DefaultArgs contain default service args for logservice/dn/tp, these default args set in matrixone-operator-cm configmap
+type DefaultArgs struct {
+	LogService []string `json:"logService,omitempty"`
+	Dn         []string `json:"dn,omitempty"`
+	Tp         []string `json:"tp,omitempty"`
+}
+
+// loadDefaultArgsCfg read "defaultArgs" field in matrixone configmap, it is a single file named "defaultArgs"
+func loadDefaultArgsCfg(path string) (*DefaultArgs, error) {
+	bs, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	cfg := &DefaultArgs{}
+	err = yaml.Unmarshal(bs, cfg)
+	return cfg, err
+}
+
+// setDefaultServiceArgs set default args for service, we only set default args when there is service args config in service spec
+func setDefaultServiceArgs(object interface{}) {
+	cfgFile := filepath.Join(OperatorCfgPath, defaultArgsFile)
+	args, err := loadDefaultArgsCfg(cfgFile)
+	if err != nil {
+		moLog.Error(err, "load mo operator configmap fail")
+		return
+	}
+
+	switch obj := object.(type) {
+	case *LogSetBasic:
+		// set default arguments only when user does not set any arguments
+		if len(obj.ServiceArgs) == 0 {
+			obj.ServiceArgs = args.LogService
+		}
+		obj.ServiceArgs = trimEmptyArgs(obj.ServiceArgs)
+	case *DNSetBasic:
+		if len(obj.ServiceArgs) == 0 {
+			obj.ServiceArgs = args.Dn
+		}
+		obj.ServiceArgs = trimEmptyArgs(obj.ServiceArgs)
+	case *CNSetBasic:
+		if len(obj.ServiceArgs) == 0 {
+			obj.ServiceArgs = args.Tp
+		}
+		obj.ServiceArgs = trimEmptyArgs(obj.ServiceArgs)
+	default:
+		moLog.Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetBasic, *DNSetBasic, *CNSetBasic")
+		return
+	}
+}
+
+// trimEmptyArgs delete empty string argument "" from slice
+func trimEmptyArgs(args []string) []string {
+	var target []string
+	for _, a := range args {
+		if len(a) != 0 {
+			target = append(target, a)
+		}
+	}
+	return target
 }

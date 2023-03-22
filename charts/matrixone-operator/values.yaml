@@ -61,3 +61,14 @@ affinity: {}
 
 kruise:
   featureGates: "StatefulSetAutoDeletePVC=true,PodUnavailableBudgetDeleteGate=true,PodUnavailableBudgetUpdateGate=true"
+
+defaultArgs:
+  - name: logService
+    values:
+      - -debug-http=:6060
+  - name: dn
+    values:
+      - -debug-http=:6060
+  - name: tp
+    values:
+      - -debug-http=:6060

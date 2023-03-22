@@ -6696,6 +6696,13 @@ spec:
               role:
                 description: '[TP, AP], default to TP'
                 type: string
+              serviceArgs:
+                description: 'ServiceArgs define command line options for process,
+                  used by logset/cnset/dnset service. NOTE: user should not define
+                  "-cfg" argument in this field, which is defined default by controller'
+                items:
+                  type: string
+                type: array
               serviceType:
                 default: ClusterIP
                 description: ServiceType is the service type of cn service

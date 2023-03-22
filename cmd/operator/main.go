@@ -64,6 +64,7 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var webhookCertDir string
+	var operatorCfgDir string
 	var caFile string
 	var failover bool
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -72,6 +73,7 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&webhookCertDir, "webhook-certificate-directory", "/tmp/k8s-webhook-server/serving-certs", "the directory that provide certificates for the webhook server")
+	flag.StringVar(&operatorCfgDir, "operator-cfg-directory", "/etc/mo-operator-cfg", "the directory that mo opeartor configmap mount, should consistent with your mount config")
 	flag.StringVar(&caFile, "ca-file", "caBundle", "the filename of caBundle")
 	flag.BoolVar(&failover, "failover", true, "enable failover feature-gate")
 	opts := &zap.Options{
@@ -109,6 +111,7 @@ func main() {
 	controllermetrics.Registry.MustRegister(collector)
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		v1alpha1.OperatorCfgPath = operatorCfgDir
 		err := v1alpha1.RegisterWebhooks(mgr)
 		exitIf(err, "unable to set up webhook")
 

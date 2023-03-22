@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "matrixone-operator.name" . }}-cm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "matrixone-operator.labels" . | nindent 4 }}
+data:
+  defaultArgs: |
+    {{- range .Values.defaultArgs }}
+    {{.name | nindent 4 }}:
+    {{- toYaml .values | nindent 4 }}
+    {{- end }}
