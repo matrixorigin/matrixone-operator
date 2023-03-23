@@ -69,6 +69,6 @@ defaultArgs:
   - name: dn
     values:
       - -debug-http=:6060
-  - name: tp
+  - name: cn
     values:
       - -debug-http=:6060

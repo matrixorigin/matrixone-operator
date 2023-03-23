@@ -337,13 +337,13 @@ func (in *DefaultArgs) DeepCopyInto(out *DefaultArgs) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.Dn != nil {
-		in, out := &in.Dn, &out.Dn
+	if in.DN != nil {
+		in, out := &in.DN, &out.DN
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.Tp != nil {
-		in, out := &in.Tp, &out.Tp
+	if in.CN != nil {
+		in, out := &in.CN, &out.CN
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
