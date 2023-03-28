@@ -135,6 +135,7 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 		}
 		if cache.DiskCacheSize != nil {
 			c["disk-capacity"] = cache.DiskCacheSize.String()
+			c["disk-path"] = fmt.Sprintf("%s/%s", DataPath, CacheDir)
 		}
 		if len(c) > 0 {
 			m["cache"] = c
