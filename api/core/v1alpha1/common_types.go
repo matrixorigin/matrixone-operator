@@ -67,6 +67,11 @@ type PodSet struct {
 	// ClusterDomain is the cluster-domain of current kubernetes cluster,
 	// refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ for details
 	ClusterDomain string `json:"clusterDomain,omitempty"`
+
+	// ServiceArgs define command line options for process, used by logset/cnset/dnset service.
+	// NOTE: user should not define "-cfg" argument in this field, which is defined default by controller
+	// +optional
+	ServiceArgs []string `json:"serviceArgs,omitempty"`
 }
 
 // MainContainer is the description of the main container of a Pod
