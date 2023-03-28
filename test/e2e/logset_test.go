@@ -154,4 +154,73 @@ var _ = Describe("MatrixOneCluster test", func() {
 			return nil
 		}, teardownClusterTimeout, pollInterval).Should(Succeed())
 	})
+
+	It("Should start logset service successfully when logset replicas is 1", func() {
+		By("Create logset")
+		l := &v1alpha1.LogSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: env.Namespace,
+				Name:      "log-" + rand.String(6),
+			},
+			Spec: v1alpha1.LogSetSpec{
+				LogSetBasic: v1alpha1.LogSetBasic{
+					PodSet: v1alpha1.PodSet{
+						Replicas: 1,
+						MainContainer: v1alpha1.MainContainer{
+							Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
+						},
+					},
+					Volume: v1alpha1.Volume{
+						Size: resource.MustParse("100Mi"),
+					},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						FileSystem: &v1alpha1.FileSystemProvider{
+							Path: "/test",
+						},
+					},
+					StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
+				},
+			},
+		}
+		Expect(kubeCli.Create(ctx, l)).To(Succeed())
+
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(l), l); err != nil {
+				logger.Errorw("error get logset status", "logset", l.Name, "error", err)
+				return err
+			}
+			if !recon.IsReady(&l.Status.ConditionalStatus) {
+				logger.Infow("wait logset ready", "logset", l.Name)
+				return errWait
+			}
+			return nil
+		}, createLogSetTimeout, pollInterval).Should(Succeed())
+
+		By("Teardown logset")
+		Expect(kubeCli.Delete(ctx, l)).To(Succeed())
+		Eventually(func() error {
+			err := kubeCli.Get(ctx, client.ObjectKeyFromObject(l), l)
+			if err == nil {
+				logger.Infow("wait logset teardown", "logset", l.Name)
+				return errWait
+			}
+			if !apierrors.IsNotFound(err) {
+				logger.Errorw("unexpected error when get logset", "logset", l, "error", err)
+				return err
+			}
+			podList := &corev1.PodList{}
+			err = kubeCli.List(ctx, podList, client.InNamespace(l.Namespace))
+			if err != nil {
+				logger.Errorw("error list pods", "error", err)
+				return err
+			}
+			for _, pod := range podList.Items {
+				if strings.HasPrefix(pod.Name, l.Name) {
+					logger.Infow("Pod that belongs to the logset is not cleaned", "pod", pod.Name)
+					return errWait
+				}
+			}
+			return nil
+		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+	})
 })
