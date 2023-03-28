@@ -113,6 +113,11 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 	if err := syncPods(ctx, sts); err != nil {
 		return nil, err
 	}
+
+	// let apiserver fill default field values for us by dry-run, otherwise following 'Semantic.DeepEqual' may always be false
+	if err = ctx.Update(sts, client.DryRunAll); err != nil {
+		return nil, errors.Wrap(err, "dry run update logset statefulset")
+	}
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return r.with(sts).Update, nil
 	}
