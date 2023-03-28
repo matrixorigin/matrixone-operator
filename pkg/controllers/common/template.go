@@ -62,13 +62,14 @@ func SubResourceLabels(owner client.Object) map[string]string {
 }
 
 // SyncTopology syncs the topology even spread of PodSet to the underlying pods
-func SyncTopology(domains []string, podSpec *corev1.PodSpec) {
+func SyncTopology(domains []string, podSpec *corev1.PodSpec, selector *metav1.LabelSelector) {
 	var constraints []corev1.TopologySpreadConstraint
 	for _, domain := range domains {
 		constraints = append(constraints, corev1.TopologySpreadConstraint{
 			MaxSkew:           1,
 			TopologyKey:       domain,
 			WhenUnsatisfiable: corev1.DoNotSchedule,
+			LabelSelector:     selector,
 		})
 	}
 	podSpec.TopologySpreadConstraints = constraints

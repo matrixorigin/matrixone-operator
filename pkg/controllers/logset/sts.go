@@ -100,7 +100,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 	}}
 	specRef.NodeSelector = ls.Spec.NodeSelector
 	common.SetStorageProviderConfig(ls.Spec.SharedStorage, specRef)
-	common.SyncTopology(ls.Spec.TopologyEvenSpread, specRef)
+	common.SyncTopology(ls.Spec.TopologyEvenSpread, specRef, &metav1.LabelSelector{MatchLabels: common.SubResourceLabels(ls)})
 	ls.Spec.Overlay.OverlayPodSpec(specRef)
 }
 

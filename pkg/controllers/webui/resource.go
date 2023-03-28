@@ -82,7 +82,7 @@ func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 		ConditionType: pub.InPlaceUpdateReady,
 	}}
 	specRef.NodeSelector = wi.Spec.NodeSelector
-	common.SyncTopology(wi.Spec.TopologyEvenSpread, specRef)
+	common.SyncTopology(wi.Spec.TopologyEvenSpread, specRef, dp.Spec.Selector)
 	wi.Spec.Overlay.OverlayPodSpec(specRef)
 }
 
