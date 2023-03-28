@@ -54,6 +54,7 @@ func (r *CNSetBasic) Default() {
 		// default disk cache size to the cache volume size
 		r.SharedStorageCache.DiskCacheSize = &r.CacheVolume.Size
 	}
+	setDefaultServiceArgs(r)
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-cnset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=cnsets,verbs=create;update,versions=v1alpha1,name=vcnset.kb.io,admissionReviewVersions={v1,v1beta1}

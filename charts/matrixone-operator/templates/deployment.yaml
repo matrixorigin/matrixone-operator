@@ -62,6 +62,8 @@ spec:
           - name: certs
             mountPath: /tmp/k8s-webhook-server/serving-certs
             readOnly: true
+          - name: config
+            mountPath: /etc/mo-operator-cfg
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -78,3 +80,6 @@ spec:
       - name: certs
         secret:
           secretName: {{ template "matrixone-operator.name" . }}-certs
+      - name: config
+        configMap:
+          name: {{ template "matrixone-operator.name" . }}-cm
