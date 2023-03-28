@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -24,6 +25,14 @@ import (
 
 const (
 	reasonEmpty = "empty"
+
+	// defaultArgsFile is the field name in matrixone-operator-cm configmap, contains information of default service args
+	defaultArgsFile = "defaultArgs"
+)
+
+var (
+	// ServiceDefaultArgs is a cache variable for default args, should be read only in this package
+	ServiceDefaultArgs *DefaultArgs
 )
 
 func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
@@ -189,4 +198,36 @@ func findMainContainer(containers []corev1.Container) *corev1.Container {
 		}
 	}
 	return nil
+}
+
+// DefaultArgs contain default service args for logservice/dn/tp, these default args set in matrixone-operator-cm configmap
+type DefaultArgs struct {
+	LogService []string `json:"logService,omitempty"`
+	DN         []string `json:"dn,omitempty"`
+	CN         []string `json:"cn,omitempty"`
+}
+
+// setDefaultServiceArgs set default args for service, we only set default args when there is service args config in service spec
+func setDefaultServiceArgs(object interface{}) {
+	if ServiceDefaultArgs == nil {
+		return
+	}
+	switch obj := object.(type) {
+	case *LogSetBasic:
+		// set default arguments only when user does not set any arguments
+		if len(obj.ServiceArgs) == 0 {
+			obj.ServiceArgs = ServiceDefaultArgs.LogService
+		}
+	case *DNSetBasic:
+		if len(obj.ServiceArgs) == 0 {
+			obj.ServiceArgs = ServiceDefaultArgs.DN
+		}
+	case *CNSetBasic:
+		if len(obj.ServiceArgs) == 0 {
+			obj.ServiceArgs = ServiceDefaultArgs.CN
+		}
+	default:
+		moLog.Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetBasic, *DNSetBasic, *CNSetBasic")
+		return
+	}
 }

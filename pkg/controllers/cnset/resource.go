@@ -60,8 +60,8 @@ service-address = "${ADDR}:{{ .LockServicePort }}"
 EOF
 sed -i "/\[cn.lockservice\]/r ${lsc}" ${conf}
 
-echo "/mo-service -cfg ${conf}"
-exec /mo-service -cfg ${conf}
+echo "/mo-service -cfg ${conf} $@"
+exec /mo-service -cfg ${conf} $@
 `))
 
 type model struct {
@@ -138,6 +138,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	mainRef.Resources = cn.Spec.Resources
 
 	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint)}
+	mainRef.Args = cn.Spec.ServiceArgs
 	volumeMountsList := []corev1.VolumeMount{
 		{
 			Name:      common.ConfigVolume,
