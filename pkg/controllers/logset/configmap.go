@@ -94,8 +94,8 @@ while true; do
     fi
 done
 
-echo "/mo-service -cfg ${conf}"
-exec /mo-service -cfg ${conf}
+echo "/mo-service -cfg ${conf} $@"
+exec /mo-service -cfg ${conf} $@
 `))
 
 type model struct {
