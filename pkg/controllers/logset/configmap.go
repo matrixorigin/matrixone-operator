@@ -63,6 +63,7 @@ uuid = "${UUID}"
 raft-address = "${ADDR}:{{ .RaftPort }}"
 logservice-address = "${ADDR}:{{ .LogServicePort }}"
 gossip-address = "${POD_IP}:{{ .GossipPort }}"
+gossip-address-v2 = "${ADDR}:{{ .GossipPort }}"
 EOF
 
 # build instance config
