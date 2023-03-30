@@ -53,6 +53,9 @@ func Test_syncPodSpec(t *testing.T) {
 		name: "basic",
 		args: args{
 			ls: &v1alpha1.LogSet{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "LogSet",
+				},
 				ObjectMeta: lsMeta,
 				Spec: v1alpha1.LogSetSpec{
 					LogSetBasic: v1alpha1.LogSetBasic{
@@ -158,6 +161,13 @@ func Test_syncPodSpec(t *testing.T) {
 				MaxSkew:           1,
 				TopologyKey:       "zone",
 				WhenUnsatisfiable: corev1.DoNotSchedule,
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"matrixorigin.io/component": "LogSet",
+						"matrixorigin.io/instance":  "test",
+						"matrixorigin.io/namespace": "default",
+					},
+				},
 			}},
 		},
 	}}
