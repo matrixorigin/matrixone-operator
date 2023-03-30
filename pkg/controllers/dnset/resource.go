@@ -149,7 +149,7 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	specRef.NodeSelector = dn.Spec.NodeSelector
 
 	common.SetStorageProviderConfig(sp, specRef)
-	common.SyncTopology(dn.Spec.TopologyEvenSpread, specRef)
+	common.SyncTopology(dn.Spec.TopologyEvenSpread, specRef, sts.Spec.Selector)
 
 	dn.Spec.Overlay.OverlayPodSpec(specRef)
 }
