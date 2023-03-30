@@ -77,6 +77,7 @@ func (r *LogSetBasic) Default() {
 		policy := PVCRetentionPolicyDelete
 		r.PVCRetentionPolicy = &policy
 	}
+	setDefaultServiceArgs(r)
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-logset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=logsets,verbs=create;update,versions=v1alpha1,name=vlogset.kb.io,admissionReviewVersions={v1,v1beta1}

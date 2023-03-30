@@ -81,8 +81,8 @@ while true; do
     fi
 done
 
-echo "/mo-service -cfg ${conf}"
-exec /mo-service -cfg ${conf}
+echo "/mo-service -cfg ${conf} $@"
+exec /mo-service -cfg ${conf} $@
 `))
 
 type model struct {
@@ -129,6 +129,7 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	mainRef.Command = []string{
 		"/bin/sh", fmt.Sprintf("%s/%s", common.ConfigPath, common.Entrypoint),
 	}
+	mainRef.Args = dn.Spec.ServiceArgs
 	mainRef.VolumeMounts = volumeMountsList
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),

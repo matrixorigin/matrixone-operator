@@ -63,6 +63,7 @@ uuid = "${UUID}"
 raft-address = "${ADDR}:{{ .RaftPort }}"
 logservice-address = "${ADDR}:{{ .LogServicePort }}"
 gossip-address = "${POD_IP}:{{ .GossipPort }}"
+gossip-address-v2 = "${ADDR}:{{ .GossipPort }}"
 EOF
 
 # build instance config
@@ -94,8 +95,8 @@ while true; do
     fi
 done
 
-echo "/mo-service -cfg ${conf}"
-exec /mo-service -cfg ${conf}
+echo "/mo-service -cfg ${conf} $@"
+exec /mo-service -cfg ${conf} $@
 `))
 
 type model struct {
@@ -138,6 +139,10 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentID(ls))
 	conf.Set([]string{"logservice", "logservice-listen-address"}, fmt.Sprintf("0.0.0.0:%d", logServicePort))
 	conf.Set([]string{"hakeeper-client", "discovery-address"}, fmt.Sprintf("%s:%d", discoverySvcAddress(ls), logServicePort))
+	if ls.Spec.Replicas == 1 {
+		// logservice cannot start up if this gossip option is not set when there is only one replica
+		conf.Set([]string{"logservice", "gossip-allow-self-as-seed"}, true)
+	}
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
