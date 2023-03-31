@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,4 +73,13 @@ func validateVolume(v *Volume, parent *field.Path) field.ErrorList {
 		errs = append(errs, field.Invalid(parent.Child("size"), v.Size, "size must not be zero"))
 	}
 	return errs
+}
+
+func defaultDiskCacheSize(total *resource.Quantity) *resource.Quantity {
+	// shrink the total size since a small amount of space will be used for filesystem and metadata
+	shrunk := total.Value() * 9 / 10
+	// divide the cache for two different cache FS: S3 and ETL
+	// TODO: the ratio of S3 and ETL should be considered or configurable
+	half := shrunk / 2
+	return resource.NewQuantity(half, total.Format)
 }
