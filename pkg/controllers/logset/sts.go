@@ -66,6 +66,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 	mainRef.Image = ls.Spec.Image
 	mainRef.Resources = ls.Spec.Resources
 	mainRef.Command = []string{"/bin/sh", fmt.Sprintf("%s/%s", configPath, entrypoint)}
+	mainRef.Args = ls.Spec.ServiceArgs
 	mainRef.VolumeMounts = []corev1.VolumeMount{
 		{Name: common.DataVolume, MountPath: common.DataPath},
 		{Name: bootstrapVolume, ReadOnly: true, MountPath: bootstrapPath},
@@ -100,7 +101,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 	}}
 	specRef.NodeSelector = ls.Spec.NodeSelector
 	common.SetStorageProviderConfig(ls.Spec.SharedStorage, specRef)
-	common.SyncTopology(ls.Spec.TopologyEvenSpread, specRef)
+	common.SyncTopology(ls.Spec.TopologyEvenSpread, specRef, &metav1.LabelSelector{MatchLabels: common.SubResourceLabels(ls)})
 	ls.Spec.Overlay.OverlayPodSpec(specRef)
 }
 

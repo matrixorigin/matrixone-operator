@@ -47,6 +47,7 @@ func (r *DNSetBasic) Default() {
 		// default disk cache size based on the cache volume total size
 		r.SharedStorageCache.DiskCacheSize = defaultDiskCacheSize(&r.CacheVolume.Size)
 	}
+	setDefaultServiceArgs(r)
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-dnset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=dnsets,verbs=create;update,versions=v1alpha1,name=vdnset.kb.io,admissionReviewVersions={v1,v1beta1}

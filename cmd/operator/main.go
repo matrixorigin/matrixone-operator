@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
 	"os"
 
@@ -64,14 +65,18 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var webhookCertDir string
+	var operatorCfgDir string
 	var caFile string
 	var failover bool
+	var operatorCfg common.OperatorConfig
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&webhookCertDir, "webhook-certificate-directory", "/tmp/k8s-webhook-server/serving-certs", "the directory that provide certificates for the webhook server")
+	flag.StringVar(&operatorCfgDir, "operator-cfg-directory", "/etc/mo-operator-cfg", "the directory that mo opeartor configmap mount, should consistent with your mount config")
 	flag.StringVar(&caFile, "ca-file", "caBundle", "the filename of caBundle")
 	flag.BoolVar(&failover, "failover", true, "enable failover feature-gate")
 	opts := &zap.Options{
@@ -82,6 +87,9 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(opts)))
+
+	err := common.LoadOperatorConfig(operatorCfgDir, &operatorCfg)
+	exitIf(err, "failed to load operator configmap")
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -109,6 +117,7 @@ func main() {
 	controllermetrics.Registry.MustRegister(collector)
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		v1alpha1.ServiceDefaultArgs = operatorCfg.DefaultArgs
 		err := v1alpha1.RegisterWebhooks(mgr)
 		exitIf(err, "unable to set up webhook")
 

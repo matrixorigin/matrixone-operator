@@ -6674,6 +6674,13 @@ spec:
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
+              serviceArgs:
+                description: 'ServiceArgs define command line options for process,
+                  used by logset/cnset/dnset service. NOTE: user should not define
+                  "-cfg" argument in this field, which is defined default by controller'
+                items:
+                  type: string
+                type: array
               sharedStorage:
                 description: SharedStorage is an external shared storage shared by
                   all LogService instances
