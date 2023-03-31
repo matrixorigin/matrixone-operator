@@ -44,8 +44,8 @@ func (r *DNSetBasic) Default() {
 		r.SharedStorageCache.MemoryCacheSize = &size
 	}
 	if r.CacheVolume != nil && r.SharedStorageCache.DiskCacheSize == nil {
-		// default disk cache size to the cache volume size
-		r.SharedStorageCache.DiskCacheSize = &r.CacheVolume.Size
+		// default disk cache size based on the cache volume total size
+		r.SharedStorageCache.DiskCacheSize = defaultDiskCacheSize(&r.CacheVolume.Size)
 	}
 	setDefaultServiceArgs(r)
 }

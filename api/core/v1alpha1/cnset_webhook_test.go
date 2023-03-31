@@ -18,6 +18,7 @@ import (
 	"context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -54,5 +55,35 @@ var _ = Describe("CNSet Webhook", func() {
 			},
 		}
 		Expect(k8sClient.Create(context.TODO(), v06)).To(Succeed())
+	})
+
+	It("should set default cache size", func() {
+		cn := &CNSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cn-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: CNSetSpec{
+				CNSetBasic: CNSetBasic{
+					PodSet: PodSet{
+						Replicas: 2,
+						MainContainer: MainContainer{
+							Image: "test",
+						},
+					},
+					CacheVolume: &Volume{
+						Size: resource.MustParse("20Gi"),
+					},
+				},
+			},
+			Deps: CNSetDeps{
+				LogSetRef: LogSetRef{
+					ExternalLogSet: &ExternalLogSet{},
+				},
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), cn)).To(Succeed())
+		expected := resource.MustParse("9Gi")
+		Expect(cn.Spec.SharedStorageCache.DiskCacheSize.Value()).To(Equal(expected.Value()))
 	})
 })
