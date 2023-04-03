@@ -15,6 +15,9 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
+	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"strings"
 	"time"
 
@@ -216,6 +219,90 @@ var _ = Describe("MatrixOneCluster test", func() {
 			}
 			for _, pod := range podList.Items {
 				if strings.HasPrefix(pod.Name, l.Name) {
+					logger.Infow("Pod that belongs to the logset is not cleaned", "pod", pod.Name)
+					return errWait
+				}
+			}
+			return nil
+		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+	})
+
+	It("Should supply default fields after dry-run request", func() {
+		// step 1: create a secret
+		secret := e2eutil.NewSecretTpl(env.Namespace)
+		Expect(kubeCli.Create(ctx, secret)).To(Succeed())
+
+		// step 2: set secret volume as an overlay of log service, create log service
+		// NOTE: we only set secret name in this volume, other fields (like defaultMode) are not set
+		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		ls.Spec.Overlay = &v1alpha1.Overlay{}
+		ls.Spec.Overlay.Volumes = []corev1.Volume{
+			e2eutil.SecretVolume(secret.Name),
+		}
+		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
+
+		// step 3: fetch statefulset created by logset controller
+		originSts := &kruisev1.StatefulSet{}
+		Eventually(func() error {
+			return kubeCli.Get(ctx, client.ObjectKey{Namespace: env.Namespace, Name: ls.Name + "-log"}, originSts)
+		}, createLogSetTimeout, pollInterval).Should(Succeed())
+
+		// statefulset volume should have default value, eg. DefaultMode: 0644
+		stsVolumes := originSts.Spec.Template.Spec.Volumes
+		secretVolume := util.FindFirst(stsVolumes, func(v corev1.Volume) bool {
+			return v.Name == secret.Name
+		})
+		Expect(secretVolume != nil).Should(BeTrue())
+		Expect(secretVolume.Secret != nil).Should(BeTrue())
+		Expect(secretVolume.Secret.DefaultMode != nil).Should(BeTrue())
+
+		// step 4: overlay the volume of deep copied statefulset, then dry run
+		// NOTE: updated secret volume does not have any default values
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(originSts), originSts); err != nil {
+				logger.Errorw("error get sts", "error", err)
+				return err
+			}
+			stsCopy := originSts.DeepCopy()
+			// overlay volume
+			copiedVolume := stsCopy.Spec.Template.Spec.Volumes
+			stsCopy.Spec.Template.Spec.Volumes = util.UpsertListByKey(copiedVolume, []corev1.Volume{e2eutil.SecretVolume(secret.Name)}, func(v corev1.Volume) string {
+				return v.Name
+			})
+			if err := kubeCli.Update(ctx, stsCopy, client.DryRunAll); err != nil {
+				logger.Errorw("error dry run update", "error", err)
+				return err
+			}
+
+			// we set managedField to nil here because "managedFields" is not equal
+			// kubeCli update operation will lead to volume field manager change, from "controller" to "kubeCli"
+			// however in real running this is not an issue, but deep equal of whole statefulset is not recommended anyway
+			stsCopy.ObjectMeta.ManagedFields = nil
+			originSts.ObjectMeta.ManagedFields = nil
+			if !equality.Semantic.DeepEqual(stsCopy, originSts) {
+				return fmt.Errorf("unexpeted not equal after dry run update")
+			}
+			return nil
+		}, time.Minute*5, time.Second*2).Should(Succeed())
+
+		// tear down logset
+		Expect(kubeCli.Delete(ctx, ls)).To(Succeed())
+		Eventually(func() error {
+			lsNS, lsName := ls.Namespace, ls.Name
+			if err := kubeCli.Get(ctx, client.ObjectKey{Namespace: lsNS, Name: lsName}, ls); err == nil {
+				logger.Infow("wait logset teardown", "logset", lsNS)
+				return errWait
+			} else if !apierrors.IsNotFound(err) {
+				logger.Errorw("unexpected error when get logset", "logset", ls, "error", err)
+				return err
+			}
+			podList := &corev1.PodList{}
+			if err := kubeCli.List(ctx, podList, client.InNamespace(lsNS)); err != nil {
+				logger.Errorw("error list pods", "error", err)
+				return err
+			}
+			for _, pod := range podList.Items {
+				if strings.HasPrefix(pod.Name, lsName) {
 					logger.Infow("Pod that belongs to the logset is not cleaned", "pod", pod.Name)
 					return errWait
 				}
