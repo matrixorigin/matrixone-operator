@@ -34,7 +34,7 @@ jobs:
           rm -f ./ah
 
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@98bccfd32b0f76149d188912ac8e45ddd3f8695f # tag=v1.4.1
+        uses: helm/chart-releaser-action@db5211eb38c65dcd18cbb57e987df03fce2a40f9 # tag=v1.4.1
         with:
           charts_dir: charts
         env:
