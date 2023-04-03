@@ -1,11 +1,9 @@
 name: Chart Publish
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "charts/**"
+  release:
+    types:
+    - published
 
 permissions: read-all
 
