@@ -40,7 +40,6 @@ jobs:
         uses: helm/chart-releaser-action@db5211eb38c65dcd18cbb57e987df03fce2a40f9 # tag=v1.4.1
         with:
           charts_dir: charts
-          version: v1.4.1
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_RELEASE_NAME_TEMPLATE: "{{ .Version }}"
