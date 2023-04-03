@@ -135,7 +135,12 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 		}
 		if cache.DiskCacheSize != nil {
 			c["disk-capacity"] = cache.DiskCacheSize.String()
-			c["disk-path"] = fmt.Sprintf("%s/%s", DataPath, CacheDir)
+			switch name {
+			case s3FileServiceName:
+				c["disk-path"] = fmt.Sprintf("%s/%s", DataPath, S3CacheDir)
+			case etlFileServiceName:
+				c["disk-path"] = fmt.Sprintf("%s/%s", DataPath, ETLCacheDir)
+			}
 		}
 		if len(c) > 0 {
 			m["cache"] = c

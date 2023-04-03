@@ -30,8 +30,10 @@ const (
 	DataPath = "/var/lib/matrixone"
 	// DataDir is the directory under data path that will be used to store the data of mo disk backend
 	DataDir = "data"
-	// CacheDir is the directory under data path that will be used as mo filesystem cache
-	CacheDir = "disk-cache"
+	// S3CacheDir is the directory under data path that will be used as mo S3 FS cache
+	S3CacheDir = "disk-cache"
+	// ETLCacheDir is the directory under data path that will be used as mo ETL FS cache
+	ETLCacheDir = "etl-cache"
 
 	// InstanceLabelKey labels the cluster instance name of the resource
 	InstanceLabelKey = "matrixorigin.io/instance"

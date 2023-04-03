@@ -125,7 +125,7 @@ func TestFileServiceConfig(t *testing.T) {
 				},
 				"cache": map[string]string{
 					"memory-capacity": "1Gi",
-					"disk-path":       "/var/lib/matrixone/disk-cache",
+					"disk-path":       "/var/lib/matrixone/etl-cache",
 					"disk-capacity":   "1Gi",
 				},
 			}},
