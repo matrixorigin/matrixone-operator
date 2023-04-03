@@ -1,6 +1,9 @@
 name: Chart Publish
 
 on:
+  push:
+    branches:
+    - main
   release:
     types:
     - published

@@ -9,8 +9,8 @@ replicaCount: 1
 
 image:
   repository: matrixorigin/matrixone-operator
-  pullPolicy: IfNotPresent
   tag: "0.7.0-alpha.3"
+  pullPolicy: IfNotPresent
 
 imagePullSecrets: []
 nameOverride: ""
