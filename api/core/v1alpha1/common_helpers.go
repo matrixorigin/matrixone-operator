@@ -100,9 +100,6 @@ func (o *Overlay) OverlayPodSpec(pod *corev1.PodSpec) {
 	if o.ImagePullSecrets != nil {
 		pod.ImagePullSecrets = o.ImagePullSecrets
 	}
-	if o.Affinity != nil {
-		pod.Affinity = o.Affinity
-	}
 	if o.Tolerations != nil {
 		pod.Tolerations = o.Tolerations
 	}

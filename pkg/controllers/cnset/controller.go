@@ -78,6 +78,9 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	if err := syncPods(ctx, sts); err != nil {
 		return nil, err
 	}
+	if err = ctx.Update(sts, client.DryRunAll); err != nil {
+		return nil, errors.Wrap(err, "dry run update cnset statefulset")
+	}
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return c.with(sts, svc).Update, nil
 	}

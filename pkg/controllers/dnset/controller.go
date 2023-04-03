@@ -108,6 +108,10 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return nil, err
 	}
 
+	if err = ctx.Update(sts, client.DryRunAll); err != nil {
+		return nil, errors.Wrap(err, "dry run update dnset statefulset")
+	}
+
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return d.with(sts, svc).Update, nil
 	}
