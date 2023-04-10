@@ -17,6 +17,7 @@ package e2e
 import (
 	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/test/e2e/e2eminio"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,24 +36,13 @@ const (
 
 var _ = Describe("Matrix BucketClaim test", func() {
 
-	AfterEach(func() {
-		// remove bucket finalizer, in case of failed test case block whole test
-		buckets := &v1alpha1.BucketClaimList{}
-		err := kubeCli.List(ctx, buckets, client.InNamespace(env.Namespace))
-		Expect(err).Should(BeNil())
-		for _, b := range buckets.Items {
-			if err = reclaimBucket(&b); err != nil {
-				logger.Infof("fail deleting bucket, %v, %s", client.ObjectKeyFromObject(&b), err.Error())
-			}
-		}
-	})
-
 	It("Should bucket been released use default retain policy(Retain)", func() {
+		minioPath := "minio-bucket/bucket-test"
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, "minio-bucket/bucket-test")
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
 		ls.Spec.SharedStorage = minioProvider
 		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
@@ -110,16 +100,12 @@ var _ = Describe("Matrix BucketClaim test", func() {
 	})
 
 	It("Should bucket been deleted use delete retain policy", func() {
-		//By("port forward minio")
-		//minioPortForward, err := e2eutil.PortForwardMinio(kubeCli, restConfig)
-		//Expect(err).Should(BeNil())
-		//Expect(minioPortForward.Ready(portForwardTimeout)).To(Succeed(), "port-forward should complete within timeout")
-
+		minioPath := "minio-bucket/bucket-test1"
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, "minio-bucket/bucket-test1")
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
 		policyDelete := v1alpha1.PVCRetentionPolicyDelete
 		minioProvider.S3.S3RetentionPolicy = &policyDelete
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
@@ -143,10 +129,12 @@ var _ = Describe("Matrix BucketClaim test", func() {
 			return nil
 		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
 
-		//By("minio bucket path should exist")
-		//exist, err := e2eutil.IsMinioPrefixExist("minio-bucket/bucket-test1")
-		//Expect(err).Should(BeNil())
-		//Expect(exist).Should(BeTrue())
+		By("minio bucket path should exist")
+		object, err := e2eminio.PutObject(minioPath)
+		Expect(err).Should(BeNil())
+		exist, err := e2eminio.IsObjectExist(object)
+		Expect(err).Should(BeNil())
+		Expect(exist).Should(BeTrue())
 
 		By("tear down logset cluster")
 		Expect(kubeCli.Delete(ctx, ls)).To(Succeed())
@@ -163,20 +151,19 @@ var _ = Describe("Matrix BucketClaim test", func() {
 			return fmt.Errorf("bucket should be deleted")
 		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
 
-		//By("minio bucket path should not exist")
-		//exist, err = e2eutil.IsMinioPrefixExist("minio-bucket/bucket-test1")
-		//Expect(err).Should(BeNil())
-		//Expect(exist).Should(BeFalse())
-		//
-		//e2eutil.StopMinioForward(minioPortForward)
+		By("minio bucket path should not exist")
+		exist, err = e2eminio.IsObjectExist(object)
+		Expect(err).Should(BeNil())
+		Expect(exist).Should(BeFalse())
 	})
 
 	It("Should not delete a bucket which is in use", func() {
+		minioPath := "minio-bucket/bucket-test2"
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, "minio-bucket/bucket-test2")
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
 		deletePolicy := v1alpha1.PVCRetentionPolicyDelete
 		minioProvider.S3.S3RetentionPolicy = &deletePolicy
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
@@ -224,7 +211,152 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		Eventually(func() error {
 			return waitLogSetDeleted(ls)
 		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+	})
 
+	It("Should reclaim job success when bucket not exist", func() {
+		minioPath := "minio-bucket/bucket-test3"
+		By("create logset cluster with minio provider")
+		minioSecret := e2eutil.MinioSecret(env.Namespace)
+		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
+
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		ls.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
+
+		var bucket *v1alpha1.BucketClaim
+		var err error
+		Eventually(func() error {
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, ls)
+			if err != nil || bucket == nil {
+				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
+			}
+			expectedStatus := v1alpha1.BucketClaimStatus{
+				BindTo: v1alpha1.BucketBindToMark(ls),
+				State:  v1alpha1.StatusInUse,
+			}
+			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
+				return fmt.Errorf("bucket status is not inuse, current %v", bucket.Status)
+			}
+			return nil
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("simulate bucket consumer to put object")
+		_, err = e2eminio.PutObject(minioPath)
+		Expect(err).Should(BeNil())
+
+		By("tear down logset cluster")
+		Expect(kubeCli.Delete(ctx, ls)).To(Succeed())
+		Eventually(func() error {
+			return waitLogSetDeleted(ls)
+		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+
+		By("bucket should in released state")
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(bucket), bucket); err != nil {
+				return err
+			}
+			if bucket.DeletionTimestamp != nil {
+				return fmt.Errorf("bucket should not be deleted in default retain policy")
+			}
+			expectedStatus := v1alpha1.BucketClaimStatus{
+				BindTo: "",
+				State:  v1alpha1.StatusReleased,
+			}
+			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
+				return fmt.Errorf("bucket status is not released, current %v", bucket.Status)
+			}
+			return nil
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("update bucket to reference a non-exist bucket")
+		bucket.Spec.S3.Path = "non-exist-bucket/path1"
+		Expect(kubeCli.Update(ctx, bucket)).To(Succeed())
+
+		By("delete bucket, trigger reclaim job")
+		Expect(kubeCli.Delete(ctx, bucket)).To(Succeed())
+
+		By("wait bucket been deleted, bucket will been deleted only when job exits successfully")
+		Eventually(func() error {
+			err := kubeCli.Get(ctx, client.ObjectKeyFromObject(bucket), bucket)
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return fmt.Errorf("bucket should be deleted")
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+	})
+
+	It("Should reclaim job success when prefix not exist", func() {
+		minioPath := "minio-bucket/bucket-test4"
+		By("create logset cluster with minio provider")
+		minioSecret := e2eutil.MinioSecret(env.Namespace)
+		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
+
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		ls.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
+
+		var bucket *v1alpha1.BucketClaim
+		var err error
+		Eventually(func() error {
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, ls)
+			if err != nil || bucket == nil {
+				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
+			}
+			expectedStatus := v1alpha1.BucketClaimStatus{
+				BindTo: v1alpha1.BucketBindToMark(ls),
+				State:  v1alpha1.StatusInUse,
+			}
+			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
+				return fmt.Errorf("bucket status is not inuse, current %v", bucket.Status)
+			}
+			return nil
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("simulate bucket consumer to put object")
+		_, err = e2eminio.PutObject(minioPath)
+		Expect(err).Should(BeNil())
+
+		By("tear down logset cluster")
+		Expect(kubeCli.Delete(ctx, ls)).To(Succeed())
+		Eventually(func() error {
+			return waitLogSetDeleted(ls)
+		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+
+		By("bucket should in released state")
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(bucket), bucket); err != nil {
+				return err
+			}
+			if bucket.DeletionTimestamp != nil {
+				return fmt.Errorf("bucket should not be deleted in default retain policy")
+			}
+			expectedStatus := v1alpha1.BucketClaimStatus{
+				BindTo: "",
+				State:  v1alpha1.StatusReleased,
+			}
+			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
+				return fmt.Errorf("bucket status is not released, current %v", bucket.Status)
+			}
+			return nil
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("update bucket to reference a non-exist path")
+		bucket.Spec.S3.Path = "minio-bucket/a-non-exist-path"
+		Expect(kubeCli.Update(ctx, bucket)).To(Succeed())
+
+		By("delete bucket, trigger reclaim job")
+		Expect(kubeCli.Delete(ctx, bucket)).To(Succeed())
+
+		By("wait bucket been deleted, bucket will been deleted only when job exits successfully")
+		Eventually(func() error {
+			err := kubeCli.Get(ctx, client.ObjectKeyFromObject(bucket), bucket)
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return fmt.Errorf("bucket should be deleted")
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
 	})
 })
 
@@ -259,4 +391,21 @@ func reclaimBucket(bucket *v1alpha1.BucketClaim) error {
 		return err
 	}
 	return kubeCli.Delete(ctx, bucket)
+}
+
+// ReclaimReleasedBucket recycle buckets, since mo-operator may be deleted before bucketClaims when deleting env namespace, its claim work will not success
+// e2e test about logset/cnset/dnset/mocluster will also create buckets with default retain policy, these buckets should be deleted proactive
+func ReclaimReleasedBucket() {
+	buckets := &v1alpha1.BucketClaimList{}
+	err := kubeCli.List(ctx, buckets, client.InNamespace(env.Namespace))
+	Expect(err).To(Succeed())
+	for _, b := range buckets.Items {
+		// failed test cases may cause a bucket in InUse status
+		if b.Status.State == v1alpha1.StatusInUse {
+			logger.Warnf("unexpect bucket status:%v", b.Status)
+		}
+		if err = reclaimBucket(&b); err != nil {
+			logger.Infof("reclaim bucket err: %v", err)
+		}
+	}
 }
