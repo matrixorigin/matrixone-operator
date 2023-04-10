@@ -15,11 +15,14 @@
 package v1alpha1
 
 import (
+	"context"
+	"crypto/sha1"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
@@ -28,6 +31,8 @@ const (
 
 	// defaultArgsFile is the field name in matrixone-operator-cm configmap, contains information of default service args
 	defaultArgsFile = "defaultArgs"
+
+	BucketUniqLabel = "matrixorigin.io/bucket-unique-id"
 )
 
 var (
@@ -227,4 +232,36 @@ func setDefaultServiceArgs(object interface{}) {
 		moLog.Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetBasic, *DNSetBasic, *CNSetBasic")
 		return
 	}
+}
+
+func ClaimedBucket(c client.Client, ls *LogSet) (*BucketClaim, error) {
+	uniqLabel := UniqueBucketLabel(ls)
+	bcList := &BucketClaimList{}
+	if err := c.List(context.TODO(), bcList, client.InNamespace(ls.Namespace), client.MatchingLabels{BucketUniqLabel: uniqLabel}); err != nil {
+		return nil, err
+	}
+
+	switch len(bcList.Items) {
+	case 0:
+		return nil, nil
+	case 1:
+		return &bcList.Items[0], nil
+	default:
+		return nil, fmt.Errorf("list more than one buckets for logset: %s/%s", ls.Namespace, ls.Name)
+	}
+}
+
+func UniqueBucketLabel(ls *LogSet) string {
+	s3Provider := ls.Spec.SharedStorage.S3
+	var providerType string
+	if s3Provider.Type != nil {
+		providerType = string(*s3Provider.Type)
+	}
+	uniqId := fmt.Sprintf("%s-%s-%s", providerType, s3Provider.Endpoint, s3Provider.Path)
+	uniqId = fmt.Sprintf("%x", sha1.Sum([]byte(uniqId)))
+	return uniqId
+}
+
+func BucketBindToMark(ls *LogSet) string {
+	return fmt.Sprintf("%s/%s", ls.Namespace, ls.Name)
 }

@@ -121,6 +121,10 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return r.with(sts).Update, nil
 	}
+
+	if err = r.syncBucketClaim(ctx, sts); err != nil {
+		return nil, errors.Wrap(err, "sync bucket claim")
+	}
 	if recon.IsReady(&ls.Status.ConditionalStatus) && len(ls.Status.FailedStores) == 0 {
 		ctx.Log.Info("logset synced")
 		return nil, nil
@@ -294,6 +298,9 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
 		}
 		// check whether pods are cleaned in next reconcile
 		return false, nil
+	}
+	if err = r.finalizeBucket(ctx); err != nil {
+		return false, err
 	}
 	return true, nil
 }

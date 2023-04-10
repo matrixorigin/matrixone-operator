@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/bucketclaim"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
 	"os"
@@ -148,6 +149,10 @@ func main() {
 	moActor := &mocluster.MatrixOneClusterActor{}
 	err = moActor.Reconcile(mgr)
 	exitIf(err, "unable to set up matrixone cluster controller")
+
+	bucketActor := bucketclaim.Actor{}
+	err = bucketActor.Reconcile(mgr)
+	exitIf(err, "unable to set up bucketclaim cluster controller")
 
 	err = mgr.AddHealthzCheck("healthz", healthz.Ping)
 	exitIf(err, "unable to set up health check")

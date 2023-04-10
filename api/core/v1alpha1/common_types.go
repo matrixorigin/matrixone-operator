@@ -231,6 +231,12 @@ type S3Provider struct {
 	// from the environment if not specified
 	// +optional
 	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
+
+	// TODO should be consistent with pvc retention policy ?
+	// S3RetentionPolicy defines the retention policy of orphaned S3 bucket storage
+	// +kubebuilder:default=Retain
+	// +kubebuilder:validation:Enum=Delete;Retain
+	S3RetentionPolicy *PVCRetentionPolicy `json:"s3RetentionPolicy,omitempty"`
 }
 
 func (p *S3Provider) GetProviderType() S3ProviderType {

@@ -15,12 +15,14 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"time"
 )
@@ -34,7 +36,12 @@ const (
 	defaultStoreFailureTimeout = 10 * time.Minute
 )
 
+var (
+	kClient client.Client
+)
+
 func (r *LogSet) setupWebhookWithManager(mgr ctrl.Manager) error {
+	kClient = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
@@ -88,12 +95,14 @@ var _ webhook.Validator = &LogSet{}
 func (r *LogSet) ValidateCreate() error {
 	errs := r.Spec.LogSetBasic.ValidateCreate()
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
+	errs = append(errs, r.validateBucketOnCreate()...)
 	return invalidOrNil(errs, r)
 }
 
 func (r *LogSet) ValidateUpdate(o runtime.Object) error {
 	old := o.(*LogSet)
 	errs := r.Spec.LogSetBasic.ValidateUpdate(&old.Spec.LogSetBasic)
+	errs = append(errs, r.validateBucketOnUpdate()...)
 	return invalidOrNil(errs, r)
 }
 
@@ -169,4 +178,55 @@ func (r *LogSetBasic) validateInitialConfig() field.ErrorList {
 		errs = append(errs, field.Invalid(parent.Child("dnShards"), dss, "dnShards must be set"))
 	}
 	return errs
+}
+
+func (r *LogSet) validateBucketOnCreate() field.ErrorList {
+	if r.Spec.LogSetBasic.SharedStorage.S3 == nil {
+		return nil
+	}
+	var errs field.ErrorList
+	path := field.NewPath("spec").Child("sharedStorage").Child("s3")
+	bucket, err := ClaimedBucket(kClient, r)
+	if err != nil {
+		errs = append(errs, field.Invalid(path, nil, err.Error()))
+		return errs
+	}
+	if bucket == nil {
+		return nil
+	}
+	if bucket.Status.State == StatusInUse &&
+		bucket.Status.BindTo != BucketBindToMark(r) {
+		msg := fmt.Sprintf("claimed bucket %v already bind to %v", client.ObjectKeyFromObject(bucket), bucket.Status.BindTo)
+		errs = append(errs, field.Invalid(path, nil, msg))
+		return errs
+	}
+	if bucket.DeletionTimestamp != nil {
+		msg := fmt.Sprintf("claimed bucket %v state is deleting", client.ObjectKeyFromObject(bucket))
+		errs = append(errs, field.Invalid(path, nil, msg))
+		return errs
+	}
+	return nil
+}
+
+func (r *LogSet) validateBucketOnUpdate() field.ErrorList {
+	if r.Spec.LogSetBasic.SharedStorage.S3 == nil {
+		return nil
+	}
+	var errs field.ErrorList
+	path := field.NewPath("spec").Child("sharedStorage").Child("s3")
+	bucket, err := ClaimedBucket(kClient, r)
+	if err != nil {
+		errs = append(errs, field.Invalid(path, nil, err.Error()))
+		return errs
+	}
+	if bucket == nil {
+		return nil
+	}
+	if bucket.Status.State == StatusInUse &&
+		bucket.Status.BindTo != BucketBindToMark(r) {
+		msg := fmt.Sprintf("claimed bucket %v already bind to %v", client.ObjectKeyFromObject(bucket), bucket.Status.BindTo)
+		errs = append(errs, field.Invalid(path, nil, msg))
+		return errs
+	}
+	return nil
 }

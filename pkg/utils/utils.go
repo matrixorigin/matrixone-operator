@@ -80,3 +80,7 @@ func mutate(f func() error, key client.ObjectKey, obj client.Object) error {
 	}
 	return nil
 }
+
+func PtrTo[T any](v T) *T {
+	return &v
+}

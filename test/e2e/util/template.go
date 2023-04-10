@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package util
 
 import (
@@ -75,4 +76,33 @@ func SecretVolume(name string) corev1.Volume {
 		},
 	}
 	return v
+}
+
+func MinioSecret(namespace string) *corev1.Secret {
+	minioSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "minio-" + rand.String(6),
+		},
+		StringData: map[string]string{
+			"AWS_ACCESS_KEY_ID":     "minio",
+			"AWS_SECRET_ACCESS_KEY": "minio123",
+		},
+	}
+	return minioSecret
+}
+
+func MinioShareStorage(minioSecretName string, path string) v1alpha1.SharedStorageProvider {
+	minioType := v1alpha1.S3ProviderTypeMinIO
+	SharedStorage := v1alpha1.SharedStorageProvider{
+		S3: &v1alpha1.S3Provider{
+			Path:     path,
+			Type:     &minioType,
+			Endpoint: "http://minio.default:9000",
+			SecretRef: &corev1.LocalObjectReference{
+				Name: minioSecretName,
+			},
+		},
+	}
+	return SharedStorage
 }
