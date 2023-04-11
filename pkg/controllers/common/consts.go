@@ -15,4 +15,5 @@ package common
 
 const (
 	LockServicePort = 6003
+	LogtailPort     = 32003
 )
