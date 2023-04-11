@@ -63,6 +63,13 @@ service-address = "${ADDR}:{{ .LockServicePort }}"
 EOF
 sed -i "/\[dn.lockservice\]/r ${lsc}" ${conf}
 
+# append logtail configs
+ltc=$(mktemp)
+cat <<EOF > ${ltc}
+service-address = "${ADDR}:{{ .LogtailPort }}"
+EOF
+sed -i "/\[dn.LogtailServer\]/r ${ltc}" ${conf}
+
 # there is a chance that the dns is not yet added to kubedns and the
 # server will crash, wait before myself to be resolvable
 elapseTime=0
@@ -90,6 +97,7 @@ type model struct {
 	ConfigFilePath string
 
 	LockServicePort int
+	LogtailPort     int
 }
 
 func syncReplicas(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
@@ -169,6 +177,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
 	conf.Set([]string{"dn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
+	conf.Set([]string{"dn", "LogtailServer", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LogtailPort))
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
@@ -178,6 +187,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	err = startScriptTpl.Execute(buff, &model{
 		DNServicePort:   dnServicePort,
 		LockServicePort: common.LockServicePort,
+		LogtailPort:     common.LogtailPort,
 		ConfigFilePath:  fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
 	})
 	if err != nil {
