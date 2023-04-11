@@ -234,10 +234,12 @@ func setDefaultServiceArgs(object interface{}) {
 	}
 }
 
-func ClaimedBucket(c client.Client, ls *LogSet) (*BucketClaim, error) {
-	uniqLabel := UniqueBucketLabel(ls)
+// ClaimedBucket return claimed bucket according to S3Provider configuration, caller must ensure that provider is not nil
+// NOTE: ClaimedBucket search bucket in cluster scope
+func ClaimedBucket(c client.Client, provider *S3Provider) (*BucketClaim, error) {
+	uniqLabel := UniqueBucketLabel(provider)
 	bcList := &BucketClaimList{}
-	if err := c.List(context.TODO(), bcList, client.InNamespace(ls.Namespace), client.MatchingLabels{BucketUniqLabel: uniqLabel}); err != nil {
+	if err := c.List(context.TODO(), bcList, client.MatchingLabels{BucketUniqLabel: uniqLabel}); err != nil {
 		return nil, err
 	}
 
@@ -247,12 +249,12 @@ func ClaimedBucket(c client.Client, ls *LogSet) (*BucketClaim, error) {
 	case 1:
 		return &bcList.Items[0], nil
 	default:
-		return nil, fmt.Errorf("list more than one buckets for logset: %s/%s", ls.Namespace, ls.Name)
+		return nil, fmt.Errorf("list more than one buckets")
 	}
 }
 
-func UniqueBucketLabel(ls *LogSet) string {
-	s3Provider := ls.Spec.SharedStorage.S3
+// UniqueBucketLabel generate an unique id for S3 provider, this id becomes a label in bucketClaim
+func UniqueBucketLabel(s3Provider *S3Provider) string {
 	var providerType string
 	if s3Provider.Type != nil {
 		providerType = string(*s3Provider.Type)
@@ -262,6 +264,41 @@ func UniqueBucketLabel(ls *LogSet) string {
 	return uniqId
 }
 
-func BucketBindToMark(ls *LogSet) string {
-	return fmt.Sprintf("%s/%s", ls.Namespace, ls.Name)
+func BucketBindToMark(logsetMeta metav1.ObjectMeta) string {
+	return fmt.Sprintf("%s/%s", logsetMeta.Namespace, logsetMeta.Name)
+}
+
+func LogSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      mo.Name,
+		Namespace: mo.Namespace,
+	}
+}
+
+func DNSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      mo.Name,
+		Namespace: mo.Namespace,
+	}
+}
+
+func TPSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      mo.Name + "-tp",
+		Namespace: mo.Namespace,
+	}
+}
+
+func APSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      mo.Name + "-ap",
+		Namespace: mo.Namespace,
+	}
+}
+
+func WebUIKey(mo *MatrixOneCluster) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      mo.Name,
+		Namespace: mo.Namespace,
+	}
 }

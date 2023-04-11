@@ -52,7 +52,7 @@ var _ webhook.Validator = &MatrixOneCluster{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *MatrixOneCluster) ValidateCreate() error {
 	var errs field.ErrorList
-	errs = append(errs, r.Spec.LogService.ValidateCreate()...)
+	errs = append(errs, r.Spec.LogService.ValidateCreate(LogSetKey(r))...)
 	errs = append(errs, r.Spec.DN.ValidateCreate()...)
 	errs = append(errs, r.Spec.TP.ValidateCreate()...)
 	if r.Spec.AP != nil {
@@ -70,7 +70,7 @@ func (r *MatrixOneCluster) ValidateUpdate(o runtime.Object) error {
 	}
 	var errs field.ErrorList
 	old := o.(*MatrixOneCluster)
-	errs = append(errs, r.Spec.LogService.ValidateUpdate(&old.Spec.LogService)...)
+	errs = append(errs, r.Spec.LogService.ValidateUpdate(&old.Spec.LogService, LogSetKey(r))...)
 	return invalidOrNil(errs, r)
 }
 

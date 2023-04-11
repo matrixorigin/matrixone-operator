@@ -71,7 +71,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 
 	// sync specs
 	ls := &v1alpha1.LogSet{
-		ObjectMeta: logSetKey(mo),
+		ObjectMeta: v1alpha1.LogSetKey(mo),
 		Spec: v1alpha1.LogSetSpec{
 			LogSetBasic: v1alpha1.LogSetBasic{
 				InitialConfig: mo.Spec.LogService.InitialConfig,
@@ -79,11 +79,11 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		},
 	}
 	dn := &v1alpha1.DNSet{
-		ObjectMeta: dnSetKey(mo),
+		ObjectMeta: v1alpha1.DNSetKey(mo),
 		Deps:       v1alpha1.DNSetDeps{LogSetRef: ls.AsDependency()},
 	}
 	tp := &v1alpha1.CNSet{
-		ObjectMeta: tpSetKey(mo),
+		ObjectMeta: v1alpha1.TPSetKey(mo),
 		Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
 	}
 	result, err := utils.CreateOwnedOrUpdate(ctx, ls, func() error {
@@ -108,7 +108,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		setPodSetDefault(&dn.Spec.DNSetBasic.PodSet, mo)
 		setOverlay(&dn.Spec.Overlay, mo)
 		dn.Spec.Image = mo.DnSetImage()
-		dn.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
+		dn.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: v1alpha1.LogSetKey(mo)}
 		return nil
 	})
 	if err != nil {
@@ -119,8 +119,8 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		setPodSetDefault(&tp.Spec.CNSetBasic.PodSet, mo)
 		setOverlay(&tp.Spec.Overlay, mo)
 		tp.Spec.Image = mo.TpSetImage()
-		tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
-		tp.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
+		tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: v1alpha1.LogSetKey(mo)}
+		tp.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)}
 		return nil
 	})
 	if err != nil {
@@ -128,7 +128,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	}
 	if mo.Spec.AP != nil {
 		ap := &v1alpha1.CNSet{
-			ObjectMeta: apSetKey(mo),
+			ObjectMeta: v1alpha1.APSetKey(mo),
 			Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
 		}
 		if err := recon.CreateOwnedOrUpdate(ctx, ap, func() error {
@@ -136,8 +136,8 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			setPodSetDefault(&ap.Spec.CNSetBasic.PodSet, mo)
 			setOverlay(&ap.Spec.Overlay, mo)
 			ap.Spec.Image = mo.ApSetImage()
-			ap.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: logSetKey(mo)}
-			ap.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)}
+			ap.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: v1alpha1.LogSetKey(mo)}
+			ap.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)}
 			return nil
 		}); err != nil {
 			return nil, errors.Wrap(err, "sync AP CNSet")
@@ -147,9 +147,9 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 
 	if mo.Spec.WebUI != nil {
 		webui := &v1alpha1.WebUI{
-			ObjectMeta: webUIKey(mo),
+			ObjectMeta: v1alpha1.WebUIKey(mo),
 			Deps: v1alpha1.WebUIDeps{
-				CNSet: &v1alpha1.CNSet{ObjectMeta: tpSetKey(mo)},
+				CNSet: &v1alpha1.CNSet{ObjectMeta: v1alpha1.TPSetKey(mo)},
 			},
 		}
 		if err := recon.CreateOwnedOrUpdate(ctx, webui, func() error {
@@ -285,11 +285,11 @@ func syncedCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
 func (r *MatrixOneClusterActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (bool, error) {
 	mo := ctx.Obj
 	objs := []client.Object{
-		&v1alpha1.LogSet{ObjectMeta: logSetKey(mo)},
-		&v1alpha1.DNSet{ObjectMeta: dnSetKey(mo)},
-		&v1alpha1.CNSet{ObjectMeta: tpSetKey(mo)},
-		&v1alpha1.CNSet{ObjectMeta: apSetKey(mo)},
-		&v1alpha1.WebUI{ObjectMeta: webUIKey(mo)},
+		&v1alpha1.LogSet{ObjectMeta: v1alpha1.LogSetKey(mo)},
+		&v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)},
+		&v1alpha1.CNSet{ObjectMeta: v1alpha1.TPSetKey(mo)},
+		&v1alpha1.CNSet{ObjectMeta: v1alpha1.APSetKey(mo)},
+		&v1alpha1.WebUI{ObjectMeta: v1alpha1.WebUIKey(mo)},
 	}
 	existAny := false
 	for _, obj := range objs {
@@ -305,41 +305,6 @@ func (r *MatrixOneClusterActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixOneC
 		existAny = existAny || exist
 	}
 	return !existAny, nil
-}
-
-func logSetKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      mo.Name,
-		Namespace: mo.Namespace,
-	}
-}
-
-func dnSetKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      mo.Name,
-		Namespace: mo.Namespace,
-	}
-}
-
-func tpSetKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      mo.Name + "-tp",
-		Namespace: mo.Namespace,
-	}
-}
-
-func apSetKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      mo.Name + "-ap",
-		Namespace: mo.Namespace,
-	}
-}
-
-func webUIKey(mo *v1alpha1.MatrixOneCluster) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      mo.Name,
-		Namespace: mo.Namespace,
-	}
 }
 
 func (r *MatrixOneClusterActor) Reconcile(mgr manager.Manager) error {

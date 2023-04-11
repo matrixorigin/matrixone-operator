@@ -16,6 +16,7 @@ package e2e
 
 import (
 	"fmt"
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/test/e2e/e2eminio"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
@@ -50,12 +51,12 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		var bucket *v1alpha1.BucketClaim
 		var err error
 		Eventually(func() error {
-			bucket, err = v1alpha1.ClaimedBucket(kubeCli, ls)
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, minioProvider.S3)
 			if err != nil || bucket == nil {
 				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
 			}
 			expectedStatus := v1alpha1.BucketClaimStatus{
-				BindTo: v1alpha1.BucketBindToMark(ls),
+				BindTo: v1alpha1.BucketBindToMark(ls.ObjectMeta),
 				State:  v1alpha1.StatusInUse,
 			}
 			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
@@ -115,12 +116,12 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		var bucket *v1alpha1.BucketClaim
 		var err error
 		Eventually(func() error {
-			bucket, err = v1alpha1.ClaimedBucket(kubeCli, ls)
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, minioProvider.S3)
 			if err != nil || bucket == nil {
 				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
 			}
 			expectedStatus := v1alpha1.BucketClaimStatus{
-				BindTo: v1alpha1.BucketBindToMark(ls),
+				BindTo: v1alpha1.BucketBindToMark(ls.ObjectMeta),
 				State:  v1alpha1.StatusInUse,
 			}
 			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
@@ -173,12 +174,12 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		var bucket *v1alpha1.BucketClaim
 		var err error
 		Eventually(func() error {
-			bucket, err = v1alpha1.ClaimedBucket(kubeCli, ls)
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, minioProvider.S3)
 			if err != nil || bucket == nil {
 				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
 			}
 			expectedStatus := v1alpha1.BucketClaimStatus{
-				BindTo: v1alpha1.BucketBindToMark(ls),
+				BindTo: v1alpha1.BucketBindToMark(ls.ObjectMeta),
 				State:  v1alpha1.StatusInUse,
 			}
 			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
@@ -190,7 +191,7 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		By("bucket should contain inuse condition")
 		Expect(kubeCli.Delete(ctx, bucket)).To(Succeed())
 		Eventually(func() error {
-			bucket, err = v1alpha1.ClaimedBucket(kubeCli, ls)
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, minioProvider.S3)
 			if err != nil || bucket == nil {
 				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
 			}
@@ -227,12 +228,12 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		var bucket *v1alpha1.BucketClaim
 		var err error
 		Eventually(func() error {
-			bucket, err = v1alpha1.ClaimedBucket(kubeCli, ls)
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, minioProvider.S3)
 			if err != nil || bucket == nil {
 				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
 			}
 			expectedStatus := v1alpha1.BucketClaimStatus{
-				BindTo: v1alpha1.BucketBindToMark(ls),
+				BindTo: v1alpha1.BucketBindToMark(ls.ObjectMeta),
 				State:  v1alpha1.StatusInUse,
 			}
 			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
@@ -300,12 +301,12 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		var bucket *v1alpha1.BucketClaim
 		var err error
 		Eventually(func() error {
-			bucket, err = v1alpha1.ClaimedBucket(kubeCli, ls)
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, minioProvider.S3)
 			if err != nil || bucket == nil {
 				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
 			}
 			expectedStatus := v1alpha1.BucketClaimStatus{
-				BindTo: v1alpha1.BucketBindToMark(ls),
+				BindTo: v1alpha1.BucketBindToMark(ls.ObjectMeta),
 				State:  v1alpha1.StatusInUse,
 			}
 			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
@@ -358,7 +359,166 @@ var _ = Describe("Matrix BucketClaim test", func() {
 			return fmt.Errorf("bucket should be deleted")
 		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
 	})
+
+	It("Should failure when creating logset which want bind to an already bound bucket", func() {
+		minioPath := "minio-bucket/bucket-test5"
+		By("create logset cluster with minio provider")
+		minioSecret := e2eutil.MinioSecret(env.Namespace)
+		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
+
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		ls.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
+
+		var bucket *v1alpha1.BucketClaim
+		var err error
+		Eventually(func() error {
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, minioProvider.S3)
+			if err != nil || bucket == nil {
+				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
+			}
+			expectedStatus := v1alpha1.BucketClaimStatus{
+				BindTo: v1alpha1.BucketBindToMark(ls.ObjectMeta),
+				State:  v1alpha1.StatusInUse,
+			}
+			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
+				return fmt.Errorf("bucket status is not inuse, current %v", bucket.Status)
+			}
+			return nil
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("create another logset cluster, claim same bucket as above")
+		lsShouldFailed := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		lsShouldFailed.Spec.SharedStorage = minioProvider
+		err = kubeCli.Create(ctx, lsShouldFailed)
+		Expect(err != nil).Should(BeTrue())
+		Expect(strings.Contains(err.Error(), "is invalid")).Should(BeTrue())
+		Expect(strings.Contains(err.Error(), "spec.sharedStorage.s3")).Should(BeTrue())
+		Expect(strings.Contains(err.Error(), "already bind to")).Should(BeTrue())
+
+		By("tear down logset cluster")
+		Expect(kubeCli.Delete(ctx, ls)).To(Succeed())
+		Eventually(func() error {
+			return waitLogSetDeleted(ls)
+		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+	})
+
+	It("Should create mo cluster fail if its included logset want to bind an already bound bucket", func() {
+
+		By("create one mo cluster with minio s3 provider")
+		minioSecret := e2eutil.MinioSecret(env.Namespace)
+		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
+
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, "minio-bucket/bucket-test6")
+		mo := e2eutil.NewMoTpl(env.Namespace, moVersion, moImageRepo)
+		mo.Spec.LogService.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, mo)).To(Succeed())
+
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo); err != nil {
+				logger.Errorw("error get mo cluster status", "cluster", mo.Name, "error", err)
+				return err
+			}
+			if mo.Status.TP == nil || !recon.IsReady(mo.Status.TP) {
+				logger.Infow("wait mo cluster ready", "cluster", mo.Name)
+				return errWait
+			}
+			return nil
+		}, createClusterTimeout, pollInterval).Should(Succeed())
+
+		By("create another mo cluster with same minio s3 provider")
+		shouldFailMO := e2eutil.NewMoTpl(env.Namespace, moVersion, moImageRepo)
+		shouldFailMO.Spec.LogService.SharedStorage = minioProvider
+		err := kubeCli.Create(ctx, shouldFailMO)
+		Expect(err != nil).Should(BeTrue())
+		Expect(strings.Contains(err.Error(), "is invalid")).Should(BeTrue())
+		Expect(strings.Contains(err.Error(), "spec.sharedStorage.s3")).Should(BeTrue())
+		Expect(strings.Contains(err.Error(), "already bind to")).Should(BeTrue())
+
+		By("Teardown cluster")
+		Expect(kubeCli.Delete(ctx, mo)).To(Succeed())
+		Eventually(func() error {
+			return waitClusterDeleted(mo)
+		}, teardownClusterTimeout, pollInterval).Should(Succeed(), "cluster should be teardown")
+	})
+
+	It("Should failure when creating logset in another namespace which want bind to an already bound bucket", func() {
+		minioPath := "minio-bucket/bucket-test7"
+		By("create logset cluster with minio provider")
+		minioSecret := e2eutil.MinioSecret(env.Namespace)
+		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
+
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		ls.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
+
+		var bucket *v1alpha1.BucketClaim
+		var err error
+		Eventually(func() error {
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, minioProvider.S3)
+			if err != nil || bucket == nil {
+				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
+			}
+			expectedStatus := v1alpha1.BucketClaimStatus{
+				BindTo: v1alpha1.BucketBindToMark(ls.ObjectMeta),
+				State:  v1alpha1.StatusInUse,
+			}
+			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
+				return fmt.Errorf("bucket status is not inuse, current %v", bucket.Status)
+			}
+			return nil
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("create a logset cluster in another namespace, claim same bucket as above")
+		newNS := e2eutil.NewNamespaceTpl()
+		Expect(kubeCli.Create(ctx, newNS)).Should(Succeed())
+
+		lsShouldFailed := e2eutil.NewLogSetTpl(newNS.Name, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		lsShouldFailed.Spec.SharedStorage = minioProvider
+		err = kubeCli.Create(ctx, lsShouldFailed)
+		Expect(err != nil).Should(BeTrue())
+		Expect(strings.Contains(err.Error(), "is invalid")).Should(BeTrue())
+		Expect(strings.Contains(err.Error(), "spec.sharedStorage.s3")).Should(BeTrue())
+		Expect(strings.Contains(err.Error(), "already bind to")).Should(BeTrue())
+
+		By("delete above new namespace")
+		Expect(kubeCli.Delete(ctx, newNS)).Should(Succeed())
+
+		By("tear down logset cluster")
+		Expect(kubeCli.Delete(ctx, ls)).To(Succeed())
+		Eventually(func() error {
+			return waitLogSetDeleted(ls)
+		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+	})
+
 })
+
+func waitClusterDeleted(mo *v1alpha1.MatrixOneCluster) error {
+	err := kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo)
+	if err == nil {
+		logger.Infow("wait mo cluster teardown", "cluster", mo.Name)
+		return errWait
+	}
+	if !apierrors.IsNotFound(err) {
+		logger.Errorw("unexpected error when get mo cluster", "cluster", mo.Name, "error", err)
+		return err
+	}
+	pvcList := &corev1.PersistentVolumeClaimList{}
+	err = kubeCli.List(ctx, pvcList, client.InNamespace(mo.Namespace))
+	if err != nil {
+		logger.Errorw("error list PVCs", "error", err)
+		return errWait
+	}
+	for _, pvc := range pvcList.Items {
+		if strings.HasPrefix(pvc.Name, fmt.Sprintf("data-%s", mo.Name)) {
+			logger.Infow("pvc is not yet cleaned", "name", pvc.Name)
+			return errWait
+		}
+	}
+	return nil
+}
 
 func waitLogSetDeleted(ls *v1alpha1.LogSet) error {
 	err := kubeCli.Get(ctx, client.ObjectKeyFromObject(ls), ls)

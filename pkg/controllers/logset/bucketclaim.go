@@ -21,6 +21,7 @@ import (
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 )
 
@@ -28,11 +29,11 @@ func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruis
 	ls := ctx.Obj
 
 	// skip if no s3 share storage configuration
-	if ctx.Obj.Spec.LogSetBasic.SharedStorage.S3 == nil {
+	if ls.Spec.SharedStorage.S3 == nil {
 		return nil
 	}
 
-	bucket, err := v1alpha1.ClaimedBucket(ctx.Client, ctx.Obj)
+	bucket, err := v1alpha1.ClaimedBucket(ctx.Client, ls.Spec.SharedStorage.S3)
 	if err != nil {
 		return err
 	}
@@ -41,6 +42,10 @@ func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruis
 	if bucket == nil {
 		return r.createNewBucket(ctx, sts)
 	}
+	if bucket.Status.BindTo != "" &&
+		bucket.Status.BindTo != v1alpha1.BucketBindToMark(ls.ObjectMeta) {
+		return fmt.Errorf("claim bucket %v already bind to %s", client.ObjectKeyFromObject(bucket), bucket.Status.BindTo)
+	}
 
 	targetBucket := bucket.DeepCopy()
 	targetFinalizer := appendIfNotExist(targetBucket.ObjectMeta.Finalizers, v1alpha1.BucketDataFinalizer)
@@ -48,7 +53,7 @@ func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruis
 
 	targetBucket.ObjectMeta.Finalizers = targetFinalizer
 	targetBucket.Spec.S3 = ls.Spec.LogSetBasic.SharedStorage.S3
-	targetBucket.Status.BindTo = v1alpha1.BucketBindToMark(ls)
+	targetBucket.Status.BindTo = v1alpha1.BucketBindToMark(ls.ObjectMeta)
 	targetBucket.Status.State = v1alpha1.StatusInUse
 
 	sort.Strings(bucket.Finalizers)
@@ -65,11 +70,11 @@ func (r *Actor) finalizeBucket(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	ls := ctx.Obj
 
 	// skip if no s3 share storage configuration
-	if ls.Spec.LogSetBasic.SharedStorage.S3 == nil {
+	if ls.Spec.SharedStorage.S3 == nil {
 		return nil
 	}
 
-	claimedBucket, err := v1alpha1.ClaimedBucket(ctx.Client, ls)
+	claimedBucket, err := v1alpha1.ClaimedBucket(ctx.Client, ls.Spec.SharedStorage.S3)
 	if err != nil {
 		return err
 	}
@@ -77,8 +82,12 @@ func (r *Actor) finalizeBucket(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	if claimedBucket == nil {
 		return nil
 	}
+	if claimedBucket.Status.BindTo != "" &&
+		claimedBucket.Status.BindTo != v1alpha1.BucketBindToMark(ls.ObjectMeta) {
+		return fmt.Errorf("claimed bucket %v already bind to %s", client.ObjectKeyFromObject(claimedBucket), claimedBucket.Status.BindTo)
+	}
 
-	switch *ls.Spec.LogSetBasic.SharedStorage.S3.S3RetentionPolicy {
+	switch *ls.Spec.SharedStorage.S3.S3RetentionPolicy {
 	case v1alpha1.PVCRetentionPolicyRetain:
 		claimedBucket.Status.State = v1alpha1.StatusReleased
 		claimedBucket.Status.BindTo = ""
@@ -103,14 +112,14 @@ func (r *Actor) createNewBucket(ctx *recon.Context[*v1alpha1.LogSet], sts *kruis
 			Name:       newBucketName,
 			Namespace:  ls.Namespace,
 			Finalizers: []string{v1alpha1.BucketDataFinalizer},
-			Labels:     map[string]string{v1alpha1.BucketUniqLabel: v1alpha1.UniqueBucketLabel(ls)},
+			Labels:     map[string]string{v1alpha1.BucketUniqLabel: v1alpha1.UniqueBucketLabel(ls.Spec.SharedStorage.S3)},
 		},
 		Spec: v1alpha1.BucketClaimSpec{
 			S3:             ls.Spec.SharedStorage.S3,
 			LogSetTemplate: sts.Spec.Template,
 		},
 		Status: v1alpha1.BucketClaimStatus{
-			BindTo: v1alpha1.BucketBindToMark(ls),
+			BindTo: v1alpha1.BucketBindToMark(ls.ObjectMeta),
 			State:  v1alpha1.StatusInUse,
 		},
 	}

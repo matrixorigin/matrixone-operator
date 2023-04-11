@@ -106,3 +106,52 @@ func MinioShareStorage(minioSecretName string, path string) v1alpha1.SharedStora
 	}
 	return SharedStorage
 }
+
+func NewMoTpl(namespace, version, repo string) *v1alpha1.MatrixOneCluster {
+	mo := &v1alpha1.MatrixOneCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "mo-" + rand.String(6),
+		},
+		Spec: v1alpha1.MatrixOneClusterSpec{
+			TP: v1alpha1.CNSetBasic{
+				PodSet: v1alpha1.PodSet{
+					Replicas: 2,
+				},
+				CacheVolume: &v1alpha1.Volume{
+					Size: resource.MustParse("100Mi"),
+				},
+			},
+			DN: v1alpha1.DNSetBasic{
+				PodSet: v1alpha1.PodSet{
+					// test multiple DN replicas
+					Replicas: 1,
+				},
+				CacheVolume: &v1alpha1.Volume{
+					Size: resource.MustParse("100Mi"),
+				},
+			},
+			LogService: v1alpha1.LogSetBasic{
+				PodSet: v1alpha1.PodSet{
+					Replicas: 3,
+				},
+				Volume: v1alpha1.Volume{
+					Size: resource.MustParse("100Mi"),
+				},
+				InitialConfig: v1alpha1.InitialConfig{},
+			},
+			Version:         version,
+			ImageRepository: repo,
+		},
+	}
+	return mo
+}
+
+func NewNamespaceTpl() *corev1.Namespace {
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ns-" + rand.String(6),
+		},
+	}
+	return ns
+}

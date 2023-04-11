@@ -93,16 +93,14 @@ var _ webhook.Validator = &LogSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *LogSet) ValidateCreate() error {
-	errs := r.Spec.LogSetBasic.ValidateCreate()
+	errs := r.Spec.LogSetBasic.ValidateCreate(r.ObjectMeta)
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
-	errs = append(errs, r.validateBucketOnCreate()...)
 	return invalidOrNil(errs, r)
 }
 
 func (r *LogSet) ValidateUpdate(o runtime.Object) error {
 	old := o.(*LogSet)
-	errs := r.Spec.LogSetBasic.ValidateUpdate(&old.Spec.LogSetBasic)
-	errs = append(errs, r.validateBucketOnUpdate()...)
+	errs := r.Spec.LogSetBasic.ValidateUpdate(&old.Spec.LogSetBasic, r.ObjectMeta)
 	return invalidOrNil(errs, r)
 }
 
@@ -110,7 +108,7 @@ func (r *LogSet) ValidateDelete() error {
 	return nil
 }
 
-func (r *LogSetBasic) ValidateCreate() field.ErrorList {
+func (r *LogSetBasic) validateMutate() field.ErrorList {
 	var errs field.ErrorList
 	errs = append(errs, validateVolume(&r.Volume, field.NewPath("spec").Child("volume"))...)
 	errs = append(errs, r.validateInitialConfig()...)
@@ -118,14 +116,23 @@ func (r *LogSetBasic) ValidateCreate() field.ErrorList {
 	return errs
 }
 
-func (r *LogSetBasic) ValidateUpdate(old *LogSetBasic) field.ErrorList {
-	if err := r.ValidateCreate(); err != nil {
+func (r *LogSetBasic) ValidateCreate(meta metav1.ObjectMeta) field.ErrorList {
+	var errs field.ErrorList
+	errs = append(errs, r.validateMutate()...)
+	errs = append(errs, r.validateIfBucketInUse(meta)...)
+	errs = append(errs, r.validateIfBucketDeleting()...)
+	return errs
+}
+
+func (r *LogSetBasic) ValidateUpdate(old *LogSetBasic, meta metav1.ObjectMeta) field.ErrorList {
+	if err := r.validateMutate(); err != nil {
 		return err
 	}
 	var errs field.ErrorList
 	if !equality.Semantic.DeepEqual(old.InitialConfig, r.InitialConfig) {
 		errs = append(errs, field.Invalid(field.NewPath("spec").Child("initialConfig"), nil, "initialConfig is immutable"))
 	}
+	errs = append(errs, r.validateIfBucketInUse(meta)...)
 	return errs
 }
 
@@ -180,25 +187,19 @@ func (r *LogSetBasic) validateInitialConfig() field.ErrorList {
 	return errs
 }
 
-func (r *LogSet) validateBucketOnCreate() field.ErrorList {
-	if r.Spec.LogSetBasic.SharedStorage.S3 == nil {
+func (r *LogSetBasic) validateIfBucketDeleting() field.ErrorList {
+	if r.SharedStorage.S3 == nil {
 		return nil
 	}
 	var errs field.ErrorList
 	path := field.NewPath("spec").Child("sharedStorage").Child("s3")
-	bucket, err := ClaimedBucket(kClient, r)
+	bucket, err := ClaimedBucket(kClient, r.SharedStorage.S3)
 	if err != nil {
 		errs = append(errs, field.Invalid(path, nil, err.Error()))
 		return errs
 	}
 	if bucket == nil {
 		return nil
-	}
-	if bucket.Status.State == StatusInUse &&
-		bucket.Status.BindTo != BucketBindToMark(r) {
-		msg := fmt.Sprintf("claimed bucket %v already bind to %v", client.ObjectKeyFromObject(bucket), bucket.Status.BindTo)
-		errs = append(errs, field.Invalid(path, nil, msg))
-		return errs
 	}
 	if bucket.DeletionTimestamp != nil {
 		msg := fmt.Sprintf("claimed bucket %v state is deleting", client.ObjectKeyFromObject(bucket))
@@ -208,13 +209,13 @@ func (r *LogSet) validateBucketOnCreate() field.ErrorList {
 	return nil
 }
 
-func (r *LogSet) validateBucketOnUpdate() field.ErrorList {
-	if r.Spec.LogSetBasic.SharedStorage.S3 == nil {
+func (r *LogSetBasic) validateIfBucketInUse(meta metav1.ObjectMeta) field.ErrorList {
+	if r.SharedStorage.S3 == nil {
 		return nil
 	}
 	var errs field.ErrorList
 	path := field.NewPath("spec").Child("sharedStorage").Child("s3")
-	bucket, err := ClaimedBucket(kClient, r)
+	bucket, err := ClaimedBucket(kClient, r.SharedStorage.S3)
 	if err != nil {
 		errs = append(errs, field.Invalid(path, nil, err.Error()))
 		return errs
@@ -223,7 +224,7 @@ func (r *LogSet) validateBucketOnUpdate() field.ErrorList {
 		return nil
 	}
 	if bucket.Status.State == StatusInUse &&
-		bucket.Status.BindTo != BucketBindToMark(r) {
+		bucket.Status.BindTo != BucketBindToMark(meta) {
 		msg := fmt.Sprintf("claimed bucket %v already bind to %v", client.ObjectKeyFromObject(bucket), bucket.Status.BindTo)
 		errs = append(errs, field.Invalid(path, nil, msg))
 		return errs
