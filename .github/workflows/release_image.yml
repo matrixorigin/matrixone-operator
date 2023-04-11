@@ -1,11 +1,8 @@
-name: update_workflows
+name: Release Image
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - '*'
+    tags: '*'
 
 jobs:
   push_image:
