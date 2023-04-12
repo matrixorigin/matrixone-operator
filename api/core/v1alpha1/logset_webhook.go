@@ -80,11 +80,38 @@ func (r *LogSetBasic) Default() {
 	if r.StoreFailureTimeout == nil {
 		r.StoreFailureTimeout = &metav1.Duration{Duration: defaultStoreFailureTimeout}
 	}
-	if r.PVCRetentionPolicy == nil {
-		policy := PVCRetentionPolicyDelete
-		r.PVCRetentionPolicy = &policy
-	}
+	r.defaultRetentionPolicy()
 	setDefaultServiceArgs(r)
+}
+
+func (r *LogSetBasic) defaultRetentionPolicy() {
+	defaultDeletePolicy := PVCRetentionPolicyDelete
+
+	if r.SharedStorage.S3 == nil {
+		if r.PVCRetentionPolicy == nil {
+			r.PVCRetentionPolicy = &defaultDeletePolicy
+		}
+		return
+	}
+
+	pvcPolicy := r.PVCRetentionPolicy
+	s3Policy := r.SharedStorage.S3.S3RetentionPolicy
+
+	switch {
+	// if both set, does not set any values
+	case pvcPolicy != nil && s3Policy != nil:
+		return
+	// if both not set, set to delete
+	case pvcPolicy == nil && s3Policy == nil:
+		r.PVCRetentionPolicy = &defaultDeletePolicy
+		r.SharedStorage.S3.S3RetentionPolicy = &defaultDeletePolicy
+	// if only set pvcPolicy, set it to s3Policy
+	case pvcPolicy != nil && s3Policy == nil:
+		r.SharedStorage.S3.S3RetentionPolicy = pvcPolicy
+	// if only set s3Policy, set it to pvcPolicy
+	case pvcPolicy == nil && s3Policy != nil:
+		r.PVCRetentionPolicy = s3Policy
+	}
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-logset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=logsets,verbs=create;update,versions=v1alpha1,name=vlogset.kb.io,admissionReviewVersions={v1,v1beta1}

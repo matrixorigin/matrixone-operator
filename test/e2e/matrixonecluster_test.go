@@ -206,7 +206,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		}
 		Eventually(func() error {
 			podList := &corev1.PodList{}
-			if err := kubeCli.List(ctx, podList); err != nil {
+			if err := kubeCli.List(ctx, podList, client.InNamespace(env.Namespace)); err != nil {
 				logger.Errorw("error list pods", "cluster", mo.Name, "error", err)
 				return err
 			}

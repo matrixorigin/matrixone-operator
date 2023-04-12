@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sync"
 )
@@ -72,7 +73,7 @@ func (bca *Actor) Finalize(ctx *recon.Context[*v1alpha1.BucketClaim]) (bool, err
 
 	if isJobSuccess(job) {
 		// successful delete data from s3, remove finalizer, remove bucketclaim from API server
-		bucket.Finalizers = removeFromSlice(bucket.Finalizers, v1alpha1.BucketDataFinalizer)
+		controllerutil.RemoveFinalizer(bucket, v1alpha1.BucketDataFinalizer)
 		if err = ctx.Update(bucket); err != nil {
 			return false, err
 		}
@@ -140,16 +141,6 @@ func isJobFailure(job *batchv1.Job) bool {
 		}
 	}
 	return false
-}
-
-func removeFromSlice(ss []string, s string) []string {
-	var ns []string
-	for _, v := range ss {
-		if v != s {
-			ns = append(ns, v)
-		}
-	}
-	return ns
 }
 
 func newFailCondition(reason, message string) *metav1.Condition {

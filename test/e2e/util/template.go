@@ -92,11 +92,11 @@ func MinioSecret(namespace string) *corev1.Secret {
 	return minioSecret
 }
 
-func MinioShareStorage(minioSecretName string, path string) v1alpha1.SharedStorageProvider {
+func MinioShareStorage(minioSecretName string) v1alpha1.SharedStorageProvider {
 	minioType := v1alpha1.S3ProviderTypeMinIO
 	SharedStorage := v1alpha1.SharedStorageProvider{
 		S3: &v1alpha1.S3Provider{
-			Path:     path,
+			Path:     "minio-bucket/test-" + rand.String(6),
 			Type:     &minioType,
 			Endpoint: "http://minio.default:9000",
 			SecretRef: &corev1.LocalObjectReference{

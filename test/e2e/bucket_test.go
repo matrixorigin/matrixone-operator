@@ -37,13 +37,14 @@ const (
 
 var _ = Describe("Matrix BucketClaim test", func() {
 
-	It("Should bucket been released use default retain policy(Retain)", func() {
-		minioPath := "minio-bucket/bucket-test"
+	It("Should bucket been released use retain policy", func() {
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
+		policyRetain := v1alpha1.PVCRetentionPolicyRetain
+		minioProvider.S3.S3RetentionPolicy = &policyRetain
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
 		ls.Spec.SharedStorage = minioProvider
 		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
@@ -101,12 +102,11 @@ var _ = Describe("Matrix BucketClaim test", func() {
 	})
 
 	It("Should bucket been deleted use delete retain policy", func() {
-		minioPath := "minio-bucket/bucket-test1"
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
 		policyDelete := v1alpha1.PVCRetentionPolicyDelete
 		minioProvider.S3.S3RetentionPolicy = &policyDelete
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
@@ -131,7 +131,7 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
 
 		By("minio bucket path should exist")
-		object, err := e2eminio.PutObject(minioPath)
+		object, err := e2eminio.PutObject(minioProvider.S3.Path)
 		Expect(err).Should(BeNil())
 		exist, err := e2eminio.IsObjectExist(object)
 		Expect(err).Should(BeNil())
@@ -159,12 +159,11 @@ var _ = Describe("Matrix BucketClaim test", func() {
 	})
 
 	It("Should not delete a bucket which is in use", func() {
-		minioPath := "minio-bucket/bucket-test2"
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
 		deletePolicy := v1alpha1.PVCRetentionPolicyDelete
 		minioProvider.S3.S3RetentionPolicy = &deletePolicy
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
@@ -215,12 +214,13 @@ var _ = Describe("Matrix BucketClaim test", func() {
 	})
 
 	It("Should reclaim job success when bucket not exist", func() {
-		minioPath := "minio-bucket/bucket-test3"
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
+		policyRetain := v1alpha1.PVCRetentionPolicyRetain
+		minioProvider.S3.S3RetentionPolicy = &policyRetain
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
 		ls.Spec.SharedStorage = minioProvider
 		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
@@ -243,7 +243,7 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
 
 		By("simulate bucket consumer to put object")
-		_, err = e2eminio.PutObject(minioPath)
+		_, err = e2eminio.PutObject(minioProvider.S3.Path)
 		Expect(err).Should(BeNil())
 
 		By("tear down logset cluster")
@@ -288,12 +288,13 @@ var _ = Describe("Matrix BucketClaim test", func() {
 	})
 
 	It("Should reclaim job success when prefix not exist", func() {
-		minioPath := "minio-bucket/bucket-test4"
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
+		policyRetain := v1alpha1.PVCRetentionPolicyRetain
+		minioProvider.S3.S3RetentionPolicy = &policyRetain
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
 		ls.Spec.SharedStorage = minioProvider
 		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
@@ -316,7 +317,7 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
 
 		By("simulate bucket consumer to put object")
-		_, err = e2eminio.PutObject(minioPath)
+		_, err = e2eminio.PutObject(minioProvider.S3.Path)
 		Expect(err).Should(BeNil())
 
 		By("tear down logset cluster")
@@ -361,12 +362,11 @@ var _ = Describe("Matrix BucketClaim test", func() {
 	})
 
 	It("Should failure when creating logset which want bind to an already bound bucket", func() {
-		minioPath := "minio-bucket/bucket-test5"
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
 		ls.Spec.SharedStorage = minioProvider
 		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
@@ -405,13 +405,16 @@ var _ = Describe("Matrix BucketClaim test", func() {
 	})
 
 	It("Should create mo cluster fail if its included logset want to bind an already bound bucket", func() {
+		By("create mo cluster in new namespace")
+		newNS := e2eutil.NewNamespaceTpl()
+		Expect(kubeCli.Create(ctx, newNS)).To(Succeed())
 
 		By("create one mo cluster with minio s3 provider")
-		minioSecret := e2eutil.MinioSecret(env.Namespace)
+		minioSecret := e2eutil.MinioSecret(newNS.Name)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, "minio-bucket/bucket-test6")
-		mo := e2eutil.NewMoTpl(env.Namespace, moVersion, moImageRepo)
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
+		mo := e2eutil.NewMoTpl(newNS.Name, moVersion, moImageRepo)
 		mo.Spec.LogService.SharedStorage = minioProvider
 		Expect(kubeCli.Create(ctx, mo)).To(Succeed())
 
@@ -428,7 +431,7 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		}, createClusterTimeout, pollInterval).Should(Succeed())
 
 		By("create another mo cluster with same minio s3 provider")
-		shouldFailMO := e2eutil.NewMoTpl(env.Namespace, moVersion, moImageRepo)
+		shouldFailMO := e2eutil.NewMoTpl(newNS.Name, moVersion, moImageRepo)
 		shouldFailMO.Spec.LogService.SharedStorage = minioProvider
 		err := kubeCli.Create(ctx, shouldFailMO)
 		Expect(err != nil).Should(BeTrue())
@@ -441,15 +444,16 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		Eventually(func() error {
 			return waitClusterDeleted(mo)
 		}, teardownClusterTimeout, pollInterval).Should(Succeed(), "cluster should be teardown")
+
+		Expect(kubeCli.Delete(ctx, newNS)).Should(Succeed())
 	})
 
 	It("Should failure when creating logset in another namespace which want bind to an already bound bucket", func() {
-		minioPath := "minio-bucket/bucket-test7"
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
 
-		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name, minioPath)
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
 		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
 		ls.Spec.SharedStorage = minioProvider
 		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
@@ -493,6 +497,105 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		}, teardownClusterTimeout, pollInterval).Should(Succeed())
 	})
 
+	It("Should pvc retention and s3 retention policy been correctly set", func() {
+		newNS := e2eutil.NewNamespaceTpl()
+		Expect(kubeCli.Create(ctx, newNS)).To(Succeed())
+
+		var logsetList []*v1alpha1.LogSet
+		policyRetain := v1alpha1.PVCRetentionPolicyRetain
+		policyDelete := v1alpha1.PVCRetentionPolicyDelete
+		minioSecret := e2eutil.MinioSecret(newNS.Name)
+		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
+
+		By("both be Delete if neither pvc policy nor s3 policy set")
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
+		minioProvider.S3.S3RetentionPolicy = nil
+		lsNilNil := e2eutil.NewLogSetTpl(newNS.Name, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		lsNilNil.Spec.Replicas = 1
+		lsNilNil.Spec.PVCRetentionPolicy = nil
+		lsNilNil.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, lsNilNil)).To(Succeed())
+		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(lsNilNil), lsNilNil)).To(Succeed())
+		Expect(*lsNilNil.Spec.PVCRetentionPolicy).Should(Equal(policyDelete))
+		Expect(*lsNilNil.Spec.SharedStorage.S3.S3RetentionPolicy).Should(Equal(policyDelete))
+		logsetList = append(logsetList, lsNilNil)
+
+		By("both be Retain if pvc is Retain and s3 policy not set")
+		minioProvider = e2eutil.MinioShareStorage(minioSecret.Name)
+		minioProvider.S3.S3RetentionPolicy = nil
+		lsRetainNil := e2eutil.NewLogSetTpl(newNS.Name, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		lsRetainNil.Spec.Replicas = 1
+		lsRetainNil.Spec.PVCRetentionPolicy = &policyRetain
+		lsRetainNil.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, lsRetainNil)).To(Succeed())
+		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(lsRetainNil), lsRetainNil)).To(Succeed())
+		Expect(*lsRetainNil.Spec.PVCRetentionPolicy).Should(Equal(policyRetain))
+		Expect(*lsRetainNil.Spec.SharedStorage.S3.S3RetentionPolicy).Should(Equal(policyRetain))
+		logsetList = append(logsetList, lsRetainNil)
+
+		By("both be Delete if pvc is Delete and s3 policy not set")
+		minioProvider = e2eutil.MinioShareStorage(minioSecret.Name)
+		minioProvider.S3.S3RetentionPolicy = nil
+		lsDeleteNil := e2eutil.NewLogSetTpl(newNS.Name, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		lsDeleteNil.Spec.Replicas = 1
+		lsDeleteNil.Spec.PVCRetentionPolicy = &policyDelete
+		lsDeleteNil.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, lsDeleteNil)).To(Succeed())
+		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(lsDeleteNil), lsDeleteNil)).To(Succeed())
+		Expect(*lsDeleteNil.Spec.PVCRetentionPolicy).Should(Equal(policyDelete))
+		Expect(*lsDeleteNil.Spec.SharedStorage.S3.S3RetentionPolicy).Should(Equal(policyDelete))
+		logsetList = append(logsetList, lsDeleteNil)
+
+		By("both be Retain if pvc not set and s3 policy is Retain")
+		minioProvider = e2eutil.MinioShareStorage(minioSecret.Name)
+		minioProvider.S3.S3RetentionPolicy = &policyRetain
+		lsNilRetain := e2eutil.NewLogSetTpl(newNS.Name, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		lsNilRetain.Spec.Replicas = 1
+		lsNilRetain.Spec.PVCRetentionPolicy = nil
+		lsNilRetain.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, lsNilRetain)).To(Succeed())
+		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(lsNilRetain), lsNilRetain)).To(Succeed())
+		Expect(*lsNilRetain.Spec.PVCRetentionPolicy).Should(Equal(policyRetain))
+		Expect(*lsNilRetain.Spec.SharedStorage.S3.S3RetentionPolicy).Should(Equal(policyRetain))
+		logsetList = append(logsetList, lsNilRetain)
+
+		By("keep unchanged is both set")
+		minioProvider = e2eutil.MinioShareStorage(minioSecret.Name)
+		minioProvider.S3.S3RetentionPolicy = &policyRetain
+		lsDeleteRetain := e2eutil.NewLogSetTpl(newNS.Name, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		lsDeleteRetain.Spec.Replicas = 1
+		lsDeleteRetain.Spec.PVCRetentionPolicy = &policyDelete
+		lsDeleteRetain.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, lsDeleteRetain)).To(Succeed())
+		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(lsDeleteRetain), lsDeleteRetain)).To(Succeed())
+		Expect(*lsDeleteRetain.Spec.PVCRetentionPolicy).Should(Equal(policyDelete))
+		Expect(*lsDeleteRetain.Spec.SharedStorage.S3.S3RetentionPolicy).Should(Equal(policyRetain))
+		logsetList = append(logsetList, lsDeleteRetain)
+
+		By("keep unchanged is both set")
+		minioProvider = e2eutil.MinioShareStorage(minioSecret.Name)
+		minioProvider.S3.S3RetentionPolicy = &policyDelete
+		lsRetainDelete := e2eutil.NewLogSetTpl(newNS.Name, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		lsRetainDelete.Spec.Replicas = 1
+		lsRetainDelete.Spec.PVCRetentionPolicy = &policyRetain
+		lsRetainDelete.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, lsRetainDelete)).To(Succeed())
+		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(lsRetainDelete), lsRetainDelete)).To(Succeed())
+		Expect(*lsRetainDelete.Spec.PVCRetentionPolicy).Should(Equal(policyRetain))
+		Expect(*lsRetainDelete.Spec.SharedStorage.S3.S3RetentionPolicy).Should(Equal(policyDelete))
+		logsetList = append(logsetList, lsRetainDelete)
+
+		By("tear down logset cluster")
+		for _, ls := range logsetList {
+			Expect(kubeCli.Delete(ctx, ls)).To(Succeed())
+		}
+		for _, ls := range logsetList {
+			Eventually(func() error {
+				return waitLogSetDeleted(ls)
+			}, teardownClusterTimeout, pollInterval).Should(Succeed())
+		}
+		Expect(kubeCli.Delete(ctx, newNS)).Should(Succeed())
+	})
 })
 
 func waitClusterDeleted(mo *v1alpha1.MatrixOneCluster) error {

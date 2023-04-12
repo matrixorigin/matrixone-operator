@@ -6715,9 +6715,7 @@ spec:
                           be inferred from the deployment environment
                         type: string
                       s3RetentionPolicy:
-                        default: Retain
-                        description: TODO should be consistent with pvc retention
-                          policy ? S3RetentionPolicy defines the retention policy
+                        description: S3RetentionPolicy defines the retention policy
                           of orphaned S3 bucket storage
                         enum:
                         - Delete

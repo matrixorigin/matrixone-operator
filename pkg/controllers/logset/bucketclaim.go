@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sort"
 )
 
@@ -48,14 +49,11 @@ func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruis
 	}
 
 	targetBucket := bucket.DeepCopy()
-	targetFinalizer := appendIfNotExist(targetBucket.ObjectMeta.Finalizers, v1alpha1.BucketDataFinalizer)
-	sort.Strings(targetFinalizer)
-
-	targetBucket.ObjectMeta.Finalizers = targetFinalizer
+	controllerutil.AddFinalizer(targetBucket, v1alpha1.BucketDataFinalizer)
 	targetBucket.Spec.S3 = ls.Spec.LogSetBasic.SharedStorage.S3
 	targetBucket.Status.BindTo = v1alpha1.BucketBindToMark(ls.ObjectMeta)
 	targetBucket.Status.State = v1alpha1.StatusInUse
-
+	sort.Strings(targetBucket.Finalizers)
 	sort.Strings(bucket.Finalizers)
 	if !equality.Semantic.DeepEqual(targetBucket, bucket) {
 		return ctx.Update(targetBucket)
