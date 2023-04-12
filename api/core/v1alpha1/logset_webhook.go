@@ -135,7 +135,7 @@ func (r *LogSet) ValidateDelete() error {
 	return nil
 }
 
-func (r *LogSetBasic) validateMutate() field.ErrorList {
+func (r *LogSetBasic) validateMutateCommon() field.ErrorList {
 	var errs field.ErrorList
 	errs = append(errs, validateVolume(&r.Volume, field.NewPath("spec").Child("volume"))...)
 	errs = append(errs, r.validateInitialConfig()...)
@@ -145,14 +145,14 @@ func (r *LogSetBasic) validateMutate() field.ErrorList {
 
 func (r *LogSetBasic) ValidateCreate(meta metav1.ObjectMeta) field.ErrorList {
 	var errs field.ErrorList
-	errs = append(errs, r.validateMutate()...)
+	errs = append(errs, r.validateMutateCommon()...)
 	errs = append(errs, r.validateIfBucketInUse(meta)...)
 	errs = append(errs, r.validateIfBucketDeleting()...)
 	return errs
 }
 
 func (r *LogSetBasic) ValidateUpdate(old *LogSetBasic, meta metav1.ObjectMeta) field.ErrorList {
-	if err := r.validateMutate(); err != nil {
+	if err := r.validateMutateCommon(); err != nil {
 		return err
 	}
 	var errs field.ErrorList
