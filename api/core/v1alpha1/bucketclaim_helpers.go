@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"strings"
 )
 
 const (
@@ -29,10 +30,10 @@ const (
 
 	// BucketDataFinalizer blocks BucketClaim reclaim until data in bucket has been recycled
 	BucketDataFinalizer = "matrixorigin.io/bucket-data-finalizer"
-	// BucketCNFinalizer finalizer removed when cnset cluster deleted
-	BucketCNFinalizer = "matrixorigin.io/bucket-cn-finalizer"
-	// BucketDNFinalizer finalizer removed when dnset cluster deleted
-	BucketDNFinalizer = "matrixorigin.io/bucket-dn-finalizer"
+	// BucketCNFinalizerPrefix is finalizer prefix of cn set
+	BucketCNFinalizerPrefix = "matrixorigin.io/CN"
+	// BucketDNFinalizerPrefix is finalizer prefix of dn set
+	BucketDNFinalizerPrefix = "matrixorigin.io/DN"
 )
 
 // ClaimedBucket return claimed bucket according to S3Provider configuration, caller must ensure that provider is not nil
@@ -121,4 +122,13 @@ func RemoveBucketFinalizer(ctx context.Context, c client.Client, lsMeta metav1.O
 		return c.Update(ctx, bucket)
 	}
 	return nil
+}
+
+func ContainFinalizerPrefix(finalizers []string, prefix string) bool {
+	for _, f := range finalizers {
+		if strings.HasPrefix(f, prefix) {
+			return true
+		}
+	}
+	return false
 }

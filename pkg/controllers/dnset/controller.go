@@ -15,6 +15,7 @@
 package dnset
 
 import (
+	"fmt"
 	"time"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -116,7 +117,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return d.with(sts, svc).Update, nil
 	}
 
-	err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, v1alpha1.BucketDNFinalizer)
+	err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
 	if err != nil {
 		return nil, errors.Wrap(err, "add bucket finalizer")
 	}
@@ -150,7 +151,7 @@ func (d *Actor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error) {
 			return false, nil
 		}
 	}
-	err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, v1alpha1.BucketDNFinalizer)
+	err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
 	if err != nil {
 		return false, err
 	}
@@ -216,6 +217,10 @@ func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	}
 	r.sts.Spec.ReserveOrdinals = util.Upsert(r.sts.Spec.ReserveOrdinals, ordinal)
 	return nil
+}
+
+func bucketFinalizer(dn *v1alpha1.DNSet) string {
+	return fmt.Sprintf("%s-%s-%s", v1alpha1.BucketDNFinalizerPrefix, dn.Namespace, dn.Name)
 }
 
 func (d *Actor) Reconcile(mgr manager.Manager) error {
