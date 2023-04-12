@@ -28,9 +28,6 @@ const (
 	StatusReleased State = "Released"
 	// StatusDeleting - bucket is deleting, data in share storage s3
 	StatusDeleting State = "Deleting"
-
-	// BucketDataFinalizer blocks BucketClaim reclaim until data in bucket has been recycled
-	BucketDataFinalizer = "matrixorigin.io/bucket-data-finalizer"
 )
 
 // +kubebuilder:object:root=true

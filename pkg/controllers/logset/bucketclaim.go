@@ -64,41 +64,45 @@ func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruis
 // finalizeBucket marks bucket as deleted for BucketClaim with Delete policy, delete always happen after deletion of
 // logset, and will not block deletion of logset.
 // logset can be deleted only after bucket status is correctly set (with the constraints of its finalizer)
-func (r *Actor) finalizeBucket(ctx *recon.Context[*v1alpha1.LogSet]) error {
+func (r *Actor) finalizeBucket(ctx *recon.Context[*v1alpha1.LogSet]) (success bool, err error) {
 	ls := ctx.Obj
 
 	// skip if no s3 share storage configuration
 	if ls.Spec.SharedStorage.S3 == nil {
-		return nil
+		return true, nil
 	}
 
 	claimedBucket, err := v1alpha1.ClaimedBucket(ctx.Client, ls.Spec.SharedStorage.S3)
 	if err != nil {
-		return err
+		return false, err
 	}
 	// skip if no bucket found
 	if claimedBucket == nil {
-		return nil
+		return true, nil
 	}
 	if claimedBucket.Status.BindTo != "" &&
 		claimedBucket.Status.BindTo != v1alpha1.BucketBindToMark(ls.ObjectMeta) {
-		return fmt.Errorf("claimed bucket %v already bind to %s", client.ObjectKeyFromObject(claimedBucket), claimedBucket.Status.BindTo)
+		return false, fmt.Errorf("claimed bucket %v already bind to %s", client.ObjectKeyFromObject(claimedBucket), claimedBucket.Status.BindTo)
 	}
 
+	if controllerutil.ContainsFinalizer(claimedBucket, v1alpha1.BucketCNFinalizer) ||
+		controllerutil.ContainsFinalizer(claimedBucket, v1alpha1.BucketDNFinalizer) {
+		return false, nil
+	}
 	switch *ls.Spec.SharedStorage.S3.S3RetentionPolicy {
 	case v1alpha1.PVCRetentionPolicyRetain:
 		claimedBucket.Status.State = v1alpha1.StatusReleased
 		claimedBucket.Status.BindTo = ""
-		return ctx.Update(claimedBucket)
+		return true, ctx.Update(claimedBucket)
 	case v1alpha1.PVCRetentionPolicyDelete:
 		claimedBucket.Status.State = v1alpha1.StatusDeleting
 		claimedBucket.Status.BindTo = ""
 		if err = ctx.Update(claimedBucket); err != nil {
-			return err
+			return false, err
 		}
-		return ctx.Delete(claimedBucket)
+		return true, ctx.Delete(claimedBucket)
 	default:
-		return fmt.Errorf("unknown s3 retention policy %s", *ls.Spec.LogSetBasic.SharedStorage.S3.S3RetentionPolicy)
+		return false, fmt.Errorf("unknown s3 retention policy %s", *ls.Spec.LogSetBasic.SharedStorage.S3.S3RetentionPolicy)
 	}
 }
 

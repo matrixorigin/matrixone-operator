@@ -299,8 +299,12 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
 		// check whether pods are cleaned in next reconcile
 		return false, nil
 	}
-	if err = r.finalizeBucket(ctx); err != nil {
+	success, err := r.finalizeBucket(ctx)
+	if err != nil {
 		return false, err
+	}
+	if !success {
+		return false, nil
 	}
 	return true, nil
 }

@@ -15,14 +15,11 @@
 package v1alpha1
 
 import (
-	"context"
-	"crypto/sha1"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
@@ -31,8 +28,6 @@ const (
 
 	// defaultArgsFile is the field name in matrixone-operator-cm configmap, contains information of default service args
 	defaultArgsFile = "defaultArgs"
-
-	BucketUniqLabel = "matrixorigin.io/bucket-unique-id"
 )
 
 var (
@@ -232,40 +227,6 @@ func setDefaultServiceArgs(object interface{}) {
 		moLog.Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetBasic, *DNSetBasic, *CNSetBasic")
 		return
 	}
-}
-
-// ClaimedBucket return claimed bucket according to S3Provider configuration, caller must ensure that provider is not nil
-// NOTE: ClaimedBucket search bucket in cluster scope
-func ClaimedBucket(c client.Client, provider *S3Provider) (*BucketClaim, error) {
-	uniqLabel := UniqueBucketLabel(provider)
-	bcList := &BucketClaimList{}
-	if err := c.List(context.TODO(), bcList, client.MatchingLabels{BucketUniqLabel: uniqLabel}); err != nil {
-		return nil, err
-	}
-
-	switch len(bcList.Items) {
-	case 0:
-		return nil, nil
-	case 1:
-		return &bcList.Items[0], nil
-	default:
-		return nil, fmt.Errorf("list more than one buckets")
-	}
-}
-
-// UniqueBucketLabel generate an unique id for S3 provider, this id becomes a label in bucketClaim
-func UniqueBucketLabel(s3Provider *S3Provider) string {
-	var providerType string
-	if s3Provider.Type != nil {
-		providerType = string(*s3Provider.Type)
-	}
-	uniqId := fmt.Sprintf("%s-%s-%s", providerType, s3Provider.Endpoint, s3Provider.Path)
-	uniqId = fmt.Sprintf("%x", sha1.Sum([]byte(uniqId)))
-	return uniqId
-}
-
-func BucketBindToMark(logsetMeta metav1.ObjectMeta) string {
-	return fmt.Sprintf("%s/%s", logsetMeta.Namespace, logsetMeta.Name)
 }
 
 func LogSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
