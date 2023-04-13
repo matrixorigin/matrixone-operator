@@ -192,4 +192,28 @@ rules:
     - list
     - patch
     - watch
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - bucketclaims
+    verbs:
+      - '*'
+  - apiGroups:
+      - core.matrixorigin.io
+    resources:
+      - bucketclaims/status
+    verbs:
+      - '*'
+  - apiGroups:
+      - 'batch'
+    resources:
+      - jobs
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
 {{- end }}

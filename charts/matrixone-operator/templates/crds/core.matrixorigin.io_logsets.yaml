@@ -6714,6 +6714,13 @@ spec:
                         description: Region of the bucket the default region will
                           be inferred from the deployment environment
                         type: string
+                      s3RetentionPolicy:
+                        description: S3RetentionPolicy defines the retention policy
+                          of orphaned S3 bucket storage
+                        enum:
+                        - Delete
+                        - Retain
+                        type: string
                       secretRef:
                         description: Credentials for s3, the client will automatically
                           discover credential sources from the environment if not

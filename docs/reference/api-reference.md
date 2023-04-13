@@ -12,11 +12,63 @@ Other resources types represent sub-resources managed by MatrixOneCluster but al
 Refer to https://docs.matrixorigin.io/ for more information about MatrixOne database and matrixone-operator.
 
 ### Resource Types
+- [BucketClaim](#bucketclaim)
+- [BucketClaimList](#bucketclaimlist)
 - [CNSet](#cnset)
 - [DNSet](#dnset)
 - [LogSet](#logset)
 - [MatrixOneCluster](#matrixonecluster)
 - [WebUI](#webui)
+
+
+
+#### BucketClaim
+
+
+
+A BucketClaim is a resource that represents the object storage bucket resource used by a mo cluster
+
+_Appears in:_
+- [BucketClaimList](#bucketclaimlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `BucketClaim`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[BucketClaimSpec](#bucketclaimspec)_ | Spec is the desired state of BucketClaim |
+
+
+#### BucketClaimList
+
+
+
+BucketClaimList contains a list of BucketClaim
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `BucketClaimList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[BucketClaim](#bucketclaim) array_ |  |
+
+
+#### BucketClaimSpec
+
+
+
+
+
+_Appears in:_
+- [BucketClaim](#bucketclaim)
+
+| Field | Description |
+| --- | --- |
+| `s3` _[S3Provider](#s3provider)_ | S3 specifies an S3 bucket as the shared storage provider, mutual-exclusive with other providers. |
+| `logSetSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#podtemplatespec-v1-core)_ | LogSetTemplate is a complete copy version of kruise statefulset PodTemplateSpec |
+
 
 
 
@@ -88,6 +140,18 @@ _Appears in:_
 | `role` _CNRole_ | [TP, AP], default to TP |
 
 
+#### ConditionalStatus
+
+
+
+
+
+_Appears in:_
+- [BucketClaimStatus](#bucketclaimstatus)
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#condition-v1-meta) array_ |  |
 
 
 #### DNSet
@@ -391,6 +455,7 @@ _Underlying type:_ `string`
 
 _Appears in:_
 - [LogSetBasic](#logsetbasic)
+- [S3Provider](#s3provider)
 
 
 
@@ -432,6 +497,35 @@ _Appears in:_
 | `maxSurge` _integer_ | MaxSurge is an optional field that specifies the maximum number of Pods that can be created over the desired number of Pods. |
 | `maxUnavailable` _integer_ | MaxUnavailable an optional field that specifies the maximum number of Pods that can be unavailable during the update process. |
 
+
+#### S3Provider
+
+
+
+
+
+_Appears in:_
+- [BucketClaimSpec](#bucketclaimspec)
+- [SharedStorageProvider](#sharedstorageprovider)
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path is the s3 storage path in <bucket-name>/<folder> format, e.g. "my-bucket/my-folder" |
+| `type` _[S3ProviderType](#s3providertype)_ | S3ProviderType is type of this s3 provider, options: [aws, minio] default to aws |
+| `region` _string_ | Region of the bucket the default region will be inferred from the deployment environment |
+| `endpoint` _string_ | Endpoint is the endpoint of the S3 compatible service default to aws S3 well known endpoint |
+| `secretRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core)_ | Credentials for s3, the client will automatically discover credential sources from the environment if not specified |
+| `s3RetentionPolicy` _[PVCRetentionPolicy](#pvcretentionpolicy)_ | S3RetentionPolicy defines the retention policy of orphaned S3 bucket storage |
+
+
+#### S3ProviderType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [S3Provider](#s3provider)
 
 
 

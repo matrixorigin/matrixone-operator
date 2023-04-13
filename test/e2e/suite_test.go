@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/matrixorigin/matrixone-operator/test/e2e/e2eminio"
+	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 
 	"math/rand"
 	"os"
@@ -55,6 +57,7 @@ var kubeCli client.Client
 var ctx context.Context
 var logger *zap.SugaredLogger
 var env Env
+var minioForwardHandler *e2eutil.PortForwardHandler
 
 type Env struct {
 	Namespace string
@@ -100,6 +103,11 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 	buf, err := json.Marshal(env)
 	Expect(err).Should(BeNil())
+
+	By("port forward minio")
+	minioForwardHandler, err = e2eminio.PortForward(kubeCli, restConfig)
+	Expect(err).Should(BeNil())
+	Expect(minioForwardHandler.Ready(portForwardTimeout)).To(Succeed(), "port-forward should complete within timeout")
 	return buf
 
 }, func(fromNode1 []byte) {
@@ -131,6 +139,8 @@ var _ = SynchronizedAfterSuite(func() {
 	// run on all nodes
 }, func() {
 	// run synchronized
+	ReclaimReleasedBucket()
+	e2eminio.StopForward(minioForwardHandler)
 })
 
 func e2eResourceLabels() map[string]string {
