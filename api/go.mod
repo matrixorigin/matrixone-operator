@@ -1,6 +1,6 @@
 module github.com/matrixorigin/matrixone-operator/api
 
-go 1.18
+go 1.19
 
 require (
 	github.com/matrixorigin/controller-runtime v0.0.0-20221223020015-ec2798dfbabf

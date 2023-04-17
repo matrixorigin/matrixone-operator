@@ -20,13 +20,24 @@ runs:
         log: info
         config: .licenserc.yml
 
+    - name: setup go version
+      uses: actions/setup-go@v3
+      with:
+        check-latest: true
+        go-version:
+          ${{ env.golang-version }}
+
     - name: verify
       shell: bash
       run: make verify
 
     # disable action cache due to https://github.com/golangci/golangci-lint-action/issues/244
+    # upgrade due to https://github.com/golangci/golangci-lint/issues/2374
+    # skip cache due to https://github.com/golangci/golangci-lint-action/issues/23
     - name: golangci_lint
       uses: golangci/golangci-lint-action@v3.1.0
       with:
-        version: v1.45.2
+        version: v1.50.0
         args: --timeout 10m0s
+        skip-pkg-cache: true
+        skip-build-cache: true
