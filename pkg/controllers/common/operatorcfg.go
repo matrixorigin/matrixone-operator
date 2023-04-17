@@ -24,7 +24,8 @@ import (
 
 // OperatorConfig includes configurations for this operator process
 type OperatorConfig struct {
-	DefaultArgs *v1alpha1.DefaultArgs `json:"defaultArgs,omitempty"`
+	DefaultArgs  *v1alpha1.DefaultArgs `json:"defaultArgs,omitempty" yaml:"defaultArgs,omitempty"`
+	FeatureGates map[string]bool       `json:"featureGates,omitempty" yaml:"featureGates,omitempty"`
 }
 
 // LoadOperatorConfig read all operator configurations from configmap mount path, and load it into OperatorConfig struct

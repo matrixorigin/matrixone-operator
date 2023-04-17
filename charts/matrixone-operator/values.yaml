@@ -72,3 +72,6 @@ defaultArgs:
   - name: cn
     values:
       - -debug-http=:6060
+
+featureGates:
+  s3Reclaim: true

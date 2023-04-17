@@ -12,5 +12,6 @@ runs:
     - name: setup go version
       uses: actions/setup-go@v3
       with:
+        check-latest: true
         go-version:
           ${{ env.golang-version }}

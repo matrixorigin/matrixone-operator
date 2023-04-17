@@ -16,6 +16,7 @@ package dnset
 
 import (
 	"fmt"
+	"github.com/matrixorigin/matrixone-operator/api/features"
 	"time"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -117,9 +118,11 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return d.with(sts, svc).Update, nil
 	}
 
-	err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
-	if err != nil {
-		return nil, errors.Wrap(err, "add bucket finalizer")
+	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
+		if err != nil {
+			return nil, errors.Wrap(err, "add bucket finalizer")
+		}
 	}
 	if recon.IsReady(&dn.Status.ConditionalStatus) {
 		return nil, nil
@@ -151,9 +154,11 @@ func (d *Actor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error) {
 			return false, nil
 		}
 	}
-	err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
-	if err != nil {
-		return false, err
+	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
+		if err != nil {
+			return false, err
+		}
 	}
 	return true, nil
 }

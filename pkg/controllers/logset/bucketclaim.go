@@ -18,6 +18,7 @@ import (
 	"fmt"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/api/features"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,8 +28,11 @@ import (
 )
 
 func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) error {
-	ls := ctx.Obj
+	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		return nil
+	}
 
+	ls := ctx.Obj
 	// skip if no s3 share storage configuration
 	if ls.Spec.SharedStorage.S3 == nil {
 		return nil
@@ -65,8 +69,11 @@ func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruis
 // logset, and will not block deletion of logset.
 // logset can be deleted only after bucket status is correctly set (with the constraints of its finalizer)
 func (r *Actor) finalizeBucket(ctx *recon.Context[*v1alpha1.LogSet]) (success bool, err error) {
-	ls := ctx.Obj
+	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		return true, nil
+	}
 
+	ls := ctx.Obj
 	// skip if no s3 share storage configuration
 	if ls.Spec.SharedStorage.S3 == nil {
 		return true, nil
@@ -126,14 +133,4 @@ func (r *Actor) createNewBucket(ctx *recon.Context[*v1alpha1.LogSet], sts *kruis
 		},
 	}
 	return ctx.Create(bucket)
-}
-
-func appendIfNotExist(a []string, s string) []string {
-	for _, v := range a {
-		if v == s {
-			return a
-		}
-	}
-	a = append(a, s)
-	return a
 }

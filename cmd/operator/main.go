@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
+	"github.com/matrixorigin/matrixone-operator/api/features"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/bucketclaim"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
@@ -92,6 +93,9 @@ func main() {
 	err := common.LoadOperatorConfig(operatorCfgDir, &operatorCfg)
 	exitIf(err, "failed to load operator configmap")
 
+	err = features.DefaultMutableFeatureGate.SetFromMap(operatorCfg.FeatureGates)
+	exitIf(err, "failed to set feature gate")
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Host:                   "0.0.0.0",
@@ -150,9 +154,13 @@ func main() {
 	err = moActor.Reconcile(mgr)
 	exitIf(err, "unable to set up matrixone cluster controller")
 
-	bucketActor := bucketclaim.Actor{}
-	err = bucketActor.Reconcile(mgr)
-	exitIf(err, "unable to set up bucketclaim cluster controller")
+	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		bucketActor := bucketclaim.Actor{}
+		err = bucketActor.Reconcile(mgr)
+		exitIf(err, "unable to set up bucketclaim cluster controller")
+	} else {
+		setupLog.Info(fmt.Sprintf("s3 reclaim feature not enabled!"))
+	}
 
 	err = mgr.AddHealthzCheck("healthz", healthz.Ping)
 	exitIf(err, "unable to set up health check")
