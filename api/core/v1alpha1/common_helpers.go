@@ -25,9 +25,6 @@ import (
 
 const (
 	reasonEmpty = "empty"
-
-	// defaultArgsFile is the field name in matrixone-operator-cm configmap, contains information of default service args
-	defaultArgsFile = "defaultArgs"
 )
 
 var (

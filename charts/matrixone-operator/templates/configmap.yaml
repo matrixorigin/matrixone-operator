@@ -11,3 +11,8 @@ data:
     {{.name | nindent 4 }}:
     {{- toYaml .values | nindent 4 }}
     {{- end }}
+
+  featureGates: |
+    {{- range $key, $value := .Values.featureGates }}
+    {{ $key }}: {{ $value }}
+    {{- end }}

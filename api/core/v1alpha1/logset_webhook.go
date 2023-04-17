@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"github.com/matrixorigin/matrixone-operator/api/features"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -215,6 +216,9 @@ func (r *LogSetBasic) validateInitialConfig() field.ErrorList {
 }
 
 func (r *LogSetBasic) validateIfBucketDeleting() field.ErrorList {
+	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		return nil
+	}
 	if r.SharedStorage.S3 == nil {
 		return nil
 	}
@@ -237,6 +241,9 @@ func (r *LogSetBasic) validateIfBucketDeleting() field.ErrorList {
 }
 
 func (r *LogSetBasic) validateIfBucketInUse(meta metav1.ObjectMeta) field.ErrorList {
+	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		return nil
+	}
 	if r.SharedStorage.S3 == nil {
 		return nil
 	}
