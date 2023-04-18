@@ -41,6 +41,8 @@ const (
 	ComponentLabelKey = "matrixorigin.io/component"
 	// NamespaceLabelKey labels the owner namespace of cluster-scope resources
 	NamespaceLabelKey = "matrixorigin.io/namespace"
+	// MatrixoneClusterLabelKey labels pod generated in certain mo cluster
+	MatrixoneClusterLabelKey = "matrixorigin.io/cluster"
 	// ActionRequiredLabelKey labels the resource that need manual intervention
 	ActionRequiredLabelKey = "matrixorigin.io/action-required"
 	// ActionRequiredLabelValue is a dummy value that is used with ActionRequiredLabelKey

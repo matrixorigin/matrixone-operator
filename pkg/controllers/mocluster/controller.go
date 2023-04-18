@@ -18,6 +18,7 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
 	"github.com/pkg/errors"
@@ -39,8 +40,6 @@ const (
 	passwordKey = "password"
 
 	maxUnavailablePod = 1
-
-	matrixoneClusterLabelKey = "matrixorigin.io/cluster"
 )
 
 var _ recon.Actor[*v1alpha1.MatrixOneCluster] = &MatrixOneClusterActor{}
@@ -60,7 +59,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	if err := recon.CreateOwnedOrUpdate(ctx, unavailableBudget, func() error {
 		unavailableBudget.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				matrixoneClusterLabelKey: mo.Name,
+				common.MatrixoneClusterLabelKey: mo.Name,
 			},
 		}
 		unavailableBudget.Spec.MaxUnavailable = &maxUnavailable
@@ -216,7 +215,7 @@ func setOverlay(o **v1alpha1.Overlay, mo *v1alpha1.MatrixOneCluster) {
 	if (*o).PodLabels == nil {
 		(*o).PodLabels = map[string]string{}
 	}
-	(*o).PodLabels[matrixoneClusterLabelKey] = mo.Name
+	(*o).PodLabels[common.MatrixoneClusterLabelKey] = mo.Name
 }
 
 // Initialize the MO cluster
