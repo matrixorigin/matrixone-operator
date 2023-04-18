@@ -176,6 +176,9 @@ var _ = Describe("MatrixOneCluster test", func() {
 				if pod.Labels[common.ComponentLabelKey] != comp {
 					continue
 				}
+				if pod.Labels[common.MatrixoneClusterLabelKey] != mo.Name {
+					continue
+				}
 				configVolume := util.FindFirst(pod.Spec.Volumes, util.WithVolumeName("config"))
 				// for all pods of the same component, we verify:
 				if configMapName == "" {

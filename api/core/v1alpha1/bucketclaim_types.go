@@ -54,6 +54,8 @@ type BucketClaimSpec struct {
 	S3 *S3Provider `json:"s3,omitempty"`
 
 	// LogSetTemplate is a complete copy version of kruise statefulset PodTemplateSpec
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	LogSetTemplate corev1.PodTemplateSpec `json:"logSetSpec"`
 }
 
