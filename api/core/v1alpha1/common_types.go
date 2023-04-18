@@ -92,9 +92,13 @@ type MainContainerOverlay struct {
 	Args []string `json:"args,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
 	// ImagePullPolicy is the pull policy of MatrixOne image. The default value is the same as the
@@ -105,18 +109,28 @@ type MainContainerOverlay struct {
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`
 }
 
@@ -125,30 +139,46 @@ type Overlay struct {
 	MainContainerOverlay `json:",inline"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	VolumeClaims []corev1.PersistentVolumeClaim `json:"volumeClaims,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`
 
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
 	// +optional
@@ -158,15 +188,21 @@ type Overlay struct {
 	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	HostAliases []corev1.HostAlias `json:"hostAliases,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 
 	// +optional
 	RuntimeClassName *string `json:"runtimeClassName,omitempty"`
 
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	DNSConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
 
 	// +optional
