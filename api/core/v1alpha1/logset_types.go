@@ -87,9 +87,19 @@ func (l *LogSetBasic) GetStoreFailureTimeout() metav1.Duration {
 
 func (l *LogSetBasic) GetPVCRetentionPolicy() PVCRetentionPolicy {
 	if l.PVCRetentionPolicy == nil {
-		return PVCRetentionPolicyDelete
+		l.setDefaultRetentionPolicy()
 	}
 	return *l.PVCRetentionPolicy
+}
+
+func (l *LogSetBasic) GetS3RetentionPolicy() *PVCRetentionPolicy {
+	if l.SharedStorage.S3 == nil {
+		return nil
+	}
+	if l.SharedStorage.S3.S3RetentionPolicy == nil {
+		l.setDefaultRetentionPolicy()
+	}
+	return l.SharedStorage.S3.S3RetentionPolicy
 }
 
 type InitialConfig struct {
