@@ -78,6 +78,12 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return d.Create, nil
 	}
 
+	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
+		if err != nil {
+			return nil, errors.Wrap(err, "add bucket finalizer")
+		}
+	}
 	podList := &corev1.PodList{}
 	err = ctx.List(podList, client.InNamespace(dn.Namespace), client.MatchingLabels(common.SubResourceLabels(dn)))
 	if err != nil {
@@ -118,12 +124,6 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return d.with(sts, svc).Update, nil
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
-		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
-		if err != nil {
-			return nil, errors.Wrap(err, "add bucket finalizer")
-		}
-	}
 	if recon.IsReady(&dn.Status.ConditionalStatus) {
 		return nil, nil
 	}

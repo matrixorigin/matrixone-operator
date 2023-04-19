@@ -71,6 +71,9 @@ func BucketBindToMark(logsetMeta metav1.ObjectMeta) string {
 }
 
 func AddBucketFinalizer(ctx context.Context, c client.Client, lsMeta metav1.ObjectMeta, finalizer string) error {
+	if lsMeta.Namespace == "" || lsMeta.Name == "" {
+		return nil
+	}
 	ls := &LogSet{}
 	err := c.Get(ctx, client.ObjectKey{Namespace: lsMeta.Namespace, Name: lsMeta.Name}, ls)
 	if err != nil {

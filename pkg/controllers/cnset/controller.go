@@ -75,6 +75,12 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return c.Create, nil
 	}
 
+	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, bucketFinalizer(cn))
+		if err != nil {
+			return nil, errors.Wrap(err, "add bucket finalizer")
+		}
+	}
 	// update statefulset of cnset
 	origin := sts.DeepCopy()
 	if err := syncPods(ctx, sts); err != nil {
@@ -126,12 +132,6 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return c.with(sts, svc).Scale, nil
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
-		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, bucketFinalizer(cn))
-		if err != nil {
-			return nil, errors.Wrap(err, "add bucket finalizer")
-		}
-	}
 	if recon.IsReady(&cn.Status.ConditionalStatus) {
 		return nil, nil
 	}

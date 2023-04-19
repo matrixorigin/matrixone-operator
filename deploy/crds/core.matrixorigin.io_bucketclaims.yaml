@@ -18,15 +18,15 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.s3.type
-      name: Type
-      type: string
     - jsonPath: .status.state
       name: Status
       type: string
     - jsonPath: .status.bindTo
       name: Bind
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:

@@ -156,6 +156,7 @@ func newFailCondition(reason, message string) *metav1.Condition {
 
 func (bca *Actor) Reconcile(mgr manager.Manager) error {
 	return recon.Setup[*v1alpha1.BucketClaim](&v1alpha1.BucketClaim{}, "BucketClaim", mgr, bca,
+		recon.SkipStatusSync(),
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&batchv1.Job{})
 		}))
