@@ -75,7 +75,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return c.Create, nil
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
 		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, bucketFinalizer(cn))
 		if err != nil {
 			return nil, errors.Wrap(err, "add bucket finalizer")
@@ -198,7 +198,7 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 			return false, nil
 		}
 	}
-	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
 		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, bucketFinalizer(cn))
 		if err != nil {
 			return false, err
