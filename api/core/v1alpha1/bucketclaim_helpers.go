@@ -71,6 +71,9 @@ func BucketBindToMark(logsetMeta metav1.ObjectMeta) string {
 }
 
 func AddBucketFinalizer(ctx context.Context, c client.Client, lsMeta metav1.ObjectMeta, finalizer string) error {
+	if lsMeta.Namespace == "" || lsMeta.Name == "" {
+		return fmt.Errorf("bad logset meta %v", lsMeta)
+	}
 	ls := &LogSet{}
 	err := c.Get(ctx, client.ObjectKey{Namespace: lsMeta.Namespace, Name: lsMeta.Name}, ls)
 	if err != nil {
@@ -98,6 +101,10 @@ func AddBucketFinalizer(ctx context.Context, c client.Client, lsMeta metav1.Obje
 }
 
 func RemoveBucketFinalizer(ctx context.Context, c client.Client, lsMeta metav1.ObjectMeta, finalizer string) error {
+	if lsMeta.Namespace == "" || lsMeta.Name == "" {
+		return fmt.Errorf("bad losget meta %v", lsMeta)
+	}
+
 	ls := &LogSet{}
 	err := c.Get(ctx, client.ObjectKey{Namespace: lsMeta.Namespace, Name: lsMeta.Name}, ls)
 	if err != nil {
