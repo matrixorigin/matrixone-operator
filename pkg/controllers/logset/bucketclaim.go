@@ -96,7 +96,13 @@ func (r *Actor) finalizeBucket(ctx *recon.Context[*v1alpha1.LogSet]) (success bo
 		v1alpha1.ContainFinalizerPrefix(claimedBucket.Finalizers, v1alpha1.BucketCNFinalizerPrefix) {
 		return false, nil
 	}
-	switch *ls.Spec.SharedStorage.S3.S3RetentionPolicy {
+
+	s3RetentionPolicy := ls.Spec.GetS3RetentionPolicy()
+	if s3RetentionPolicy == nil {
+		// generally we will never enter this block
+		return true, nil
+	}
+	switch *s3RetentionPolicy {
 	case v1alpha1.PVCRetentionPolicyRetain:
 		claimedBucket.Status.State = v1alpha1.StatusReleased
 		claimedBucket.Status.BindTo = ""
@@ -109,7 +115,7 @@ func (r *Actor) finalizeBucket(ctx *recon.Context[*v1alpha1.LogSet]) (success bo
 		}
 		return true, ctx.Delete(claimedBucket)
 	default:
-		return false, fmt.Errorf("unknown s3 retention policy %s", *ls.Spec.SharedStorage.S3.S3RetentionPolicy)
+		return false, fmt.Errorf("unknown s3 retention policy %s", *s3RetentionPolicy)
 	}
 }
 

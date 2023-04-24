@@ -32,9 +32,9 @@ const (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=bucket
-// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.s3.type"
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.state"
 // +kubebuilder:printcolumn:name="Bind",type="string",JSONPath=".status.bindTo"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // A BucketClaim is a resource that represents the object storage bucket resource used by a mo cluster
 type BucketClaim struct {

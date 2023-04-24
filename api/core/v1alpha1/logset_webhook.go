@@ -16,6 +16,8 @@ package v1alpha1
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +27,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"time"
 )
 
 const (
@@ -81,11 +82,13 @@ func (r *LogSetSpec) Default() {
 	if r.StoreFailureTimeout == nil {
 		r.StoreFailureTimeout = &metav1.Duration{Duration: defaultStoreFailureTimeout}
 	}
-	r.defaultRetentionPolicy()
+	r.setDefaultRetentionPolicy()
 	setDefaultServiceArgs(r)
 }
 
-func (r *LogSetSpec) defaultRetentionPolicy() {
+// setDefaultRetentionPolicy always set PVCRetentionPolicy, and always set S3RetentionPolicy only if S3 is not nil
+// setDefaultRetentionPolicy does not change origin policy and only set default value when policy is nil
+func (r *LogSetSpec) setDefaultRetentionPolicy() {
 	defaultDeletePolicy := PVCRetentionPolicyDelete
 
 	if r.SharedStorage.S3 == nil {
