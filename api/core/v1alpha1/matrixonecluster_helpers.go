@@ -48,6 +48,17 @@ func (m *MatrixOneCluster) ApSetImage() string {
 	return image
 }
 
+func (m *MatrixOneCluster) ProxySetImage() string {
+	if m.Spec.Proxy == nil {
+		return ""
+	}
+	image := m.Spec.Proxy.Image
+	if image == "" {
+		image = m.defaultImage()
+	}
+	return image
+}
+
 func (m *MatrixOneCluster) defaultImage() string {
 	return fmt.Sprintf("%s:%s", m.Spec.ImageRepository, m.Spec.Version)
 }

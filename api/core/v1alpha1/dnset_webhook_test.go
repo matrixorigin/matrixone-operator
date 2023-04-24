@@ -34,12 +34,10 @@ var _ = Describe("DNSet Webhook", func() {
 				Namespace: "default",
 			},
 			Spec: DNSetSpec{
-				DNSetBasic: DNSetBasic{
-					PodSet: PodSet{
-						Replicas: 2,
-						MainContainer: MainContainer{
-							Image: "test",
-						},
+				PodSet: PodSet{
+					Replicas: 2,
+					MainContainer: MainContainer{
+						Image: "test",
 					},
 				},
 			},
@@ -64,16 +62,14 @@ var _ = Describe("DNSet Webhook", func() {
 				Namespace: "default",
 			},
 			Spec: DNSetSpec{
-				DNSetBasic: DNSetBasic{
-					PodSet: PodSet{
-						Replicas: 2,
-						MainContainer: MainContainer{
-							Image: "test",
-						},
+				PodSet: PodSet{
+					Replicas: 2,
+					MainContainer: MainContainer{
+						Image: "test",
 					},
-					CacheVolume: &Volume{
-						Size: resource.MustParse("20Gi"),
-					},
+				},
+				CacheVolume: &Volume{
+					Size: resource.MustParse("20Gi"),
 				},
 			},
 			Deps: DNSetDeps{

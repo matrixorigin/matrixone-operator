@@ -22,3 +22,4 @@ Chart.lock
 charts/matrixone-operator/charts/
 *.tgz
 e2e*.xml
+e2e.test

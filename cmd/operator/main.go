@@ -21,6 +21,8 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/bucketclaim"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/proxyset"
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
 	"os"
 
@@ -59,6 +61,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kruisev1.AddToScheme(scheme))
+	utilruntime.Must(kruisev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kruisepolicy.AddToScheme(scheme))
 }
 
@@ -153,6 +156,10 @@ func main() {
 	moActor := &mocluster.MatrixOneClusterActor{}
 	err = moActor.Reconcile(mgr)
 	exitIf(err, "unable to set up matrixone cluster controller")
+
+	proxyActor := &proxyset.Actor{}
+	err = proxyActor.Reconcile(mgr)
+	exitIf(err, "unable to set up proxyset controller")
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
 		bucketActor := bucketclaim.Actor{}

@@ -21,13 +21,6 @@ import (
 )
 
 type WebUISpec struct {
-	WebUIBasic `json:",inline"`
-
-	// +optional
-	Overlay *Overlay `json:"overlay,omitempty"`
-}
-
-type WebUIBasic struct {
 	PodSet `json:",inline"`
 
 	// ServiceType is the service type of cn service
@@ -42,6 +35,9 @@ type WebUIBasic struct {
 
 	// +optional
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+
+	// +optional
+	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
 type RollingUpdateStrategy struct {

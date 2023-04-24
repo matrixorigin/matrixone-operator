@@ -32,13 +32,6 @@ const (
 )
 
 type LogSetSpec struct {
-	LogSetBasic `json:",inline"`
-
-	// +optional
-	Overlay *Overlay `json:"overlay,omitempty"`
-}
-
-type LogSetBasic struct {
 	PodSet `json:",inline"`
 
 	// Volume is the local persistent volume for each LogService instance
@@ -69,23 +62,26 @@ type LogSetBasic struct {
 	// The default policy is Delete.
 	// +optional
 	PVCRetentionPolicy *PVCRetentionPolicy `json:"pvcRetentionPolicy,omitempty"`
+
+	// +optional
+	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
-func (l *LogSetBasic) GetFailedPodStrategy() FailedPodStrategy {
+func (l *LogSetSpec) GetFailedPodStrategy() FailedPodStrategy {
 	if l.FailedPodStrategy == nil {
 		return FailedPodStrategyDelete
 	}
 	return *l.FailedPodStrategy
 }
 
-func (l *LogSetBasic) GetStoreFailureTimeout() metav1.Duration {
+func (l *LogSetSpec) GetStoreFailureTimeout() metav1.Duration {
 	if l.StoreFailureTimeout == nil {
 		return metav1.Duration{Duration: defaultStoreFailureTimeout}
 	}
 	return *l.StoreFailureTimeout
 }
 
-func (l *LogSetBasic) GetPVCRetentionPolicy() PVCRetentionPolicy {
+func (l *LogSetSpec) GetPVCRetentionPolicy() PVCRetentionPolicy {
 	if l.PVCRetentionPolicy == nil {
 		return PVCRetentionPolicyDelete
 	}

@@ -4,7 +4,7 @@ SHELL=/usr/bin/env bash -o pipefail
 REPO ?= "matrixorigin/matrixone-operator"
 TAG ?= "latest"
 GOPROXY ?= "https://proxy.golang.org,direct"
-MO_VERSION ?= "nightly-28d8d583"
+MO_VERSION ?= "nightly-5337c87"
 MO_IMAGE_REPO ?= "matrixorigin/matrixone"
 BRANCH ?= main
 
@@ -137,7 +137,7 @@ run-pgd: build-pgd
 
 GINKGO = $(shell pwd)/bin/ginkgo
 ginkgo:
-	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo@v1.6.0)
+	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo@v2.9.2)
 
 MOCKGEN = $(shell pwd)/bin/mockgen
 mockgen: ## Download mockgen locally if necessary

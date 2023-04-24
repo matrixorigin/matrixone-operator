@@ -44,17 +44,14 @@ func TestDNSetActor_Observe(t *testing.T) {
 			Name:      "test",
 		},
 		Spec: v1alpha1.DNSetSpec{
-			DNSetBasic: v1alpha1.DNSetBasic{
-				PodSet: v1alpha1.PodSet{
-					MainContainer: v1alpha1.MainContainer{
-						Image: "test:latest",
-					},
-					Replicas: 1,
+			PodSet: v1alpha1.PodSet{
+				MainContainer: v1alpha1.MainContainer{
+					Image: "test:latest",
 				},
-				CacheVolume: &v1alpha1.Volume{
-					Size: resource.MustParse("10Gi"),
-				},
-				// TODO: add configuration of dn
+				Replicas: 1,
+			},
+			CacheVolume: &v1alpha1.Volume{
+				Size: resource.MustParse("10Gi"),
 			},
 		},
 	}
@@ -64,13 +61,11 @@ func TestDNSetActor_Observe(t *testing.T) {
 			Name:      "test",
 		},
 		Spec: v1alpha1.DNSetSpec{
-			DNSetBasic: v1alpha1.DNSetBasic{
-				PodSet: v1alpha1.PodSet{
-					MainContainer: v1alpha1.MainContainer{
-						Image: "test:latest",
-					},
-					Replicas: 3,
+			PodSet: v1alpha1.PodSet{
+				MainContainer: v1alpha1.MainContainer{
+					Image: "test:latest",
 				},
+				Replicas: 3,
 			},
 		},
 	}
@@ -177,11 +172,9 @@ func TestDNSetActor_Observe(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: v1alpha1.LogSetSpec{
-					LogSetBasic: v1alpha1.LogSetBasic{
-						SharedStorage: v1alpha1.SharedStorageProvider{
-							S3: &v1alpha1.S3Provider{
-								Path: "bucket/dir",
-							},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
+							Path: "bucket/dir",
 						},
 					},
 				},
@@ -216,13 +209,11 @@ func TestDNSetVolumeMount(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: v1alpha1.DNSetSpec{
-					DNSetBasic: v1alpha1.DNSetBasic{
-						PodSet: v1alpha1.PodSet{
-							MainContainer: v1alpha1.MainContainer{
-								Image: "test:latest",
-							},
-							Replicas: 3,
+					PodSet: v1alpha1.PodSet{
+						MainContainer: v1alpha1.MainContainer{
+							Image: "test:latest",
 						},
+						Replicas: 3,
 					},
 				},
 			},
@@ -246,11 +237,9 @@ func TestDNSetVolumeMount(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: v1alpha1.LogSetSpec{
-					LogSetBasic: v1alpha1.LogSetBasic{
-						SharedStorage: v1alpha1.SharedStorageProvider{
-							S3: &v1alpha1.S3Provider{
-								Path: "bucket/dir",
-							},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
+							Path: "bucket/dir",
 						},
 					},
 				},

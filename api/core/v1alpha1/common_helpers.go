@@ -207,21 +207,21 @@ func setDefaultServiceArgs(object interface{}) {
 		return
 	}
 	switch obj := object.(type) {
-	case *LogSetBasic:
+	case *LogSetSpec:
 		// set default arguments only when user does not set any arguments
 		if len(obj.ServiceArgs) == 0 {
 			obj.ServiceArgs = ServiceDefaultArgs.LogService
 		}
-	case *DNSetBasic:
+	case *DNSetSpec:
 		if len(obj.ServiceArgs) == 0 {
 			obj.ServiceArgs = ServiceDefaultArgs.DN
 		}
-	case *CNSetBasic:
+	case *CNSetSpec:
 		if len(obj.ServiceArgs) == 0 {
 			obj.ServiceArgs = ServiceDefaultArgs.CN
 		}
 	default:
-		moLog.Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetBasic, *DNSetBasic, *CNSetBasic")
+		moLog.Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetSpec, *DNSetSpec, *CNSetSpec")
 		return
 	}
 }
@@ -255,6 +255,13 @@ func APSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
 }
 
 func WebUIKey(mo *MatrixOneCluster) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      mo.Name,
+		Namespace: mo.Namespace,
+	}
+}
+
+func ProxyKey(mo *MatrixOneCluster) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      mo.Name,
 		Namespace: mo.Namespace,

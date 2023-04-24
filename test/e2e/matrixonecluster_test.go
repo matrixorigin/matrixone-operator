@@ -22,7 +22,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/test/e2e/sql"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +64,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 				Name:      "test",
 			},
 			Spec: v1alpha1.MatrixOneClusterSpec{
-				TP: v1alpha1.CNSetBasic{
+				TP: v1alpha1.CNSetSpec{
 					PodSet: v1alpha1.PodSet{
 						Replicas: 2,
 					},
@@ -72,7 +72,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 						Size: resource.MustParse("100Mi"),
 					},
 				},
-				DN: v1alpha1.DNSetBasic{
+				DN: v1alpha1.DNSetSpec{
 					PodSet: v1alpha1.PodSet{
 						// test multiple DN replicas
 						Replicas: 1,
@@ -81,7 +81,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 						Size: resource.MustParse("100Mi"),
 					},
 				},
-				LogService: v1alpha1.LogSetBasic{
+				LogService: v1alpha1.LogSetSpec{
 					PodSet: v1alpha1.PodSet{
 						Replicas: 3,
 					},
@@ -100,10 +100,16 @@ var _ = Describe("MatrixOneCluster test", func() {
 					},
 					InitialConfig: v1alpha1.InitialConfig{},
 				},
+				Proxy: &v1alpha1.ProxySetSpec{
+					PodSet: v1alpha1.PodSet{
+						Replicas: 1,
+					},
+				},
 				Version:         moVersion,
 				ImageRepository: moImageRepo,
 			},
 		}
+
 		Expect(kubeCli.Create(ctx, mo)).To(Succeed())
 
 		Eventually(func() error {
@@ -117,14 +123,15 @@ var _ = Describe("MatrixOneCluster test", func() {
 			}
 			return nil
 		}, createClusterTimeout, pollInterval).Should(Succeed())
+		var proxyPod *corev1.Pod
 		Eventually(func() error {
 			podList := &corev1.PodList{}
 			if err := kubeCli.List(ctx, podList); err != nil {
 				logger.Errorw("error list pods", "cluster", mo.Name, "error", err)
 				return err
 			}
-			var logN, dnN, cnN int32
-			for _, pod := range podList.Items {
+			var logN, dnN, cnN, proxyN int32
+			for i, pod := range podList.Items {
 				if !util.IsPodReady(&pod) {
 					continue
 				}
@@ -135,9 +142,15 @@ var _ = Describe("MatrixOneCluster test", func() {
 					dnN++
 				case "CNSet":
 					cnN++
+				case "ProxySet":
+					if proxyPod == nil {
+						// simply pick the first proxy pod we encounter to perform the following test
+						proxyPod = &podList.Items[i]
+					}
+					proxyN++
 				}
 			}
-			if logN >= mo.Spec.LogService.Replicas && dnN >= mo.Spec.DN.Replicas && cnN >= mo.Spec.TP.Replicas {
+			if logN >= mo.Spec.LogService.Replicas && dnN >= mo.Spec.DN.Replicas && cnN >= mo.Spec.TP.Replicas && proxyN >= mo.Spec.Proxy.Replicas {
 				return nil
 			}
 			logger.Infow("wait enough pods running", "log pods count", logN, "cn pods count", cnN, "dn pods count", dnN)
@@ -145,7 +158,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		}, createClusterTimeout, pollInterval).Should(Succeed())
 
 		By("End to end SQL")
-		pfh, err := e2eutil.PortForward(restConfig, mo.Namespace, mo.Name+"-tp-cn-0", 6001, 6001)
+		pfh, err := e2eutil.PortForward(restConfig, mo.Namespace, proxyPod.Name, 6001, 6001)
 		Expect(err).To(BeNil())
 		Expect(pfh.Ready(portForwardTimeout)).To(Succeed(), "port-forward should complete within timeout")
 		logger.Info("run SQL smoke test")

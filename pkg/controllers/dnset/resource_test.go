@@ -46,11 +46,11 @@ func Test_buildDNSetConfigMap(t *testing.T) {
 						Namespace: "test",
 						Name:      "test",
 					},
-					Spec: v1alpha1.LogSetSpec{LogSetBasic: v1alpha1.LogSetBasic{SharedStorage: v1alpha1.SharedStorageProvider{
+					Spec: v1alpha1.LogSetSpec{SharedStorage: v1alpha1.SharedStorageProvider{
 						FileSystem: &v1alpha1.FileSystemProvider{
 							Path: "/test",
 						},
-					}}},
+					}},
 					Status: v1alpha1.LogSetStatus{
 						Discovery: &v1alpha1.LogSetDiscovery{
 							Port:    6001,
@@ -98,7 +98,7 @@ service-addresses = []
 						Namespace: "test",
 						Name:      "test",
 					},
-					Spec: v1alpha1.DNSetSpec{DNSetBasic: v1alpha1.DNSetBasic{PodSet: v1alpha1.PodSet{
+					Spec: v1alpha1.DNSetSpec{PodSet: v1alpha1.PodSet{
 						Config: &v1alpha1.TomlConfig{MP: map[string]interface{}{
 							"cn": map[string]interface{}{
 								"Engine": map[string]interface{}{
@@ -106,18 +106,18 @@ service-addresses = []
 								},
 							},
 						}},
-					}}},
+					}},
 				},
 				ls: &v1alpha1.LogSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      "test",
 					},
-					Spec: v1alpha1.LogSetSpec{LogSetBasic: v1alpha1.LogSetBasic{SharedStorage: v1alpha1.SharedStorageProvider{
+					Spec: v1alpha1.LogSetSpec{SharedStorage: v1alpha1.SharedStorageProvider{
 						FileSystem: &v1alpha1.FileSystemProvider{
 							Path: "/test",
 						},
-					}}},
+					}},
 					Status: v1alpha1.LogSetStatus{
 						Discovery: &v1alpha1.LogSetDiscovery{
 							Port:    6001,

@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var startScriptTpl = template.Must(template.New("dn-start-script").Parse(`
+var startScriptTpl = template.Must(template.New("cn-start-script").Parse(`
 #!/bin/sh
 set -eu
 POD_NAME=${POD_NAME:-$HOSTNAME}

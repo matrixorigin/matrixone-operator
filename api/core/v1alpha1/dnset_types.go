@@ -20,13 +20,6 @@ import (
 )
 
 type DNSetSpec struct {
-	DNSetBasic `json:",inline"`
-
-	// +optional
-	Overlay *Overlay `json:"overlay,omitempty"`
-}
-
-type DNSetBasic struct {
 	PodSet `json:",inline"`
 
 	// CacheVolume is the desired local cache volume for DNSet,
@@ -35,6 +28,9 @@ type DNSetBasic struct {
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 
 	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
+
+	// +optional
+	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
 type DNSetStatus struct {

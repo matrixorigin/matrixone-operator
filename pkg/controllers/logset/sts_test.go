@@ -58,33 +58,31 @@ func Test_syncPodSpec(t *testing.T) {
 				},
 				ObjectMeta: lsMeta,
 				Spec: v1alpha1.LogSetSpec{
-					LogSetBasic: v1alpha1.LogSetBasic{
-						PodSet: v1alpha1.PodSet{
-							MainContainer: v1alpha1.MainContainer{
-								Image:     "test:latest",
-								Resources: resource,
-							},
-							Replicas: 3,
-							NodeSelector: map[string]string{
-								"arch": "arm64",
-							},
-							TopologyEvenSpread: []string{"zone"},
-							Config: &v1alpha1.TomlConfig{
-								MP: map[string]interface{}{
-									"log-level": "debug",
-								},
+					PodSet: v1alpha1.PodSet{
+						MainContainer: v1alpha1.MainContainer{
+							Image:     "test:latest",
+							Resources: resource,
+						},
+						Replicas: 3,
+						NodeSelector: map[string]string{
+							"arch": "arm64",
+						},
+						TopologyEvenSpread: []string{"zone"},
+						Config: &v1alpha1.TomlConfig{
+							MP: map[string]interface{}{
+								"log-level": "debug",
 							},
 						},
-						SharedStorage: v1alpha1.SharedStorageProvider{
-							S3: &v1alpha1.S3Provider{
-								Path: "test/my-bucket",
-							},
+					},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
+							Path: "test/my-bucket",
 						},
-						InitialConfig: v1alpha1.InitialConfig{
-							LogShards:        pointer.Int(1),
-							DNShards:         pointer.Int(1),
-							LogShardReplicas: pointer.Int(3),
-						},
+					},
+					InitialConfig: v1alpha1.InitialConfig{
+						LogShards:        pointer.Int(1),
+						DNShards:         pointer.Int(1),
+						LogShardReplicas: pointer.Int(3),
 					},
 				},
 			},

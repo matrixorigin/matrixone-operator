@@ -34,19 +34,17 @@ var _ = Describe("LogSet Webhook", func() {
 				Namespace: "default",
 			},
 			Spec: LogSetSpec{
-				LogSetBasic: LogSetBasic{
-					PodSet: PodSet{
-						Replicas: 3,
-						MainContainer: MainContainer{
-							Image: "test",
-						},
+				PodSet: PodSet{
+					Replicas: 3,
+					MainContainer: MainContainer{
+						Image: "test",
 					},
-					Volume: Volume{
-						Size: resource.MustParse("10Gi"),
-					},
-					SharedStorage: SharedStorageProvider{
-						S3: &S3Provider{Path: "test/data"},
-					},
+				},
+				Volume: Volume{
+					Size: resource.MustParse("10Gi"),
+				},
+				SharedStorage: SharedStorageProvider{
+					S3: &S3Provider{Path: "test/data"},
 				},
 			},
 		}
@@ -60,19 +58,17 @@ var _ = Describe("LogSet Webhook", func() {
 				Namespace: "default",
 			},
 			Spec: LogSetSpec{
-				LogSetBasic: LogSetBasic{
-					PodSet: PodSet{
-						Replicas: 3,
-						MainContainer: MainContainer{
-							Image: "test",
-						},
+				PodSet: PodSet{
+					Replicas: 3,
+					MainContainer: MainContainer{
+						Image: "test",
 					},
-					Volume: Volume{
-						Size: resource.MustParse("10Gi"),
-					},
-					SharedStorage: SharedStorageProvider{
-						S3: &S3Provider{Path: "test/data"},
-					},
+				},
+				Volume: Volume{
+					Size: resource.MustParse("10Gi"),
+				},
+				SharedStorage: SharedStorageProvider{
+					S3: &S3Provider{Path: "test/data"},
 				},
 			},
 		}

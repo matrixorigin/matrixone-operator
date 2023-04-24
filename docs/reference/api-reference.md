@@ -18,6 +18,8 @@ Refer to https://docs.matrixorigin.io/ for more information about MatrixOne data
 - [DNSet](#dnset)
 - [LogSet](#logset)
 - [MatrixOneCluster](#matrixonecluster)
+- [ProxySet](#proxyset)
+- [ProxySetList](#proxysetlist)
 - [WebUI](#webui)
 
 
@@ -90,25 +92,6 @@ _Appears in:_
 | `deps` _[CNSetDeps](#cnsetdeps)_ | Deps is the dependencies of CNSet |
 
 
-#### CNSetBasic
-
-
-
-
-
-_Appears in:_
-- [CNSetSpec](#cnsetspec)
-- [MatrixOneClusterSpec](#matrixoneclusterspec)
-
-| Field | Description |
-| --- | --- |
-| `PodSet` _[PodSet](#podset)_ |  |
-| `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service |
-| `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
-| `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet, node storage will be used if not specified |
-| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
-
-
 #### CNSetDeps
 
 
@@ -132,11 +115,15 @@ _Appears in:_
 
 _Appears in:_
 - [CNSet](#cnset)
+- [MatrixOneClusterSpec](#matrixoneclusterspec)
 
 | Field | Description |
 | --- | --- |
-| `CNSetBasic` _[CNSetBasic](#cnsetbasic)_ |  |
-| `overlay` _[Overlay](#overlay)_ |  |
+| `PodSet` _[PodSet](#podset)_ |  |
+| `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service |
+| `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
+| `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet, node storage will be used if not specified |
+| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
 | `role` _CNRole_ | [TP, AP], default to TP |
 
 
@@ -148,6 +135,7 @@ _Appears in:_
 
 _Appears in:_
 - [BucketClaimStatus](#bucketclaimstatus)
+- [ProxySetStatus](#proxysetstatus)
 
 | Field | Description |
 | --- | --- |
@@ -172,23 +160,6 @@ _Appears in:_
 | `deps` _[DNSetDeps](#dnsetdeps)_ | Deps is the dependencies of DNSet |
 
 
-#### DNSetBasic
-
-
-
-
-
-_Appears in:_
-- [DNSetSpec](#dnsetspec)
-- [MatrixOneClusterSpec](#matrixoneclusterspec)
-
-| Field | Description |
-| --- | --- |
-| `PodSet` _[PodSet](#podset)_ |  |
-| `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for DNSet, node storage will be used if not specified |
-| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
-
-
 #### DNSetDeps
 
 
@@ -211,10 +182,13 @@ _Appears in:_
 
 _Appears in:_
 - [DNSet](#dnset)
+- [MatrixOneClusterSpec](#matrixoneclusterspec)
 
 | Field | Description |
 | --- | --- |
-| `DNSetBasic` _[DNSetBasic](#dnsetbasic)_ |  |
+| `PodSet` _[PodSet](#podset)_ |  |
+| `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for DNSet, node storage will be used if not specified |
+| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
 | `overlay` _[Overlay](#overlay)_ |  |
 
 
@@ -241,11 +215,20 @@ _Underlying type:_ `string`
 
 
 _Appears in:_
-- [LogSetBasic](#logsetbasic)
+- [LogSetSpec](#logsetspec)
 
 
 
 
+
+#### FileSystemProvider
+
+
+
+
+
+_Appears in:_
+- [SharedStorageProvider](#sharedstorageprovider)
 
 
 
@@ -256,13 +239,13 @@ _Appears in:_
 
 
 _Appears in:_
-- [LogSetBasic](#logsetbasic)
+- [LogSetSpec](#logsetspec)
 
 | Field | Description |
 | --- | --- |
-| `logShards` _[int](#int)_ | LogShards is the initial number of log shards, cannot be tuned after cluster creation currently. default to 1 |
-| `dnShards` _[int](#int)_ | DNShards is the initial number of DN shards, cannot be tuned after cluster creation currently. default to 1 |
-| `logShardReplicas` _[int](#int)_ | LogShardReplicas is the replica numbers of each log shard, cannot be tuned after cluster creation currently. default to 3 if LogSet replicas >= 3, to 1 otherwise |
+| `logShards` _integer_ | LogShards is the initial number of log shards, cannot be tuned after cluster creation currently. default to 1 |
+| `dnShards` _integer_ | DNShards is the initial number of DN shards, cannot be tuned after cluster creation currently. default to 1 |
+| `logShardReplicas` _integer_ | LogShardReplicas is the replica numbers of each log shard, cannot be tuned after cluster creation currently. default to 3 if LogSet replicas >= 3, to 1 otherwise |
 
 
 #### LogSet
@@ -282,27 +265,6 @@ _Appears in:_
 | `spec` _[LogSetSpec](#logsetspec)_ | Spec is the desired state of LogSet |
 
 
-#### LogSetBasic
-
-
-
-
-
-_Appears in:_
-- [LogSetSpec](#logsetspec)
-- [MatrixOneClusterSpec](#matrixoneclusterspec)
-
-| Field | Description |
-| --- | --- |
-| `PodSet` _[PodSet](#podset)_ |  |
-| `volume` _[Volume](#volume)_ | Volume is the local persistent volume for each LogService instance |
-| `sharedStorage` _[SharedStorageProvider](#sharedstorageprovider)_ | SharedStorage is an external shared storage shared by all LogService instances |
-| `initialConfig` _[InitialConfig](#initialconfig)_ | InitialConfig is the initial configuration of HAKeeper InitialConfig is immutable |
-| `storeFailureTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | StoreFailureTimeout is the timeout to fail-over the logset Pod after a failure of it is observed |
-| `failedPodStrategy` _[FailedPodStrategy](#failedpodstrategy)_ | FailedPodStrategy controls how to handle failed pod when failover happens, default to Delete |
-| `pvcRetentionPolicy` _[PVCRetentionPolicy](#pvcretentionpolicy)_ | PVCRetentionPolicy defines the retention policy of orphaned PVCs due to cluster deletion, scale-in or failover. Available options: - Delete: delete orphaned PVCs - Retain: keep orphaned PVCs, if the corresponding Pod get created again (e.g. scale-in and scale-out, recreate the cluster), the Pod will reuse the retained PVC which contains previous data. Retained PVCs require manual cleanup if they are no longer needed. The default policy is Delete. |
-
-
 
 
 #### LogSetRef
@@ -314,6 +276,7 @@ LogSetRef reference to an LogSet, either internal or external
 _Appears in:_
 - [CNSetDeps](#cnsetdeps)
 - [DNSetDeps](#dnsetdeps)
+- [ProxySetDeps](#proxysetdeps)
 
 | Field | Description |
 | --- | --- |
@@ -329,10 +292,17 @@ _Appears in:_
 
 _Appears in:_
 - [LogSet](#logset)
+- [MatrixOneClusterSpec](#matrixoneclusterspec)
 
 | Field | Description |
 | --- | --- |
-| `LogSetBasic` _[LogSetBasic](#logsetbasic)_ |  |
+| `PodSet` _[PodSet](#podset)_ |  |
+| `volume` _[Volume](#volume)_ | Volume is the local persistent volume for each LogService instance |
+| `sharedStorage` _[SharedStorageProvider](#sharedstorageprovider)_ | SharedStorage is an external shared storage shared by all LogService instances |
+| `initialConfig` _[InitialConfig](#initialconfig)_ | InitialConfig is the initial configuration of HAKeeper InitialConfig is immutable |
+| `storeFailureTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | StoreFailureTimeout is the timeout to fail-over the logset Pod after a failure of it is observed |
+| `failedPodStrategy` _[FailedPodStrategy](#failedpodstrategy)_ | FailedPodStrategy controls how to handle failed pod when failover happens, default to Delete |
+| `pvcRetentionPolicy` _[PVCRetentionPolicy](#pvcretentionpolicy)_ | PVCRetentionPolicy defines the retention policy of orphaned PVCs due to cluster deletion, scale-in or failover. Available options: - Delete: delete orphaned PVCs - Retain: keep orphaned PVCs, if the corresponding Pod get created again (e.g. scale-in and scale-out, recreate the cluster), the Pod will reuse the retained PVC which contains previous data. Retained PVCs require manual cleanup if they are no longer needed. The default policy is Delete. |
 | `overlay` _[Overlay](#overlay)_ |  |
 
 
@@ -401,11 +371,12 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `tp` _[CNSetBasic](#cnsetbasic)_ | TP is the default CN pod set that accepts client connections and execute queries |
-| `ap` _[CNSetBasic](#cnsetbasic)_ | AP is an optional CN pod set that accept MPP sub-plans to accelerate sql queries |
-| `dn` _[DNSetBasic](#dnsetbasic)_ | DN is the default DN pod set of this Cluster |
-| `logService` _[LogSetBasic](#logsetbasic)_ | LogService is the default LogService pod set of this cluster |
-| `webui` _[WebUIBasic](#webuibasic)_ | WebUI is the default web ui pod of this cluster |
+| `tp` _[CNSetSpec](#cnsetspec)_ | TP is the default CN pod set that accepts client connections and execute queries |
+| `ap` _[CNSetSpec](#cnsetspec)_ | AP is an optional CN pod set that accept MPP sub-plans to accelerate sql queries |
+| `dn` _[DNSetSpec](#dnsetspec)_ | DN is the default DN pod set of this Cluster |
+| `logService` _[LogSetSpec](#logsetspec)_ | LogService is the default LogService pod set of this cluster |
+| `webui` _[WebUISpec](#webuispec)_ | WebUI is the default web ui pod of this cluster |
+| `proxy` _[ProxySetSpec](#proxysetspec)_ | Proxy defines an optional MO Proxy of this cluster |
 | `version` _string_ | Version is the version of the cluster, which translated to the docker image tag used for each component. default to the recommended version of the operator |
 | `imageRepository` _string_ | ImageRepository allows user to override the default image repository in order to use a docker registry proxy or private registry. |
 | `topologySpread` _string array_ | TopologyEvenSpread specifies default topology policy for all components, this will be overridden by component-level config |
@@ -420,9 +391,10 @@ _Appears in:_
 Overlay allows advanced customization of the pod spec in the set
 
 _Appears in:_
-- [CNSetSpec](#cnsetspec)
 - [DNSetSpec](#dnsetspec)
 - [LogSetSpec](#logsetspec)
+- [PodSet](#podset)
+- [ProxySetSpec](#proxysetspec)
 - [WebUISpec](#webuispec)
 
 | Field | Description |
@@ -454,7 +426,7 @@ _Underlying type:_ `string`
 
 
 _Appears in:_
-- [LogSetBasic](#logsetbasic)
+- [LogSetSpec](#logsetspec)
 - [S3Provider](#s3provider)
 
 
@@ -466,14 +438,16 @@ _Appears in:_
 PodSet is an auxiliary struct to describe a set of isomorphic pods.
 
 _Appears in:_
-- [CNSetBasic](#cnsetbasic)
-- [DNSetBasic](#dnsetbasic)
-- [LogSetBasic](#logsetbasic)
-- [WebUIBasic](#webuibasic)
+- [CNSetSpec](#cnsetspec)
+- [DNSetSpec](#dnsetspec)
+- [LogSetSpec](#logsetspec)
+- [ProxySetSpec](#proxysetspec)
+- [WebUISpec](#webuispec)
 
 | Field | Description |
 | --- | --- |
 | `MainContainer` _[MainContainer](#maincontainer)_ |  |
+| `overlay` _[Overlay](#overlay)_ |  |
 | `replicas` _integer_ | Replicas is the desired number of pods of this set |
 | `topologySpread` _string array_ | TopologyEvenSpread specifies what topology domains the Pods in set should be evenly spread in. This will be overridden by .overlay.TopologySpreadConstraints |
 | `nodeSelector` _object (keys:string, values:string)_ |  |
@@ -483,6 +457,74 @@ _Appears in:_
 | `serviceArgs` _string array_ | ServiceArgs define command line options for process, used by logset/cnset/dnset service. NOTE: user should not define "-cfg" argument in this field, which is defined default by controller |
 
 
+#### ProxySet
+
+
+
+A ProxySet is a resource that represents a set of MO's Proxy instances
+
+_Appears in:_
+- [ProxySetList](#proxysetlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `ProxySet`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[ProxySetSpec](#proxysetspec)_ | Spec is the desired state of ProxySet |
+| `deps` _[ProxySetDeps](#proxysetdeps)_ | Deps is the dependencies of ProxySet |
+
+
+#### ProxySetDeps
+
+
+
+
+
+_Appears in:_
+- [ProxySet](#proxyset)
+
+| Field | Description |
+| --- | --- |
+| `LogSetRef` _[LogSetRef](#logsetref)_ |  |
+
+
+#### ProxySetList
+
+
+
+ProxySetList contains a list of Proxy
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `ProxySetList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[ProxySet](#proxyset) array_ |  |
+
+
+#### ProxySetSpec
+
+
+
+
+
+_Appears in:_
+- [MatrixOneClusterSpec](#matrixoneclusterspec)
+- [ProxySet](#proxyset)
+
+| Field | Description |
+| --- | --- |
+| `PodSet` _[PodSet](#podset)_ |  |
+| `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of proxy service |
+| `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
+| `overlay` _[Overlay](#overlay)_ |  |
+
+
+
+
 #### RollingUpdateStrategy
 
 
@@ -490,7 +532,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [WebUIBasic](#webuibasic)
+- [WebUISpec](#webuispec)
 
 | Field | Description |
 | --- | --- |
@@ -536,8 +578,8 @@ _Appears in:_
 
 
 _Appears in:_
-- [CNSetBasic](#cnsetbasic)
-- [DNSetBasic](#dnsetbasic)
+- [CNSetSpec](#cnsetspec)
+- [DNSetSpec](#dnsetspec)
 
 | Field | Description |
 | --- | --- |
@@ -552,7 +594,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [LogSetBasic](#logsetbasic)
+- [LogSetSpec](#logsetspec)
 
 | Field | Description |
 | --- | --- |
@@ -594,9 +636,9 @@ _Appears in:_
 
 
 _Appears in:_
-- [CNSetBasic](#cnsetbasic)
-- [DNSetBasic](#dnsetbasic)
-- [LogSetBasic](#logsetbasic)
+- [CNSetSpec](#cnsetspec)
+- [DNSetSpec](#dnsetspec)
+- [LogSetSpec](#logsetspec)
 
 | Field | Description |
 | --- | --- |
@@ -622,24 +664,6 @@ WebUI  is a resource that represents a set of MO's webui instances
 | `deps` _[WebUIDeps](#webuideps)_ | Deps is the dependencies of WebUI |
 
 
-#### WebUIBasic
-
-
-
-
-
-_Appears in:_
-- [MatrixOneClusterSpec](#matrixoneclusterspec)
-- [WebUISpec](#webuispec)
-
-| Field | Description |
-| --- | --- |
-| `PodSet` _[PodSet](#podset)_ |  |
-| `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service |
-| `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy rolling update strategy |
-| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
-
-
 #### WebUIDeps
 
 
@@ -661,11 +685,15 @@ _Appears in:_
 
 
 _Appears in:_
+- [MatrixOneClusterSpec](#matrixoneclusterspec)
 - [WebUI](#webui)
 
 | Field | Description |
 | --- | --- |
-| `WebUIBasic` _[WebUIBasic](#webuibasic)_ |  |
+| `PodSet` _[PodSet](#podset)_ |  |
+| `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service |
+| `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy rolling update strategy |
+| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
 | `overlay` _[Overlay](#overlay)_ |  |
 
 
