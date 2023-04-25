@@ -20,17 +20,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type CNRole string
-
-const (
-	CNRoleTP CNRole = "TP"
-	CNRoleAP CNRole = "AP"
-)
-
-type CNSetSpec struct {
+type ProxySetSpec struct {
 	PodSet `json:",inline"`
 
-	// ServiceType is the service type of cn service
+	// ServiceType is the service type of proxy service
 	// +optional
 	// +kubebuilder:default=ClusterIP
 	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
@@ -41,32 +34,16 @@ type CNSetSpec struct {
 	// +optional
 	NodePort *int32 `json:"nodePort,omitempty"`
 
-	// CacheVolume is the desired local cache volume for CNSet,
-	// node storage will be used if not specified
 	// +optional
-	CacheVolume *Volume `json:"cacheVolume,omitempty"`
-
-	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
-
-	// [TP, AP], default to TP
-	// +optional
-	Role CNRole `json:"role,omitempty"`
+	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
-// CNSetStatus Figure out what status should be exposed
-type CNSetStatus struct {
+type ProxySetStatus struct {
 	ConditionalStatus `json:",inline"`
-	FailoverStatus    `json:",inline"`
 }
 
-type CNSetDeps struct {
+type ProxySetDeps struct {
 	LogSetRef `json:",inline"`
-	// The DNSet it depends on
-	// +kubebuilder:validation:Schemaless
-	// +kubebuilder:validation:Type=object
-	// +kubebuilder:pruning:PreserveUnknownFields
-	// +optional
-	DNSet *DNSet `json:"dnSet,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -74,28 +51,28 @@ type CNSetDeps struct {
 // +kubebuilder:printcolumn:name="Replicas",type="integer",JSONPath=".spec.replicas"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
-// A CNSet is a resource that represents a set of MO's CN instances
+// A ProxySet is a resource that represents a set of MO's Proxy instances
 // +kubebuilder:subresource:status
-type CNSet struct {
+type ProxySet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec is the desired state of CNSet
-	Spec CNSetSpec `json:"spec"`
-	// Deps is the dependencies of CNSet
-	Deps CNSetDeps `json:"deps,omitempty"`
+	// Spec is the desired state of ProxySet
+	Spec ProxySetSpec `json:"spec"`
+	// Deps is the dependencies of ProxySet
+	Deps ProxySetDeps `json:"deps,omitempty"`
 
-	Status CNSetStatus `json:"status,omitempty"`
+	Status ProxySetStatus `json:"status,omitempty"`
 }
 
-func (s *CNSet) GetServiceType() corev1.ServiceType {
+func (s *ProxySet) GetServiceType() corev1.ServiceType {
 	if s.Spec.ServiceType == "" {
 		return corev1.ServiceTypeClusterIP
 	}
 	return s.Spec.ServiceType
 }
 
-func (s *CNSet) GetDependencies() []recon.Dependency {
+func (s *ProxySet) GetDependencies() []recon.Dependency {
 	var deps []recon.Dependency
 	if s.Deps.LogSet != nil {
 		deps = append(deps, &recon.ObjectDependency[*LogSet]{
@@ -105,34 +82,26 @@ func (s *CNSet) GetDependencies() []recon.Dependency {
 			},
 		})
 	}
-	if s.Deps.DNSet != nil {
-		deps = append(deps, &recon.ObjectDependency[*DNSet]{
-			ObjectRef: s.Deps.DNSet,
-			ReadyFunc: func(d *DNSet) bool {
-				return recon.IsReady(&d.Status) && recon.IsSynced(&d.Status)
-			},
-		})
-	}
 	return deps
 }
 
-func (s *CNSet) SetCondition(condition metav1.Condition) {
+func (s *ProxySet) SetCondition(condition metav1.Condition) {
 	s.Status.SetCondition(condition)
 }
 
-func (s *CNSet) GetConditions() []metav1.Condition {
+func (s *ProxySet) GetConditions() []metav1.Condition {
 	return s.Status.GetConditions()
 }
 
 //+kubebuilder:object:root=true
 
-// CNSetList contains a list of CNSet
-type CNSetList struct {
+// ProxySetList contains a list of Proxy
+type ProxySetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []CNSet `json:"items"`
+	Items           []ProxySet `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&CNSet{}, &CNSetList{})
+	SchemeBuilder.Register(&ProxySet{}, &ProxySetList{})
 }

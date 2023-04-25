@@ -46,6 +46,11 @@ type ConditionalStatus struct {
 type PodSet struct {
 	MainContainer `json:",inline"`
 
+	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	Overlay *Overlay `json:"overlay,omitempty"`
+
 	// Replicas is the desired number of pods of this set
 	Replicas int32 `json:"replicas"`
 

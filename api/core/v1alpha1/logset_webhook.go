@@ -16,6 +16,8 @@ package v1alpha1
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +27,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"time"
 )
 
 const (
@@ -54,10 +55,10 @@ var _ webhook.Defaulter = &LogSet{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *LogSet) Default() {
-	r.Spec.LogSetBasic.Default()
+	r.Spec.Default()
 }
 
-func (r *LogSetBasic) Default() {
+func (r *LogSetSpec) Default() {
 	//if r.InitialConfig.HAKeeperReplicas == nil {
 	//	if r.Replicas >= minHAReplicas {
 	//		r.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
@@ -87,7 +88,7 @@ func (r *LogSetBasic) Default() {
 
 // setDefaultRetentionPolicy always set PVCRetentionPolicy, and always set S3RetentionPolicy only if S3 is not nil
 // setDefaultRetentionPolicy does not change origin policy and only set default value when policy is nil
-func (r *LogSetBasic) setDefaultRetentionPolicy() {
+func (r *LogSetSpec) setDefaultRetentionPolicy() {
 	defaultDeletePolicy := PVCRetentionPolicyDelete
 
 	if r.SharedStorage.S3 == nil {
@@ -123,14 +124,14 @@ var _ webhook.Validator = &LogSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *LogSet) ValidateCreate() error {
-	errs := r.Spec.LogSetBasic.ValidateCreate(r.ObjectMeta)
+	errs := r.Spec.ValidateCreate(r.ObjectMeta)
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
 	return invalidOrNil(errs, r)
 }
 
 func (r *LogSet) ValidateUpdate(o runtime.Object) error {
 	old := o.(*LogSet)
-	errs := r.Spec.LogSetBasic.ValidateUpdate(&old.Spec.LogSetBasic, r.ObjectMeta)
+	errs := r.Spec.ValidateUpdate(&old.Spec, r.ObjectMeta)
 	return invalidOrNil(errs, r)
 }
 
@@ -138,7 +139,7 @@ func (r *LogSet) ValidateDelete() error {
 	return nil
 }
 
-func (r *LogSetBasic) validateMutateCommon() field.ErrorList {
+func (r *LogSetSpec) validateMutateCommon() field.ErrorList {
 	var errs field.ErrorList
 	errs = append(errs, validateVolume(&r.Volume, field.NewPath("spec").Child("volume"))...)
 	errs = append(errs, r.validateInitialConfig()...)
@@ -146,7 +147,7 @@ func (r *LogSetBasic) validateMutateCommon() field.ErrorList {
 	return errs
 }
 
-func (r *LogSetBasic) ValidateCreate(meta metav1.ObjectMeta) field.ErrorList {
+func (r *LogSetSpec) ValidateCreate(meta metav1.ObjectMeta) field.ErrorList {
 	var errs field.ErrorList
 	errs = append(errs, r.validateMutateCommon()...)
 	errs = append(errs, r.validateIfBucketInUse(meta)...)
@@ -154,7 +155,7 @@ func (r *LogSetBasic) ValidateCreate(meta metav1.ObjectMeta) field.ErrorList {
 	return errs
 }
 
-func (r *LogSetBasic) ValidateUpdate(old *LogSetBasic, meta metav1.ObjectMeta) field.ErrorList {
+func (r *LogSetSpec) ValidateUpdate(old *LogSetSpec, meta metav1.ObjectMeta) field.ErrorList {
 	if err := r.validateMutateCommon(); err != nil {
 		return err
 	}
@@ -166,7 +167,7 @@ func (r *LogSetBasic) ValidateUpdate(old *LogSetBasic, meta metav1.ObjectMeta) f
 	return errs
 }
 
-func (r *LogSetBasic) validateSharedStorage() field.ErrorList {
+func (r *LogSetSpec) validateSharedStorage() field.ErrorList {
 	var errs field.ErrorList
 	parent := field.NewPath("spec").Child("sharedStorage")
 	count := 0
@@ -191,7 +192,7 @@ func (r *LogSetBasic) validateSharedStorage() field.ErrorList {
 	return errs
 }
 
-func (r *LogSetBasic) validateInitialConfig() field.ErrorList {
+func (r *LogSetSpec) validateInitialConfig() field.ErrorList {
 	var errs field.ErrorList
 	parent := field.NewPath("spec").Child("initialConfig")
 
@@ -217,7 +218,7 @@ func (r *LogSetBasic) validateInitialConfig() field.ErrorList {
 	return errs
 }
 
-func (r *LogSetBasic) validateIfBucketDeleting() field.ErrorList {
+func (r *LogSetSpec) validateIfBucketDeleting() field.ErrorList {
 	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
 		return nil
 	}
@@ -242,7 +243,7 @@ func (r *LogSetBasic) validateIfBucketDeleting() field.ErrorList {
 	return nil
 }
 
-func (r *LogSetBasic) validateIfBucketInUse(meta metav1.ObjectMeta) field.ErrorList {
+func (r *LogSetSpec) validateIfBucketInUse(meta metav1.ObjectMeta) field.ErrorList {
 	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
 		return nil
 	}

@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
 )
@@ -71,11 +70,6 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	// sync specs
 	ls := &v1alpha1.LogSet{
 		ObjectMeta: v1alpha1.LogSetKey(mo),
-		Spec: v1alpha1.LogSetSpec{
-			LogSetBasic: v1alpha1.LogSetBasic{
-				InitialConfig: mo.Spec.LogService.InitialConfig,
-			},
-		},
 	}
 	dn := &v1alpha1.DNSet{
 		ObjectMeta: v1alpha1.DNSetKey(mo),
@@ -83,11 +77,14 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	}
 	tp := &v1alpha1.CNSet{
 		ObjectMeta: v1alpha1.TPSetKey(mo),
-		Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
+		Deps: v1alpha1.CNSetDeps{
+			LogSetRef: ls.AsDependency(),
+			DNSet:     &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)},
+		},
 	}
-	result, err := utils.CreateOwnedOrUpdate(ctx, ls, func() error {
-		ls.Spec.LogSetBasic = mo.Spec.LogService
-		setPodSetDefault(&ls.Spec.LogSetBasic.PodSet, mo)
+	_, err := utils.CreateOwnedOrUpdate(ctx, ls, func() error {
+		ls.Spec = mo.Spec.LogService
+		setPodSetDefault(&ls.Spec.PodSet, mo)
 		setOverlay(&ls.Spec.Overlay, mo)
 		ls.Spec.Image = mo.LogSetImage()
 		return nil
@@ -95,31 +92,27 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	if err != nil {
 		return nil, errors.Wrap(err, "sync LogSet")
 	}
-	if result == controllerutil.OperationResultUpdated {
-		// mark the logset as NotSynced to avoid race condition
-		ls.SetCondition(updatingCondition())
-		if err := ctx.UpdateStatus(ls); err != nil {
-			return nil, err
-		}
-	}
-	result, err = utils.CreateOwnedOrUpdate(ctx, dn, func() error {
-		dn.Spec.DNSetBasic = mo.Spec.DN
-		setPodSetDefault(&dn.Spec.DNSetBasic.PodSet, mo)
+	_, err = utils.CreateOwnedOrUpdate(ctx, dn, func() error {
+		dn.Spec = mo.Spec.DN
+		setPodSetDefault(&dn.Spec.PodSet, mo)
 		setOverlay(&dn.Spec.Overlay, mo)
 		dn.Spec.Image = mo.DnSetImage()
-		dn.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: v1alpha1.LogSetKey(mo)}
 		return nil
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "sync DNSet")
 	}
-	result, err = utils.CreateOwnedOrUpdate(ctx, tp, func() error {
-		tp.Spec.CNSetBasic = mo.Spec.TP
-		setPodSetDefault(&tp.Spec.CNSetBasic.PodSet, mo)
+	_, err = utils.CreateOwnedOrUpdate(ctx, tp, func() error {
+		tp.Spec = mo.Spec.TP
+		if mo.Spec.Proxy != nil {
+			if tp.Spec.Config == nil {
+				tp.Spec.Config = v1alpha1.NewTomlConfig(map[string]interface{}{})
+			}
+			tp.Spec.Config.Set([]string{"cn", "frontend", "proxy-enabled"}, true)
+		}
+		setPodSetDefault(&tp.Spec.PodSet, mo)
 		setOverlay(&tp.Spec.Overlay, mo)
 		tp.Spec.Image = mo.TpSetImage()
-		tp.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: v1alpha1.LogSetKey(mo)}
-		tp.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)}
 		return nil
 	})
 	if err != nil {
@@ -128,15 +121,22 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	if mo.Spec.AP != nil {
 		ap := &v1alpha1.CNSet{
 			ObjectMeta: v1alpha1.APSetKey(mo),
-			Deps:       v1alpha1.CNSetDeps{LogSetRef: ls.AsDependency()},
+			Deps: v1alpha1.CNSetDeps{
+				LogSetRef: ls.AsDependency(),
+				DNSet:     &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)},
+			},
 		}
 		if err := recon.CreateOwnedOrUpdate(ctx, ap, func() error {
-			ap.Spec.CNSetBasic = *mo.Spec.AP
-			setPodSetDefault(&ap.Spec.CNSetBasic.PodSet, mo)
+			ap.Spec = *mo.Spec.AP
+			if mo.Spec.Proxy != nil {
+				if ap.Spec.Config == nil {
+					ap.Spec.Config = v1alpha1.NewTomlConfig(map[string]interface{}{})
+				}
+				ap.Spec.Config.Set([]string{"cn", "frontend", "proxy-enabled"}, true)
+			}
+			setPodSetDefault(&ap.Spec.PodSet, mo)
 			setOverlay(&ap.Spec.Overlay, mo)
 			ap.Spec.Image = mo.ApSetImage()
-			ap.Deps.LogSet = &v1alpha1.LogSet{ObjectMeta: v1alpha1.LogSetKey(mo)}
-			ap.Deps.DNSet = &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)}
 			return nil
 		}); err != nil {
 			return nil, errors.Wrap(err, "sync AP CNSet")
@@ -152,12 +152,32 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			},
 		}
 		if err := recon.CreateOwnedOrUpdate(ctx, webui, func() error {
-			webui.Spec.WebUIBasic = *mo.Spec.WebUI
+			webui.Spec = *mo.Spec.WebUI
 			return nil
 		}); err != nil {
 			return nil, errors.Wrap(err, "sync webUI")
 		}
 		mo.Status.Webui = &webui.Status
+	}
+
+	if mo.Spec.Proxy != nil {
+		proxy := &v1alpha1.ProxySet{
+			ObjectMeta: v1alpha1.ProxyKey(mo),
+			Deps: v1alpha1.ProxySetDeps{
+				LogSetRef: ls.AsDependency(),
+			},
+		}
+		if err := recon.CreateOwnedOrUpdate(ctx, proxy, func() error {
+			proxy.Spec = *mo.Spec.Proxy
+			setPodSetDefault(&proxy.Spec.PodSet, mo)
+			setOverlay(&proxy.Spec.Overlay, mo)
+			proxy.Spec.Image = mo.ProxySetImage()
+			return nil
+		}); err != nil {
+			return nil, errors.Wrap(err, "sync proxy")
+		}
+
+		mo.Status.Proxy = &proxy.Status
 	}
 
 	// collect status
@@ -209,7 +229,7 @@ func setOverlay(o **v1alpha1.Overlay, mo *v1alpha1.MatrixOneCluster) {
 	if *o == nil {
 		*o = &v1alpha1.Overlay{}
 	}
-	if mo.Spec.ImagePullPolicy != nil {
+	if (*o).ImagePullPolicy == nil && mo.Spec.ImagePullPolicy != nil {
 		(*o).ImagePullPolicy = mo.Spec.ImagePullPolicy
 	}
 	if (*o).PodLabels == nil {
@@ -255,6 +275,9 @@ func readyCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
 	case !recon.IsReady(mo.Status.TP):
 		c.Status = metav1.ConditionFalse
 		c.Reason = "TPSetNotReady"
+	case mo.Spec.Proxy != nil && !recon.IsReady(mo.Status.Proxy):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "ProxySetNotReady"
 	default:
 		c.Status = metav1.ConditionTrue
 		c.Reason = "AllSetsReady"
@@ -274,6 +297,9 @@ func syncedCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
 	case !recon.IsSynced(mo.Status.TP):
 		c.Status = metav1.ConditionFalse
 		c.Reason = "TPSetNotSynced"
+	case mo.Spec.Proxy != nil && !recon.IsSynced(mo.Status.Proxy):
+		c.Status = metav1.ConditionFalse
+		c.Reason = "ProxyNotSynced"
 	default:
 		c.Status = metav1.ConditionTrue
 		c.Reason = "AllSetsSynced"
@@ -312,7 +338,8 @@ func (r *MatrixOneClusterActor) Reconcile(mgr manager.Manager) error {
 			b.Owns(&v1alpha1.LogSet{}).
 				Owns(&v1alpha1.DNSet{}).
 				Owns(&v1alpha1.CNSet{}).
-				Owns(&v1alpha1.WebUI{})
+				Owns(&v1alpha1.WebUI{}).
+				Owns(&v1alpha1.ProxySet{})
 		}))
 }
 

@@ -21,7 +21,7 @@ import (
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,23 +44,21 @@ var _ = Describe("MatrixOneCluster test", func() {
 				Name:      "dn",
 			},
 			Spec: v1alpha1.LogSetSpec{
-				LogSetBasic: v1alpha1.LogSetBasic{
-					PodSet: v1alpha1.PodSet{
-						Replicas: 3,
-						MainContainer: v1alpha1.MainContainer{
-							Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
-						},
+				PodSet: v1alpha1.PodSet{
+					Replicas: 3,
+					MainContainer: v1alpha1.MainContainer{
+						Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
 					},
-					Volume: v1alpha1.Volume{
-						Size: resource.MustParse("100Mi"),
-					},
-					SharedStorage: v1alpha1.SharedStorageProvider{
-						FileSystem: &v1alpha1.FileSystemProvider{
-							Path: "/test",
-						},
-					},
-					StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
 				},
+				Volume: v1alpha1.Volume{
+					Size: resource.MustParse("100Mi"),
+				},
+				SharedStorage: v1alpha1.SharedStorageProvider{
+					FileSystem: &v1alpha1.FileSystemProvider{
+						Path: "/test",
+					},
+				},
+				StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
 			},
 		}
 		d := &v1alpha1.DNSet{
@@ -69,16 +67,14 @@ var _ = Describe("MatrixOneCluster test", func() {
 				Name:      "dn-" + rand.String(6),
 			},
 			Spec: v1alpha1.DNSetSpec{
-				DNSetBasic: v1alpha1.DNSetBasic{
-					PodSet: v1alpha1.PodSet{
-						Replicas: 1,
-						MainContainer: v1alpha1.MainContainer{
-							Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
-						},
+				PodSet: v1alpha1.PodSet{
+					Replicas: 1,
+					MainContainer: v1alpha1.MainContainer{
+						Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
 					},
-					CacheVolume: &v1alpha1.Volume{
-						Size: resource.MustParse("100Mi"),
-					},
+				},
+				CacheVolume: &v1alpha1.Volume{
+					Size: resource.MustParse("100Mi"),
 				},
 			},
 			Deps: v1alpha1.DNSetDeps{

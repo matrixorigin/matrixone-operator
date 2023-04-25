@@ -105,8 +105,6 @@ spec:
                   type: string
                 type: object
               overlay:
-                description: Overlay allows advanced customization of the pod spec
-                  in the set
                 properties:
                   affinity:
                     x-kubernetes-preserve-unknown-fields: true
@@ -179,6 +177,7 @@ spec:
                   volumes:
                     x-kubernetes-preserve-unknown-fields: true
                 type: object
+                x-kubernetes-preserve-unknown-fields: true
               replicas:
                 description: Replicas is the desired number of pods of this set
                 format: int32

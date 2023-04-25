@@ -33,10 +33,10 @@ var _ webhook.Defaulter = &DNSet{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *DNSet) Default() {
-	r.Spec.DNSetBasic.Default()
+	r.Spec.Default()
 }
 
-func (r *DNSetBasic) Default() {
+func (r *DNSetSpec) Default() {
 	if r.Resources.Requests.Memory() != nil && r.SharedStorageCache.MemoryCacheSize == nil {
 		// default memory cache size to 50% request memory
 		size := r.Resources.Requests.Memory().DeepCopy()
@@ -58,7 +58,7 @@ var _ webhook.Validator = &DNSet{}
 func (r *DNSet) ValidateCreate() error {
 	var errs field.ErrorList
 	errs = append(errs, validateLogSetRef(&r.Deps.LogSetRef, field.NewPath("deps"))...)
-	errs = append(errs, r.Spec.DNSetBasic.ValidateCreate()...)
+	errs = append(errs, r.Spec.ValidateCreate()...)
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
 	return invalidOrNil(errs, r)
 }
@@ -74,7 +74,7 @@ func (r *DNSet) ValidateDelete() error {
 	return nil
 }
 
-func (r *DNSetBasic) ValidateCreate() field.ErrorList {
+func (r *DNSetSpec) ValidateCreate() field.ErrorList {
 	var errs field.ErrorList
 	if r.CacheVolume != nil {
 		errs = append(errs, validateVolume(r.CacheVolume, field.NewPath("spec").Child("cacheVolume"))...)

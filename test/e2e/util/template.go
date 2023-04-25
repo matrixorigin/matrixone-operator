@@ -31,23 +31,21 @@ func NewLogSetTpl(ns, image string) *v1alpha1.LogSet {
 			Name:      "log-" + rand.String(6),
 		},
 		Spec: v1alpha1.LogSetSpec{
-			LogSetBasic: v1alpha1.LogSetBasic{
-				PodSet: v1alpha1.PodSet{
-					Replicas: 3,
-					MainContainer: v1alpha1.MainContainer{
-						Image: image,
-					},
+			PodSet: v1alpha1.PodSet{
+				Replicas: 3,
+				MainContainer: v1alpha1.MainContainer{
+					Image: image,
 				},
-				Volume: v1alpha1.Volume{
-					Size: resource.MustParse("100Mi"),
-				},
-				SharedStorage: v1alpha1.SharedStorageProvider{
-					FileSystem: &v1alpha1.FileSystemProvider{
-						Path: "/test",
-					},
-				},
-				StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
 			},
+			Volume: v1alpha1.Volume{
+				Size: resource.MustParse("100Mi"),
+			},
+			SharedStorage: v1alpha1.SharedStorageProvider{
+				FileSystem: &v1alpha1.FileSystemProvider{
+					Path: "/test",
+				},
+			},
+			StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
 		},
 	}
 	return l
@@ -114,7 +112,7 @@ func NewMoTpl(namespace, version, repo string) *v1alpha1.MatrixOneCluster {
 			Name:      "mo-" + rand.String(6),
 		},
 		Spec: v1alpha1.MatrixOneClusterSpec{
-			TP: v1alpha1.CNSetBasic{
+			TP: v1alpha1.CNSetSpec{
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 				},
@@ -122,7 +120,7 @@ func NewMoTpl(namespace, version, repo string) *v1alpha1.MatrixOneCluster {
 					Size: resource.MustParse("100Mi"),
 				},
 			},
-			DN: v1alpha1.DNSetBasic{
+			DN: v1alpha1.DNSetSpec{
 				PodSet: v1alpha1.PodSet{
 					// test multiple DN replicas
 					Replicas: 1,
@@ -131,7 +129,7 @@ func NewMoTpl(namespace, version, repo string) *v1alpha1.MatrixOneCluster {
 					Size: resource.MustParse("100Mi"),
 				},
 			},
-			LogService: v1alpha1.LogSetBasic{
+			LogService: v1alpha1.LogSetSpec{
 				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
 				},

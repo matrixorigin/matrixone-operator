@@ -43,18 +43,16 @@ func TestLogSetActor_Observe(t *testing.T) {
 			Name:      "test",
 		},
 		Spec: v1alpha1.LogSetSpec{
-			LogSetBasic: v1alpha1.LogSetBasic{
-				PodSet: v1alpha1.PodSet{
-					MainContainer: v1alpha1.MainContainer{
-						Image: "test:latest",
-					},
-					Replicas: 1,
+			PodSet: v1alpha1.PodSet{
+				MainContainer: v1alpha1.MainContainer{
+					Image: "test:latest",
 				},
-				InitialConfig: v1alpha1.InitialConfig{
-					LogShards:        pointer.Int(1),
-					DNShards:         pointer.Int(1),
-					LogShardReplicas: pointer.Int(1),
-				},
+				Replicas: 1,
+			},
+			InitialConfig: v1alpha1.InitialConfig{
+				LogShards:        pointer.Int(1),
+				DNShards:         pointer.Int(1),
+				LogShardReplicas: pointer.Int(1),
 			},
 		},
 	}

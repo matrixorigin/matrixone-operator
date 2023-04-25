@@ -30,7 +30,7 @@ import (
 
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap"

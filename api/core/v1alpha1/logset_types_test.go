@@ -24,42 +24,42 @@ func TestSetDefaultRetentionPolicy(t *testing.T) {
 	retain := PVCRetentionPolicyRetain
 
 	testCases := []struct {
-		logset    LogSetBasic
+		logset    LogSetSpec
 		pvcPolicy *PVCRetentionPolicy
 		s3Policy  *PVCRetentionPolicy
 	}{
 		// does not set any policies
 		{
-			logset:    LogSetBasic{},
+			logset:    LogSetSpec{},
 			pvcPolicy: &del,
 			s3Policy:  nil,
 		},
 
 		// set only one policy, four cases
 		{
-			logset:    LogSetBasic{PVCRetentionPolicy: &del},
+			logset:    LogSetSpec{PVCRetentionPolicy: &del},
 			pvcPolicy: &del,
 			s3Policy:  nil,
 		},
 		{
-			logset:    LogSetBasic{SharedStorage: SharedStorageProvider{S3: &S3Provider{S3RetentionPolicy: &del}}},
+			logset:    LogSetSpec{SharedStorage: SharedStorageProvider{S3: &S3Provider{S3RetentionPolicy: &del}}},
 			pvcPolicy: &del,
 			s3Policy:  &del,
 		},
 		{
-			logset:    LogSetBasic{PVCRetentionPolicy: &retain},
+			logset:    LogSetSpec{PVCRetentionPolicy: &retain},
 			pvcPolicy: &retain,
 			s3Policy:  nil,
 		},
 		{
-			logset:    LogSetBasic{SharedStorage: SharedStorageProvider{S3: &S3Provider{S3RetentionPolicy: &retain}}},
+			logset:    LogSetSpec{SharedStorage: SharedStorageProvider{S3: &S3Provider{S3RetentionPolicy: &retain}}},
 			pvcPolicy: &retain,
 			s3Policy:  &retain,
 		},
 
 		// all policy set, four cases
 		{
-			logset: LogSetBasic{
+			logset: LogSetSpec{
 				PVCRetentionPolicy: &retain,
 				SharedStorage:      SharedStorageProvider{S3: &S3Provider{S3RetentionPolicy: &retain}},
 			},
@@ -67,7 +67,7 @@ func TestSetDefaultRetentionPolicy(t *testing.T) {
 			s3Policy:  &retain,
 		},
 		{
-			logset: LogSetBasic{
+			logset: LogSetSpec{
 				PVCRetentionPolicy: &del,
 				SharedStorage:      SharedStorageProvider{S3: &S3Provider{S3RetentionPolicy: &retain}},
 			},
@@ -75,7 +75,7 @@ func TestSetDefaultRetentionPolicy(t *testing.T) {
 			s3Policy:  &retain,
 		},
 		{
-			logset: LogSetBasic{
+			logset: LogSetSpec{
 				PVCRetentionPolicy: &retain,
 				SharedStorage:      SharedStorageProvider{S3: &S3Provider{S3RetentionPolicy: &del}},
 			},
@@ -83,7 +83,7 @@ func TestSetDefaultRetentionPolicy(t *testing.T) {
 			s3Policy:  &del,
 		},
 		{
-			logset: LogSetBasic{
+			logset: LogSetSpec{
 				PVCRetentionPolicy: &del,
 				SharedStorage:      SharedStorageProvider{S3: &S3Provider{S3RetentionPolicy: &del}},
 			},

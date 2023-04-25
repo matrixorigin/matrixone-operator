@@ -41,7 +41,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: v1alpha1.MatrixOneClusterSpec{
-			LogService: v1alpha1.LogSetBasic{
+			LogService: v1alpha1.LogSetSpec{
 				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
 				},
@@ -52,12 +52,12 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 					S3: &v1alpha1.S3Provider{Path: "test/data"},
 				},
 			},
-			DN: v1alpha1.DNSetBasic{
+			DN: v1alpha1.DNSetSpec{
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 				},
 			},
-			TP: v1alpha1.CNSetBasic{
+			TP: v1alpha1.CNSetSpec{
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 				},

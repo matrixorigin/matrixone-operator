@@ -34,12 +34,10 @@ var _ = Describe("CNSet Webhook", func() {
 				Namespace: "default",
 			},
 			Spec: CNSetSpec{
-				CNSetBasic: CNSetBasic{
-					PodSet: PodSet{
-						Replicas: 2,
-						MainContainer: MainContainer{
-							Image: "test",
-						},
+				PodSet: PodSet{
+					Replicas: 2,
+					MainContainer: MainContainer{
+						Image: "test",
 					},
 				},
 			},
@@ -64,16 +62,14 @@ var _ = Describe("CNSet Webhook", func() {
 				Namespace: "default",
 			},
 			Spec: CNSetSpec{
-				CNSetBasic: CNSetBasic{
-					PodSet: PodSet{
-						Replicas: 2,
-						MainContainer: MainContainer{
-							Image: "test",
-						},
+				PodSet: PodSet{
+					Replicas: 2,
+					MainContainer: MainContainer{
+						Image: "test",
 					},
-					CacheVolume: &Volume{
-						Size: resource.MustParse("20Gi"),
-					},
+				},
+				CacheVolume: &Volume{
+					Size: resource.MustParse("20Gi"),
 				},
 			},
 			Deps: CNSetDeps{

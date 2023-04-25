@@ -36,7 +36,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 				Namespace: "default",
 			},
 			Spec: MatrixOneClusterSpec{
-				LogService: LogSetBasic{
+				LogService: LogSetSpec{
 					PodSet: PodSet{
 						Replicas: 3,
 					},
@@ -47,12 +47,12 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						S3: &S3Provider{Path: "test/data"},
 					},
 				},
-				DN: DNSetBasic{
+				DN: DNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
 				},
-				TP: CNSetBasic{
+				TP: CNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
@@ -78,7 +78,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 				Namespace: "default",
 			},
 			Spec: MatrixOneClusterSpec{
-				LogService: LogSetBasic{
+				LogService: LogSetSpec{
 					PodSet: PodSet{
 						Replicas: 3,
 					},
@@ -89,12 +89,12 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						S3: &S3Provider{Path: "test/data"},
 					},
 				},
-				DN: DNSetBasic{
+				DN: DNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
 				},
-				TP: CNSetBasic{
+				TP: CNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
@@ -127,7 +127,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 				Namespace: "default",
 			},
 			Spec: MatrixOneClusterSpec{
-				LogService: LogSetBasic{
+				LogService: LogSetSpec{
 					PodSet: PodSet{
 						Replicas: 3,
 					},
@@ -140,12 +140,12 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						},
 					},
 				},
-				DN: DNSetBasic{
+				DN: DNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
 				},
-				TP: CNSetBasic{
+				TP: CNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
@@ -162,7 +162,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 
 		By("accept valid update")
 		cluster.Spec.LogService.Replicas = 5
-		cluster.Spec.AP = &CNSetBasic{
+		cluster.Spec.AP = &CNSetSpec{
 			PodSet: PodSet{
 				Replicas: 2,
 			},

@@ -43,18 +43,14 @@ func TestCNSetActor_Observe(t *testing.T) {
 			Name:      "test",
 		},
 		Spec: v1alpha1.CNSetSpec{
-			CNSetBasic: v1alpha1.CNSetBasic{
-				PodSet: v1alpha1.PodSet{
-					MainContainer: v1alpha1.MainContainer{
-						Image: "test:latest",
-					},
-					Replicas: 1,
+			PodSet: v1alpha1.PodSet{
+				MainContainer: v1alpha1.MainContainer{
+					Image: "test:latest",
 				},
-				CacheVolume: &v1alpha1.Volume{
-					Size: resource.MustParse("10Gi"),
-				},
-				// TODO: add configuration of cn
-
+				Replicas: 1,
+			},
+			CacheVolume: &v1alpha1.Volume{
+				Size: resource.MustParse("10Gi"),
 			},
 		},
 	}
@@ -64,13 +60,11 @@ func TestCNSetActor_Observe(t *testing.T) {
 			Name:      "test",
 		},
 		Spec: v1alpha1.CNSetSpec{
-			CNSetBasic: v1alpha1.CNSetBasic{
-				PodSet: v1alpha1.PodSet{
-					MainContainer: v1alpha1.MainContainer{
-						Image: "test:latest",
-					},
-					Replicas: 3,
+			PodSet: v1alpha1.PodSet{
+				MainContainer: v1alpha1.MainContainer{
+					Image: "test:latest",
 				},
+				Replicas: 3,
 			},
 		},
 	}
@@ -181,11 +175,9 @@ func TestCNSetActor_Observe(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: v1alpha1.LogSetSpec{
-					LogSetBasic: v1alpha1.LogSetBasic{
-						SharedStorage: v1alpha1.SharedStorageProvider{
-							S3: &v1alpha1.S3Provider{
-								Path: "bucket/dir",
-							},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
+							Path: "bucket/dir",
 						},
 					},
 				},
@@ -220,13 +212,11 @@ func TestCNSetVolumeMount(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: v1alpha1.CNSetSpec{
-					CNSetBasic: v1alpha1.CNSetBasic{
-						PodSet: v1alpha1.PodSet{
-							MainContainer: v1alpha1.MainContainer{
-								Image: "test:latest",
-							},
-							Replicas: 3,
+					PodSet: v1alpha1.PodSet{
+						MainContainer: v1alpha1.MainContainer{
+							Image: "test:latest",
 						},
+						Replicas: 3,
 					},
 				},
 			},
@@ -244,16 +234,14 @@ func TestCNSetVolumeMount(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: v1alpha1.CNSetSpec{
-					CNSetBasic: v1alpha1.CNSetBasic{
-						PodSet: v1alpha1.PodSet{
-							MainContainer: v1alpha1.MainContainer{
-								Image: "test:latest",
-							},
-							Replicas: 3,
+					PodSet: v1alpha1.PodSet{
+						MainContainer: v1alpha1.MainContainer{
+							Image: "test:latest",
 						},
-						CacheVolume: &v1alpha1.Volume{
-							Size: resource.MustParse("10Gi"),
-						},
+						Replicas: 3,
+					},
+					CacheVolume: &v1alpha1.Volume{
+						Size: resource.MustParse("10Gi"),
 					},
 				},
 			},
@@ -277,11 +265,9 @@ func TestCNSetVolumeMount(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: v1alpha1.LogSetSpec{
-					LogSetBasic: v1alpha1.LogSetBasic{
-						SharedStorage: v1alpha1.SharedStorageProvider{
-							S3: &v1alpha1.S3Provider{
-								Path: "bucket/dir",
-							},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
+							Path: "bucket/dir",
 						},
 					},
 				},

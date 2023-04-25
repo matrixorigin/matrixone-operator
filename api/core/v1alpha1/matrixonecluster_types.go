@@ -25,21 +25,25 @@ import (
 type MatrixOneClusterSpec struct {
 	// TP is the default CN pod set that accepts client connections and execute queries
 	// +required
-	TP CNSetBasic `json:"tp"`
+	TP CNSetSpec `json:"tp"`
 
 	// AP is an optional CN pod set that accept MPP sub-plans to accelerate sql queries
 	// +optionals
-	AP *CNSetBasic `json:"ap,omitempty"`
+	AP *CNSetSpec `json:"ap,omitempty"`
 
 	// DN is the default DN pod set of this Cluster
-	DN DNSetBasic `json:"dn"`
+	DN DNSetSpec `json:"dn"`
 
 	// LogService is the default LogService pod set of this cluster
-	LogService LogSetBasic `json:"logService"`
+	LogService LogSetSpec `json:"logService"`
 
 	// WebUI is the default web ui pod of this cluster
 	// +optional
-	WebUI *WebUIBasic `json:"webui,omitempty"`
+	WebUI *WebUISpec `json:"webui,omitempty"`
+
+	// Proxy defines an optional MO Proxy of this cluster
+	// +optional
+	Proxy *ProxySetSpec `json:"proxy,omitempty"`
 
 	// Version is the version of the cluster, which translated
 	// to the docker image tag used for each component.
@@ -85,6 +89,8 @@ type MatrixOneClusterStatus struct {
 	AP *CNSetStatus `json:"ap,omitempty"`
 	// DN is the DN set status
 	DN *DNSetStatus `json:"dn,omitempty"`
+	// Proxy is the Proxy set status
+	Proxy *ProxySetStatus `json:"proxy,omitempty"`
 
 	// Webui is the webui service status
 	Webui *WebUIStatus `json:"webui,omitempty"`

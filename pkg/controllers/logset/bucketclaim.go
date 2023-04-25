@@ -54,7 +54,7 @@ func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruis
 
 	targetBucket := bucket.DeepCopy()
 	controllerutil.AddFinalizer(targetBucket, v1alpha1.BucketDataFinalizer)
-	targetBucket.Spec.S3 = ls.Spec.LogSetBasic.SharedStorage.S3
+	targetBucket.Spec.S3 = ls.Spec.SharedStorage.S3
 	targetBucket.Status.BindTo = v1alpha1.BucketBindToMark(ls.ObjectMeta)
 	targetBucket.Status.State = v1alpha1.StatusInUse
 	sort.Strings(targetBucket.Finalizers)
@@ -97,7 +97,7 @@ func (r *Actor) finalizeBucket(ctx *recon.Context[*v1alpha1.LogSet]) (success bo
 		return false, nil
 	}
 
-	s3RetentionPolicy := ls.Spec.LogSetBasic.GetS3RetentionPolicy()
+	s3RetentionPolicy := ls.Spec.GetS3RetentionPolicy()
 	if s3RetentionPolicy == nil {
 		// generally we will never enter this block
 		return true, nil

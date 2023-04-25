@@ -117,6 +117,8 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  overlay:
+                    x-kubernetes-preserve-unknown-fields: true
                   replicas:
                     description: Replicas is the desired number of pods of this set
                     format: int32
@@ -148,6 +150,9 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  role:
+                    description: '[TP, AP], default to TP'
+                    type: string
                   serviceArgs:
                     description: 'ServiceArgs define command line options for process,
                       used by logset/cnset/dnset service. NOTE: user should not define
@@ -234,6 +239,80 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  overlay:
+                    properties:
+                      affinity:
+                        x-kubernetes-preserve-unknown-fields: true
+                      args:
+                        items:
+                          type: string
+                        type: array
+                      command:
+                        items:
+                          type: string
+                        type: array
+                      dnsConfig:
+                        x-kubernetes-preserve-unknown-fields: true
+                      env:
+                        x-kubernetes-preserve-unknown-fields: true
+                      envFrom:
+                        x-kubernetes-preserve-unknown-fields: true
+                      hostAliases:
+                        x-kubernetes-preserve-unknown-fields: true
+                      imagePullPolicy:
+                        default: IfNotPresent
+                        description: ImagePullPolicy is the pull policy of MatrixOne
+                          image. The default value is the same as the default of Kubernetes.
+                        enum:
+                        - Always
+                        - Never
+                        - IfNotPresent
+                        type: string
+                      imagePullSecrets:
+                        x-kubernetes-preserve-unknown-fields: true
+                      initContainers:
+                        x-kubernetes-preserve-unknown-fields: true
+                      lifecycle:
+                        x-kubernetes-preserve-unknown-fields: true
+                      livenessProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      podAnnotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      podLabels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      priorityClassName:
+                        type: string
+                      readinessProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      runtimeClassName:
+                        type: string
+                      securityContext:
+                        x-kubernetes-preserve-unknown-fields: true
+                      serviceAccountName:
+                        type: string
+                      sidecarContainers:
+                        x-kubernetes-preserve-unknown-fields: true
+                      startupProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      terminationGracePeriodSeconds:
+                        format: int64
+                        type: integer
+                      tolerations:
+                        x-kubernetes-preserve-unknown-fields: true
+                      topologySpreadConstraints:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumeClaims:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumeMounts:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumes:
+                        x-kubernetes-preserve-unknown-fields: true
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   replicas:
                     description: Replicas is the desired number of pods of this set
                     format: int32
@@ -351,6 +430,80 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  overlay:
+                    properties:
+                      affinity:
+                        x-kubernetes-preserve-unknown-fields: true
+                      args:
+                        items:
+                          type: string
+                        type: array
+                      command:
+                        items:
+                          type: string
+                        type: array
+                      dnsConfig:
+                        x-kubernetes-preserve-unknown-fields: true
+                      env:
+                        x-kubernetes-preserve-unknown-fields: true
+                      envFrom:
+                        x-kubernetes-preserve-unknown-fields: true
+                      hostAliases:
+                        x-kubernetes-preserve-unknown-fields: true
+                      imagePullPolicy:
+                        default: IfNotPresent
+                        description: ImagePullPolicy is the pull policy of MatrixOne
+                          image. The default value is the same as the default of Kubernetes.
+                        enum:
+                        - Always
+                        - Never
+                        - IfNotPresent
+                        type: string
+                      imagePullSecrets:
+                        x-kubernetes-preserve-unknown-fields: true
+                      initContainers:
+                        x-kubernetes-preserve-unknown-fields: true
+                      lifecycle:
+                        x-kubernetes-preserve-unknown-fields: true
+                      livenessProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      podAnnotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      podLabels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      priorityClassName:
+                        type: string
+                      readinessProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      runtimeClassName:
+                        type: string
+                      securityContext:
+                        x-kubernetes-preserve-unknown-fields: true
+                      serviceAccountName:
+                        type: string
+                      sidecarContainers:
+                        x-kubernetes-preserve-unknown-fields: true
+                      startupProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      terminationGracePeriodSeconds:
+                        format: int64
+                        type: integer
+                      tolerations:
+                        x-kubernetes-preserve-unknown-fields: true
+                      topologySpreadConstraints:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumeClaims:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumeMounts:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumes:
+                        x-kubernetes-preserve-unknown-fields: true
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   pvcRetentionPolicy:
                     description: 'PVCRetentionPolicy defines the retention policy
                       of orphaned PVCs due to cluster deletion, scale-in or failover.
@@ -506,6 +659,163 @@ spec:
                 description: NodeSelector specifies default node selector for all
                   components, this will be overridden by component-level config
                 type: object
+              proxy:
+                description: Proxy defines an optional MO Proxy of this cluster
+                properties:
+                  clusterDomain:
+                    description: ClusterDomain is the cluster-domain of current kubernetes
+                      cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+                      for details
+                    type: string
+                  config:
+                    description: Config is the raw config for pods
+                    type: string
+                  dnsBasedIdentity:
+                    description: If enabled, use the Pod dns name as the Pod identity
+                    type: boolean
+                  image:
+                    description: Image is the docker image of the main container
+                    type: string
+                  nodePort:
+                    description: NodePort specifies the node port to use when ServiceType
+                      is NodePort or LoadBalancer, reconciling will fail if the node
+                      port is not available.
+                    format: int32
+                    type: integer
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  overlay:
+                    properties:
+                      affinity:
+                        x-kubernetes-preserve-unknown-fields: true
+                      args:
+                        items:
+                          type: string
+                        type: array
+                      command:
+                        items:
+                          type: string
+                        type: array
+                      dnsConfig:
+                        x-kubernetes-preserve-unknown-fields: true
+                      env:
+                        x-kubernetes-preserve-unknown-fields: true
+                      envFrom:
+                        x-kubernetes-preserve-unknown-fields: true
+                      hostAliases:
+                        x-kubernetes-preserve-unknown-fields: true
+                      imagePullPolicy:
+                        default: IfNotPresent
+                        description: ImagePullPolicy is the pull policy of MatrixOne
+                          image. The default value is the same as the default of Kubernetes.
+                        enum:
+                        - Always
+                        - Never
+                        - IfNotPresent
+                        type: string
+                      imagePullSecrets:
+                        x-kubernetes-preserve-unknown-fields: true
+                      initContainers:
+                        x-kubernetes-preserve-unknown-fields: true
+                      lifecycle:
+                        x-kubernetes-preserve-unknown-fields: true
+                      livenessProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      podAnnotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      podLabels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      priorityClassName:
+                        type: string
+                      readinessProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      runtimeClassName:
+                        type: string
+                      securityContext:
+                        x-kubernetes-preserve-unknown-fields: true
+                      serviceAccountName:
+                        type: string
+                      sidecarContainers:
+                        x-kubernetes-preserve-unknown-fields: true
+                      startupProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      terminationGracePeriodSeconds:
+                        format: int64
+                        type: integer
+                      tolerations:
+                        x-kubernetes-preserve-unknown-fields: true
+                      topologySpreadConstraints:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumeClaims:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumeMounts:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumes:
+                        x-kubernetes-preserve-unknown-fields: true
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  replicas:
+                    description: Replicas is the desired number of pods of this set
+                    format: int32
+                    type: integer
+                  resources:
+                    description: Resources is the resource requirement of the main
+                      conainer
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  serviceArgs:
+                    description: 'ServiceArgs define command line options for process,
+                      used by logset/cnset/dnset service. NOTE: user should not define
+                      "-cfg" argument in this field, which is defined default by controller'
+                    items:
+                      type: string
+                    type: array
+                  serviceType:
+                    default: ClusterIP
+                    description: ServiceType is the service type of proxy service
+                    enum:
+                    - ClusterIP
+                    - NodePort
+                    - LoadBalancer
+                    type: string
+                  topologySpread:
+                    description: TopologyEvenSpread specifies what topology domains
+                      the Pods in set should be evenly spread in. This will be overridden
+                      by .overlay.TopologySpreadConstraints
+                    items:
+                      type: string
+                    type: array
+                required:
+                - replicas
+                type: object
               topologySpread:
                 description: TopologyEvenSpread specifies default topology policy
                   for all components, this will be overridden by component-level config
@@ -565,6 +875,8 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  overlay:
+                    x-kubernetes-preserve-unknown-fields: true
                   replicas:
                     description: Replicas is the desired number of pods of this set
                     format: int32
@@ -596,6 +908,9 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  role:
+                    description: '[TP, AP], default to TP'
+                    type: string
                   serviceArgs:
                     description: 'ServiceArgs define command line options for process,
                       used by logset/cnset/dnset service. NOTE: user should not define
@@ -666,6 +981,80 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  overlay:
+                    properties:
+                      affinity:
+                        x-kubernetes-preserve-unknown-fields: true
+                      args:
+                        items:
+                          type: string
+                        type: array
+                      command:
+                        items:
+                          type: string
+                        type: array
+                      dnsConfig:
+                        x-kubernetes-preserve-unknown-fields: true
+                      env:
+                        x-kubernetes-preserve-unknown-fields: true
+                      envFrom:
+                        x-kubernetes-preserve-unknown-fields: true
+                      hostAliases:
+                        x-kubernetes-preserve-unknown-fields: true
+                      imagePullPolicy:
+                        default: IfNotPresent
+                        description: ImagePullPolicy is the pull policy of MatrixOne
+                          image. The default value is the same as the default of Kubernetes.
+                        enum:
+                        - Always
+                        - Never
+                        - IfNotPresent
+                        type: string
+                      imagePullSecrets:
+                        x-kubernetes-preserve-unknown-fields: true
+                      initContainers:
+                        x-kubernetes-preserve-unknown-fields: true
+                      lifecycle:
+                        x-kubernetes-preserve-unknown-fields: true
+                      livenessProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      podAnnotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      podLabels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      priorityClassName:
+                        type: string
+                      readinessProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      runtimeClassName:
+                        type: string
+                      securityContext:
+                        x-kubernetes-preserve-unknown-fields: true
+                      serviceAccountName:
+                        type: string
+                      sidecarContainers:
+                        x-kubernetes-preserve-unknown-fields: true
+                      startupProbe:
+                        x-kubernetes-preserve-unknown-fields: true
+                      terminationGracePeriodSeconds:
+                        format: int64
+                        type: integer
+                      tolerations:
+                        x-kubernetes-preserve-unknown-fields: true
+                      topologySpreadConstraints:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumeClaims:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumeMounts:
+                        x-kubernetes-preserve-unknown-fields: true
+                      volumes:
+                        x-kubernetes-preserve-unknown-fields: true
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   replicas:
                     description: Replicas is the desired number of pods of this set
                     format: int32
@@ -1135,6 +1524,81 @@ spec:
                   condition, programmatic client should rely on ConditionalStatus
                   rather than phase.
                 type: string
+              proxy:
+                description: Proxy is the Proxy set status
+                properties:
+                  conditions:
+                    items:
+                      description: "Condition contains details for one aspect of the
+                        current state of this API Resource. --- This struct is intended
+                        for direct use as an array at the field path .status.conditions.
+                        \ For example, \n type FooStatus struct{ // Represents the
+                        observations of a foo's current state. // Known .status.conditions.type
+                        are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type
+                        // +patchStrategy=merge // +listType=map // +listMapKey=type
+                        Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                        patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
+                        \n // other fields }"
+                      properties:
+                        lastTransitionTime:
+                          description: lastTransitionTime is the last time the condition
+                            transitioned from one status to another. This should be
+                            when the underlying condition changed.  If that is not
+                            known, then using the time when the API field changed
+                            is acceptable.
+                          format: date-time
+                          type: string
+                        message:
+                          description: message is a human readable message indicating
+                            details about the transition. This may be an empty string.
+                          maxLength: 32768
+                          type: string
+                        observedGeneration:
+                          description: observedGeneration represents the .metadata.generation
+                            that the condition was set based upon. For instance, if
+                            .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration
+                            is 9, the condition is out of date with respect to the
+                            current state of the instance.
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        reason:
+                          description: reason contains a programmatic identifier indicating
+                            the reason for the condition's last transition. Producers
+                            of specific condition types may define expected values
+                            and meanings for this field, and whether the values are
+                            considered a guaranteed API. The value should be a CamelCase
+                            string. This field may not be empty.
+                          maxLength: 1024
+                          minLength: 1
+                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                          type: string
+                        status:
+                          description: status of the condition, one of True, False,
+                            Unknown.
+                          enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                          type: string
+                        type:
+                          description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                            --- Many .condition.type values are consistent across
+                            resources like Available, but because arbitrary conditions
+                            can be useful (see .node.status.conditions), the ability
+                            to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                          maxLength: 316
+                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                          type: string
+                      required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                      type: object
+                    type: array
+                type: object
               tp:
                 description: TP is the TP set status
                 properties:

@@ -38,13 +38,11 @@ func TestWebuiActor_Observe(t *testing.T) {
 			Name:      "test",
 		},
 		Spec: v1alpha1.WebUISpec{
-			WebUIBasic: v1alpha1.WebUIBasic{
-				PodSet: v1alpha1.PodSet{
-					MainContainer: v1alpha1.MainContainer{
-						Image: "test:latest",
-					},
-					Replicas: 1,
+			PodSet: v1alpha1.PodSet{
+				MainContainer: v1alpha1.MainContainer{
+					Image: "test:latest",
 				},
+				Replicas: 1,
 			},
 		},
 	}
