@@ -157,16 +157,20 @@ func main() {
 	err = moActor.Reconcile(mgr)
 	exitIf(err, "unable to set up matrixone cluster controller")
 
-	proxyActor := &proxyset.Actor{}
-	err = proxyActor.Reconcile(mgr)
-	exitIf(err, "unable to set up proxyset controller")
+	if features.DefaultFeatureGate.Enabled(features.ProxySupport) {
+		proxyActor := &proxyset.Actor{}
+		err = proxyActor.Reconcile(mgr)
+		exitIf(err, "unable to set up proxyset controller")
+	} else {
+		setupLog.Info(fmt.Sprintf("proxy support not enabled, skip setup proxy actor"))
+	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
 		bucketActor := bucketclaim.Actor{}
 		err = bucketActor.Reconcile(mgr)
 		exitIf(err, "unable to set up bucketclaim cluster controller")
 	} else {
-		setupLog.Info(fmt.Sprintf("s3 reclaim feature not enabled!"))
+		setupLog.Info(fmt.Sprintf("s3 reclaim feature not enabled, skip setup bucketclaim actor"))
 	}
 
 	err = mgr.AddHealthzCheck("healthz", healthz.Ping)
