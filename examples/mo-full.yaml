@@ -99,7 +99,7 @@ spec:
     image: matrixorigin/matrixone:latest
     # optional, override cluster-level node selector
     nodeSelector: {}
-    # optional, specify the configuration of logservice pods, default to empty
+    # optional, specify the configuration of DN pods, default to empty
     config: |
       # TOML format config file below
       [log]
@@ -137,11 +137,40 @@ spec:
     image: matrixorigin/matrixone:latest
     # optional, override cluster-level node selector
     nodeSelector: {}
-    # optional, specify the configuration of logservice pods, default to empty
+    # optional, specify the configuration of CN pods, default to empty
     config: |
       # TOML format config file below
       [log]
       level=debug
+  # optional, deploy Proxy pods that route and manage SQL sessions.
+  # if proxy is not enabled, SQL session will be handled directly by CN
+  proxy:
+    # Proxy replicas
+    replicas: 2
+    # optioanl, the container resources of logservice pods, default to no request and no limit
+    resources:
+      # requests are the requested resources, this will also be used to schedule the LogService Pod
+      requests:
+        cpu: 4
+        memory: 12Gi
+      # limits are the resource limitation of the Pod
+      limits:
+        cpu: 4
+        memory: 12Gi
+    # optional, topologySpread ensures the pods of LogService are evenly spread by the labels listed below
+    topologySpread:
+    - kubernetes.io/hostname
+    # optional, override the cluster-level imageRepository and version
+    image: matrixorigin/matrixone:latest
+    # optional, override cluster-level node selector
+    nodeSelector: {}
+    # optional, specify the configuration of Proxy pods, default to empty
+    config: |
+      # TOML format config file below
+      [log]
+      level=debug
+    overlay:
+      env: []
 
   # optional, deploy another CN group that does not accept MySQL session, this group can accept MPP pipelines to accelerate
   # AP queries.
