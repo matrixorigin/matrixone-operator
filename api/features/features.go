@@ -32,11 +32,13 @@ var (
 )
 
 const (
-	S3Reclaim featuregate.Feature = "s3Reclaim"
+	S3Reclaim    featuregate.Feature = "s3Reclaim"
+	ProxySupport featuregate.Feature = "proxySupport"
 )
 
 var defaultFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	S3Reclaim: {Default: false, PreRelease: featuregate.Alpha},
+	S3Reclaim:    {Default: false, PreRelease: featuregate.Alpha},
+	ProxySupport: {Default: false, PreRelease: featuregate.Alpha},
 }
 
 func init() {
