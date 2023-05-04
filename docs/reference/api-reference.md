@@ -74,6 +74,21 @@ _Appears in:_
 
 
 
+#### CNLabel
+
+
+
+
+
+_Appears in:_
+- [CNSetSpec](#cnsetspec)
+
+| Field | Description |
+| --- | --- |
+| `key` _string_ | Key is the store label key |
+| `values` _string array_ | Values are the store label values |
+
+
 #### CNSet
 
 
@@ -124,7 +139,8 @@ _Appears in:_
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet, node storage will be used if not specified |
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
-| `role` _CNRole_ | [TP, AP], default to TP |
+| `role` _CNRole_ | [TP, AP], default to TP Deprecated: use labels instead |
+| `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
 
 
 #### ConditionalStatus

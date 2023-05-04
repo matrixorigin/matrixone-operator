@@ -15,11 +15,16 @@
 package v1alpha1
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -223,6 +228,29 @@ func setDefaultServiceArgs(object interface{}) {
 	default:
 		moLog.Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetSpec, *DNSetSpec, *CNSetSpec")
 		return
+	}
+}
+
+func GetCNPodUUID(pod *corev1.Pod, isDNSBased bool) (string, error) {
+	if isDNSBased {
+		addr := fmt.Sprintf("%s.%s.%s.svc\n", pod.Name, pod.Spec.Subdomain, pod.Namespace)
+		sum := sha256.Sum256([]byte(addr))
+		hexStr := []byte(hex.EncodeToString(sum[:]))
+		s := make([]uint16, 8)
+		// simulate the behavior of od -x
+		for i := 0; i < 16; i += 2 {
+			s[(i+1)/2] = binary.LittleEndian.Uint16(hexStr[i : i+2])
+		}
+		return fmt.Sprintf(
+			"%x%x-%x-%x-%x-%x%x%x", s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]), nil
+	} else {
+		ss := strings.Split(pod.Name, "-")
+		ordinal := ss[len(ss)-1]
+		i, err := strconv.Atoi(ordinal)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("00000000-0000-0000-0000-2%011d", i), nil
 	}
 }
 

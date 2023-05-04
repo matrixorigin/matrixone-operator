@@ -214,7 +214,9 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	cnSet := buildCNSet(cn)
 	svc := buildSvc(cn)
 	syncReplicas(cn, cnSet)
-	syncPodMeta(cn, cnSet)
+	if err := syncPodMeta(cn, cnSet); err != nil {
+		return errors.Wrap(err, "sync pod meta")
+	}
 	syncPodSpec(cn, cnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	syncPersistentVolumeClaim(cn, cnSet)
 

@@ -49,8 +49,19 @@ type CNSetSpec struct {
 	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
 
 	// [TP, AP], default to TP
+	// Deprecated: use labels instead
 	// +optional
 	Role CNRole `json:"role,omitempty"`
+
+	// Labels are the CN labels for all the CN stores managed by this CNSet
+	Labels []CNLabel `json:"cnLabels,omitempty"`
+}
+
+type CNLabel struct {
+	// Key is the store label key
+	Key string `json:"key,omitempty"`
+	// Values are the store label values
+	Values []string `json:"values,omitempty"`
 }
 
 // CNSetStatus Figure out what status should be exposed
