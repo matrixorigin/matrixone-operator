@@ -112,7 +112,7 @@ func NewMoTpl(namespace, version, repo string) *v1alpha1.MatrixOneCluster {
 			Name:      "mo-" + rand.String(6),
 		},
 		Spec: v1alpha1.MatrixOneClusterSpec{
-			TP: v1alpha1.CNSetSpec{
+			TP: &v1alpha1.CNSetSpec{
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 				},

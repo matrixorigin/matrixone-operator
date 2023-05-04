@@ -268,20 +268,6 @@ func DNSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
 	}
 }
 
-func TPSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      mo.Name + "-tp",
-		Namespace: mo.Namespace,
-	}
-}
-
-func APSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      mo.Name + "-ap",
-		Namespace: mo.Namespace,
-	}
-}
-
 func WebUIKey(mo *MatrixOneCluster) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      mo.Name,

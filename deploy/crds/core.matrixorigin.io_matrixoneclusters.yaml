@@ -65,8 +65,8 @@ spec:
             description: Spec is the desired state of MatrixOneCluster
             properties:
               ap:
-                description: AP is an optional CN pod set that accept MPP sub-plans
-                  to accelerate sql queries
+                description: 'AP is an optional CN pod set that accept MPP sub-plans
+                  to accelerate sql queries Deprecated: use cnGroups instead'
                 properties:
                   cacheVolume:
                     description: CacheVolume is the desired local cache volume for
@@ -208,6 +208,164 @@ spec:
                 required:
                 - replicas
                 type: object
+              cnGroups:
+                description: CNGroups are CN pod sets that have different spec like
+                  resources, arch, store labels
+                items:
+                  properties:
+                    cacheVolume:
+                      description: CacheVolume is the desired local cache volume for
+                        CNSet, node storage will be used if not specified
+                      properties:
+                        memoryCacheSize:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: MemoryCacheSize specifies the memory cache
+                            size for read/write this volume
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        size:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: Size is the desired storage size of the volume
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        storageClassName:
+                          description: StorageClassName reference to the storageclass
+                            of the desired volume, the default storageclass of the
+                            cluster would be used if no specified.
+                          type: string
+                      type: object
+                    clusterDomain:
+                      description: ClusterDomain is the cluster-domain of current
+                        kubernetes cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+                        for details
+                      type: string
+                    cnLabels:
+                      description: Labels are the CN labels for all the CN stores
+                        managed by this CNSet
+                      items:
+                        properties:
+                          key:
+                            description: Key is the store label key
+                            type: string
+                          values:
+                            description: Values are the store label values
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      type: array
+                    config:
+                      description: Config is the raw config for pods
+                      type: string
+                    dnsBasedIdentity:
+                      description: If enabled, use the Pod dns name as the Pod identity
+                      type: boolean
+                    image:
+                      description: Image is the docker image of the main container
+                      type: string
+                    name:
+                      description: Name is the CNGroup name, an error will be raised
+                        if duplicated name is found in a mo cluster
+                      type: string
+                    nodePort:
+                      description: NodePort specifies the node port to use when ServiceType
+                        is NodePort or LoadBalancer, reconciling will fail if the
+                        node port is not available.
+                      format: int32
+                      type: integer
+                    nodeSelector:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    overlay:
+                      x-kubernetes-preserve-unknown-fields: true
+                    replicas:
+                      description: Replicas is the desired number of pods of this
+                        set
+                      format: int32
+                      type: integer
+                    resources:
+                      description: Resources is the resource requirement of the main
+                        conainer
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Limits describes the maximum amount of compute
+                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Requests describes the minimum amount of compute
+                            resources required. If Requests is omitted for a container,
+                            it defaults to Limits if that is explicitly specified,
+                            otherwise to an implementation-defined value. More info:
+                            https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          type: object
+                      type: object
+                    role:
+                      description: '[TP, AP], default to TP Deprecated: use labels
+                        instead'
+                      type: string
+                    serviceArgs:
+                      description: 'ServiceArgs define command line options for process,
+                        used by logset/cnset/dnset service. NOTE: user should not
+                        define "-cfg" argument in this field, which is defined default
+                        by controller'
+                      items:
+                        type: string
+                      type: array
+                    serviceType:
+                      default: ClusterIP
+                      description: ServiceType is the service type of cn service
+                      enum:
+                      - ClusterIP
+                      - NodePort
+                      - LoadBalancer
+                      type: string
+                    sharedStorageCache:
+                      properties:
+                        diskCacheSize:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        memoryCacheSize:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                      type: object
+                    topologySpread:
+                      description: TopologyEvenSpread specifies what topology domains
+                        the Pods in set should be evenly spread in. This will be overridden
+                        by .overlay.TopologySpreadConstraints
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - name
+                  - replicas
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               dn:
                 description: DN is the default DN pod set of this Cluster
                 properties:
@@ -838,8 +996,8 @@ spec:
                   type: string
                 type: array
               tp:
-                description: TP is the default CN pod set that accepts client connections
-                  and execute queries
+                description: 'TP is the default CN pod set that accepts client connections
+                  and execute queries Deprecated: use cnGroups instead'
                 properties:
                   cacheVolume:
                     description: CacheVolume is the desired local cache volume for
@@ -1160,14 +1318,13 @@ spec:
             required:
             - dn
             - logService
-            - tp
             - version
             type: object
           status:
             description: Status is the current state of MatrixOneCluster
             properties:
               ap:
-                description: AP is the AP set status
+                description: AP is the AP set status Deprecated
                 properties:
                   availableStores:
                     items:
@@ -1264,6 +1421,15 @@ spec:
                           type: string
                       type: object
                     type: array
+                type: object
+              cnGroups:
+                properties:
+                  desiredGroups:
+                    type: integer
+                  readyGroups:
+                    type: integer
+                  syncedGroups:
+                    type: integer
                 type: object
               conditions:
                 items:
@@ -1630,7 +1796,7 @@ spec:
                     type: array
                 type: object
               tp:
-                description: TP is the TP set status
+                description: 'TP is the TP set status Deprecated: use'
                 properties:
                   availableStores:
                     items:

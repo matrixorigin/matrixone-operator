@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"time"
 )
 
@@ -120,6 +121,20 @@ func toStoreLabels(labels []v1alpha1.CNLabel) map[string]metadata.LabelList {
 func (c *Controller) Reconcile(mgr manager.Manager) error {
 	return obs.Setup[*corev1.Pod](&corev1.Pod{}, "cnlabels", mgr, c,
 		recon.SkipStatusSync(),
-		recon.WithBuildFn(func(b *builder.Builder) {}),
+		recon.WithBuildFn(func(b *builder.Builder) {
+			b.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+				pod, ok := obj.(*corev1.Pod)
+				if !ok {
+					return false
+				}
+				if pod.Labels == nil {
+					return false
+				}
+				if component, ok := pod.Labels[common.ComponentLabelKey]; !ok || component != "CNSet" {
+					return false
+				}
+				return true
+			}))
+		}),
 	)
 }

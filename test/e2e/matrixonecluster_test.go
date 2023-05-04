@@ -64,14 +64,17 @@ var _ = Describe("MatrixOneCluster test", func() {
 				Name:      "test",
 			},
 			Spec: v1alpha1.MatrixOneClusterSpec{
-				TP: v1alpha1.CNSetSpec{
-					PodSet: v1alpha1.PodSet{
-						Replicas: 2,
+				CNGroups: []v1alpha1.CNGroup{{
+					Name: "tp",
+					CNSetSpec: v1alpha1.CNSetSpec{
+						PodSet: v1alpha1.PodSet{
+							Replicas: 2,
+						},
+						CacheVolume: &v1alpha1.Volume{
+							Size: resource.MustParse("100Mi"),
+						},
 					},
-					CacheVolume: &v1alpha1.Volume{
-						Size: resource.MustParse("100Mi"),
-					},
-				},
+				}},
 				DN: v1alpha1.DNSetSpec{
 					PodSet: v1alpha1.PodSet{
 						// test multiple DN replicas
@@ -116,7 +119,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 				logger.Errorw("error get mo cluster status", "cluster", mo.Name, "error", err)
 				return err
 			}
-			if mo.Status.TP == nil || !recon.IsReady(mo.Status.TP) {
+			if !recon.IsReady(mo) {
 				logger.Infow("wait mo cluster ready", "cluster", mo.Name)
 				return errWait
 			}
@@ -149,7 +152,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 					proxyN++
 				}
 			}
-			if logN >= mo.Spec.LogService.Replicas && dnN >= mo.Spec.DN.Replicas && cnN >= mo.Spec.TP.Replicas && proxyN >= mo.Spec.Proxy.Replicas {
+			if logN >= mo.Spec.LogService.Replicas && dnN >= mo.Spec.DN.Replicas && cnN >= mo.Spec.CNGroups[0].Replicas && proxyN >= mo.Spec.Proxy.Replicas {
 				return nil
 			}
 			logger.Infow("wait enough pods running", "log pods count", logN, "cn pods count", cnN, "dn pods count", dnN)
@@ -180,7 +183,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo)).To(Succeed())
 		mo.Spec.LogService.Config = configTemplate.DeepCopy()
 		mo.Spec.DN.Config = configTemplate.DeepCopy()
-		mo.Spec.TP.Config = configTemplate.DeepCopy()
+		mo.Spec.CNGroups[0].Config = configTemplate.DeepCopy()
 		Expect(kubeCli.Update(ctx, mo)).To(Succeed())
 		verifyConfig := func(pods []corev1.Pod, comp string) error {
 			var configMapName string

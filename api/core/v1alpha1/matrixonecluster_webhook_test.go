@@ -52,7 +52,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						Replicas: 2,
 					},
 				},
-				TP: CNSetSpec{
+				TP: &CNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
@@ -94,7 +94,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						Replicas: 2,
 					},
 				},
-				TP: CNSetSpec{
+				TP: &CNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
@@ -145,7 +145,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						Replicas: 2,
 					},
 				},
-				TP: CNSetSpec{
+				TP: &CNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},

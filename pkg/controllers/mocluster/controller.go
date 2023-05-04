@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package mocluster
 
 import (
@@ -75,13 +76,6 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		ObjectMeta: v1alpha1.DNSetKey(mo),
 		Deps:       v1alpha1.DNSetDeps{LogSetRef: ls.AsDependency()},
 	}
-	tp := &v1alpha1.CNSet{
-		ObjectMeta: v1alpha1.TPSetKey(mo),
-		Deps: v1alpha1.CNSetDeps{
-			LogSetRef: ls.AsDependency(),
-			DNSet:     &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)},
-		},
-	}
 	_, err := utils.CreateOwnedOrUpdate(ctx, ls, func() error {
 		ls.Spec = mo.Spec.LogService
 		setPodSetDefault(&ls.Spec.PodSet, mo)
@@ -102,54 +96,72 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	if err != nil {
 		return nil, errors.Wrap(err, "sync DNSet")
 	}
-	_, err = utils.CreateOwnedOrUpdate(ctx, tp, func() error {
-		tp.Spec = mo.Spec.TP
-		if mo.Spec.Proxy != nil {
-			if tp.Spec.Config == nil {
-				tp.Spec.Config = v1alpha1.NewTomlConfig(map[string]interface{}{})
-			}
-			tp.Spec.Config.Set([]string{"cn", "frontend", "proxy-enabled"}, true)
-		}
-		setPodSetDefault(&tp.Spec.PodSet, mo)
-		setOverlay(&tp.Spec.Overlay, mo)
-		tp.Spec.Image = mo.TpSetImage()
-		return nil
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "sync TP CNSet")
+
+	cnGroups := append([]v1alpha1.CNGroup{}, mo.Spec.CNGroups...)
+	// append TP and AP cnset for backward compatibility
+	if mo.Spec.TP != nil {
+		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "tp", CNSetSpec: *mo.Spec.TP})
 	}
 	if mo.Spec.AP != nil {
-		ap := &v1alpha1.CNSet{
-			ObjectMeta: v1alpha1.APSetKey(mo),
+		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "ap", CNSetSpec: *mo.Spec.AP})
+	}
+	desiredCNSets := map[string]bool{}
+	for _, g := range cnGroups {
+		cnSetName := fmt.Sprintf("%s-%s", mo.Name, g.Name)
+		desiredCNSets[cnSetName] = true
+		tpl := &v1alpha1.CNSet{
+			ObjectMeta: common.CNSetKey(mo, cnSetName),
 			Deps: v1alpha1.CNSetDeps{
 				LogSetRef: ls.AsDependency(),
 				DNSet:     &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)},
 			},
 		}
-		if err := recon.CreateOwnedOrUpdate(ctx, ap, func() error {
-			ap.Spec = *mo.Spec.AP
+		_, err = utils.CreateOwnedOrUpdate(ctx, tpl, func() error {
+			tpl.Spec = g.CNSetSpec
 			if mo.Spec.Proxy != nil {
-				if ap.Spec.Config == nil {
-					ap.Spec.Config = v1alpha1.NewTomlConfig(map[string]interface{}{})
+				if tpl.Spec.Config == nil {
+					tpl.Spec.Config = v1alpha1.NewTomlConfig(map[string]interface{}{})
 				}
-				ap.Spec.Config.Set([]string{"cn", "frontend", "proxy-enabled"}, true)
+				tpl.Spec.Config.Set([]string{"cn", "frontend", "proxy-enabled"}, true)
 			}
-			setPodSetDefault(&ap.Spec.PodSet, mo)
-			setOverlay(&ap.Spec.Overlay, mo)
-			ap.Spec.Image = mo.ApSetImage()
+			setPodSetDefault(&tpl.Spec.PodSet, mo)
+			setOverlay(&tpl.Spec.Overlay, mo)
+			tpl.Spec.Image = common.CNSetImage(mo, &g.CNSetSpec)
 			return nil
-		}); err != nil {
-			return nil, errors.Wrap(err, "sync AP CNSet")
+		})
+		if err != nil {
+			return nil, errors.Wrapf(err, "sync CNSet %s", g.Name)
 		}
-		mo.Status.AP = &ap.Status
 	}
+
+	// GC no longer needed CNSets
+	groupStatus := v1alpha1.CNGroupStatus{DesiredGroups: len(cnGroups)}
+	csList := &v1alpha1.CNSetList{}
+	cnSelector := map[string]string{common.MatrixoneClusterLabelKey: mo.Name}
+	if err := ctx.List(csList, client.InNamespace(mo.Namespace), client.MatchingLabels(cnSelector)); err != nil {
+		return nil, errors.Wrap(err, "error list current CNSets of the cluster")
+	}
+	for i := range csList.Items {
+		cnSet := csList.Items[i]
+		if !desiredCNSets[cnSet.Name] {
+			ctx.Log.V(4).Info("delete CNSet as it is no longer needed", "name", cnSet.Name)
+			if err := ctx.Delete(&cnSet); err != nil {
+				return nil, errors.Wrap(err, "error delete cnset")
+			}
+			continue
+		}
+		if recon.IsReady(&cnSet) {
+			groupStatus.ReadyGroups++
+		}
+		if recon.IsSynced(&cnSet) {
+			groupStatus.SyncedGroups++
+		}
+	}
+	mo.Status.CNGroupStatus = groupStatus
 
 	if mo.Spec.WebUI != nil {
 		webui := &v1alpha1.WebUI{
 			ObjectMeta: v1alpha1.WebUIKey(mo),
-			Deps: v1alpha1.WebUIDeps{
-				CNSet: &v1alpha1.CNSet{ObjectMeta: v1alpha1.TPSetKey(mo)},
-			},
 		}
 		if err := recon.CreateOwnedOrUpdate(ctx, webui, func() error {
 			webui.Spec = *mo.Spec.WebUI
@@ -183,7 +195,6 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	// collect status
 	mo.Status.LogService = &ls.Status
 	mo.Status.DN = &dn.Status
-	mo.Status.TP = &tp.Status
 	mo.Status.Phase = "NotReady"
 	mo.Status.ConditionalStatus.SetCondition(syncedCondition(mo))
 
@@ -272,9 +283,9 @@ func readyCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
 	case !recon.IsReady(mo.Status.DN):
 		c.Status = metav1.ConditionFalse
 		c.Reason = "DNSetNotReady"
-	case !recon.IsReady(mo.Status.TP):
+	case !mo.Status.CNGroupStatus.Ready():
 		c.Status = metav1.ConditionFalse
-		c.Reason = "TPSetNotReady"
+		c.Reason = "SomeCNSetsAreNotReady"
 	case mo.Spec.Proxy != nil && !recon.IsReady(mo.Status.Proxy):
 		c.Status = metav1.ConditionFalse
 		c.Reason = "ProxySetNotReady"
@@ -294,9 +305,9 @@ func syncedCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
 	case !recon.IsSynced(mo.Status.DN):
 		c.Status = metav1.ConditionFalse
 		c.Reason = "DNSetNotSynced"
-	case !recon.IsSynced(mo.Status.TP):
+	case !mo.Status.CNGroupStatus.Synced():
 		c.Status = metav1.ConditionFalse
-		c.Reason = "TPSetNotSynced"
+		c.Reason = "SomeCNSetsAreNotSynced"
 	case mo.Spec.Proxy != nil && !recon.IsSynced(mo.Status.Proxy):
 		c.Status = metav1.ConditionFalse
 		c.Reason = "ProxyNotSynced"
@@ -309,12 +320,17 @@ func syncedCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
 
 func (r *MatrixOneClusterActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (bool, error) {
 	mo := ctx.Obj
+	err := ctx.Client.DeleteAllOf(ctx, &v1alpha1.CNSet{}, client.InNamespace(mo.Namespace), client.MatchingLabels(
+		map[string]string{common.MatrixoneClusterLabelKey: mo.Name},
+	))
+	if err := util.Ignore(apierrors.IsNotFound, err); err != nil {
+		return false, err
+	}
 	objs := []client.Object{
 		&v1alpha1.LogSet{ObjectMeta: v1alpha1.LogSetKey(mo)},
 		&v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)},
-		&v1alpha1.CNSet{ObjectMeta: v1alpha1.TPSetKey(mo)},
-		&v1alpha1.CNSet{ObjectMeta: v1alpha1.APSetKey(mo)},
 		&v1alpha1.WebUI{ObjectMeta: v1alpha1.WebUIKey(mo)},
+		&v1alpha1.WebUI{ObjectMeta: v1alpha1.ProxyKey(mo)},
 	}
 	existAny := false
 	for _, obj := range objs {
