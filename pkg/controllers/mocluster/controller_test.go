@@ -19,6 +19,7 @@ import (
 	"github.com/matrixorigin/controller-runtime/pkg/fake"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	. "github.com/onsi/gomega"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
@@ -57,7 +58,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 					Replicas: 2,
 				},
 			},
-			TP: v1alpha1.CNSetSpec{
+			TP: &v1alpha1.CNSetSpec{
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 				},
@@ -111,7 +112,11 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 				},
 			},
 			&v1alpha1.CNSet{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-tp"},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-tp",
+					Labels:    map[string]string{common.MatrixoneClusterLabelKey: tpl.Name},
+				},
 				Status: v1alpha1.CNSetStatus{
 					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
 						Type:   recon.ConditionTypeReady,
@@ -223,7 +228,11 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 				},
 			},
 			&v1alpha1.CNSet{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-tp"},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-tp",
+					Labels:    map[string]string{common.MatrixoneClusterLabelKey: tpl.Name},
+				},
 				Status: v1alpha1.CNSetStatus{
 					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
 						Type:   recon.ConditionTypeReady,

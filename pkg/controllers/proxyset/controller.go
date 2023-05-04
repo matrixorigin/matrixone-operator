@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package proxyset
 
 import (
@@ -22,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -49,6 +51,11 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.ProxySet]) (recon.Action[*v
 		return nil, errors.Wrap(err, "sync service")
 	}
 	if cloneset.Status.ReadyReplicas >= p.Spec.Replicas {
+		p.Status.SetCondition(metav1.Condition{
+			Type:    recon.ConditionTypeReady,
+			Status:  metav1.ConditionTrue,
+			Message: "proxy ready",
+		})
 		return nil, nil
 	}
 	return nil, recon.ErrReSync(fmt.Sprintf("proxy not ready, ready replicas: %d, desired replicas: %d", cloneset.Status.ReadyReplicas, p.Spec.Replicas))

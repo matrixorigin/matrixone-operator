@@ -268,6 +268,7 @@ func DNSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
 	}
 }
 
+// Deprecated: use CNSetKey instead
 func TPSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      mo.Name + "-tp",
@@ -275,6 +276,7 @@ func TPSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
 	}
 }
 
+// Deprecated: use CNSetKey instead
 func APSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      mo.Name + "-ap",

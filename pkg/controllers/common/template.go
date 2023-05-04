@@ -15,6 +15,7 @@
 package common
 
 import (
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -171,4 +172,22 @@ func PersistentVolumeClaimTemplate(size resource.Quantity, sc *string, name stri
 			StorageClassName: sc,
 		},
 	}
+}
+
+func CNSetKey(mo *v1alpha1.MatrixOneCluster, name string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: mo.Namespace,
+		Labels: map[string]string{
+			MatrixoneClusterLabelKey: mo.Name,
+		},
+	}
+}
+
+func CNSetImage(mo *v1alpha1.MatrixOneCluster, spec *v1alpha1.CNSetSpec) string {
+	image := spec.Image
+	if image == "" {
+		image = mo.DefaultImage()
+	}
+	return image
 }

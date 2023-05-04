@@ -39,7 +39,9 @@ var _ webhook.Defaulter = &MatrixOneCluster{}
 func (r *MatrixOneCluster) Default() {
 	r.Spec.LogService.Default()
 	r.Spec.DN.Default()
-	r.Spec.TP.Default()
+	if r.Spec.TP != nil {
+		r.Spec.TP.Default()
+	}
 	if r.Spec.AP != nil {
 		r.Spec.AP.Default()
 	}
@@ -69,7 +71,9 @@ func (r *MatrixOneCluster) ValidateUpdate(o runtime.Object) error {
 func (r *MatrixOneCluster) validateMutateCommon() field.ErrorList {
 	var errs field.ErrorList
 	errs = append(errs, r.Spec.DN.ValidateCreate()...)
-	errs = append(errs, r.Spec.TP.ValidateCreate()...)
+	if r.Spec.TP != nil {
+		errs = append(errs, r.Spec.TP.ValidateCreate()...)
+	}
 	if r.Spec.AP != nil {
 		errs = append(errs, r.Spec.AP.ValidateCreate()...)
 	}

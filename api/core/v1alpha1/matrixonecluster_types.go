@@ -24,12 +24,19 @@ import (
 // of kubernetes apiserver
 type MatrixOneClusterSpec struct {
 	// TP is the default CN pod set that accepts client connections and execute queries
-	// +required
-	TP CNSetSpec `json:"tp"`
+	// Deprecated: use cnGroups instead
+	// +optional
+	TP *CNSetSpec `json:"tp,omitempty"`
 
 	// AP is an optional CN pod set that accept MPP sub-plans to accelerate sql queries
-	// +optionals
+	// Deprecated: use cnGroups instead
+	// +optional
 	AP *CNSetSpec `json:"ap,omitempty"`
+
+	// CNGroups are CN pod sets that have different spec like resources, arch, store labels
+	// +listMapKey=name
+	// +listType=map
+	CNGroups []CNGroup `json:"cnGroups,omitempty"`
 
 	// DN is the default DN pod set of this Cluster
 	DN DNSetSpec `json:"dn"`
@@ -71,6 +78,14 @@ type MatrixOneClusterSpec struct {
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 }
 
+type CNGroup struct {
+	CNSetSpec `json:",inline"`
+
+	// Name is the CNGroup name, an error will be raised if duplicated name is found in a mo cluster
+	// +required
+	Name string `json:"name"`
+}
+
 // MatrixOneClusterStatus defines the observed state of MatrixOneCluster
 type MatrixOneClusterStatus struct {
 	ConditionalStatus `json:",inline"`
@@ -83,9 +98,12 @@ type MatrixOneClusterStatus struct {
 	// used to connect to the database.
 	CredentialRef *corev1.LocalObjectReference `json:"credentialRef,omitempty"`
 
+	CNGroupStatus CNGroupStatus `json:"cnGroups,omitempty"`
 	// TP is the TP set status
+	// Deprecated: use
 	TP *CNSetStatus `json:"tp,omitempty"`
 	// AP is the AP set status
+	// Deprecated
 	AP *CNSetStatus `json:"ap,omitempty"`
 	// DN is the DN set status
 	DN *DNSetStatus `json:"dn,omitempty"`
@@ -97,6 +115,20 @@ type MatrixOneClusterStatus struct {
 
 	// LogService is the LogService status
 	LogService *LogSetStatus `json:"logService,omitempty"`
+}
+
+type CNGroupStatus struct {
+	DesiredGroups int `json:"desiredGroups,omitempty"`
+	ReadyGroups   int `json:"readyGroups,omitempty"`
+	SyncedGroups  int `json:"syncedGroups,omitempty"`
+}
+
+func (s CNGroupStatus) Synced() bool {
+	return s.SyncedGroups >= s.DesiredGroups
+}
+
+func (s CNGroupStatus) Ready() bool {
+	return s.ReadyGroups >= s.DesiredGroups
 }
 
 // +kubebuilder:object:root=true
@@ -123,12 +155,12 @@ type MatrixOneCluster struct {
 	Status MatrixOneClusterStatus `json:"status,omitempty"`
 }
 
-func (d *MatrixOneCluster) SetCondition(condition metav1.Condition) {
-	d.Status.SetCondition(condition)
+func (mo *MatrixOneCluster) SetCondition(condition metav1.Condition) {
+	mo.Status.SetCondition(condition)
 }
 
-func (d *MatrixOneCluster) GetConditions() []metav1.Condition {
-	return d.Status.GetConditions()
+func (mo *MatrixOneCluster) GetConditions() []metav1.Condition {
+	return mo.Status.GetConditions()
 }
 
 //+kubebuilder:object:root=true
