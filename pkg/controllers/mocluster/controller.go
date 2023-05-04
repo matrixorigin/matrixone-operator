@@ -162,9 +162,6 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	if mo.Spec.WebUI != nil {
 		webui := &v1alpha1.WebUI{
 			ObjectMeta: v1alpha1.WebUIKey(mo),
-			Deps: v1alpha1.WebUIDeps{
-				CNSet: &v1alpha1.CNSet{ObjectMeta: v1alpha1.TPSetKey(mo)},
-			},
 		}
 		if err := recon.CreateOwnedOrUpdate(ctx, webui, func() error {
 			webui.Spec = *mo.Spec.WebUI
@@ -323,12 +320,17 @@ func syncedCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
 
 func (r *MatrixOneClusterActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (bool, error) {
 	mo := ctx.Obj
+	err := ctx.Client.DeleteAllOf(ctx, &v1alpha1.CNSet{}, client.InNamespace(mo.Namespace), client.MatchingLabels(
+		map[string]string{common.MatrixoneClusterLabelKey: mo.Name},
+	))
+	if err := util.Ignore(apierrors.IsNotFound, err); err != nil {
+		return false, err
+	}
 	objs := []client.Object{
 		&v1alpha1.LogSet{ObjectMeta: v1alpha1.LogSetKey(mo)},
 		&v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)},
-		&v1alpha1.CNSet{ObjectMeta: v1alpha1.TPSetKey(mo)},
-		&v1alpha1.CNSet{ObjectMeta: v1alpha1.APSetKey(mo)},
 		&v1alpha1.WebUI{ObjectMeta: v1alpha1.WebUIKey(mo)},
+		&v1alpha1.WebUI{ObjectMeta: v1alpha1.ProxyKey(mo)},
 	}
 	existAny := false
 	for _, obj := range objs {

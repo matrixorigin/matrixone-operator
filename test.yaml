@@ -3,13 +3,15 @@ kind: MatrixOneCluster
 metadata:
   name: mo
 spec:
-  imageRepository: matrixorigin/matrixone
+  imageRepository: ghcr.io/aylei/matrixone
+  nodeSelector:
+    kubernetes.io/arch: amd64
   version: nightly-d15e37b5
   logService:
     replicas: 3
     sharedStorage:
       s3:
-        path: maomao-moc-test/test-aylie-20230504
+        path: maomao-moc-test/test-aylie-20230505
         secretRef:
           name: aws
     volume:
