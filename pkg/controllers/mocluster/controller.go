@@ -100,16 +100,16 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	cnGroups := append([]v1alpha1.CNGroup{}, mo.Spec.CNGroups...)
 	// append TP and AP cnset for backward compatibility
 	if mo.Spec.TP != nil {
-		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: mo.Name + "-tp", CNSetSpec: *mo.Spec.TP})
+		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "tp", CNSetSpec: *mo.Spec.TP})
 	}
 	if mo.Spec.AP != nil {
-		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: mo.Name + "-ap", CNSetSpec: *mo.Spec.AP})
+		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "ap", CNSetSpec: *mo.Spec.AP})
 	}
 	desiredCNSets := map[string]bool{}
 	for _, g := range cnGroups {
 		desiredCNSets[g.Name] = true
 		tpl := &v1alpha1.CNSet{
-			ObjectMeta: common.CNSetKey(mo, g.Name),
+			ObjectMeta: common.CNSetKey(mo, fmt.Sprintf("%s-%s", mo.Name, g.Name)),
 			Deps: v1alpha1.CNSetDeps{
 				LogSetRef: ls.AsDependency(),
 				DNSet:     &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)},

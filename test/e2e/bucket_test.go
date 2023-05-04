@@ -423,7 +423,7 @@ var _ = Describe("Matrix BucketClaim test", func() {
 				logger.Errorw("error get mo cluster status", "cluster", mo.Name, "error", err)
 				return err
 			}
-			if mo.Status.TP == nil || !recon.IsReady(mo.Status.TP) {
+			if !recon.IsReady(mo) {
 				logger.Infow("wait mo cluster ready", "cluster", mo.Name)
 				return errWait
 			}

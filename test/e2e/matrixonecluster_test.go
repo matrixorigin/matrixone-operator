@@ -65,7 +65,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 			},
 			Spec: v1alpha1.MatrixOneClusterSpec{
 				CNGroups: []v1alpha1.CNGroup{{
-					Name: "test-tp",
+					Name: "tp",
 					CNSetSpec: v1alpha1.CNSetSpec{
 						PodSet: v1alpha1.PodSet{
 							Replicas: 2,
