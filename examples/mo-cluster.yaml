@@ -20,7 +20,8 @@ spec:
     replicas: 2
     cacheVolume:
       size: 10Gi
-  tp:
+  cnGroups:
+  - name: tp
     replicas: 2
     cacheVolume:
       size: 10Gi

@@ -104,8 +104,9 @@ spec:
       # TOML format config file below
       [log]
       level=debug
-  # required, deploy CN pods that accept user session
-  tp:
+  # cnGroups defines the CN pods in the cluster, pod in a same group is isomorphic
+  cnGroups:
+  - name: tp
     # CN replicas
     replicas: 2
     # optional, set an extra cache volume for CN pods
