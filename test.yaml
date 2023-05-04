@@ -22,12 +22,12 @@ spec:
   proxy:
     replicas: 2
   cnGroups:
-  - name: mo-tp
+  - name: tp
     replicas: 1
     cnLabels:
     - key: role
       values: ["test"]
-  - name: mo-aylei
+  - name: aylei
     replicas: 1
     cnLabels:
     - key: account

@@ -107,9 +107,10 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	}
 	desiredCNSets := map[string]bool{}
 	for _, g := range cnGroups {
-		desiredCNSets[g.Name] = true
+		cnSetName := fmt.Sprintf("%s-%s", mo.Name, g.Name)
+		desiredCNSets[cnSetName] = true
 		tpl := &v1alpha1.CNSet{
-			ObjectMeta: common.CNSetKey(mo, fmt.Sprintf("%s-%s", mo.Name, g.Name)),
+			ObjectMeta: common.CNSetKey(mo, cnSetName),
 			Deps: v1alpha1.CNSetDeps{
 				LogSetRef: ls.AsDependency(),
 				DNSet:     &v1alpha1.DNSet{ObjectMeta: v1alpha1.DNSetKey(mo)},
