@@ -142,6 +142,11 @@ spec:
       # TOML format config file below
       [log]
       level=debug
+    cnLabels:
+    - key: "YOUR_LABEL_KEY_A"
+      values: ["YOUR_LABEL_A_VALUE1", "YOUR_LABEL_A_VALUE2"]
+    - key: "YOUR_LABEL_KEY_B"
+      values: ["YOUR_LABEL_B_VALUE1", "YOUR_LABEL_B_VALUE2"]
   # optional, deploy Proxy pods that route and manage SQL sessions.
   # if proxy is not enabled, SQL session will be handled directly by CN
   proxy:
