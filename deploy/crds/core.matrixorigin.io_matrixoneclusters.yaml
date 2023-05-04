@@ -98,6 +98,21 @@ spec:
                       cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
                       for details
                     type: string
+                  cnLabels:
+                    description: Labels are the CN labels for all the CN stores managed
+                      by this CNSet
+                    items:
+                      properties:
+                        key:
+                          description: Key is the store label key
+                          type: string
+                        values:
+                          description: Values are the store label values
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    type: array
                   config:
                     description: Config is the raw config for pods
                     type: string
@@ -151,7 +166,7 @@ spec:
                         type: object
                     type: object
                   role:
-                    description: '[TP, AP], default to TP'
+                    description: '[TP, AP], default to TP Deprecated: use labels instead'
                     type: string
                   serviceArgs:
                     description: 'ServiceArgs define command line options for process,
@@ -856,6 +871,21 @@ spec:
                       cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
                       for details
                     type: string
+                  cnLabels:
+                    description: Labels are the CN labels for all the CN stores managed
+                      by this CNSet
+                    items:
+                      properties:
+                        key:
+                          description: Key is the store label key
+                          type: string
+                        values:
+                          description: Values are the store label values
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    type: array
                   config:
                     description: Config is the raw config for pods
                     type: string
@@ -909,7 +939,7 @@ spec:
                         type: object
                     type: object
                   role:
-                    description: '[TP, AP], default to TP'
+                    description: '[TP, AP], default to TP Deprecated: use labels instead'
                     type: string
                   serviceArgs:
                     description: 'ServiceArgs define command line options for process,

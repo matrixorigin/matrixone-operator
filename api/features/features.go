@@ -34,11 +34,14 @@ var (
 const (
 	S3Reclaim    featuregate.Feature = "s3Reclaim"
 	ProxySupport featuregate.Feature = "proxySupport"
+
+	CNLabel featuregate.Feature = "cnLabel"
 )
 
 var defaultFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	S3Reclaim:    {Default: false, PreRelease: featuregate.Alpha},
 	ProxySupport: {Default: false, PreRelease: featuregate.Alpha},
+	CNLabel:      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 func init() {

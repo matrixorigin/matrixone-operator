@@ -76,3 +76,4 @@ defaultArgs:
 featureGates:
   s3Reclaim: true
   proxySupport: true
+  cnLabel: true

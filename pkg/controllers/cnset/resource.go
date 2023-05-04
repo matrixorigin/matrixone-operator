@@ -16,6 +16,7 @@ package cnset
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"golang.org/x/exp/slices"
@@ -121,8 +122,23 @@ func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
 	}
 }
 
-func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
+func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) error {
+	meta := &sts.Spec.Template.ObjectMeta
+	if meta.Annotations == nil {
+		meta.Annotations = map[string]string{}
+	}
+	s, err := json.Marshal(cn.Spec.Labels)
+	if err != nil {
+		return err
+	}
+	meta.Annotations[common.CNLabelAnnotation] = string(s)
+	if cn.Spec.DNSBasedIdentity {
+		meta.Annotations[common.DNSIdentityAnnotation] = string(metav1.ConditionTrue)
+	} else {
+		meta.Annotations[common.DNSIdentityAnnotation] = string(metav1.ConditionFalse)
+	}
 	cn.Spec.Overlay.OverlayPodMeta(&sts.Spec.Template.ObjectMeta)
+	return nil
 }
 
 func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {

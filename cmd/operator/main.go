@@ -20,8 +20,11 @@ import (
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/bucketclaim"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnlabel"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/proxyset"
+	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
+	"github.com/matrixorigin/matrixone/pkg/logutil"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
 	"os"
@@ -92,6 +95,9 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(opts)))
+	logutil.SetupMOLogger(&logutil.LogConfig{
+		Level: zapcore.ErrorLevel.String(),
+	})
 
 	err := common.LoadOperatorConfig(operatorCfgDir, &operatorCfg)
 	exitIf(err, "failed to load operator configmap")
@@ -171,6 +177,14 @@ func main() {
 		exitIf(err, "unable to set up bucketclaim cluster controller")
 	} else {
 		setupLog.Info(fmt.Sprintf("s3 reclaim feature not enabled, skip setup bucketclaim actor"))
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.CNLabel) {
+		cnLabelController := cnlabel.NewController(hacli.NewManager(mgr.GetClient()))
+		err = cnLabelController.Reconcile(mgr)
+		exitIf(err, "unable to set up cnlabel controller")
+	} else {
+		setupLog.Info(fmt.Sprintf("cn label not enabled, skip setup cnlabel"))
 	}
 
 	err = mgr.AddHealthzCheck("healthz", healthz.Ping)

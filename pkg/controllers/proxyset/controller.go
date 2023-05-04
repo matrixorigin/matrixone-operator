@@ -14,6 +14,7 @@
 package proxyset
 
 import (
+	"fmt"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -47,7 +48,10 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.ProxySet]) (recon.Action[*v
 	if err != nil {
 		return nil, errors.Wrap(err, "sync service")
 	}
-	return nil, nil
+	if cloneset.Status.ReadyReplicas >= p.Spec.Replicas {
+		return nil, nil
+	}
+	return nil, recon.ErrReSync(fmt.Sprintf("proxy not ready, ready replicas: %d, desired replicas: %d", cloneset.Status.ReadyReplicas, p.Spec.Replicas))
 }
 
 func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.ProxySet]) (bool, error) {
