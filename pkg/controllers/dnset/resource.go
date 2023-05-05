@@ -145,7 +145,7 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
 	}
 
-	if dn.Spec.DNSBasedIdentity {
+	if dn.GetDNSBasedIdentity() {
 		mainRef.Env = append(mainRef.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
 	}
 	dn.Spec.Overlay.OverlayMainContainer(mainRef)

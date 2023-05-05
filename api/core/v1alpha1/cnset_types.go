@@ -135,6 +135,13 @@ func (s *CNSet) GetConditions() []metav1.Condition {
 	return s.Status.GetConditions()
 }
 
+func (s *CNSet) GetDNSBasedIdentity() bool {
+	if s.Spec.DNSBasedIdentity == nil {
+		return true
+	}
+	return *s.Spec.DNSBasedIdentity
+}
+
 //+kubebuilder:object:root=true
 
 // CNSetList contains a list of CNSet

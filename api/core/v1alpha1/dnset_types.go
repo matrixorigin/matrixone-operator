@@ -81,6 +81,13 @@ func (d *DNSet) GetConditions() []metav1.Condition {
 	return d.Status.GetConditions()
 }
 
+func (d *DNSet) GetDNSBasedIdentity() bool {
+	if d.Spec.DNSBasedIdentity == nil {
+		return false
+	}
+	return *d.Spec.DNSBasedIdentity
+}
+
 //+kubebuilder:object:root=true
 
 // DNSetList contains a list of DNSet

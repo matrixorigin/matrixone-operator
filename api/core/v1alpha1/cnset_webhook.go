@@ -35,9 +35,6 @@ var _ webhook.Defaulter = &CNSet{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *CNSet) Default() {
 	r.Spec.Default()
-	if r.Spec.Role == "" {
-		r.Spec.Role = CNRoleTP
-	}
 }
 
 func (r *CNSetSpec) Default() {
