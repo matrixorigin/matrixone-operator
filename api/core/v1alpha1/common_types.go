@@ -67,7 +67,7 @@ type PodSet struct {
 	Config *TomlConfig `json:"config,omitempty"`
 
 	// If enabled, use the Pod dns name as the Pod identity
-	DNSBasedIdentity bool `json:"dnsBasedIdentity,omitempty"`
+	DNSBasedIdentity *bool `json:"dnsBasedIdentity,omitempty"`
 
 	// ClusterDomain is the cluster-domain of current kubernetes cluster,
 	// refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ for details
