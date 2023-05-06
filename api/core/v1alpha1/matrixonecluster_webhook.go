@@ -45,6 +45,9 @@ func (r *MatrixOneCluster) Default() {
 	if r.Spec.AP != nil {
 		r.Spec.AP.Default()
 	}
+	for _, cn := range r.Spec.CNGroups {
+		cn.Default()
+	}
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-matrixonecluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=matrixoneclusters,verbs=create;update,versions=v1alpha1,name=vmatrixonecluster.kb.io,admissionReviewVersions=v1;v1beta1
@@ -76,6 +79,9 @@ func (r *MatrixOneCluster) validateMutateCommon() field.ErrorList {
 	}
 	if r.Spec.AP != nil {
 		errs = append(errs, r.Spec.AP.ValidateCreate()...)
+	}
+	for _, cn := range r.Spec.CNGroups {
+		errs = append(errs, cn.ValidateCreate()...)
 	}
 	if r.Spec.Version == "" {
 		errs = append(errs, field.Invalid(field.NewPath("spec").Child("version"), "", "version must be set"))
