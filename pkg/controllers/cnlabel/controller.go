@@ -17,6 +17,7 @@ package cnlabel
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	obs "github.com/matrixorigin/controller-runtime/pkg/observer"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -36,7 +37,7 @@ import (
 	"time"
 )
 
-const retryInterval = 5 * time.Second
+const retryInterval = 15 * time.Second
 
 type Controller struct {
 	clientMgr *hacli.HAKeeperClientManager
@@ -80,7 +81,15 @@ func (c *Controller) Observe(ctx *recon.Context[*corev1.Pod]) error {
 	if cn.Deps.LogSet == nil {
 		return errors.Wrapf(err, "cannot get logset of CN pod %s/%s, logset dep is nil", pod.Namespace, pod.Name)
 	}
-	haClient, err := c.clientMgr.GetClient(client.ObjectKeyFromObject(cn.Deps.LogSet))
+	ls := &v1alpha1.LogSet{}
+	// refresh logset status
+	if err := ctx.Get(client.ObjectKeyFromObject(cn.Deps.LogSet), ls); err != nil {
+		return errors.Wrap(err, "error get logset")
+	}
+	if !recon.IsReady(ls) {
+		return recon.ErrReSync(fmt.Sprintf("logset is not ready for Pod %s, cannot update CN labels", pod.Name), retryInterval)
+	}
+	haClient, err := c.clientMgr.GetClient(ls)
 	if err != nil {
 		return errors.Wrap(err, "get HAKeeper client")
 	}
