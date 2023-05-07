@@ -8,7 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
-	github.com/matrixorigin/controller-runtime v0.0.0-20230329033025-17c57685ca8e
+	github.com/matrixorigin/controller-runtime v0.0.0-20230506073151-147840610357
 	github.com/matrixorigin/matrixone v0.7.1-0.20230420141550-d8f67c26e3db
 	github.com/matrixorigin/matrixone-operator/api v0.0.0-20220926063007-e629f86256d2
 	github.com/minio/minio-go/v7 v7.0.51

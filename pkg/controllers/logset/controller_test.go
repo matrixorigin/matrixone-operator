@@ -15,9 +15,6 @@ package logset
 
 import (
 	"context"
-	"testing"
-	"time"
-
 	"github.com/golang/mock/gomock"
 	"github.com/matrixorigin/controller-runtime/pkg/fake"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -27,10 +24,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 )
@@ -47,29 +47,28 @@ func TestLogSetActor_Observe(t *testing.T) {
 				MainContainer: v1alpha1.MainContainer{
 					Image: "test:latest",
 				},
-				Replicas: 1,
+				Replicas: 3,
 			},
 			InitialConfig: v1alpha1.InitialConfig{
 				LogShards:        pointer.Int(1),
 				DNShards:         pointer.Int(1),
-				LogShardReplicas: pointer.Int(1),
+				LogShardReplicas: pointer.Int(3),
 			},
 		},
 	}
 	labels := common.SubResourceLabels(tpl)
-	now := time.Now()
 	tests := []struct {
 		name   string
 		logset *v1alpha1.LogSet
 		client client.Client
-		expect func(g *WithT, action recon.Action[*v1alpha1.LogSet], err error)
+		expect func(g *WithT, cli client.Client, action recon.Action[*v1alpha1.LogSet], err error)
 	}{{
 		name:   "create when resource not exist",
 		logset: tpl,
 		client: &fake.Client{
 			Client: fake.KubeClientBuilder().WithScheme(s).Build(),
 		},
-		expect: func(g *WithT, action recon.Action[*v1alpha1.LogSet], err error) {
+		expect: func(g *WithT, _ client.Client, action recon.Action[*v1alpha1.LogSet], err error) {
 			g.Expect(err).To(BeNil())
 			g.Expect(action.String()).To(ContainSubstring("Create"))
 		},
@@ -84,7 +83,7 @@ func TestLogSetActor_Observe(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: kruisev1.StatefulSetSpec{
-						Replicas: pointer.Int32(1),
+						Replicas: pointer.Int32(3),
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
 								Labels: labels,
@@ -108,7 +107,7 @@ func TestLogSetActor_Observe(t *testing.T) {
 				},
 			).Build(),
 		},
-		expect: func(g *WithT, action recon.Action[*v1alpha1.LogSet], err error) {
+		expect: func(g *WithT, _ client.Client, action recon.Action[*v1alpha1.LogSet], err error) {
 			g.Expect(err).To(BeNil())
 			g.Expect(action.String()).To(ContainSubstring("Update"))
 		},
@@ -116,6 +115,9 @@ func TestLogSetActor_Observe(t *testing.T) {
 		name:   "scale out",
 		logset: tpl,
 		client: &fake.Client{
+			MockPatch: func(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
+				return nil
+			},
 			Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
 				&kruisev1.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
@@ -139,7 +141,7 @@ func TestLogSetActor_Observe(t *testing.T) {
 				},
 			).Build(),
 		},
-		expect: func(g *WithT, action recon.Action[*v1alpha1.LogSet], err error) {
+		expect: func(g *WithT, _ client.Client, action recon.Action[*v1alpha1.LogSet], err error) {
 			g.Expect(err).To(BeNil())
 			g.Expect(action.String()).To(ContainSubstring("Scale"))
 		},
@@ -147,12 +149,10 @@ func TestLogSetActor_Observe(t *testing.T) {
 		name: "failover",
 		logset: func() *v1alpha1.LogSet {
 			ls := tpl.DeepCopy()
-			ls.Status = v1alpha1.LogSetStatus{FailoverStatus: v1alpha1.FailoverStatus{
-				FailedStores: []v1alpha1.Store{{
-					PodName:            "test-log-0",
-					Phase:              v1alpha1.StorePhaseDown,
-					LastTransitionTime: metav1.Time{Time: now.Add(-24 * time.Hour)},
-				}},
+			ls.Status.FailedStores = []v1alpha1.Store{{
+				PodName:            "test-log-0",
+				Phase:              v1alpha1.StorePhaseDown,
+				LastTransitionTime: metav1.Time{Time: time.Now().Add(-24 * time.Hour)},
 			}}
 			return ls
 		}(),
@@ -164,7 +164,7 @@ func TestLogSetActor_Observe(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: kruisev1.StatefulSetSpec{
-						Replicas: pointer.Int32(0),
+						Replicas: pointer.Int32(3),
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{},
 							Spec:       corev1.PodSpec{},
@@ -183,23 +183,101 @@ func TestLogSetActor_Observe(t *testing.T) {
 					Namespace: "default",
 					Labels:    labels,
 				}),
+				fake.ReadyPod(metav1.ObjectMeta{
+					Name:      "test-log-1",
+					Namespace: "default",
+					Labels:    labels,
+				}),
+				fake.ReadyPod(metav1.ObjectMeta{
+					Name:      "test-log-2",
+					Namespace: "default",
+					Labels:    labels,
+				}),
 			).Build(),
 		},
-		expect: func(g *WithT, action recon.Action[*v1alpha1.LogSet], err error) {
+		expect: func(g *WithT, cli client.Client, action recon.Action[*v1alpha1.LogSet], err error) {
 			g.Expect(err).To(BeNil())
 			g.Expect(action.String()).To(ContainSubstring("Repair"))
+			asts := &kruisev1.StatefulSet{}
+			g.Expect(cli.Get(context.TODO(), types.NamespacedName{Namespace: "default", Name: "test-log"}, asts)).To(Succeed())
+			g.Expect(asts.Spec.ReserveOrdinals).To(ConsistOf(0))
+		},
+	}, {
+		name: "should not failover if minority limit is reached",
+		logset: func() *v1alpha1.LogSet {
+			ls := tpl.DeepCopy()
+			ls.Status.FailedStores = []v1alpha1.Store{{
+				PodName:            "test-log-0",
+				Phase:              v1alpha1.StorePhaseDown,
+				LastTransitionTime: metav1.Time{Time: time.Now().Add(-24 * time.Hour)},
+			}}
+			return ls
+		}(),
+		client: &fake.Client{
+			Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
+				&kruisev1.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-log",
+						Namespace: "default",
+					},
+					Spec: kruisev1.StatefulSetSpec{
+						Replicas: pointer.Int32(0),
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{},
+							Spec:       corev1.PodSpec{},
+						},
+						ServiceName:     "test-svc",
+						ReserveOrdinals: []int{1},
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-log-discovery",
+						Namespace: "default",
+					},
+				},
+				fake.UnreadyPod(metav1.ObjectMeta{
+					Name:      "test-log-0",
+					Namespace: "default",
+					Labels:    labels,
+				}),
+				fake.ReadyPod(metav1.ObjectMeta{
+					Name:      "test-log-2",
+					Namespace: "default",
+					Labels:    labels,
+				}),
+				fake.ReadyPod(metav1.ObjectMeta{
+					Name:      "test-log-3",
+					Namespace: "default",
+					Labels:    labels,
+				}),
+			).Build(),
+		},
+		expect: func(g *WithT, cli client.Client, action recon.Action[*v1alpha1.LogSet], err error) {
+			g.Expect(err).To(BeNil())
+			g.Expect(action.String()).To(ContainSubstring("Repair"))
+			asts := &kruisev1.StatefulSet{}
+			g.Expect(cli.Get(context.TODO(), types.NamespacedName{Namespace: "default", Name: "test-log"}, asts)).To(Succeed())
+			g.Expect(asts.Spec.ReserveOrdinals).To(ConsistOf(1))
 		},
 	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			r := &Actor{}
+			r := &Actor{
+				FailoverEnabled: true,
+			}
 			mockCtrl := gomock.NewController(t)
 			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
-			ctx := fake.NewContext(tt.logset, tt.client, eventEmitter)
+			ls := tt.logset.DeepCopy()
+			g.Expect(tt.client.Create(context.TODO(), ls)).To(Succeed())
+			ctx := fake.NewContext(ls, tt.client, eventEmitter)
 			action, err := r.Observe(ctx)
-			tt.expect(g, action, err)
+			if action != nil {
+				g.Expect(action(ctx)).To(Succeed())
+			}
+			tt.expect(g, tt.client, action, err)
 		})
 	}
 }
