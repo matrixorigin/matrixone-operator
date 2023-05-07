@@ -27,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -100,7 +101,12 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	cnGroups := append([]v1alpha1.CNGroup{}, mo.Spec.CNGroups...)
 	// append TP and AP cnset for backward compatibility
 	if mo.Spec.TP != nil {
-		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "tp", CNSetSpec: *mo.Spec.TP})
+		spec := *mo.Spec.TP
+		// for backward compatibility, the TP CN may store UUID in cache volume and check consistency
+		if spec.DNSBasedIdentity == nil {
+			spec.DNSBasedIdentity = pointer.Bool(false)
+		}
+		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "tp", CNSetSpec: spec})
 	}
 	if mo.Spec.AP != nil {
 		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "ap", CNSetSpec: *mo.Spec.AP})

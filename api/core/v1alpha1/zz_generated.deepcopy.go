@@ -1118,6 +1118,11 @@ func (in *PodSet) DeepCopyInto(out *PodSet) {
 		in, out := &in.Config, &out.Config
 		*out = (*in).DeepCopy()
 	}
+	if in.DNSBasedIdentity != nil {
+		in, out := &in.DNSBasedIdentity, &out.DNSBasedIdentity
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ServiceArgs != nil {
 		in, out := &in.ServiceArgs, &out.ServiceArgs
 		*out = make([]string, len(*in))

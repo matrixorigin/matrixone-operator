@@ -84,9 +84,8 @@ func syncMainContainer(p *v1alpha1.PodSet, c *corev1.Container, mutateFn func(c 
 		util.FieldRefEnv(PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(NamespaceEnvKey, "metadata.namespace"),
 	}
-	if p.DNSBasedIdentity {
-		c.Env = append(c.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
-	}
+	// TODO: consider migration strategy
+	// c.Env = append(c.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
 	c.VolumeMounts = []corev1.VolumeMount{
 		{
 			Name:      ConfigVolume,

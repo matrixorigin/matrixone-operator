@@ -132,7 +132,7 @@ func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) error {
 		return err
 	}
 	meta.Annotations[common.CNLabelAnnotation] = string(s)
-	if cn.Spec.DNSBasedIdentity {
+	if cn.GetDNSBasedIdentity() {
 		meta.Annotations[common.DNSIdentityAnnotation] = string(metav1.ConditionTrue)
 	} else {
 		meta.Annotations[common.DNSIdentityAnnotation] = string(metav1.ConditionFalse)
@@ -178,7 +178,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
 	}
-	if cn.Spec.DNSBasedIdentity {
+	if cn.GetDNSBasedIdentity() {
 		mainRef.Env = append(mainRef.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
 	}
 

@@ -180,7 +180,7 @@ func main() {
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.CNLabel) {
-		cnLabelController := cnlabel.NewController(hacli.NewManager(mgr.GetClient()))
+		cnLabelController := cnlabel.NewController(hacli.NewManager(mgr.GetClient(), mgr.GetLogger()))
 		err = cnLabelController.Reconcile(mgr)
 		exitIf(err, "unable to set up cnlabel controller")
 	} else {
