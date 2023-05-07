@@ -16,9 +16,12 @@ package hacli
 
 import (
 	"context"
+	"github.com/go-logr/logr"
+	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone/pkg/logservice"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
@@ -26,45 +29,97 @@ import (
 )
 
 const (
-	HAKeeperTimeout = 10 * time.Second
+	HAKeeperTimeout = 2 * time.Second
 )
 
 type HAKeeperClientManager struct {
+	logger  logr.Logger
+	done    chan struct{}
 	kubeCli client.Client
+
 	sync.Mutex
-	logSetToClients map[types.NamespacedName]logservice.ProxyHAKeeperClient
+	logSetToClients map[types.UID]proxyClient
 }
 
-func NewManager(kubeCli client.Client) *HAKeeperClientManager {
-	return &HAKeeperClientManager{
+type proxyClient struct {
+	client logservice.ProxyHAKeeperClient
+	lsRef  types.NamespacedName
+}
+
+func NewManager(kubeCli client.Client, logger logr.Logger) *HAKeeperClientManager {
+	mgr := &HAKeeperClientManager{
+		logger:          logger,
+		done:            make(chan struct{}),
 		kubeCli:         kubeCli,
-		logSetToClients: map[types.NamespacedName]logservice.ProxyHAKeeperClient{},
+		logSetToClients: map[types.UID]proxyClient{},
 	}
+	go mgr.gc()
+	return mgr
 }
 
-func (m *HAKeeperClientManager) GetClient(logSetRef types.NamespacedName) (logservice.ProxyHAKeeperClient, error) {
+func (m *HAKeeperClientManager) GetClient(ls *v1alpha1.LogSet) (logservice.ProxyHAKeeperClient, error) {
 	// FIXME: this is would be bottleneck if we concurrently reconcile a large amount of
 	// matrixone clusters, we can concurrently initialize the HAKeeper clients here if necessary.
 	m.Lock()
 	defer m.Unlock()
-	if _, ok := m.logSetToClients[logSetRef]; !ok {
-		cli, err := m.newHAKeeperClient(logSetRef)
+	if _, ok := m.logSetToClients[ls.UID]; !ok {
+		cli, err := m.newHAKeeperClient(ls)
 		if err != nil {
 			return nil, err
 		}
-		m.logSetToClients[logSetRef] = cli
+		m.logSetToClients[ls.UID] = proxyClient{
+			client: cli,
+			lsRef:  client.ObjectKeyFromObject(ls),
+		}
 	}
-	return m.logSetToClients[logSetRef], nil
+	return m.logSetToClients[ls.UID].client, nil
 }
 
-func (m *HAKeeperClientManager) newHAKeeperClient(logsetRef types.NamespacedName) (logservice.ProxyHAKeeperClient, error) {
-	ls := &v1alpha1.LogSet{}
+func (m *HAKeeperClientManager) Close() {
+	close(m.done)
+}
+
+func (m *HAKeeperClientManager) gc() {
+	for {
+		select {
+		case <-time.Tick(30 * time.Second):
+			m.doGC()
+		case <-m.done:
+			return
+		}
+	}
+}
+
+func (m *HAKeeperClientManager) doGC() {
+	m.Lock()
+	defer m.Unlock()
+	for uid, v := range m.logSetToClients {
+		closeFn := func() {
+			err := v.client.Close()
+			if err != nil {
+				m.logger.Error(err, "error closing HAKeeper client", "logset", v.lsRef, "uid", uid)
+			}
+		}
+		ls := &v1alpha1.LogSet{}
+		err := m.kubeCli.Get(context.TODO(), v.lsRef, ls)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				delete(m.logSetToClients, uid)
+				go closeFn()
+			}
+			m.logger.Error(err, "error gc HAKeeper client", "logset", v.lsRef, "uid", uid)
+			continue
+		}
+		if ls.UID != uid || recon.IsReady(ls) {
+			delete(m.logSetToClients, uid)
+			go closeFn()
+		}
+	}
+}
+
+func (m *HAKeeperClientManager) newHAKeeperClient(ls *v1alpha1.LogSet) (logservice.ProxyHAKeeperClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), HAKeeperTimeout)
 	defer cancel()
-	err := m.kubeCli.Get(ctx, logsetRef, ls)
-	if err != nil {
-		return nil, errors.Wrap(err, "get LogSet")
-	}
 	cli, err := logservice.NewProxyHAKeeperClient(ctx, logservice.HAKeeperClientConfig{DiscoveryAddress: ls.Status.Discovery.String()})
 	if err != nil {
 		return nil, errors.Wrap(err, "build HAKeeper client")
