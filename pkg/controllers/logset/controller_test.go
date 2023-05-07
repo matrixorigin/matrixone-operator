@@ -30,6 +30,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 )
@@ -46,7 +47,7 @@ func TestLogSetActor_Observe(t *testing.T) {
 				MainContainer: v1alpha1.MainContainer{
 					Image: "test:latest",
 				},
-				Replicas: 1,
+				Replicas: 3,
 			},
 			InitialConfig: v1alpha1.InitialConfig{
 				LogShards:        pointer.Int(1),
@@ -82,7 +83,7 @@ func TestLogSetActor_Observe(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: kruisev1.StatefulSetSpec{
-						Replicas: pointer.Int32(1),
+						Replicas: pointer.Int32(3),
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
 								Labels: labels,
@@ -114,6 +115,9 @@ func TestLogSetActor_Observe(t *testing.T) {
 		name:   "scale out",
 		logset: tpl,
 		client: &fake.Client{
+			MockPatch: func(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
+				return nil
+			},
 			Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
 				&kruisev1.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
@@ -145,6 +149,11 @@ func TestLogSetActor_Observe(t *testing.T) {
 		name: "failover",
 		logset: func() *v1alpha1.LogSet {
 			ls := tpl.DeepCopy()
+			ls.Status.FailedStores = []v1alpha1.Store{{
+				PodName:            "test-log-0",
+				Phase:              v1alpha1.StorePhaseDown,
+				LastTransitionTime: metav1.Time{Time: time.Now().Add(-24 * time.Hour)},
+			}}
 			return ls
 		}(),
 		client: &fake.Client{
@@ -197,6 +206,11 @@ func TestLogSetActor_Observe(t *testing.T) {
 		name: "should not failover if minority limit is reached",
 		logset: func() *v1alpha1.LogSet {
 			ls := tpl.DeepCopy()
+			ls.Status.FailedStores = []v1alpha1.Store{{
+				PodName:            "test-log-0",
+				Phase:              v1alpha1.StorePhaseDown,
+				LastTransitionTime: metav1.Time{Time: time.Now().Add(-24 * time.Hour)},
+			}}
 			return ls
 		}(),
 		client: &fake.Client{
