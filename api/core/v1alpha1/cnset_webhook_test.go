@@ -82,4 +82,50 @@ var _ = Describe("CNSet Webhook", func() {
 		expected := resource.MustParse("9Gi")
 		Expect(cn.Spec.SharedStorageCache.DiskCacheSize.Value()).To(Equal(expected.Value()))
 	})
+
+	It("should reject empty CN label key or values", func() {
+		cnTpl := &CNSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cn-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: CNSetSpec{
+				PodSet: PodSet{
+					Replicas: 2,
+					MainContainer: MainContainer{
+						Image: "test",
+					},
+				},
+			},
+			Deps: CNSetDeps{
+				LogSetRef: LogSetRef{
+					ExternalLogSet: &ExternalLogSet{},
+				},
+			},
+		}
+		emptyLabelKey := cnTpl.DeepCopy()
+		emptyLabelKey.Spec.Labels = []CNLabel{{
+			Key:    "",
+			Values: []string{"test"},
+		}}
+		Expect(k8sClient.Create(context.TODO(), emptyLabelKey)).NotTo(Succeed())
+		emptyLabelValueList := cnTpl.DeepCopy()
+		emptyLabelValueList.Spec.Labels = []CNLabel{{
+			Key:    "test",
+			Values: []string{},
+		}}
+		Expect(k8sClient.Create(context.TODO(), emptyLabelValueList)).NotTo(Succeed())
+		emptyLabelValueItem := cnTpl.DeepCopy()
+		emptyLabelValueItem.Spec.Labels = []CNLabel{{
+			Key:    "test",
+			Values: []string{""},
+		}}
+		Expect(k8sClient.Create(context.TODO(), emptyLabelValueItem)).NotTo(Succeed())
+		validLabel := cnTpl.DeepCopy()
+		emptyLabelValueItem.Spec.Labels = []CNLabel{{
+			Key:    "test",
+			Values: []string{"test"},
+		}}
+		Expect(k8sClient.Create(context.TODO(), validLabel)).To(Succeed())
+	})
 })
