@@ -123,6 +123,11 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			},
 		}
 		_, err = utils.CreateOwnedOrUpdate(ctx, tpl, func() error {
+			// ensure label for legacy CNSet
+			if tpl.Labels == nil {
+				tpl.Labels = map[string]string{}
+			}
+			tpl.Labels[common.MatrixoneClusterLabelKey] = mo.Name
 			tpl.Spec = g.CNSetSpec
 			if mo.Spec.Proxy != nil {
 				if tpl.Spec.Config == nil {
