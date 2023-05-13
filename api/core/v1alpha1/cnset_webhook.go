@@ -35,6 +35,9 @@ var _ webhook.Defaulter = &CNSet{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *CNSet) Default() {
 	r.Spec.Default()
+	if r.Spec.Role == "" {
+		r.Spec.Role = CNRoleTP
+	}
 }
 
 func (r *CNSetSpec) Default() {
@@ -88,6 +91,19 @@ func (r *CNSetSpec) ValidateCreate() field.ErrorList {
 	}
 	if r.NodePort != nil && r.ServiceType == corev1.ServiceTypeClusterIP {
 		errs = append(errs, field.Invalid(field.NewPath("spec").Child("nodePort"), r.NodePort, "cannot set node port when serviceType is ClusterIP"))
+	}
+	for i, l := range r.Labels {
+		if l.Key == "" {
+			errs = append(errs, field.Invalid(field.NewPath("spec").Child("cnLabels").Index(i).Child("key"), r.Labels[i], "label key cannot be empty"))
+		}
+		if len(l.Values) == 0 {
+			errs = append(errs, field.Invalid(field.NewPath("spec").Child("cnLabels").Index(i).Child("values"), r.Labels[i], "label values cannot be empty"))
+		}
+		for j, v := range l.Values {
+			if v == "" {
+				errs = append(errs, field.Invalid(field.NewPath("spec").Child("cnLabels").Index(i).Child("values").Index(j), r.Labels[i].Values, "label value cannot be empty string"))
+			}
+		}
 	}
 	return errs
 }
