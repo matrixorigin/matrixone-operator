@@ -28,9 +28,6 @@ type DNSetSpec struct {
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 
 	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
-
-	// +optional
-	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
 type DNSetStatus struct {

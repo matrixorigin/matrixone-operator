@@ -35,9 +35,6 @@ type WebUISpec struct {
 
 	// +optional
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-
-	// +optional
-	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
 type RollingUpdateStrategy struct {

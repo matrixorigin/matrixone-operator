@@ -223,7 +223,6 @@ _Appears in:_
 | `PodSet` _[PodSet](#podset)_ |  |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for DNSet, node storage will be used if not specified |
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
-| `overlay` _[Overlay](#overlay)_ |  |
 
 
 
@@ -337,7 +336,6 @@ _Appears in:_
 | `storeFailureTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | StoreFailureTimeout is the timeout to fail-over the logset Pod after a failure of it is observed |
 | `failedPodStrategy` _[FailedPodStrategy](#failedpodstrategy)_ | FailedPodStrategy controls how to handle failed pod when failover happens, default to Delete |
 | `pvcRetentionPolicy` _[PVCRetentionPolicy](#pvcretentionpolicy)_ | PVCRetentionPolicy defines the retention policy of orphaned PVCs due to cluster deletion, scale-in or failover. Available options: - Delete: delete orphaned PVCs - Retain: keep orphaned PVCs, if the corresponding Pod get created again (e.g. scale-in and scale-out, recreate the cluster), the Pod will reuse the retained PVC which contains previous data. Retained PVCs require manual cleanup if they are no longer needed. The default policy is Delete. |
-| `overlay` _[Overlay](#overlay)_ |  |
 
 
 #### MainContainer
@@ -426,11 +424,7 @@ _Appears in:_
 Overlay allows advanced customization of the pod spec in the set
 
 _Appears in:_
-- [DNSetSpec](#dnsetspec)
-- [LogSetSpec](#logsetspec)
 - [PodSet](#podset)
-- [ProxySetSpec](#proxysetspec)
-- [WebUISpec](#webuispec)
 
 | Field | Description |
 | --- | --- |
@@ -555,7 +549,6 @@ _Appears in:_
 | `PodSet` _[PodSet](#podset)_ |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of proxy service |
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
-| `overlay` _[Overlay](#overlay)_ |  |
 
 
 
@@ -729,6 +722,5 @@ _Appears in:_
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service |
 | `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy rolling update strategy |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
-| `overlay` _[Overlay](#overlay)_ |  |
 
 

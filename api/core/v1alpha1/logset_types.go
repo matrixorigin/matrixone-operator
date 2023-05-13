@@ -62,9 +62,6 @@ type LogSetSpec struct {
 	// The default policy is Delete.
 	// +optional
 	PVCRetentionPolicy *PVCRetentionPolicy `json:"pvcRetentionPolicy,omitempty"`
-
-	// +optional
-	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
 func (l *LogSetSpec) GetFailedPodStrategy() FailedPodStrategy {
