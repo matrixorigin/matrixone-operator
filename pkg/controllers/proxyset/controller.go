@@ -58,7 +58,14 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.ProxySet]) (recon.Action[*v
 		})
 		return nil, nil
 	}
-	return nil, recon.ErrReSync(fmt.Sprintf("proxy not ready, ready replicas: %d, desired replicas: %d", cloneset.Status.ReadyReplicas, p.Spec.Replicas))
+	// proxy not ready
+	msg := fmt.Sprintf("proxy not ready, ready replicas: %d, desired replicas: %d", cloneset.Status.ReadyReplicas, p.Spec.Replicas)
+	p.Status.SetCondition(metav1.Condition{
+		Type:    recon.ConditionTypeReady,
+		Status:  metav1.ConditionFalse,
+		Message: msg,
+	})
+	return nil, recon.ErrReSync(msg)
 }
 
 func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.ProxySet]) (bool, error) {
