@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package proxyset
 
 import (
@@ -24,12 +25,19 @@ import (
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"text/template"
 )
 
 const (
+	// nameSuffix is the suffix of the proxyset name
 	nameSuffix = "-proxy"
-	port       = 6001
+	// port is the default port of the proxy
+	port = 6001
+	// probeFailureThreshold is the readiness failure threshold of the proxy
+	probeFailureThreshold = 2
+	// probePeriodSeconds is the readiness probe period of the proxy
+	probePeriodSeconds = 5
 )
 
 type model struct {
@@ -86,7 +94,23 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.ProxySet], proxy *v1alpha1.ProxyS
 		ConfigMap:       cm,
 		KubeCli:         ctx,
 		StorageProvider: &ctx.Dep.Deps.LogSet.Spec.SharedStorage,
+		MutateContainer: syncMainContainer,
 	})
+}
+
+func syncMainContainer(c *corev1.Container) {
+	// readiness probe ensure only ready proxy is registered to the LB backend and receive traffic,
+	c.ReadinessProbe = &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			TCPSocket: &corev1.TCPSocketAction{
+				Port: intstr.FromInt(port),
+			},
+		},
+		FailureThreshold: probeFailureThreshold,
+		PeriodSeconds:    probePeriodSeconds,
+	}
+	// TODO(aylei): liveness probe should be defined carefully since restarting proxy would interrupt
+	// living connections, at least we cannot rely on tcp port readiness to indicate the liveness.
 }
 
 func buildSvc(proxy *v1alpha1.ProxySet) *corev1.Service {
