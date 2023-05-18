@@ -19,6 +19,7 @@ import (
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"strings"
 )
 
@@ -39,6 +40,8 @@ const (
 	awsSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
 	awsRegion          = "AWS_REGION"
 	defaultAWSRegion   = "us-west-2"
+
+	byteSuffix = "B"
 )
 
 // SetStorageProviderConfig set inject configuration of storage provider to Pods
@@ -73,7 +76,7 @@ func FileServiceConfig(localPath string, sp v1alpha1.SharedStorageProvider, v *v
 	}
 	if v != nil && v.MemoryCacheSize != nil {
 		localFS["cache"] = map[string]string{
-			"memory-capacity": v.MemoryCacheSize.String(),
+			"memory-capacity": asSizeBytes(*v.MemoryCacheSize),
 		}
 	}
 	// MO Operator currently unifies the storage DB data and ETL data to a single shared storage
@@ -131,10 +134,10 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 	if cache != nil {
 		c := map[string]string{}
 		if cache.MemoryCacheSize != nil {
-			c["memory-capacity"] = cache.MemoryCacheSize.String()
+			c["memory-capacity"] = asSizeBytes(*cache.MemoryCacheSize)
 		}
 		if cache.DiskCacheSize != nil {
-			c["disk-capacity"] = cache.DiskCacheSize.String()
+			c["disk-capacity"] = asSizeBytes(*cache.DiskCacheSize)
 			switch name {
 			case s3FileServiceName:
 				c["disk-path"] = fmt.Sprintf("%s/%s", DataPath, S3CacheDir)
@@ -148,4 +151,11 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 	}
 
 	return m
+}
+
+// asSizeBytes convert a Quantity to a size byte string
+func asSizeBytes(q resource.Quantity) string {
+	// workaround https://github.com/matrixorigin/matrixone/issues/9507,
+	// will still keep this after the issue get fixed for better compatibility
+	return q.String() + byteSuffix
 }

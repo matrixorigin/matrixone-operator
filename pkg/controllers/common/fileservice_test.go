@@ -29,7 +29,7 @@ func TestFileServiceConfig(t *testing.T) {
 		v         *v1alpha1.Volume
 		c         *v1alpha1.SharedStorageCache
 	}
-	quantity1Gi := resource.MustParse("1Gi")
+	quantity1GiB := resource.MustParse("1Gi")
 	tests := []struct {
 		name string
 		args args
@@ -86,11 +86,11 @@ func TestFileServiceConfig(t *testing.T) {
 				},
 			},
 			v: &v1alpha1.Volume{
-				MemoryCacheSize: &quantity1Gi,
+				MemoryCacheSize: &quantity1GiB,
 			},
 			c: &v1alpha1.SharedStorageCache{
-				MemoryCacheSize: &quantity1Gi,
-				DiskCacheSize:   &quantity1Gi,
+				MemoryCacheSize: &quantity1GiB,
+				DiskCacheSize:   &quantity1GiB,
 			},
 		},
 		want: map[string]interface{}{
@@ -100,7 +100,7 @@ func TestFileServiceConfig(t *testing.T) {
 				"data-dir": "/test",
 				"backend":  "DISK",
 				"cache": map[string]string{
-					"memory-capacity": "1Gi",
+					"memory-capacity": "1GiB",
 				},
 			}, {
 				"name":    "S3",
@@ -111,9 +111,9 @@ func TestFileServiceConfig(t *testing.T) {
 					"bucket":     "bucket",
 				},
 				"cache": map[string]string{
-					"memory-capacity": "1Gi",
+					"memory-capacity": "1GiB",
 					"disk-path":       "/var/lib/matrixone/disk-cache",
-					"disk-capacity":   "1Gi",
+					"disk-capacity":   "1GiB",
 				},
 			}, {
 				"name":    "ETL",
@@ -124,9 +124,9 @@ func TestFileServiceConfig(t *testing.T) {
 					"bucket":     "bucket",
 				},
 				"cache": map[string]string{
-					"memory-capacity": "1Gi",
+					"memory-capacity": "1GiB",
 					"disk-path":       "/var/lib/matrixone/etl-cache",
-					"disk-capacity":   "1Gi",
+					"disk-capacity":   "1GiB",
 				},
 			}},
 		},
