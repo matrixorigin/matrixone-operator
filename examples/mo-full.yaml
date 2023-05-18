@@ -42,7 +42,7 @@ spec:
     config: |
       # TOML format config file below
       [log]
-      level=debug
+      level="debug"
     # required, configure the shared storage of the mo cluster
     sharedStorage:
       # use AWS S3 as shared storage
@@ -103,7 +103,7 @@ spec:
     config: |
       # TOML format config file below
       [log]
-      level=debug
+      level="debug"
   # cnGroups defines the CN pods in the cluster, pod in a same group is isomorphic
   cnGroups:
   - name: tp
@@ -142,7 +142,7 @@ spec:
     config: |
       # TOML format config file below
       [log]
-      level=debug
+      level="debug"
     cnLabels:
     - key: "YOUR_LABEL_KEY_A"
       values: ["YOUR_LABEL_A_VALUE1", "YOUR_LABEL_A_VALUE2"]
@@ -174,14 +174,6 @@ spec:
     config: |
       # TOML format config file below
       [log]
-      level=debug
+      level="debug"
     overlay:
       env: []
-
-  # optional, deploy another CN group that does not accept MySQL session, this group can accept MPP pipelines to accelerate
-  # AP queries.
-  ap:
-    replicas: 2
-    cacheVolume:
-      size: 10Gi
-    # the configurable fields are same as TP
