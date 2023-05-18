@@ -125,6 +125,9 @@ func (bca *Actor) NewJobTpl(bucket *v1alpha1.BucketClaim, cm *corev1.ConfigMap) 
 	mainContainer.Args = []string{}
 	podTpl.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
 
+	// remove all labels inherit from logset pod
+	podTpl.Labels = nil
+
 	// ignore volumes from logset, which may dependent other resources(like configmap) and these resource may not exist
 	mainContainer.VolumeMounts = []corev1.VolumeMount{{
 		Name:      "aws-cli-config",
