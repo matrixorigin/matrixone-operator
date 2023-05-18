@@ -207,7 +207,7 @@ func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
 		return nil
 	}
 	if len(r.sts.Spec.ReserveOrdinals) >= minorityLimit {
-		ctx.Log.Info("failover limit %d has reached, only minority failover can be safely automated", minorityLimit)
+		ctx.Log.Info("failover limit has reached, only minority failover can be safely automated", "limit", minorityLimit)
 		return nil
 	}
 	toRepair := ctx.Obj.Status.StoresFailedFor(ctx.Obj.Spec.GetStoreFailureTimeout().Duration)
