@@ -20,12 +20,31 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sort"
 )
+
+func (r *Actor) syncBucketEverRunningAnn(ctx *recon.Context[*v1alpha1.LogSet], pods *corev1.PodList) error {
+	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
+		return nil
+	}
+	ls := ctx.Obj
+	// skip if no s3 share storage configuration
+	if ls.Spec.SharedStorage.S3 == nil {
+		return nil
+	}
+
+	bucket, err := v1alpha1.ClaimedBucket(ctx.Client, ls.Spec.SharedStorage.S3)
+	if err != nil || bucket == nil {
+		// skip if there is an error, or bucket does not exist
+		return err
+	}
+	return v1alpha1.SetAnnAccordingPods(ctx.Context, ctx.Client, bucket, pods)
+}
 
 func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) error {
 	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {

@@ -104,6 +104,13 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		})
 	}
 
+	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && dn.Deps.LogSet != nil {
+		err = v1alpha1.SyncBucketEverRunningAnn(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, podList)
+		if err != nil {
+			return nil, errors.Wrap(err, "set bucket ever running ann")
+		}
+	}
+
 	switch {
 	case len(dn.Status.StoresFailedFor(storeDownTimeout)) > 0:
 		return d.with(sts, svc).Repair, nil
