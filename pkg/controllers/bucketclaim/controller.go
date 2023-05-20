@@ -57,6 +57,22 @@ func (bca *Actor) Finalize(ctx *recon.Context[*v1alpha1.BucketClaim]) (bool, err
 		return false, ctx.Update(bucket)
 	}
 
+	// if AnnAnyInstanceRunning is not set, indicates that there is no running pod instance found for its mo cluster
+	// so there is no need to start a job to finalize bucket data.
+	// NOTE: generally LogSet start successfully is a precondition of starting DN and CN, if no running pod found means that
+	// LogSet is failure, so it is certain that no running DN and CN.
+	// this will resolve the case of wrong static secret configuration, but will not resolve the case of job fail to start
+	// because of lack of resource
+	if bucket.Annotations[v1alpha1.AnnAnyInstanceRunning] == "" {
+		ctx.Log.Info(fmt.Sprintf("skip startup bucketclaim job because no running pod found for: %v", client.ObjectKeyFromObject(ctx.Obj)))
+
+		controllerutil.RemoveFinalizer(bucket, v1alpha1.BucketDataFinalizer)
+		if err := ctx.Update(bucket); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      jobName(bucket),

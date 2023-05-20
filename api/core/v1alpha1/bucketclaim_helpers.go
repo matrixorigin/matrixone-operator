@@ -18,6 +18,8 @@ import (
 	"context"
 	"crypto/sha1"
 	"fmt"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +29,11 @@ import (
 
 const (
 	BucketUniqLabel = "matrixorigin.io/bucket-unique-id"
+
+	// AnnAnyInstanceRunning is a bucket annotation indicates whether any pod instances running in a mo cluster.
+	// pod instances include logset/cn/dn, if any pod of logset/cn/dn is ever in running status, this annotation will set to "true".
+	// and this annotation can only be set to true, will not delete at any time.
+	AnnAnyInstanceRunning = "bucket.matrixorigin.io/any-instance-running"
 
 	// BucketDataFinalizer blocks BucketClaim reclaim until data in bucket has been recycled
 	BucketDataFinalizer = "matrixorigin.io/bucket-data-finalizer"
@@ -138,4 +145,52 @@ func ContainFinalizerPrefix(finalizers []string, prefix string) bool {
 		}
 	}
 	return false
+}
+
+func SyncBucketEverRunningAnn(ctx context.Context, c client.Client, lsMeta metav1.ObjectMeta, pods *corev1.PodList) error {
+	if lsMeta.Namespace == "" || lsMeta.Name == "" {
+		return fmt.Errorf("bad losget meta %v", lsMeta)
+	}
+	ls := &LogSet{}
+	err := c.Get(ctx, client.ObjectKey{Namespace: lsMeta.Namespace, Name: lsMeta.Name}, ls)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	s3 := ls.Spec.SharedStorage.S3
+	if s3 == nil {
+		return nil
+	}
+	bucket, err := ClaimedBucket(c, s3)
+	if err != nil || bucket == nil {
+		// skip set annotation if bucket not exist
+		return err
+	}
+	return SetAnnAccordingPods(ctx, c, bucket, pods)
+}
+
+func SetAnnAccordingPods(ctx context.Context, c client.Client, bucket *BucketClaim, pods *corev1.PodList) error {
+	// skip if already exist
+	if bucket.Annotations[AnnAnyInstanceRunning] != "" {
+		return nil
+	}
+
+	isRunning := false
+	for _, pod := range pods.Items {
+		if util.IsPodReady(&pod) {
+			isRunning = true
+			break
+		}
+	}
+	if !isRunning {
+		// cannot find any running pods
+		return nil
+	}
+	if bucket.Annotations == nil {
+		bucket.Annotations = make(map[string]string)
+	}
+	bucket.Annotations[AnnAnyInstanceRunning] = "true"
+	return c.Update(ctx, bucket)
 }

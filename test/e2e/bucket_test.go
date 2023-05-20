@@ -15,9 +15,12 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/test/e2e/e2eminio"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	. "github.com/onsi/ginkgo/v2"
@@ -136,6 +139,23 @@ var _ = Describe("Matrix BucketClaim test", func() {
 		exist, err := e2eminio.IsObjectExist(object)
 		Expect(err).Should(BeNil())
 		Expect(exist).Should(BeTrue())
+
+		By("wait logset pod running")
+		Eventually(func() error {
+			pods := &corev1.PodList{}
+			if err := kubeCli.List(context.TODO(), pods, client.InNamespace(ls.Namespace), client.MatchingLabels(map[string]string{
+				common.InstanceLabelKey: ls.Name,
+			})); err != nil {
+				return err
+			}
+
+			for _, pod := range pods.Items {
+				if util.IsPodReady(&pod) {
+					return nil
+				}
+			}
+			return fmt.Errorf("wait logset pod in running state")
+		}, createLogSetTimeout, pollInterval).Should(Succeed())
 
 		By("tear down logset cluster")
 		Expect(kubeCli.Delete(ctx, ls)).To(Succeed())
