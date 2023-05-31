@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -65,6 +66,12 @@ func validateMainContainer(c *MainContainer, parent *field.Path) field.ErrorList
 		errs = append(errs, field.Invalid(parent.Child("image"), c.Image, "image must be set"))
 	}
 	return errs
+}
+
+func validateContainerResource(r *corev1.ResourceRequirements, parent *field.Path) field.ErrorList {
+	// TODO: use kubernetes/api/validation.ValidatePodSpec to perform through Validation after we migrate
+	// webhooks out of api package
+	return nil
 }
 
 func validateVolume(v *Volume, parent *field.Path) field.ErrorList {
