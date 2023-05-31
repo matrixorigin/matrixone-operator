@@ -180,7 +180,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		Expect(k8sClient.Update(context.TODO(), invalidReplica)).ToNot(Succeed(), "initialConfig should be immutable")
 	})
 
-	It("should set defaults for CNGroups", func() {
+	It("should validate and set defaults for CNGroups", func() {
 		cluster := &MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mo-" + randomString(5),
@@ -233,11 +233,18 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 				}},
 			},
 		}
-		Expect(k8sClient.Create(context.TODO(), cluster)).To(Succeed())
+		setDefault := cluster.DeepCopy()
+		Expect(k8sClient.Create(context.TODO(), setDefault)).To(Succeed())
 
 		By("defaults should be set on creation")
-		Expect(cluster.Spec.CNGroups[0].ServiceType).ToNot(BeEmpty(), "CN serviceType should have default")
-		Expect(cluster.Spec.CNGroups[1].SharedStorageCache.DiskCacheSize).ToNot(BeNil(), "CN DiskCache should have default")
-		Expect(cluster.Spec.CNGroups[1].SharedStorageCache.MemoryCacheSize).ToNot(BeNil(), "CN MemoryCache should have default")
+		Expect(setDefault.Spec.CNGroups[0].ServiceType).ToNot(BeEmpty(), "CN serviceType should have default")
+		Expect(setDefault.Spec.CNGroups[1].SharedStorageCache.DiskCacheSize).ToNot(BeNil(), "CN DiskCache should have default")
+		Expect(setDefault.Spec.CNGroups[1].SharedStorageCache.MemoryCacheSize).ToNot(BeNil(), "CN MemoryCache should have default")
+
+		for _, badName := range []string{"a b", "a/b", "a_b"} {
+			b := cluster.DeepCopy()
+			b.Spec.CNGroups[0].Name = badName
+			Expect(k8sClient.Create(context.TODO(), setDefault)).NotTo(Succeed())
+		}
 	})
 })

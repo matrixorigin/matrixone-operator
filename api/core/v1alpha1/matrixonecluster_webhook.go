@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -80,12 +81,23 @@ func (r *MatrixOneCluster) validateMutateCommon() field.ErrorList {
 	if r.Spec.AP != nil {
 		errs = append(errs, r.Spec.AP.ValidateCreate()...)
 	}
-	for _, cn := range r.Spec.CNGroups {
-		errs = append(errs, cn.ValidateCreate()...)
+	for i, cn := range r.Spec.CNGroups {
+		errs = append(errs, r.validateCNGroup(cn, field.NewPath("spec").Child("cnGroups").Index(i))...)
 	}
 	if r.Spec.Version == "" {
 		errs = append(errs, field.Invalid(field.NewPath("spec").Child("version"), "", "version must be set"))
 	}
+	return errs
+}
+
+func (r *MatrixOneCluster) validateCNGroup(g CNGroup, parent *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	if es := validation.IsDNS1123Subdomain(g.Name); es != nil {
+		for _, err := range es {
+			errs = append(errs, field.Invalid(parent.Child("name"), g.Name, err))
+		}
+	}
+	errs = append(errs, g.CNSetSpec.ValidateCreate()...)
 	return errs
 }
 
