@@ -18,6 +18,7 @@ import (
 	"context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -177,5 +178,66 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		mutateInitialConfig := cluster.DeepCopy()
 		mutateInitialConfig.Spec.LogService.InitialConfig.LogShardReplicas = pointer.Int(*mutateInitialConfig.Spec.LogService.InitialConfig.LogShardReplicas - 1)
 		Expect(k8sClient.Update(context.TODO(), invalidReplica)).ToNot(Succeed(), "initialConfig should be immutable")
+	})
+
+	It("should set defaults for CNGroups", func() {
+		cluster := &MatrixOneCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mo-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: MatrixOneClusterSpec{
+				LogService: LogSetSpec{
+					PodSet: PodSet{
+						Replicas: 3,
+					},
+					Volume: Volume{
+						Size: resource.MustParse("10Gi"),
+					},
+					SharedStorage: SharedStorageProvider{
+						S3: &S3Provider{
+							Path: "test/data",
+						},
+					},
+				},
+				DN: DNSetSpec{
+					PodSet: PodSet{
+						Replicas: 2,
+					},
+				},
+				Version: "test",
+				CNGroups: []CNGroup{{
+					Name: "test",
+					CNSetSpec: CNSetSpec{
+						PodSet: PodSet{
+							Replicas: 3,
+						},
+					},
+				}, {
+					Name: "cache",
+					CNSetSpec: CNSetSpec{
+						PodSet: PodSet{
+							Replicas: 3,
+							MainContainer: MainContainer{
+								Resources: corev1.ResourceRequirements{
+									Requests: map[corev1.ResourceName]resource.Quantity{
+										corev1.ResourceMemory: resource.MustParse("10Gi"),
+									},
+								},
+							},
+						},
+						CacheVolume: &Volume{
+							Size: resource.MustParse("10Gi"),
+						},
+					},
+				}},
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), cluster)).To(Succeed())
+
+		By("defaults should be set on creation")
+		Expect(cluster.Spec.CNGroups[0].ServiceType).ToNot(BeEmpty(), "CN serviceType should have default")
+		Expect(cluster.Spec.CNGroups[1].SharedStorageCache.DiskCacheSize).ToNot(BeNil(), "CN DiskCache should have default")
+		Expect(cluster.Spec.CNGroups[1].SharedStorageCache.MemoryCacheSize).ToNot(BeNil(), "CN MemoryCache should have default")
 	})
 })

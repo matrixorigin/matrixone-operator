@@ -45,8 +45,8 @@ func (r *MatrixOneCluster) Default() {
 	if r.Spec.AP != nil {
 		r.Spec.AP.Default()
 	}
-	for _, cn := range r.Spec.CNGroups {
-		cn.Default()
+	for i := range r.Spec.CNGroups {
+		r.Spec.CNGroups[i].Default()
 	}
 }
 
