@@ -128,6 +128,9 @@ func (bca *Actor) NewJobTpl(bucket *v1alpha1.BucketClaim, cm *corev1.ConfigMap) 
 	// remove all labels inherit from logset pod
 	podTpl.Labels = nil
 
+	// NOTE: make bucket deletion pod as best effort
+	mainContainer.Resources = corev1.ResourceRequirements{}
+
 	// ignore volumes from logset, which may dependent other resources(like configmap) and these resource may not exist
 	mainContainer.VolumeMounts = []corev1.VolumeMount{{
 		Name:      "aws-cli-config",
