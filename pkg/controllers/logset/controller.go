@@ -125,8 +125,10 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 	if err = r.syncBucketClaim(ctx, sts); err != nil {
 		return nil, errors.Wrap(err, "sync bucket claim")
 	}
-	if err = r.syncBucketEverRunningAnn(ctx, podList); err != nil {
-		return nil, errors.Wrap(err, "sync bucket ever running annotation")
+	if len(ls.Status.AvailableStores) > 0 {
+		if err = r.syncBucketEverRunningAnn(ctx); err != nil {
+			return nil, errors.Wrap(err, "sync bucket ever running annotation")
+		}
 	}
 
 	if recon.IsReady(&ls.Status.ConditionalStatus) && len(ls.Status.FailedStores) == 0 {

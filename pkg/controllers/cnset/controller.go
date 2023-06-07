@@ -17,6 +17,8 @@ package cnset
 import (
 	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/features"
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"time"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -48,30 +50,23 @@ var _ recon.Actor[*v1alpha1.CNSet] = &Actor{}
 
 type WithResources struct {
 	*Actor
-	sts *kruise.StatefulSet
+	cs  *kruisev1alpha1.CloneSet
 	svc *corev1.Service
 }
 
-func (c *Actor) with(sts *kruise.StatefulSet, svc *corev1.Service) *WithResources {
-	return &WithResources{Actor: c, sts: sts, svc: svc}
+func (c *Actor) with(cs *kruisev1alpha1.CloneSet) *WithResources {
+	return &WithResources{Actor: c, cs: cs}
 }
 
 func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1alpha1.CNSet], error) {
 	cn := ctx.Obj
 
-	svc := &corev1.Service{}
-	err, foundSvc := util.IsFound(ctx.Get(client.ObjectKey{Namespace: cn.Namespace, Name: svcName(cn)}, svc))
+	cs := &kruisev1alpha1.CloneSet{}
+	err, foundCs := util.IsFound(ctx.Get(client.ObjectKey{Namespace: cn.Namespace, Name: setName(cn)}, cs))
 	if err != nil {
-		return nil, errors.Wrap(err, "get cn service")
+		return nil, errors.Wrap(err, "get cn clonset")
 	}
-
-	sts := &kruise.StatefulSet{}
-	err, foundSts := util.IsFound(ctx.Get(client.ObjectKey{Namespace: cn.Namespace, Name: stsName(cn)}, sts))
-	if err != nil {
-		return nil, errors.Wrap(err, "get cn statefulset")
-	}
-
-	if !foundSts || !foundSvc {
+	if !foundCs {
 		return c.Create, nil
 	}
 
@@ -81,111 +76,89 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 			return nil, errors.Wrap(err, "add bucket finalizer")
 		}
 	}
-	// update statefulset of cnset
-	origin := sts.DeepCopy()
-	if err := syncPods(ctx, sts); err != nil {
+
+	svc := buildSvc(cn)
+	if err := recon.CreateOwnedOrUpdate(ctx, svc, func() error {
+		syncService(cn, svc)
+		return nil
+	}); err != nil {
+		return nil, errors.Wrap(err, "sync service")
+	}
+
+	// diff desired cloneset and determine whether should an update be invoked
+	origin := cs.DeepCopy()
+	if err := syncCloneSet(ctx, cs); err != nil {
 		return nil, err
 	}
-	if err = ctx.Update(sts, client.DryRunAll); err != nil {
-		return nil, errors.Wrap(err, "dry run update cnset statefulset")
+	if err = ctx.Update(cs, client.DryRunAll); err != nil {
+		return nil, errors.Wrap(err, "dry run update cnset")
 	}
-	if !equality.Semantic.DeepEqual(origin, sts) {
-		return c.with(sts, svc).Update, nil
-	}
-
-	// update service of cnset
-	originSvc := svc.DeepCopy()
-	syncService(ctx.Obj, svc)
-	if !equality.Semantic.DeepEqual(originSvc, svc) {
-		return c.with(sts, svc).SvcUpdate, nil
+	if !equality.Semantic.DeepEqual(origin, cs) {
+		return c.with(cs).Update, nil
 	}
 
-	// collect cn status
-	podList := &corev1.PodList{}
-	err = ctx.List(podList, client.InNamespace(cn.Namespace), client.MatchingLabels(common.SubResourceLabels(cn)))
-	if err != nil {
-		return nil, errors.Wrap(err, "list cnset pods")
-	}
-
-	common.CollectStoreStatus(&cn.Status.FailoverStatus, podList.Items)
-
-	if len(cn.Status.AvailableStores) >= int(cn.Spec.Replicas) {
-		cn.Status.SetCondition(metav1.Condition{
-			Type:    recon.ConditionTypeReady,
-			Status:  metav1.ConditionTrue,
-			Message: "cn stores ready",
-		})
-
+	// sync status from cloneset
+	if cs.Status.ReadyReplicas >= cn.Spec.Replicas {
+		setReady(cn)
 	} else {
-		cn.Status.SetCondition(metav1.Condition{
-			Type:    recon.ConditionTypeReady,
-			Status:  metav1.ConditionFalse,
-			Reason:  common.ReasonNoEnoughReadyStores,
-			Message: "cn stores not ready",
-		})
+		setNotReady(cn)
+	}
+	if cs.Status.UpdatedReplicas >= cn.Spec.Replicas {
+		setSynced(cn)
+	} else {
+		setNotSynced(cn)
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
-		err = v1alpha1.SyncBucketEverRunningAnn(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, podList)
-		if err != nil {
-			return nil, errors.Wrap(err, "set bucket ever running ann")
+		if cs.Status.ReadyReplicas > 0 {
+			err = v1alpha1.SyncBucketEverRunningAnn(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta)
+			if err != nil {
+				return nil, errors.Wrap(err, "set bucket ever running ann")
+			}
 		}
 	}
-	switch {
-	case len(cn.Status.StoresFailedFor(storeDownTimeOut)) > 0:
-		return c.with(sts, svc).Repair, nil
-	case cn.Spec.Replicas != *sts.Spec.Replicas:
-		return c.with(sts, svc).Scale, nil
+	if cn.Spec.Replicas != *cs.Spec.Replicas {
+		return c.with(cs).Scale, nil
 	}
 
 	if recon.IsReady(&cn.Status.ConditionalStatus) {
-		return nil, nil
+		return nil, c.cleanup(ctx)
 	}
 
 	return nil, recon.ErrReSync("cnset is not ready", reSyncAfter)
 }
 
 func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
-	return ctx.Patch(c.sts, func() error {
-		syncReplicas(ctx.Obj, c.sts)
+	return ctx.Patch(c.cs, func() error {
+		syncReplicas(ctx.Obj, c.cs)
 		return nil
 	})
 }
 
 func (c *WithResources) Update(ctx *recon.Context[*v1alpha1.CNSet]) error {
-	return ctx.Update(c.sts)
+	return ctx.Update(c.cs)
 }
 
-func (c *WithResources) SvcUpdate(ctx *recon.Context[*v1alpha1.CNSet]) error {
-	return ctx.Patch(c.svc, func() error {
-		syncService(ctx.Obj, c.svc)
-		return nil
-	})
-}
-
-func (c *WithResources) Repair(ctx *recon.Context[*v1alpha1.CNSet]) error {
-	toRepair := ctx.Obj.Status.FailoverStatus.StoresFailedFor(storeDownTimeOut)
-	if len(toRepair) == 0 {
-		return nil
-	}
-
-	// repair one at a time
-	ordinal, err := util.PodOrdinal(toRepair[0].PodName)
+func (c *Actor) cleanup(ctx *recon.Context[*v1alpha1.CNSet]) error {
+	sts := &kruise.StatefulSet{}
+	err := ctx.Get(client.ObjectKey{Namespace: ctx.Obj.Namespace, Name: setName(ctx.Obj)}, sts)
 	if err != nil {
-		return errors.Wrapf(err, "error parse ordinal from pod name %s", toRepair[0].PodName)
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return errors.Wrap(err, "error check legacy CN statefulset")
 	}
-	c.sts.Spec.ReserveOrdinals = util.Upsert(c.sts.Spec.ReserveOrdinals, ordinal)
-
-	return nil
+	if err := ctx.Delete(sts); err != nil {
+		return errors.Wrap(err, "error delete legacy CN statefulset")
+	}
+	return recon.ErrReSync("wait legacy CNSet deleted")
 }
 
 func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 	cn := ctx.Obj
 
-	objs := []client.Object{&corev1.Service{ObjectMeta: metav1.ObjectMeta{
-		Name: headlessSvcName(cn),
-	}}, &kruise.StatefulSet{ObjectMeta: metav1.ObjectMeta{
-		Name: stsName(cn),
+	objs := []client.Object{&kruisev1alpha1.CloneSet{ObjectMeta: metav1.ObjectMeta{
+		Name: setName(cn),
 	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
 		Name: svcName(cn),
 	}}}
@@ -220,23 +193,12 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	cnSet := buildCNSet(cn)
 	svc := buildSvc(cn)
 	syncReplicas(cn, cnSet)
-	if err := syncPodMeta(cn, cnSet); err != nil {
-		return errors.Wrap(err, "sync pod meta")
-	}
-	syncPodSpec(cn, cnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
-	syncPersistentVolumeClaim(cn, cnSet)
-
-	configMap, err := buildCNSetConfigMap(cn, ctx.Dep.Deps.LogSet)
-	if err != nil {
-		return err
-	}
-
-	if err := common.SyncConfigMap(ctx, &cnSet.Spec.Template.Spec, configMap); err != nil {
-		return err
+	if err := syncCloneSet(ctx, cnSet); err != nil {
+		return errors.Wrap(err, "sync clone set")
 	}
 
 	// create all resources
-	err = lo.Reduce[client.Object, error]([]client.Object{
+	err := lo.Reduce[client.Object, error]([]client.Object{
 		hSvc,
 		svc,
 		cnSet,
@@ -254,7 +216,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 func (c *Actor) Reconcile(mgr manager.Manager) error {
 	err := recon.Setup[*v1alpha1.CNSet](&v1alpha1.CNSet{}, "cnset", mgr, c,
 		recon.WithBuildFn(func(b *builder.Builder) {
-			b.Owns(&kruise.StatefulSet{}).
+			b.Owns(&kruisev1alpha1.CloneSet{}).
 				Owns(&corev1.Service{})
 		}))
 	if err != nil {
@@ -263,21 +225,63 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 
 	return nil
 }
-func syncPods(ctx *recon.Context[*v1alpha1.CNSet], sts *kruise.StatefulSet) error {
+func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneSet) error {
+	maxUnavailable := intstr.FromInt(1)
+	cs.Spec.UpdateStrategy.Type = kruisev1alpha1.InPlaceIfPossibleCloneSetUpdateStrategyType
+	cs.Spec.UpdateStrategy.MaxUnavailable = &maxUnavailable
+	cs.Spec.ScaleStrategy.DisablePVCReuse = true
+	cs.Spec.ScaleStrategy.MaxUnavailable = &maxUnavailable
+	// TODO: lifecycle hook to un-regist CN from HAKeeper
+
+	if err := syncPodMeta(ctx.Obj, cs); err != nil {
+		return errors.Wrap(err, "sync pod meta")
+	}
+	if ctx.Dep != nil {
+		syncPodSpec(ctx.Obj, cs, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+	}
+	syncPersistentVolumeClaim(ctx.Obj, cs)
+
 	cm, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err
 	}
-
-	syncPodMeta(ctx.Obj, sts)
-
-	if ctx.Dep != nil {
-		syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
-	}
-
-	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
+	return common.SyncConfigMap(ctx, &cs.Spec.Template.Spec, cm)
 }
 
 func bucketFinalizer(cn *v1alpha1.CNSet) string {
 	return fmt.Sprintf("%s-%s-%s", v1alpha1.BucketCNFinalizerPrefix, cn.Namespace, cn.Name)
+}
+
+func setReady(cn *v1alpha1.CNSet) {
+	cn.Status.SetCondition(metav1.Condition{
+		Type:    recon.ConditionTypeReady,
+		Status:  metav1.ConditionTrue,
+		Message: "cn stores ready",
+	})
+}
+
+func setNotReady(cn *v1alpha1.CNSet) {
+	cn.Status.SetCondition(metav1.Condition{
+		Type:    recon.ConditionTypeReady,
+		Status:  metav1.ConditionFalse,
+		Reason:  common.ReasonNoEnoughReadyStores,
+		Message: "cn stores not ready",
+	})
+}
+
+func setSynced(cn *v1alpha1.CNSet) {
+	cn.Status.SetCondition(metav1.Condition{
+		Type:    recon.ConditionTypeSynced,
+		Status:  metav1.ConditionTrue,
+		Message: "cn synced",
+	})
+}
+
+func setNotSynced(cn *v1alpha1.CNSet) {
+	cn.Status.SetCondition(metav1.Condition{
+		Type:    recon.ConditionTypeSynced,
+		Status:  metav1.ConditionFalse,
+		Reason:  common.ReasonNoEnoughUpdatedStores,
+		Message: "cn stores not ready",
+	})
 }

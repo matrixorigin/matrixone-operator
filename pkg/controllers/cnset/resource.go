@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"golang.org/x/exp/slices"
 	"text/template"
 
@@ -26,7 +27,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
 	"github.com/openkruise/kruise-api/apps/pub"
-	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,12 +37,7 @@ var startScriptTpl = template.Must(template.New("cn-start-script").Parse(`
 set -eu
 POD_NAME=${POD_NAME:-$HOSTNAME}
 ADDR="${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc"
-ORDINAL=${POD_NAME##*-}
-if [ -z "${HOSTNAME_UUID+guard}" ]; then
-  UUID=$(printf '00000000-0000-0000-0000-2%011x' ${ORDINAL})
-else
-  UUID=$(echo ${ADDR} | sha256sum | od -x | head -1 | awk '{OFS="-"; print $2$3,$4,$5,$6,$7$8$9}')
-fi
+UUID=$(echo ${ADDR} | sha256sum | od -x | head -1 | awk '{OFS="-"; print $2$3,$4,$5,$6,$7$8$9}')
 conf=$(mktemp)
 bc=$(mktemp)
 cat <<EOF > ${bc}
@@ -93,21 +88,21 @@ func buildSvc(cn *v1alpha1.CNSet) *corev1.Service {
 	return svc
 }
 
-func buildCNSet(cn *v1alpha1.CNSet) *kruise.StatefulSet {
-	return common.StatefulSetTemplate(cn, stsName(cn), headlessSvcName(cn))
+func buildCNSet(cn *v1alpha1.CNSet) *kruisev1alpha1.CloneSet {
+	return common.CloneSetTemplate(cn, setName(cn))
 }
 
-func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
+func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) {
 	if cn.Spec.CacheVolume != nil {
 		dataPVC := common.PersistentVolumeClaimTemplate(cn.Spec.CacheVolume.Size, cn.Spec.CacheVolume.StorageClassName, common.DataVolume)
 		tpls := []corev1.PersistentVolumeClaim{dataPVC}
 		cn.Spec.Overlay.AppendVolumeClaims(&tpls)
-		sts.Spec.VolumeClaimTemplates = tpls
+		cs.Spec.VolumeClaimTemplates = tpls
 	}
 }
 
-func syncReplicas(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) {
-	sts.Spec.Replicas = &cn.Spec.Replicas
+func syncReplicas(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) {
+	cs.Spec.Replicas = &cn.Spec.Replicas
 }
 
 func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
@@ -120,10 +115,11 @@ func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
 			svc.Spec.Ports[portIndex].NodePort = *cn.Spec.NodePort
 		}
 	}
+	svc.Annotations = cn.Spec.ServiceAnnotations
 }
 
-func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) error {
-	meta := &sts.Spec.Template.ObjectMeta
+func syncPodMeta(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) error {
+	meta := &cs.Spec.Template.ObjectMeta
 	if meta.Annotations == nil {
 		meta.Annotations = map[string]string{}
 	}
@@ -137,12 +133,12 @@ func syncPodMeta(cn *v1alpha1.CNSet, sts *kruise.StatefulSet) error {
 	} else {
 		meta.Annotations[common.DNSIdentityAnnotation] = string(metav1.ConditionFalse)
 	}
-	cn.Spec.Overlay.OverlayPodMeta(&sts.Spec.Template.ObjectMeta)
+	cn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 	return nil
 }
 
-func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.SharedStorageProvider) {
-	specRef := &sts.Spec.Template.Spec
+func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.SharedStorageProvider) {
+	specRef := &cs.Spec.Template.Spec
 
 	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
 		return c.Name == v1alpha1.ContainerMain
@@ -178,9 +174,6 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
 	}
-	if cn.GetDNSBasedIdentity() {
-		mainRef.Env = append(mainRef.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
-	}
 
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)
 
@@ -190,7 +183,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	}}
 	specRef.NodeSelector = cn.Spec.NodeSelector
 	common.SetStorageProviderConfig(sp, specRef)
-	common.SyncTopology(cn.Spec.TopologyEvenSpread, specRef, sts.Spec.Selector)
+	common.SyncTopology(cn.Spec.TopologyEvenSpread, specRef, cs.Spec.Selector)
 	cn.Spec.Overlay.OverlayPodSpec(specRef)
 }
 

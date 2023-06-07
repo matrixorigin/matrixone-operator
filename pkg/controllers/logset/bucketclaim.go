@@ -20,7 +20,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,7 +27,7 @@ import (
 	"sort"
 )
 
-func (r *Actor) syncBucketEverRunningAnn(ctx *recon.Context[*v1alpha1.LogSet], pods *corev1.PodList) error {
+func (r *Actor) syncBucketEverRunningAnn(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
 		return nil
 	}
@@ -43,7 +42,7 @@ func (r *Actor) syncBucketEverRunningAnn(ctx *recon.Context[*v1alpha1.LogSet], p
 		// skip if there is an error, or bucket does not exist
 		return err
 	}
-	return v1alpha1.SetAnnAccordingPods(ctx.Context, ctx.Client, bucket, pods)
+	return v1alpha1.SetBucketEverRunningAnn(ctx.Context, ctx.Client, bucket)
 }
 
 func (r *Actor) syncBucketClaim(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) error {
