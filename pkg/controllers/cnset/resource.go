@@ -88,8 +88,11 @@ func buildSvc(cn *v1alpha1.CNSet) *corev1.Service {
 	return svc
 }
 
-func buildCNSet(cn *v1alpha1.CNSet) *kruisev1alpha1.CloneSet {
-	return common.CloneSetTemplate(cn, setName(cn))
+func buildCNSet(cn *v1alpha1.CNSet, headlessSvc *corev1.Service) *kruisev1alpha1.CloneSet {
+	tpl := common.CloneSetTemplate(cn, setName(cn))
+	// NB: set subdomain to make the ${POD_NAME}.${HEADLESS_SVC_NAME}.${NS} DNS record resolvable
+	tpl.Spec.Template.Spec.Subdomain = tpl.Name
+	return tpl
 }
 
 func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) {

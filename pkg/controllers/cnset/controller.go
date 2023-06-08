@@ -189,8 +189,9 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	cn := ctx.Obj
 
+	// headless svc for pod dns resolution
 	hSvc := buildHeadlessSvc(cn)
-	cnSet := buildCNSet(cn)
+	cnSet := buildCNSet(cn, hSvc)
 	svc := buildSvc(cn)
 	syncReplicas(cn, cnSet)
 	if err := syncCloneSet(ctx, cnSet); err != nil {
