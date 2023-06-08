@@ -197,6 +197,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	if err := syncCloneSet(ctx, cnSet); err != nil {
 		return errors.Wrap(err, "sync clone set")
 	}
+	syncPersistentVolumeClaim(ctx.Obj, cnSet)
 
 	// create all resources
 	err := lo.Reduce[client.Object, error]([]client.Object{
@@ -240,7 +241,7 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	if ctx.Dep != nil {
 		syncPodSpec(ctx.Obj, cs, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	}
-	syncPersistentVolumeClaim(ctx.Obj, cs)
+	// TODO(aylei): CNSet should support update cacheVolume
 
 	cm, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
 	if err != nil {
