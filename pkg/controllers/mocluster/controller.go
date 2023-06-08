@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,24 +49,26 @@ type MatrixOneClusterActor struct{}
 func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (recon.Action[*v1alpha1.MatrixOneCluster], error) {
 	mo := ctx.Obj
 
-	maxUnavailable := intstr.FromInt(maxUnavailablePod)
 	unavailableBudget := &kruisepolicy.PodUnavailableBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: mo.Namespace,
 			Name:      mo.Name,
 		},
 	}
-	if err := recon.CreateOwnedOrUpdate(ctx, unavailableBudget, func() error {
-		unavailableBudget.Spec.Selector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				common.MatrixoneClusterLabelKey: mo.Name,
-			},
-		}
-		unavailableBudget.Spec.MaxUnavailable = &maxUnavailable
-		return nil
-	}); err != nil {
-		return nil, errors.Wrap(err, "sync cluster unavailable budget")
+	if err := util.Ignore(apierrors.IsNotFound, ctx.Delete(unavailableBudget)); err != nil {
+		return nil, errors.Wrap(err, "error clientup pod unavailable budget")
 	}
+	//if err := recon.CreateOwnedOrUpdate(ctx, unavailableBudget, func() error {
+	//	unavailableBudget.Spec.Selector = &metav1.LabelSelector{
+	//		MatchLabels: map[string]string{
+	//			common.MatrixoneClusterLabelKey: mo.Name,
+	//		},
+	//	}
+	//	unavailableBudget.Spec.MaxUnavailable = &maxUnavailable
+	//	return nil
+	//}); err != nil {
+	//	return nil, errors.Wrap(err, "sync cluster unavailable budget")
+	//}
 
 	// sync specs
 	ls := &v1alpha1.LogSet{
