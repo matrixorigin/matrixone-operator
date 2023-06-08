@@ -15,6 +15,7 @@
 package cnset
 
 import (
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -69,7 +70,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 		},
 	}
 	labels := common.SubResourceLabels(tpl)
-	n := stsName(tpl)
+	n := setName(tpl)
 	svc := svcName(tpl)
 	tests := []struct {
 		name   string
@@ -104,12 +105,12 @@ func TestCNSetActor_Observe(t *testing.T) {
 			cnset: tpl,
 			client: &fake.Client{
 				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
-					&kruisev1.StatefulSet{
+					&kruisev1alpha1.CloneSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      n,
 							Namespace: "default",
 						},
-						Spec: kruisev1.StatefulSetSpec{
+						Spec: kruisev1alpha1.CloneSetSpec{
 							Replicas: pointer.Int32(1),
 							Template: corev1.PodTemplateSpec{
 								ObjectMeta: metav1.ObjectMeta{
@@ -139,7 +140,6 @@ func TestCNSetActor_Observe(t *testing.T) {
 									},
 								},
 							},
-							ServiceName: svc,
 						},
 					},
 					&corev1.Service{
@@ -199,7 +199,7 @@ func TestCNSetVolumeMount(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		sts    *kruisev1.StatefulSet
+		cs     *kruisev1alpha1.CloneSet
 		cnset  *v1alpha1.CNSet
 		sp     v1alpha1.SharedStorageProvider
 		client client.Client
@@ -223,8 +223,8 @@ func TestCNSetVolumeMount(t *testing.T) {
 			client: &fake.Client{
 				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
 			},
-			sp:  v1alpha1.SharedStorageProvider{},
-			sts: &kruisev1.StatefulSet{},
+			sp: v1alpha1.SharedStorageProvider{},
+			cs: &kruisev1alpha1.CloneSet{},
 		},
 		{
 			name: "test volume mount with cache volume",
@@ -248,8 +248,8 @@ func TestCNSetVolumeMount(t *testing.T) {
 			client: &fake.Client{
 				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
 			},
-			sp:  v1alpha1.SharedStorageProvider{},
-			sts: &kruisev1.StatefulSet{},
+			sp: v1alpha1.SharedStorageProvider{},
+			cs: &kruisev1alpha1.CloneSet{},
 		},
 	}
 
@@ -278,13 +278,13 @@ func TestCNSetVolumeMount(t *testing.T) {
 					},
 				},
 			}
-			syncPodSpec(tt.cnset, tt.sts, tt.sp)
+			syncPodSpec(tt.cnset, tt.cs, tt.sp)
 
 			if tt.cnset.Spec.CacheVolume == nil {
 				// if cacheVolume not set, volumeClaimTemplates should be 0
 				// dataVolumeMount should not be created.
-				if !utils.CheckVolumeClaimTemplate(common.DataVolume, tt.sts.Spec.VolumeClaimTemplates) {
-					if utils.CheckVolumeMount(common.DataVolume, tt.sts.Spec.Template.Spec.Containers[0].VolumeMounts) {
+				if !utils.CheckVolumeClaimTemplate(common.DataVolume, tt.cs.Spec.VolumeClaimTemplates) {
+					if utils.CheckVolumeMount(common.DataVolume, tt.cs.Spec.Template.Spec.Containers[0].VolumeMounts) {
 						t.Error("mo data volume create error")
 					}
 				} else {
@@ -300,6 +300,7 @@ func newScheme() *runtime.Scheme {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kruisev1.AddToScheme(scheme))
+	utilruntime.Must(kruisev1alpha1.AddToScheme(scheme))
 
 	return scheme
 }

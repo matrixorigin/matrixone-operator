@@ -18,8 +18,6 @@ import (
 	"context"
 	"crypto/sha1"
 	"fmt"
-	"github.com/matrixorigin/controller-runtime/pkg/util"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -147,7 +145,7 @@ func ContainFinalizerPrefix(finalizers []string, prefix string) bool {
 	return false
 }
 
-func SyncBucketEverRunningAnn(ctx context.Context, c client.Client, lsMeta metav1.ObjectMeta, pods *corev1.PodList) error {
+func SyncBucketEverRunningAnn(ctx context.Context, c client.Client, lsMeta metav1.ObjectMeta) error {
 	if lsMeta.Namespace == "" || lsMeta.Name == "" {
 		return fmt.Errorf("bad losget meta %v", lsMeta)
 	}
@@ -168,24 +166,12 @@ func SyncBucketEverRunningAnn(ctx context.Context, c client.Client, lsMeta metav
 		// skip set annotation if bucket not exist
 		return err
 	}
-	return SetAnnAccordingPods(ctx, c, bucket, pods)
+	return SetBucketEverRunningAnn(ctx, c, bucket)
 }
 
-func SetAnnAccordingPods(ctx context.Context, c client.Client, bucket *BucketClaim, pods *corev1.PodList) error {
+func SetBucketEverRunningAnn(ctx context.Context, c client.Client, bucket *BucketClaim) error {
 	// skip if already exist
 	if bucket.Annotations[AnnAnyInstanceRunning] != "" {
-		return nil
-	}
-
-	isRunning := false
-	for _, pod := range pods.Items {
-		if util.IsPodReady(&pod) {
-			isRunning = true
-			break
-		}
-	}
-	if !isRunning {
-		// cannot find any running pods
 		return nil
 	}
 	if bucket.Annotations == nil {

@@ -186,7 +186,6 @@ func (s *FailoverStatus) StoresFailedFor(d time.Duration) []Store {
 			stores = append(stores, store)
 		}
 	}
-
 	return stores
 }
 

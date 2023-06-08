@@ -41,7 +41,7 @@ func svcName(cn *v1alpha1.CNSet) string {
 	return resourceName(cn)
 }
 
-func stsName(cn *v1alpha1.CNSet) string {
+func setName(cn *v1alpha1.CNSet) string {
 	return resourceName(cn)
 }
 

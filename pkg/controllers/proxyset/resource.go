@@ -63,23 +63,7 @@ exec /mo-service -cfg ${conf} $@
 `))
 
 func buildCloneSet(proxy *v1alpha1.ProxySet) *kruisev1alpha1.CloneSet {
-	return &kruisev1alpha1.CloneSet{
-		ObjectMeta: cloneSetKey(proxy),
-		Spec: kruisev1alpha1.CloneSetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: common.SubResourceLabels(proxy),
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      common.SubResourceLabels(proxy),
-					Annotations: map[string]string{},
-				},
-			},
-			UpdateStrategy: kruisev1alpha1.CloneSetUpdateStrategy{
-				Type: kruisev1alpha1.InPlaceIfPossibleCloneSetUpdateStrategyType,
-			},
-		},
-	}
+	return common.CloneSetTemplate(proxy, resourceName(proxy))
 }
 
 func syncCloneSet(ctx *recon.Context[*v1alpha1.ProxySet], proxy *v1alpha1.ProxySet, cs *kruisev1alpha1.CloneSet) error {

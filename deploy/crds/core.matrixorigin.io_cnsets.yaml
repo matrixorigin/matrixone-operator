@@ -164,6 +164,11 @@ spec:
               role:
                 description: '[TP, AP], default to TP Deprecated: use labels instead'
                 type: string
+              serviceAnnotations:
+                additionalProperties:
+                  type: string
+                description: ServiceAnnotations are the annotations for the cn service
+                type: object
               serviceArgs:
                 description: 'ServiceArgs define command line options for process,
                   used by logset/cnset/dnset service. NOTE: user should not define
@@ -207,18 +212,6 @@ spec:
           status:
             description: CNSetStatus Figure out what status should be exposed
             properties:
-              availableStores:
-                items:
-                  properties:
-                    lastTransition:
-                      format: date-time
-                      type: string
-                    phase:
-                      type: string
-                    podName:
-                      type: string
-                  type: object
-                type: array
               conditions:
                 items:
                   description: "Condition contains details for one aspect of the current
@@ -285,18 +278,6 @@ spec:
                   - reason
                   - status
                   - type
-                  type: object
-                type: array
-              failedStores:
-                items:
-                  properties:
-                    lastTransition:
-                      format: date-time
-                      type: string
-                    phase:
-                      type: string
-                    podName:
-                      type: string
                   type: object
                 type: array
             type: object

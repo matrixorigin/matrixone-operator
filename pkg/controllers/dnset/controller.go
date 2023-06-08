@@ -105,15 +105,15 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && dn.Deps.LogSet != nil {
-		err = v1alpha1.SyncBucketEverRunningAnn(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, podList)
-		if err != nil {
-			return nil, errors.Wrap(err, "set bucket ever running ann")
+		if len(dn.Status.AvailableStores) > 0 {
+			err = v1alpha1.SyncBucketEverRunningAnn(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta)
+			if err != nil {
+				return nil, errors.Wrap(err, "set bucket ever running ann")
+			}
 		}
 	}
 
 	switch {
-	case len(dn.Status.StoresFailedFor(storeDownTimeout)) > 0:
-		return d.with(sts, svc).Repair, nil
 	case dn.Spec.Replicas != *sts.Spec.Replicas:
 		return d.with(sts, svc).Scale, nil
 	}
@@ -214,21 +214,6 @@ func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.DNSet]) error {
 
 func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	return ctx.Update(r.sts)
-}
-
-func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.DNSet]) error {
-	toRepair := ctx.Obj.Status.StoresFailedFor(storeDownTimeout)
-	if len(toRepair) == 0 {
-		return nil
-	}
-
-	// repair one at a time
-	ordinal, err := util.PodOrdinal(toRepair[0].PodName)
-	if err != nil {
-		return errors.Wrapf(err, "error parse ordinal from pod name %s", toRepair[0].PodName)
-	}
-	r.sts.Spec.ReserveOrdinals = util.Upsert(r.sts.Spec.ReserveOrdinals, ordinal)
-	return nil
 }
 
 func bucketFinalizer(dn *v1alpha1.DNSet) string {

@@ -15,8 +15,11 @@
 package common
 
 const (
-	// ReasoneNoEnughReadyStores means the resource fall into current condition due to there is no enought reayd stores
+	// ReasonNoEnoughReadyStores means the resource fall into current condition due to there is no enough ready stores
 	ReasonNoEnoughReadyStores = "NoEnoughReadyStores"
+
+	// ReasonNoEnoughUpdatedStores means the resource fall into current condition due to there is no enough updated stores
+	ReasonNoEnoughUpdatedStores = "NoEnoughUpdatedStores"
 )
 
 const (

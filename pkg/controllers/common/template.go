@@ -16,6 +16,7 @@ package common
 
 import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,6 +58,8 @@ const (
 	HeadlessSvcEnvKey = "HEADLESS_SERVICE_NAME"
 	// NamespaceEnvKey  is the container environment variable to reflect the namespace of the Pod that runs the container
 	NamespaceEnvKey = "NAMESPACE"
+	// PodIPEnvKey is the container environment variable to reflect the IP of the Pod that runs the container
+	PodIPEnvKey = "POD_IP"
 )
 
 // SubResourceLabels generate labels for sub-resources
@@ -170,6 +173,27 @@ func PersistentVolumeClaimTemplate(size resource.Quantity, sc *string, name stri
 				},
 			},
 			StorageClassName: sc,
+		},
+	}
+}
+
+// CloneSetTemplate return a kruise cloneset as template
+func CloneSetTemplate(o client.Object, name string) *kruisev1alpha1.CloneSet {
+	return &kruisev1alpha1.CloneSet{
+		ObjectMeta: ObjMetaTemplate(o, name),
+		Spec: kruisev1alpha1.CloneSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: SubResourceLabels(o),
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      SubResourceLabels(o),
+					Annotations: map[string]string{},
+				},
+			},
+			UpdateStrategy: kruisev1alpha1.CloneSetUpdateStrategy{
+				Type: kruisev1alpha1.InPlaceIfPossibleCloneSetUpdateStrategyType,
+			},
 		},
 	}
 }
