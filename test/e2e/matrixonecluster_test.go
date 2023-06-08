@@ -114,6 +114,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		}
 
 		Expect(kubeCli.Create(ctx, mo)).To(Succeed())
+
 		Eventually(func() error {
 			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo); err != nil {
 				logger.Errorw("error get mo cluster status", "cluster", mo.Name, "error", err)

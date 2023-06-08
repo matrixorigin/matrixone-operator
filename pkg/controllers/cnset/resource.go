@@ -43,8 +43,8 @@ bc=$(mktemp)
 cat <<EOF > ${bc}
 uuid = "${UUID}"
 listen-address = "0.0.0.0:{{ .CNRpcPort }}"
-service-address = "${ADDR}:{{ .CNRpcPort }}"
-sql-address = "${ADDR}:{{ .CNSQLPort }}"
+service-address = "${POD_IP}:{{ .CNRpcPort }}"
+sql-address = "${POD_IP}:{{ .CNSQLPort }}"
 EOF
 # build instance config
 sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
@@ -52,7 +52,7 @@ sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
 # append lock-service configs
 lsc=$(mktemp)
 cat <<EOF > ${lsc}
-service-address = "${ADDR}:{{ .LockServicePort }}"
+service-address = "${POD_IP}:{{ .LockServicePort }}"
 EOF
 sed -i "/\[cn.lockservice\]/r ${lsc}" ${conf}
 
@@ -91,7 +91,7 @@ func buildSvc(cn *v1alpha1.CNSet) *corev1.Service {
 func buildCNSet(cn *v1alpha1.CNSet, headlessSvc *corev1.Service) *kruisev1alpha1.CloneSet {
 	tpl := common.CloneSetTemplate(cn, setName(cn))
 	// NB: set subdomain to make the ${POD_NAME}.${HEADLESS_SVC_NAME}.${NS} DNS record resolvable
-	tpl.Spec.Template.Spec.Subdomain = tpl.Name
+	tpl.Spec.Template.Spec.Subdomain = headlessSvc.Name
 	return tpl
 }
 
@@ -176,6 +176,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
+		util.FieldRefEnv(common.PodIPEnvKey, "status.podIP"),
 	}
 
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)

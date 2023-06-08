@@ -58,6 +58,8 @@ const (
 	HeadlessSvcEnvKey = "HEADLESS_SERVICE_NAME"
 	// NamespaceEnvKey  is the container environment variable to reflect the namespace of the Pod that runs the container
 	NamespaceEnvKey = "NAMESPACE"
+	// PodIPEnvKey is the container environment variable to reflect the IP of the Pod that runs the container
+	PodIPEnvKey = "POD_IP"
 )
 
 // SubResourceLabels generate labels for sub-resources
