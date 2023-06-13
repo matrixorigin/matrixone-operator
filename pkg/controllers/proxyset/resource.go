@@ -137,7 +137,7 @@ func buildProxyConfigMap(proxy *v1alpha1.ProxySet, ls *v1alpha1.LogSet) (*corev1
 		conf = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
 	conf.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
-	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, nil, nil))
+	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, nil))
 	conf.Set([]string{"service-type"}, "PROXY")
 	conf.Set([]string{"proxy", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", port))
 	s, err := conf.ToString()

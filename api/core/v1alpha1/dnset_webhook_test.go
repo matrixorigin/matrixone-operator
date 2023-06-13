@@ -79,7 +79,7 @@ var _ = Describe("DNSet Webhook", func() {
 			},
 		}
 		Expect(k8sClient.Create(context.TODO(), dn)).To(Succeed())
-		expected := resource.MustParse("9Gi")
+		expected := resource.MustParse("18Gi")
 		Expect(dn.Spec.SharedStorageCache.DiskCacheSize.Value()).To(Equal(expected.Value()))
 	})
 })

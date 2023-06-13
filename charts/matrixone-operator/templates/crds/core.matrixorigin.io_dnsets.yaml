@@ -69,8 +69,7 @@ spec:
                     anyOf:
                     - type: integer
                     - type: string
-                    description: MemoryCacheSize specifies the memory cache size for
-                      read/write this volume
+                    description: 'Deprecated: use SharedStorageCache instead'
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   size:
@@ -149,12 +148,27 @@ spec:
                     anyOf:
                     - type: integer
                     - type: string
+                    description: 'DiskCacheSize specifies how much disk space can
+                      be used to cache the object in shared storage, the default size
+                      would be 90% of the cacheVolume size to reserve some space to
+                      the filesystem metadata and avoid disk space exhaustion DiskCache
+                      would be disabled if CacheVolume is not set for DN/CN, and if
+                      DiskCacheSize is set while the CacheVolume is not set for DN/CN,
+                      an error would be raised to indicate the misconfiguration. NOTE:
+                      Unless there is a specific reason not to set this field, it
+                      is usually more reasonable to let the operator set the available
+                      disk cache size according to the actual size of the cacheVolume.'
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   memoryCacheSize:
                     anyOf:
                     - type: integer
                     - type: string
+                    description: MemoryCacheSize specifies how much memory would be
+                      used to cache the object in shared storage, the default size
+                      would be 50% of the container memory request MemoryCache cannot
+                      be completely disabled due to MO limitation currently, you can
+                      set MemoryCacheSize to 1B to achieve an effect similar to disabling
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object

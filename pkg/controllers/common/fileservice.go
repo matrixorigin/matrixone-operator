@@ -68,22 +68,17 @@ func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1
 }
 
 // FileServiceConfig generate the fileservice config for an MO component
-func FileServiceConfig(localPath string, sp v1alpha1.SharedStorageProvider, v *v1alpha1.Volume, cache *v1alpha1.SharedStorageCache) map[string]interface{} {
+func FileServiceConfig(localPath string, sp v1alpha1.SharedStorageProvider, cache *v1alpha1.SharedStorageCache) map[string]interface{} {
 	localFS := map[string]interface{}{
 		"name":     localFileServiceName,
 		"backend":  fsBackendTypeDisk,
 		"data-dir": localPath,
 	}
-	if v != nil && v.MemoryCacheSize != nil {
-		localFS["cache"] = map[string]string{
-			"memory-capacity": asSizeBytes(*v.MemoryCacheSize),
-		}
-	}
 	// MO Operator currently unifies the storage DB data and ETL data to a single shared storage
 	// for user. We may provide options to configure the shared storages of DB and ETL separately if
 	// we found it necessary in the future.
 	s3FS := sharedFileServiceConfig(sp, cache, s3FileServiceName, "data")
-	etlFS := sharedFileServiceConfig(sp, cache, etlFileServiceName, "etl")
+	etlFS := sharedFileServiceConfig(sp, nil, etlFileServiceName, "etl")
 	return map[string]interface{}{
 		// some data are not accessed by fileservice and will be read/written at `data-dir` directly
 		"data-dir": localPath,
@@ -131,25 +126,22 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 		}
 		m["data-dir"] = fs.Path
 	}
+	cacheConfig := map[string]string{}
 	if cache != nil {
-		c := map[string]string{}
 		if cache.MemoryCacheSize != nil {
-			c["memory-capacity"] = asSizeBytes(*cache.MemoryCacheSize)
+			cacheConfig["memory-capacity"] = asSizeBytes(*cache.MemoryCacheSize)
 		}
 		if cache.DiskCacheSize != nil {
-			c["disk-capacity"] = asSizeBytes(*cache.DiskCacheSize)
-			switch name {
-			case s3FileServiceName:
-				c["disk-path"] = fmt.Sprintf("%s/%s", DataPath, S3CacheDir)
-			case etlFileServiceName:
-				c["disk-path"] = fmt.Sprintf("%s/%s", DataPath, ETLCacheDir)
-			}
+			cacheConfig["disk-capacity"] = asSizeBytes(*cache.DiskCacheSize)
+			cacheConfig["disk-path"] = fmt.Sprintf("%s/%s", DataPath, S3CacheDir)
 		}
-		if len(c) > 0 {
-			m["cache"] = c
-		}
+	} else {
+		// disable cache
+		cacheConfig["memory-capacity"] = "1B"
 	}
-
+	if len(cacheConfig) > 0 {
+		m["cache"] = cacheConfig
+	}
 	return m
 }
 

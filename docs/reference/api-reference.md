@@ -157,7 +157,7 @@ _Appears in:_
 | `serviceAnnotations` _object (keys:string, values:string)_ | ServiceAnnotations are the annotations for the cn service |
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet, node storage will be used if not specified |
-| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
+| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |
 | `role` _CNRole_ | [TP, AP], default to TP Deprecated: use labels instead |
 | `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
 
@@ -612,8 +612,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `memoryCacheSize` _Quantity_ |  |
-| `diskCacheSize` _Quantity_ |  |
+| `memoryCacheSize` _Quantity_ | MemoryCacheSize specifies how much memory would be used to cache the object in shared storage, the default size would be 50% of the container memory request MemoryCache cannot be completely disabled due to MO limitation currently, you can set MemoryCacheSize to 1B to achieve an effect similar to disabling |
+| `diskCacheSize` _Quantity_ | DiskCacheSize specifies how much disk space can be used to cache the object in shared storage, the default size would be 90% of the cacheVolume size to reserve some space to the filesystem metadata and avoid disk space exhaustion DiskCache would be disabled if CacheVolume is not set for DN/CN, and if DiskCacheSize is set while the CacheVolume is not set for DN/CN, an error would be raised to indicate the misconfiguration. NOTE: Unless there is a specific reason not to set this field, it is usually more reasonable to let the operator set the available disk cache size according to the actual size of the cacheVolume. |
 
 
 #### SharedStorageProvider
@@ -673,7 +673,7 @@ _Appears in:_
 | --- | --- |
 | `size` _Quantity_ | Size is the desired storage size of the volume |
 | `storageClassName` _string_ | StorageClassName reference to the storageclass of the desired volume, the default storageclass of the cluster would be used if no specified. |
-| `memoryCacheSize` _Quantity_ | MemoryCacheSize specifies the memory cache size for read/write this volume |
+| `memoryCacheSize` _Quantity_ | Deprecated: use SharedStorageCache instead |
 
 
 #### WebUI

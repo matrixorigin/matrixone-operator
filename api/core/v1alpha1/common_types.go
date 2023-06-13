@@ -227,7 +227,7 @@ type Volume struct {
 	// +optional
 	StorageClassName *string `json:"storageClassName,omitempty"`
 
-	// MemoryCacheSize specifies the memory cache size for read/write this volume
+	// Deprecated: use SharedStorageCache instead
 	MemoryCacheSize *resource.Quantity `json:"memoryCacheSize,omitempty"`
 }
 
@@ -242,8 +242,20 @@ type SharedStorageProvider struct {
 }
 
 type SharedStorageCache struct {
+	// MemoryCacheSize specifies how much memory would be used to cache the object in shared storage,
+	// the default size would be 50% of the container memory request
+	// MemoryCache cannot be completely disabled due to MO limitation currently, you can set MemoryCacheSize
+	// to 1B to achieve an effect similar to disabling
 	MemoryCacheSize *resource.Quantity `json:"memoryCacheSize,omitempty"`
-	DiskCacheSize   *resource.Quantity `json:"diskCacheSize,omitempty"`
+
+	// DiskCacheSize specifies how much disk space can be used to cache the object in shared storage,
+	// the default size would be 90% of the cacheVolume size to reserve some space to the filesystem metadata
+	// and avoid disk space exhaustion
+	// DiskCache would be disabled if CacheVolume is not set for DN/CN, and if DiskCacheSize is set while the CacheVolume
+	// is not set for DN/CN, an error would be raised to indicate the misconfiguration.
+	// NOTE: Unless there is a specific reason not to set this field, it is usually more reasonable to let the operator
+	// set the available disk cache size according to the actual size of the cacheVolume.
+	DiskCacheSize *resource.Quantity `json:"diskCacheSize,omitempty"`
 }
 
 type FileSystemProvider struct {

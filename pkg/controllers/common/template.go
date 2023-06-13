@@ -34,8 +34,6 @@ const (
 	DataDir = "data"
 	// S3CacheDir is the directory under data path that will be used as mo S3 FS cache
 	S3CacheDir = "disk-cache"
-	// ETLCacheDir is the directory under data path that will be used as mo ETL FS cache
-	ETLCacheDir = "etl-cache"
 
 	// InstanceLabelKey labels the cluster instance name of the resource
 	InstanceLabelKey = "matrixorigin.io/instance"
