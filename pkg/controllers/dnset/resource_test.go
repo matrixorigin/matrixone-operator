@@ -15,6 +15,7 @@
 package dnset
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,6 +86,9 @@ name = "S3"
 backend = "DISK-ETL"
 data-dir = "/test"
 name = "ETL"
+
+[fileservice.cache]
+memory-capacity = "1B"
 
 [hakeeper-client]
 service-addresses = []
@@ -158,6 +162,9 @@ backend = "DISK-ETL"
 data-dir = "/test"
 name = "ETL"
 
+[fileservice.cache]
+memory-capacity = "1B"
+
 [hakeeper-client]
 service-addresses = []
 `,
@@ -172,7 +179,7 @@ service-addresses = []
 				return
 			}
 			g.Expect(got.Data["config.toml"]).NotTo(BeNil())
-			g.Expect(got.Data["config.toml"]).To(Equal(tt.wantConfig))
+			g.Expect(cmp.Diff(tt.wantConfig, got.Data["config.toml"])).To(BeEmpty())
 		})
 	}
 }

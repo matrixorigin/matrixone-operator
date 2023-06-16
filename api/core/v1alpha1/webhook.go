@@ -85,8 +85,5 @@ func validateVolume(v *Volume, parent *field.Path) field.ErrorList {
 func defaultDiskCacheSize(total *resource.Quantity) *resource.Quantity {
 	// shrink the total size since a small amount of space will be used for filesystem and metadata
 	shrunk := total.Value() * 9 / 10
-	// divide the cache for two different cache FS: S3 and ETL
-	// TODO: the ratio of S3 and ETL should be considered or configurable
-	half := shrunk / 2
-	return resource.NewQuantity(half, total.Format)
+	return resource.NewQuantity(shrunk, total.Format)
 }

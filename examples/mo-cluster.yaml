@@ -25,9 +25,3 @@ spec:
     replicas: 2
     cacheVolume:
       size: 10Gi
-
-#  # Uncomment this section to enable CN nodes for analytic processing
-#  ap:
-#    replicas: 2
-#    cacheVolume:
-#      size: 10Gi

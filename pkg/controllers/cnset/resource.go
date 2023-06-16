@@ -199,7 +199,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	if cfg == nil {
 		cfg = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
-	cfg.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, cn.Spec.CacheVolume, &cn.Spec.SharedStorageCache))
+	cfg.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &cn.Spec.SharedStorageCache))
 	cfg.Set([]string{"service-type"}, "CN")
 	cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	// cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())

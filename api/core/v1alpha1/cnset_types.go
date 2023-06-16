@@ -50,6 +50,7 @@ type CNSetSpec struct {
 	// +optional
 	CacheVolume *Volume `json:"cacheVolume,omitempty"`
 
+	// SharedStorageCache is the configuration of the S3 sharedStorageCache
 	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
 
 	// [TP, AP], default to TP

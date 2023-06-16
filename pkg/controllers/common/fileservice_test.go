@@ -26,7 +26,6 @@ func TestFileServiceConfig(t *testing.T) {
 	type args struct {
 		localPath string
 		sp        v1alpha1.SharedStorageProvider
-		v         *v1alpha1.Volume
 		c         *v1alpha1.SharedStorageCache
 	}
 	quantity1GiB := resource.MustParse("1Gi")
@@ -46,7 +45,6 @@ func TestFileServiceConfig(t *testing.T) {
 					},
 				},
 			},
-			v: nil,
 			c: nil,
 		},
 		want: map[string]interface{}{
@@ -58,6 +56,9 @@ func TestFileServiceConfig(t *testing.T) {
 			}, {
 				"name":    "S3",
 				"backend": "S3",
+				"cache": map[string]string{
+					"memory-capacity": "1B",
+				},
 				"s3": map[string]interface{}{
 					"endpoint":   "s3.us-west-2.amazonaws.com",
 					"key-prefix": "prefix/data",
@@ -66,6 +67,9 @@ func TestFileServiceConfig(t *testing.T) {
 			}, {
 				"name":    "ETL",
 				"backend": "S3",
+				"cache": map[string]string{
+					"memory-capacity": "1B",
+				},
 				"s3": map[string]interface{}{
 					"endpoint":   "s3.us-west-2.amazonaws.com",
 					"key-prefix": "prefix/etl",
@@ -85,9 +89,6 @@ func TestFileServiceConfig(t *testing.T) {
 					},
 				},
 			},
-			v: &v1alpha1.Volume{
-				MemoryCacheSize: &quantity1GiB,
-			},
 			c: &v1alpha1.SharedStorageCache{
 				MemoryCacheSize: &quantity1GiB,
 				DiskCacheSize:   &quantity1GiB,
@@ -99,9 +100,6 @@ func TestFileServiceConfig(t *testing.T) {
 				"name":     "LOCAL",
 				"data-dir": "/test",
 				"backend":  "DISK",
-				"cache": map[string]string{
-					"memory-capacity": "1GiB",
-				},
 			}, {
 				"name":    "S3",
 				"backend": "S3",
@@ -124,9 +122,7 @@ func TestFileServiceConfig(t *testing.T) {
 					"bucket":     "bucket",
 				},
 				"cache": map[string]string{
-					"memory-capacity": "1GiB",
-					"disk-path":       "/var/lib/matrixone/etl-cache",
-					"disk-capacity":   "1GiB",
+					"memory-capacity": "1B",
 				},
 			}},
 		},
@@ -134,7 +130,7 @@ func TestFileServiceConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if diff := cmp.Diff(tt.want, FileServiceConfig(tt.args.localPath, tt.args.sp, tt.args.v, tt.args.c)); diff != "" {
+			if diff := cmp.Diff(tt.want, FileServiceConfig(tt.args.localPath, tt.args.sp, tt.args.c)); diff != "" {
 				t.Errorf("FileServiceConfig(), diff:\n %s", diff)
 			}
 		})
