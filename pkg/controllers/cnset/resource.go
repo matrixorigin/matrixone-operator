@@ -131,11 +131,6 @@ func syncPodMeta(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) error {
 		return err
 	}
 	meta.Annotations[common.CNLabelAnnotation] = string(s)
-	if cn.GetDNSBasedIdentity() {
-		meta.Annotations[common.DNSIdentityAnnotation] = string(metav1.ConditionTrue)
-	} else {
-		meta.Annotations[common.DNSIdentityAnnotation] = string(metav1.ConditionFalse)
-	}
 	cn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 	return nil
 }

@@ -1196,6 +1196,11 @@ spec:
                       - type
                       type: object
                     type: array
+                  labelSelector:
+                    type: string
+                  replicas:
+                    format: int32
+                    type: integer
                 type: object
               cnGroups:
                 properties:
@@ -1644,6 +1649,11 @@ spec:
                       - type
                       type: object
                     type: array
+                  labelSelector:
+                    type: string
+                  replicas:
+                    format: int32
+                    type: integer
                 type: object
               webui:
                 description: Webui is the webui service status

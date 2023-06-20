@@ -72,6 +72,9 @@ type CNLabel struct {
 // CNSetStatus Figure out what status should be exposed
 type CNSetStatus struct {
 	ConditionalStatus `json:",inline"`
+
+	Replicas      int32  `json:"replicas,omitempty"`
+	LabelSelector string `json:"labelSelector,omitempty"`
 }
 
 type CNSetDeps struct {
@@ -91,6 +94,7 @@ type CNSetDeps struct {
 
 // A CNSet is a resource that represents a set of MO's CN instances
 // +kubebuilder:subresource:status
+// +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
 type CNSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -137,13 +141,6 @@ func (s *CNSet) SetCondition(condition metav1.Condition) {
 
 func (s *CNSet) GetConditions() []metav1.Condition {
 	return s.Status.GetConditions()
-}
-
-func (s *CNSet) GetDNSBasedIdentity() bool {
-	if s.Spec.DNSBasedIdentity == nil {
-		return true
-	}
-	return *s.Spec.DNSBasedIdentity
 }
 
 //+kubebuilder:object:root=true

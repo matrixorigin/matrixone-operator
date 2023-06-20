@@ -28,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -94,12 +93,7 @@ func (c *Controller) Observe(ctx *recon.Context[*corev1.Pod]) error {
 		return errors.Wrap(err, "get HAKeeper client")
 	}
 
-	dnsBasedIdentity := false
-
-	if v, ok := pod.Annotations[common.DNSIdentityAnnotation]; ok && v == string(metav1.ConditionTrue) {
-		dnsBasedIdentity = true
-	}
-	id, err := v1alpha1.GetCNPodUUID(pod, dnsBasedIdentity)
+	id, err := v1alpha1.GetCNPodUUID(pod)
 	if err != nil {
 		return errors.Wrap(err, "get cn pod UUID")
 	}
