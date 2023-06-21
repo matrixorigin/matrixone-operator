@@ -42,16 +42,11 @@ func TestGetCNPodUUID(t *testing.T) {
 		dnsBased: true,
 		pod:      &pod,
 		want:     "64396564-3061-3238-3164-363835623561",
-	}, {
-		name:     "Ordinal Based",
-		dnsBased: false,
-		pod:      &pod,
-		want:     "00000000-0000-0000-0000-200000000000",
 	}}
 	g := NewGomegaWithT(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetCNPodUUID(tt.pod, tt.dnsBased)
+			got, err := GetCNPodUUID(tt.pod)
 			if !tt.wantErr {
 				g.Expect(err).To(Succeed())
 			}

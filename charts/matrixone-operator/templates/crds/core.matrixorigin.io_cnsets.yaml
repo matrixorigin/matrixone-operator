@@ -295,6 +295,11 @@ spec:
                   - type
                   type: object
                 type: array
+              labelSelector:
+                type: string
+              replicas:
+                format: int32
+                type: integer
             type: object
         required:
         - spec
@@ -302,4 +307,8 @@ spec:
     served: true
     storage: true
     subresources:
+      scale:
+        labelSelectorPath: .status.selector
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
       status: {}

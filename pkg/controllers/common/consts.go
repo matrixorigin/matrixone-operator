@@ -18,6 +18,5 @@ const (
 	LockServicePort = 6003
 	LogtailPort     = 32003
 
-	DNSIdentityAnnotation = "matrixone.cloud/dns-based-identity"
-	CNLabelAnnotation     = "matrixone.cloud/cn-label"
+	CNLabelAnnotation = "matrixone.cloud/cn-label"
 )
