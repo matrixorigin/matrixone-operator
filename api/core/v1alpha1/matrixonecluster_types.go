@@ -115,6 +115,15 @@ type MatrixOneClusterStatus struct {
 
 	// LogService is the LogService status
 	LogService *LogSetStatus `json:"logService,omitempty"`
+
+	// Readable is the readable status for human
+	Readable *ReadableStatus `json:"readable,omitempty"`
+}
+
+type ReadableStatus struct {
+	Log string `json:"log,omitempty"`
+	DN  string `json:"dn,omitempty"`
+	CN  string `json:"cn,omitempty"`
 }
 
 type CNGroupStatus struct {
@@ -138,11 +147,8 @@ func (s CNGroupStatus) Ready() bool {
 // +kubebuilder:resource:shortName=mo
 // +kubebuilder:printcolumn:name="Log",type="integer",JSONPath=".spec.logService.replicas"
 // +kubebuilder:printcolumn:name="DN",type="integer",JSONPath=".spec.dn.replicas"
-// +kubebuilder:printcolumn:name="TP",type="integer",JSONPath=".spec.tp.replicas"
-// +kubebuilder:printcolumn:name="AP",type="integer",JSONPath=".spec.ap.replicas"
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase"
-// +kubebuilder:printcolumn:name="UI",type="integer",priority=1,JSONPath=".spec.webui.replicas"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type MatrixOneCluster struct {
 	metav1.TypeMeta   `json:",inline"`

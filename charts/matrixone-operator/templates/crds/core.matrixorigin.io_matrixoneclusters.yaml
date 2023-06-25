@@ -24,22 +24,12 @@ spec:
     - jsonPath: .spec.dn.replicas
       name: DN
       type: integer
-    - jsonPath: .spec.tp.replicas
-      name: TP
-      type: integer
-    - jsonPath: .spec.ap.replicas
-      name: AP
-      type: integer
     - jsonPath: .spec.version
       name: Version
       type: string
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .spec.webui.replicas
-      name: UI
-      priority: 1
-      type: integer
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -1574,6 +1564,16 @@ spec:
                       - type
                       type: object
                     type: array
+                type: object
+              readable:
+                description: Readable is the readable status for human
+                properties:
+                  cn:
+                    type: string
+                  dn:
+                    type: string
+                  log:
+                    type: string
                 type: object
               tp:
                 description: 'TP is the TP set status Deprecated: use'
