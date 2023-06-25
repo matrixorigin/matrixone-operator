@@ -30,10 +30,6 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .spec.webui.replicas
-      name: UI
-      priority: 1
-      type: integer
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
