@@ -300,6 +300,17 @@ spec:
               replicas:
                 format: int32
                 type: integer
+              stores:
+                items:
+                  properties:
+                    podName:
+                      type: string
+                    state:
+                      type: string
+                    uuid:
+                      type: string
+                  type: object
+                type: array
             type: object
         required:
         - spec
@@ -308,7 +319,7 @@ spec:
     storage: true
     subresources:
       scale:
-        labelSelectorPath: .status.selector
+        labelSelectorPath: .status.labelSelector
         specReplicasPath: .spec.replicas
         statusReplicasPath: .status.replicas
       status: {}

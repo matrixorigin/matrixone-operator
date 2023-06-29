@@ -20,7 +20,7 @@ import (
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/bucketclaim"
-	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnlabel"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnstore"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/proxyset"
 	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
@@ -180,7 +180,7 @@ func main() {
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.CNLabel) {
-		cnLabelController := cnlabel.NewController(hacli.NewManager(mgr.GetClient(), mgr.GetLogger()))
+		cnLabelController := cnstore.NewController(hacli.NewManager(mgr.GetClient(), mgr.GetLogger()))
 		err = cnLabelController.Reconcile(mgr)
 		exitIf(err, "unable to set up cnlabel controller")
 	} else {
