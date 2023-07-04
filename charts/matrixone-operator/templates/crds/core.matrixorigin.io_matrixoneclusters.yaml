@@ -1191,6 +1191,17 @@ spec:
                   replicas:
                     format: int32
                     type: integer
+                  stores:
+                    items:
+                      properties:
+                        podName:
+                          type: string
+                        state:
+                          type: string
+                        uuid:
+                          type: string
+                      type: object
+                    type: array
                 type: object
               cnGroups:
                 properties:
@@ -1654,6 +1665,17 @@ spec:
                   replicas:
                     format: int32
                     type: integer
+                  stores:
+                    items:
+                      properties:
+                        podName:
+                          type: string
+                        state:
+                          type: string
+                        uuid:
+                          type: string
+                      type: object
+                    type: array
                 type: object
               webui:
                 description: Webui is the webui service status

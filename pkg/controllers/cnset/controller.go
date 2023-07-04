@@ -96,7 +96,26 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	if !equality.Semantic.DeepEqual(origin, cs) {
 		return c.with(cs).Update, nil
 	}
-
+	// calculate status
+	var stores []v1alpha1.CNStore
+	podList := &corev1.PodList{}
+	err = ctx.List(podList, client.InNamespace(cn.Namespace),
+		client.MatchingLabels(common.SubResourceLabels(cn)))
+	if err != nil {
+		return nil, errors.Wrap(err, "list cn pods")
+	}
+	for _, pod := range podList.Items {
+		uid, err := v1alpha1.GetCNPodUUID(&pod)
+		if err != nil {
+			return nil, errors.Wrap(err, "get CN pod uuid")
+		}
+		stores = append(stores, v1alpha1.CNStore{
+			UUID:    uid,
+			PodName: pod.Name,
+			State:   v1alpha1.CNStoreStateUnknown,
+		})
+	}
+	cn.Status.Stores = stores
 	cn.Status.Replicas = cs.Status.Replicas
 	cn.Status.LabelSelector = cs.Status.LabelSelector
 	// sync status from cloneset

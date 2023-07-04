@@ -27,6 +27,10 @@ const (
 	CNRoleAP CNRole = "AP"
 )
 
+const (
+	CNStoreStateUnknown string = "Unknown"
+)
+
 type CNSetSpec struct {
 	PodSet `json:",inline"`
 
@@ -73,8 +77,16 @@ type CNLabel struct {
 type CNSetStatus struct {
 	ConditionalStatus `json:",inline"`
 
+	Stores []CNStore `json:"stores,omitempty"`
+
 	Replicas      int32  `json:"replicas,omitempty"`
 	LabelSelector string `json:"labelSelector,omitempty"`
+}
+
+type CNStore struct {
+	UUID    string `json:"uuid,omitempty"`
+	PodName string `json:"podName,omitempty"`
+	State   string `json:"state,omitempty"`
 }
 
 type CNSetDeps struct {
@@ -94,7 +106,7 @@ type CNSetDeps struct {
 
 // A CNSet is a resource that represents a set of MO's CN instances
 // +kubebuilder:subresource:status
-// +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
+// +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector
 type CNSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
