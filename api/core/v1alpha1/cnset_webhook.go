@@ -44,7 +44,7 @@ func (r *CNSetSpec) Default() {
 	if r.ServiceType == "" {
 		r.ServiceType = corev1.ServiceTypeClusterIP
 	}
-	if r.Resources.Requests.Memory() != nil && r.SharedStorageCache.MemoryCacheSize == nil {
+	if r.Resources.Requests.Memory().Value() != 0 && r.SharedStorageCache.MemoryCacheSize == nil {
 		// default memory cache size to 50% request memory
 		size := r.Resources.Requests.Memory().DeepCopy()
 		size.Set(size.Value() / 2)
