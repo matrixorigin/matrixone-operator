@@ -163,6 +163,13 @@ spec:
               role:
                 description: '[TP, AP], default to TP Deprecated: use labels instead'
                 type: string
+              scalingConfig:
+                properties:
+                  storeDrainTimeout:
+                    description: StoreDrainTimeout is the timeout for draining a CN
+                      store
+                    type: string
+                type: object
               serviceAnnotations:
                 additionalProperties:
                   type: string

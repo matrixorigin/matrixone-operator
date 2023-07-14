@@ -160,6 +160,7 @@ _Appears in:_
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |
 | `role` _CNRole_ | [TP, AP], default to TP Deprecated: use labels instead |
 | `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
+| `scalingConfig` _[ScalingConfig](#scalingconfig)_ |  |
 
 
 
@@ -602,6 +603,20 @@ _Underlying type:_ `string`
 _Appears in:_
 - [S3Provider](#s3provider)
 
+
+
+#### ScalingConfig
+
+
+
+
+
+_Appears in:_
+- [CNSetSpec](#cnsetspec)
+
+| Field | Description |
+| --- | --- |
+| `storeDrainTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | StoreDrainTimeout is the timeout for draining a CN store |
 
 
 #### SharedStorageCache

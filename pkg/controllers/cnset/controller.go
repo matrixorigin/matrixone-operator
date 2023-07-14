@@ -17,6 +17,7 @@ package cnset
 import (
 	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/features"
+	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"time"
@@ -105,10 +106,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, errors.Wrap(err, "list cn pods")
 	}
 	for _, pod := range podList.Items {
-		uid, err := v1alpha1.GetCNPodUUID(&pod)
-		if err != nil {
-			return nil, errors.Wrap(err, "get CN pod uuid")
-		}
+		uid := v1alpha1.GetCNPodUUID(&pod)
 		stores = append(stores, v1alpha1.CNStore{
 			UUID:    uid,
 			PodName: pod.Name,
@@ -254,7 +252,15 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	cs.Spec.UpdateStrategy.MaxUnavailable = &maxUnavailable
 	cs.Spec.ScaleStrategy.DisablePVCReuse = true
 	cs.Spec.ScaleStrategy.MaxUnavailable = &maxUnavailable
-	// TODO: lifecycle hook to un-regist CN from HAKeeper
+	if cs.Spec.Lifecycle == nil {
+		cs.Spec.Lifecycle = &pub.Lifecycle{}
+	}
+	cs.Spec.Lifecycle.PreDelete = &pub.LifecycleHook{
+		FinalizersHandler: []string{
+			common.CNDrainingFinalizer,
+		},
+		MarkPodNotReady: true,
+	}
 
 	if err := syncPodMeta(ctx.Obj, cs); err != nil {
 		return errors.Wrap(err, "sync pod meta")

@@ -64,6 +64,23 @@ type CNSetSpec struct {
 
 	// Labels are the CN labels for all the CN stores managed by this CNSet
 	Labels []CNLabel `json:"cnLabels,omitempty"`
+
+	// ScalingConfig declares the CN scaling behavior
+	ScalingConfig ScalingConfig `json:"scalingConfig,omitempty"`
+}
+
+type ScalingConfig struct {
+	// StoreDrainEnabled is the flag to enable store draining
+	StoreDrainEnabled *bool `json:"storeDrainEnabled,omitempty"`
+	// StoreDrainTimeout is the timeout for draining a CN store
+	StoreDrainTimeout *metav1.Duration `json:"storeDrainTimeout,omitempty"`
+}
+
+func (s *ScalingConfig) GetStoreDrainEnabled() bool {
+	if s.StoreDrainEnabled == nil {
+		return false
+	}
+	return *s.StoreDrainEnabled
 }
 
 type CNLabel struct {
