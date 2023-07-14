@@ -158,7 +158,12 @@ spec:
                     description: '[TP, AP], default to TP Deprecated: use labels instead'
                     type: string
                   scalingConfig:
+                    description: ScalingConfig declares the CN scaling behavior
                     properties:
+                      storeDrainEnabled:
+                        description: StoreDrainEnabled is the flag to enable store
+                          draining
+                        type: boolean
                       storeDrainTimeout:
                         description: StoreDrainTimeout is the timeout for draining
                           a CN store
@@ -341,7 +346,12 @@ spec:
                         instead'
                       type: string
                     scalingConfig:
+                      description: ScalingConfig declares the CN scaling behavior
                       properties:
+                        storeDrainEnabled:
+                          description: StoreDrainEnabled is the flag to enable store
+                            draining
+                          type: boolean
                         storeDrainTimeout:
                           description: StoreDrainTimeout is the timeout for draining
                             a CN store
@@ -950,7 +960,12 @@ spec:
                     description: '[TP, AP], default to TP Deprecated: use labels instead'
                     type: string
                   scalingConfig:
+                    description: ScalingConfig declares the CN scaling behavior
                     properties:
+                      storeDrainEnabled:
+                        description: StoreDrainEnabled is the flag to enable store
+                          draining
+                        type: boolean
                       storeDrainTimeout:
                         description: StoreDrainTimeout is the timeout for draining
                           a CN store
