@@ -21,6 +21,7 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mosql"
 	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
 	"github.com/matrixorigin/matrixone/pkg/logservice"
 	logpb "github.com/matrixorigin/matrixone/pkg/pb/logservice"
@@ -81,6 +82,14 @@ func (c *withCNSet) OnPreparingDelete(ctx *recon.Context[*corev1.Pod]) error {
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
 	}
+
+	// store draining disabled, cleanup finalizers and skip
+	sc := c.cn.Spec.ScalingConfig
+	if !sc.GetStoreDrainEnabled() {
+		return c.completeDraining(ctx)
+	}
+
+	// start draining
 	var startTime time.Time
 	startTimeStr, ok := pod.Annotations[storeDrainingStartAnno]
 	if ok {
@@ -108,20 +117,43 @@ func (c *withCNSet) OnPreparingDelete(ctx *recon.Context[*corev1.Pod]) error {
 	if err != nil {
 		return errors.Wrap(err, "error set CN state draining")
 	}
+	if err := c.setCNState(ctx, v1alpha1.CNStoreStateDraining); err != nil {
+		return err
+	}
 	ctx.Log.Info("call MO to collect Store status", "uuid", uid)
 	cnDrained := false
-	// TODO: remove finalizer if drained or timeout
-	if time.Now().Sub(startTime) > time.Minute || cnDrained {
-		ctx.Log.Info("CN store draining timeout, force delete", "uuid", uid)
-		if err := ctx.Patch(pod, func() error {
-			controllerutil.RemoveFinalizer(pod, common.CNDrainingFinalizer)
-			return nil
-		}); err != nil {
-			return errors.Wrap(err, "error removing CN draining finalizer")
+	if c.cn.Spec.MetricsSecretRef == nil {
+		ctx.Log.Info("CN metric secret does not initialized, cannot query state")
+	} else {
+		// TODO: should use other CN to query conns
+		sqlcli := mosql.NewClient(fmt.Sprintf("%s:%d", pod.Status.PodIP, 6001), ctx.Client, c.cn.Spec.MetricsSecretRef.NamespacedName())
+		connCount, err := sqlcli.GetServerConnection(ctx, uid)
+		if err != nil {
+			return err
 		}
-		return nil
+		if connCount < 1 {
+			cnDrained = true
+		}
+	}
+	if cnDrained {
+		return c.completeDraining(ctx)
+	}
+	if time.Since(startTime) > sc.GetStoreDrainTimeout() {
+		ctx.Log.Info("store draining timeout, force delete CN", "uuid", uid)
+		return c.completeDraining(ctx)
 	}
 	return recon.ErrReSync("wait for CN store draining", retryInterval)
+}
+
+func (c *withCNSet) completeDraining(ctx *recon.Context[*corev1.Pod]) error {
+	if err := ctx.Patch(ctx.Obj, func() error {
+		controllerutil.RemoveFinalizer(ctx.Obj, common.CNDrainingFinalizer)
+		delete(ctx.Obj.Annotations, storeDrainingStartAnno)
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "error removing CN draining finalizer")
+	}
+	return nil
 }
 
 // OnNormal ensure CNStore labels and transit CN store to UP state
@@ -172,7 +204,7 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		ctx.Log.Error(err, "update CN failed", "uuid", uid)
 		return recon.ErrReSync("update cn failed", retryInterval)
 	}
-	return nil
+	return c.setCNState(ctx, v1alpha1.CNStoreStateUp)
 }
 
 func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
@@ -226,6 +258,20 @@ func (c *withCNSet) withHAKeeperClient(ctx *recon.Context[*corev1.Pod], fn func(
 	defer cancel()
 	if err := fn(timeout, haClient); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (c *Controller) setCNState(ctx *recon.Context[*corev1.Pod], state string) error {
+	err := ctx.Patch(ctx.Obj, func() error {
+		if ctx.Obj.Annotations == nil {
+			ctx.Obj.Annotations = map[string]string{}
+		}
+		ctx.Obj.Annotations[common.CNStateAnno] = state
+		return nil
+	})
+	if err != nil {
+		return errors.Wrap(err, "error set cn state")
 	}
 	return nil
 }

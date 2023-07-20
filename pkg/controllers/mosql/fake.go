@@ -12,10 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package mosql
 
-const (
-	CNStateAnno = "matrixorigin.io/cn-state"
-
-	CNDrainingFinalizer = "matrixorigin.io/cn-draining"
+import (
+	"context"
+	"database/sql"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func NewFakeClient(_ string, _ client.Client, _ types.NamespacedName) Client {
+	return &fakeClient{}
+}
+
+type fakeClient struct{}
+
+func (c *fakeClient) GetServerConnection(ctx context.Context, uid string) (int, error) {
+	return 0, nil
+}
+
+func (c *fakeClient) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	return nil, nil
+}

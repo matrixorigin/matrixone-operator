@@ -18,6 +18,7 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 type CNRole string
@@ -28,7 +29,9 @@ const (
 )
 
 const (
-	CNStoreStateUnknown string = "Unknown"
+	CNStoreStateUnknown  string = "Unknown"
+	CNStoreStateDraining string = "Draining"
+	CNStoreStateUp       string = "Up"
 )
 
 type CNSetSpec struct {
@@ -67,6 +70,9 @@ type CNSetSpec struct {
 
 	// ScalingConfig declares the CN scaling behavior
 	ScalingConfig ScalingConfig `json:"scalingConfig,omitempty"`
+
+	// MetricsSecretRef is the secret reference for the operator to access CN metrics
+	MetricsSecretRef *ObjectRef `json:"metricsSecretRef,omitempty"`
 }
 
 type ScalingConfig struct {
@@ -81,6 +87,13 @@ func (s *ScalingConfig) GetStoreDrainEnabled() bool {
 		return false
 	}
 	return *s.StoreDrainEnabled
+}
+
+func (s *ScalingConfig) GetStoreDrainTimeout() time.Duration {
+	if s.StoreDrainTimeout == nil {
+		return 0
+	}
+	return s.StoreDrainTimeout.Duration
 }
 
 type CNLabel struct {

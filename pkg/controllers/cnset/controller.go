@@ -107,10 +107,14 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 	for _, pod := range podList.Items {
 		uid := v1alpha1.GetCNPodUUID(&pod)
+		cnState := pod.Annotations[common.CNStateAnno]
+		if cnState == "" {
+			cnState = v1alpha1.CNStoreStateUnknown
+		}
 		stores = append(stores, v1alpha1.CNStore{
 			UUID:    uid,
 			PodName: pod.Name,
-			State:   v1alpha1.CNStoreStateUnknown,
+			State:   cnState,
 		})
 	}
 	cn.Status.Stores = stores

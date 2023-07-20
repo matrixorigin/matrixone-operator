@@ -89,6 +89,23 @@ _Appears in:_
 | `name` _string_ | Name is the CNGroup name, an error will be raised if duplicated name is found in a mo cluster |
 
 
+#### CNGroupStatus
+
+
+
+
+
+_Appears in:_
+- [CNGroupsStatus](#cngroupsstatus)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+| `serviceName` _string_ |  |
+| `ready` _boolean_ |  |
+| `synced` _boolean_ |  |
+
+
 
 
 #### CNLabel
@@ -161,6 +178,9 @@ _Appears in:_
 | `role` _CNRole_ | [TP, AP], default to TP Deprecated: use labels instead |
 | `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
 | `scalingConfig` _[ScalingConfig](#scalingconfig)_ | ScalingConfig declares the CN scaling behavior |
+| `metricsSecretRef` _[ObjectRef](#objectref)_ | MetricsSecretRef is the secret reference for the operator to access CN metrics |
+
+
 
 
 
@@ -419,6 +439,21 @@ _Appears in:_
 | `topologySpread` _string array_ | TopologyEvenSpread specifies default topology policy for all components, this will be overridden by component-level config |
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector specifies default node selector for all components, this will be overridden by component-level config |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
+
+
+#### ObjectRef
+
+
+
+
+
+_Appears in:_
+- [CNSetSpec](#cnsetspec)
+
+| Field | Description |
+| --- | --- |
+| `namespace` _string_ |  |
+| `name` _string_ |  |
 
 
 #### Overlay

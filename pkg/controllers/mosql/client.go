@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mometric
+package mosql
 
 import (
 	"context"
@@ -23,13 +23,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 	"time"
+
+	// mysql driver
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
 	queryTimeout = 10 * time.Second
 )
 
-type Client struct {
+type Client interface {
+	GetServerConnection(ctx context.Context, uid string) (int, error)
+	Query(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
+type moClient struct {
 	kubeCli client.Client
 	secret  types.NamespacedName
 	target  string
@@ -38,16 +46,18 @@ type Client struct {
 	conn *sql.DB
 }
 
-func NewClient(target string, kubeCli client.Client, secret types.NamespacedName) *Client {
-	return &Client{
+var NewClient = newClient
+
+func newClient(target string, kubeCli client.Client, secret types.NamespacedName) Client {
+	return &moClient{
 		target:  target,
 		kubeCli: kubeCli,
 		secret:  secret,
 	}
 }
 
-func (c *Client) GetServerConnection(ctx context.Context, uid string) (int, error) {
-	rows, err := c.query(ctx, `
+func (c *moClient) GetServerConnection(ctx context.Context, uid string) (int, error) {
+	rows, err := c.Query(ctx, `
 SELECT value FROM
 system_metrics.server_connections
 WHERE node=?
@@ -66,7 +76,7 @@ LIMIT 1;
 	return v, nil
 }
 
-func (c *Client) query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+func (c *moClient) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	conn, err := c.getConnection(ctx)
 	if err != nil {
 		return nil, err
@@ -80,7 +90,7 @@ func (c *Client) query(ctx context.Context, query string, args ...any) (*sql.Row
 	return conn.QueryContext(ctx, query, args...)
 }
 
-func (c *Client) getConnection(ctx context.Context) (*sql.DB, error) {
+func (c *moClient) getConnection(ctx context.Context) (*sql.DB, error) {
 	if c.conn != nil {
 		return c.conn, nil
 	}
