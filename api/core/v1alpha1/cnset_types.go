@@ -18,6 +18,7 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 type CNRole string
@@ -28,7 +29,9 @@ const (
 )
 
 const (
-	CNStoreStateUnknown string = "Unknown"
+	CNStoreStateUnknown  string = "Unknown"
+	CNStoreStateDraining string = "Draining"
+	CNStoreStateUp       string = "Up"
 )
 
 type CNSetSpec struct {
@@ -64,6 +67,33 @@ type CNSetSpec struct {
 
 	// Labels are the CN labels for all the CN stores managed by this CNSet
 	Labels []CNLabel `json:"cnLabels,omitempty"`
+
+	// ScalingConfig declares the CN scaling behavior
+	ScalingConfig ScalingConfig `json:"scalingConfig,omitempty"`
+
+	// MetricsSecretRef is the secret reference for the operator to access CN metrics
+	MetricsSecretRef *ObjectRef `json:"metricsSecretRef,omitempty"`
+}
+
+type ScalingConfig struct {
+	// StoreDrainEnabled is the flag to enable store draining
+	StoreDrainEnabled *bool `json:"storeDrainEnabled,omitempty"`
+	// StoreDrainTimeout is the timeout for draining a CN store
+	StoreDrainTimeout *metav1.Duration `json:"storeDrainTimeout,omitempty"`
+}
+
+func (s *ScalingConfig) GetStoreDrainEnabled() bool {
+	if s.StoreDrainEnabled == nil {
+		return false
+	}
+	return *s.StoreDrainEnabled
+}
+
+func (s *ScalingConfig) GetStoreDrainTimeout() time.Duration {
+	if s.StoreDrainTimeout == nil {
+		return 0
+	}
+	return s.StoreDrainTimeout.Duration
 }
 
 type CNLabel struct {

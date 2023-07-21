@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type PVCRetentionPolicy string
@@ -328,4 +329,18 @@ type Store struct {
 	PodName            string      `json:"podName,omitempty"`
 	Phase              string      `json:"phase,omitempty"`
 	LastTransitionTime metav1.Time `json:"lastTransition,omitempty"`
+}
+
+type ObjectRef struct {
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+	// +required
+	Name string `json:"name"`
+}
+
+func (o *ObjectRef) NamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: o.Namespace,
+		Name:      o.Name,
+	}
 }

@@ -118,6 +118,17 @@ spec:
               image:
                 description: Image is the docker image of the main container
                 type: string
+              metricsSecretRef:
+                description: MetricsSecretRef is the secret reference for the operator
+                  to access CN metrics
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                required:
+                - name
+                type: object
               nodePort:
                 description: NodePort specifies the node port to use when ServiceType
                   is NodePort or LoadBalancer, reconciling will fail if the node port
@@ -163,6 +174,17 @@ spec:
               role:
                 description: '[TP, AP], default to TP Deprecated: use labels instead'
                 type: string
+              scalingConfig:
+                description: ScalingConfig declares the CN scaling behavior
+                properties:
+                  storeDrainEnabled:
+                    description: StoreDrainEnabled is the flag to enable store draining
+                    type: boolean
+                  storeDrainTimeout:
+                    description: StoreDrainTimeout is the timeout for draining a CN
+                      store
+                    type: string
+                type: object
               serviceAnnotations:
                 additionalProperties:
                   type: string

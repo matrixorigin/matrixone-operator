@@ -20,6 +20,7 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mosql"
 	. "github.com/onsi/gomega"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
@@ -89,7 +90,6 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 		name: "ready",
 		mo: func() *v1alpha1.MatrixOneCluster {
 			mo := tpl.DeepCopy()
-			mo.Status.CredentialRef = &corev1.LocalObjectReference{Name: "test"}
 			return mo
 		}(),
 		objects: []client.Object{
@@ -206,48 +206,6 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			g.Expect(cond.Reason).To(Equal("LogServiceNotSynced"))
 		},
 	}, {
-		name: "initializeDB",
-		mo:   tpl.DeepCopy(),
-		objects: []client.Object{
-			&v1alpha1.LogSet{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"},
-				Status: v1alpha1.LogSetStatus{
-					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
-						Type:   recon.ConditionTypeReady,
-						Status: metav1.ConditionTrue,
-					}}},
-				},
-			},
-			&v1alpha1.DNSet{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"},
-				Status: v1alpha1.DNSetStatus{
-					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
-						Type:   recon.ConditionTypeReady,
-						Status: metav1.ConditionTrue,
-					}}},
-				},
-			},
-			&v1alpha1.CNSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-tp",
-					Labels:    map[string]string{common.MatrixoneClusterLabelKey: tpl.Name},
-				},
-				Status: v1alpha1.CNSetStatus{
-					ConditionalStatus: v1alpha1.ConditionalStatus{Conditions: []metav1.Condition{{
-						Type:   recon.ConditionTypeReady,
-						Status: metav1.ConditionTrue,
-					}}},
-				},
-			},
-		},
-		expect: func(g *WithT, mo *v1alpha1.MatrixOneCluster, err error, c client.Client) {
-			g.Expect(recon.IsReady(&mo.Status)).To(BeFalse())
-		},
-		expectAction: func(g *WithT, action recon.Action[*v1alpha1.MatrixOneCluster]) {
-			g.Expect(action.String()).To(ContainSubstring("Initialize"))
-		},
-	}, {
 		name: "inheritOrOverrideGlobalNodeSelector",
 		mo: func() *v1alpha1.MatrixOneCluster {
 			m := tpl.DeepCopy()
@@ -308,7 +266,8 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(tt.objects...).Build()
+			mosql.NewClient = mosql.NewFakeClient
+			cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(tt.objects...).WithObjects(tt.mo).Build()
 			g := NewGomegaWithT(t)
 			r := &MatrixOneClusterActor{}
 			mockCtrl := gomock.NewController(t)
@@ -358,8 +317,7 @@ func TestMatrixOneClusterActor_Initialize(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
 			ctx := fake.NewContext(tt.mo, cli, eventEmitter)
-			err := r.Initialize(ctx)
-			g.Expect(err).To(Succeed())
+			_, _ = r.Observe(ctx)
 			tt.expect(g, cli, tt.mo)
 		})
 	}

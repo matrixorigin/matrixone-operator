@@ -37,7 +37,7 @@ const (
 	createCNSetTimeout = 5 * time.Minute
 )
 
-var _ = Describe("MatrixOneCluster test", func() {
+var _ = Describe("CNSet test", func() {
 	It("Should reconcile the cluster properly", func() {
 		By("Create cnset")
 		l := &v1alpha1.LogSet{

@@ -16,10 +16,16 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"time"
+)
+
+const (
+	defaultStoreDrainTimeout = 5 * time.Minute
 )
 
 func (r *CNSet) setupWebhookWithManager(mgr ctrl.Manager) error {
@@ -53,6 +59,11 @@ func (r *CNSetSpec) Default() {
 	if r.CacheVolume != nil && r.SharedStorageCache.DiskCacheSize == nil {
 		// default disk cache size based on the cache volume total size
 		r.SharedStorageCache.DiskCacheSize = defaultDiskCacheSize(&r.CacheVolume.Size)
+	}
+	if r.ScalingConfig.StoreDrainEnabled != nil && *r.ScalingConfig.StoreDrainEnabled {
+		if r.ScalingConfig.StoreDrainTimeout == nil {
+			r.ScalingConfig.StoreDrainTimeout = &metav1.Duration{Duration: defaultStoreDrainTimeout}
+		}
 	}
 	setDefaultServiceArgs(r)
 }

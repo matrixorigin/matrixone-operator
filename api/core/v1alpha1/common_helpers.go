@@ -228,7 +228,7 @@ func setDefaultServiceArgs(object interface{}) {
 	}
 }
 
-func GetCNPodUUID(pod *corev1.Pod) (string, error) {
+func GetCNPodUUID(pod *corev1.Pod) string {
 	addr := fmt.Sprintf("%s.%s.%s.svc\n", pod.Name, pod.Spec.Subdomain, pod.Namespace)
 	sum := sha256.Sum256([]byte(addr))
 	hexStr := []byte(hex.EncodeToString(sum[:]))
@@ -238,7 +238,7 @@ func GetCNPodUUID(pod *corev1.Pod) (string, error) {
 		s[(i+1)/2] = binary.LittleEndian.Uint16(hexStr[i : i+2])
 	}
 	return fmt.Sprintf(
-		"%x%x-%x-%x-%x-%x%x%x", s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]), nil
+		"%x%x-%x-%x-%x-%x%x%x", s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7])
 }
 
 func LogSetKey(mo *MatrixOneCluster) metav1.ObjectMeta {

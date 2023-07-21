@@ -98,13 +98,10 @@ type MatrixOneClusterStatus struct {
 	// used to connect to the database.
 	CredentialRef *corev1.LocalObjectReference `json:"credentialRef,omitempty"`
 
-	CNGroupStatus CNGroupStatus `json:"cnGroups,omitempty"`
-	// TP is the TP set status
-	// Deprecated: use
-	TP *CNSetStatus `json:"tp,omitempty"`
-	// AP is the AP set status
-	// Deprecated
-	AP *CNSetStatus `json:"ap,omitempty"`
+	ClusterMetrics ClusterMetrics `json:"clusterMetrics,omitempty"`
+
+	CNGroupStatus CNGroupsStatus `json:"cnGroups,omitempty"`
+
 	// DN is the DN set status
 	DN *DNSetStatus `json:"dn,omitempty"`
 	// Proxy is the Proxy set status
@@ -120,23 +117,40 @@ type MatrixOneClusterStatus struct {
 	Readable *ReadableStatus `json:"readable,omitempty"`
 }
 
+type ClusterMetrics struct {
+	// SecretRef is the metrics user credential that allows operator to access
+	// metrics from MO
+	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
+	// Whether cluster metrics is initialized
+	Initialized bool `json:"initialized,omitempty"`
+}
+
 type ReadableStatus struct {
 	Log string `json:"log,omitempty"`
 	DN  string `json:"dn,omitempty"`
 	CN  string `json:"cn,omitempty"`
 }
 
-type CNGroupStatus struct {
+type CNGroupsStatus struct {
 	DesiredGroups int `json:"desiredGroups,omitempty"`
 	ReadyGroups   int `json:"readyGroups,omitempty"`
 	SyncedGroups  int `json:"syncedGroups,omitempty"`
+
+	Groups []CNGroupStatus `json:"groups,omitempty"`
 }
 
-func (s CNGroupStatus) Synced() bool {
+type CNGroupStatus struct {
+	Name        string `json:"name,omitempty"`
+	ServiceName string `json:"serviceName,omitempty"`
+	Ready       bool   `json:"ready,omitempty"`
+	Synced      bool   `json:"synced,omitempty"`
+}
+
+func (s CNGroupsStatus) Synced() bool {
 	return s.SyncedGroups >= s.DesiredGroups
 }
 
-func (s CNGroupStatus) Ready() bool {
+func (s CNGroupsStatus) Ready() bool {
 	return s.ReadyGroups >= s.DesiredGroups
 }
 

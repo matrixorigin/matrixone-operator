@@ -15,17 +15,21 @@
 package mocluster
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mosql"
 	"github.com/matrixorigin/matrixone-operator/pkg/utils"
-	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +42,8 @@ const (
 
 	usernameKey = "username"
 	passwordKey = "password"
+	accountKey  = "account"
+	roleKey     = "role"
 
 	maxUnavailablePod = 1
 )
@@ -48,27 +54,9 @@ type MatrixOneClusterActor struct{}
 
 func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (recon.Action[*v1alpha1.MatrixOneCluster], error) {
 	mo := ctx.Obj
-
-	unavailableBudget := &kruisepolicy.PodUnavailableBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: mo.Namespace,
-			Name:      mo.Name,
-		},
+	if err := r.InitRootCredential(ctx); err != nil {
+		return nil, errors.Wrap(err, "init cluster credential")
 	}
-	if err := util.Ignore(apierrors.IsNotFound, ctx.Delete(unavailableBudget)); err != nil {
-		return nil, errors.Wrap(err, "error clientup pod unavailable budget")
-	}
-	//if err := recon.CreateOwnedOrUpdate(ctx, unavailableBudget, func() error {
-	//	unavailableBudget.Spec.Selector = &metav1.LabelSelector{
-	//		MatchLabels: map[string]string{
-	//			common.MatrixoneClusterLabelKey: mo.Name,
-	//		},
-	//	}
-	//	unavailableBudget.Spec.MaxUnavailable = &maxUnavailable
-	//	return nil
-	//}); err != nil {
-	//	return nil, errors.Wrap(err, "sync cluster unavailable budget")
-	//}
 
 	// sync specs
 	ls := &v1alpha1.LogSet{
@@ -138,6 +126,21 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			}
 			setPodSetDefault(&tpl.Spec.PodSet, mo)
 			setOverlay(&tpl.Spec.Overlay, mo)
+			tpl.Spec.Overlay.Env = []corev1.EnvVar{{
+				Name: "DEFAULT_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: mo.Status.CredentialRef.Name},
+						Key:                  "password",
+					},
+				},
+			}}
+			if mo.Status.ClusterMetrics.Initialized {
+				tpl.Spec.MetricsSecretRef = &v1alpha1.ObjectRef{
+					Namespace: mo.Namespace,
+					Name:      mo.Status.ClusterMetrics.SecretRef.Name,
+				}
+			}
 			tpl.Spec.Image = common.CNSetImage(mo, &g.CNSetSpec)
 			return nil
 		})
@@ -147,7 +150,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	}
 
 	// GC no longer needed CNSets
-	groupStatus := v1alpha1.CNGroupStatus{DesiredGroups: len(cnGroups)}
+	groupStatus := v1alpha1.CNGroupsStatus{DesiredGroups: len(cnGroups)}
 	csList := &v1alpha1.CNSetList{}
 	cnSelector := map[string]string{common.MatrixoneClusterLabelKey: mo.Name}
 	if err := ctx.List(csList, client.InNamespace(mo.Namespace), client.MatchingLabels(cnSelector)); err != nil {
@@ -162,12 +165,21 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 			}
 			continue
 		}
-		if recon.IsReady(&cnSet) {
+		cngs := v1alpha1.CNGroupStatus{
+			Name:        cnSet.Name,
+			ServiceName: cnSet.Name + "-cn",
+			Ready:       recon.IsReady(&cnSet),
+			Synced:      recon.IsSynced(&cnSet),
+		}
+		if cngs.Ready {
 			groupStatus.ReadyGroups++
 		}
-		if recon.IsSynced(&cnSet) {
+		if cngs.Synced {
 			groupStatus.SyncedGroups++
 		}
+		groupStatus.Groups = util.UpsertByKey(groupStatus.Groups, cngs, func(v v1alpha1.CNGroupStatus) string {
+			return v.Name
+		})
 	}
 	mo.Status.CNGroupStatus = groupStatus
 
@@ -209,34 +221,48 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 	mo.Status.DN = &dn.Status
 	mo.Status.Phase = "NotReady"
 	mo.Status.ConditionalStatus.SetCondition(syncedCondition(mo))
-
 	subResourcesReady := readyCondition(mo)
-
-	if mo.Status.CredentialRef == nil {
-		// cluster not initialized
-		if subResourcesReady.Status == metav1.ConditionFalse {
-			// the underlying sets are not ready, wait
-			mo.Status.ConditionalStatus.SetCondition(subResourcesReady)
-			return nil, recon.ErrReSync("wait cluster ready to complete initialization", resyncAfter)
-		}
-		// checkpoint the status before the initialize action
-		mo.Status.ConditionalStatus.SetCondition(metav1.Condition{
-			Type:   recon.ConditionTypeReady,
-			Status: metav1.ConditionFalse,
-			Reason: "ClusterNotInitialized",
-		})
-		mo.Status.Phase = "Initializing"
-		return r.Initialize, nil
-	}
 	mo.Status.ConditionalStatus.SetCondition(subResourcesReady)
 	if subResourcesReady.Status == metav1.ConditionTrue {
 		mo.Status.Phase = "Ready"
+	}
+	if !mo.Status.ClusterMetrics.Initialized && len(groupStatus.Groups) > 0 {
+		if err := r.initializeMetricUser(ctx, groupStatus.Groups[0]); err != nil {
+			return nil, errors.Wrap(err, "initialize metric user")
+		}
 	}
 
 	if recon.IsReady(&mo.Status) {
 		return nil, nil
 	}
 	return nil, recon.ErrReSync("matrixone cluster is not ready", resyncAfter)
+}
+
+func (r *MatrixOneClusterActor) initializeMetricUser(ctx *recon.Context[*v1alpha1.MatrixOneCluster], entryCN v1alpha1.CNGroupStatus) error {
+	mo := ctx.Obj
+	metricSec, err := r.InitMetricCredential(ctx)
+	if err != nil {
+		return errors.Wrap(err, "init metric credential")
+	}
+	sqlcli := mosql.NewClient(entryCN.ServiceName, ctx.Client, types.NamespacedName{Namespace: mo.Namespace, Name: mo.Status.CredentialRef.Name})
+	if _, err := sqlcli.Query(context.TODO(), "CREATE USER IF NOT EXISTS ? identified by '?'", metricSec.Data[usernameKey], metricSec.Data[passwordKey]); err != nil {
+		return errors.Wrap(err, "create operator user")
+	}
+	role := metricSec.Data[roleKey]
+	if _, err := sqlcli.Query(context.TODO(), "CREATE ROLE IF NOT EXISTS ?", role); err != nil {
+		return errors.Wrap(err, "create metric role")
+	}
+	if _, err := sqlcli.Query(context.TODO(), "GRANT connect ON ACCOUNT * TO ?", role); err != nil {
+		return errors.Wrap(err, "grant permission")
+	}
+	if _, err := sqlcli.Query(context.TODO(), "GRANT select ON TABLE system_metrics.* TO ?", role); err != nil {
+		return errors.Wrap(err, "grant permission")
+	}
+	if _, err := sqlcli.Query(context.TODO(), "GRANT ? TO ?", role, metricSec.Data[usernameKey]); err != nil {
+		return errors.Wrap(err, "grant permission")
+	}
+	mo.Status.ClusterMetrics.Initialized = true
+	return ctx.UpdateStatus(mo)
 }
 
 func setPodSetDefault(ps *v1alpha1.PodSet, mo *v1alpha1.MatrixOneCluster) {
@@ -261,9 +287,12 @@ func setOverlay(o **v1alpha1.Overlay, mo *v1alpha1.MatrixOneCluster) {
 	(*o).PodLabels[common.MatrixoneClusterLabelKey] = mo.Name
 }
 
-// Initialize the MO cluster
-func (r *MatrixOneClusterActor) Initialize(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) error {
-	// 1. generate the secret
+// InitRootCredential init the MO cluster root credential
+func (r *MatrixOneClusterActor) InitRootCredential(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) error {
+	if ctx.Obj.Status.CredentialRef != nil {
+		return nil
+	}
+	// 1. generate root secret
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ctx.Obj.Namespace,
@@ -278,12 +307,41 @@ func (r *MatrixOneClusterActor) Initialize(ctx *recon.Context[*v1alpha1.MatrixOn
 	if err := ctx.CreateOwned(sec); err != nil {
 		return err
 	}
-	// 2. initialize the cluster
-	// TODO: initialize users that using the above secret after MO support ALTER USER
 
-	// 3. update the status
+	// 2. update the status
 	ctx.Obj.Status.CredentialRef = &corev1.LocalObjectReference{Name: sec.Name}
 	return ctx.UpdateStatus(ctx.Obj)
+}
+
+// InitMetricCredential init the MO cluster metric credential
+func (r *MatrixOneClusterActor) InitMetricCredential(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (*corev1.Secret, error) {
+	metricSec := &corev1.Secret{}
+	if ctx.Obj.Status.ClusterMetrics.SecretRef != nil {
+		if err := ctx.Get(types.NamespacedName{Namespace: ctx.Obj.Namespace, Name: ctx.Obj.Status.ClusterMetrics.SecretRef.Name}, metricSec); err != nil {
+			return nil, errors.Wrap(err, "error get metrics secret")
+		}
+		return metricSec, nil
+	}
+	// 1. generate metric secret
+	metricSec = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ctx.Obj.Namespace,
+			Name:      metricCredentialName(ctx.Obj),
+		},
+		StringData: map[string]string{
+			usernameKey: "mo_operator",
+			accountKey:  "sys",
+			roleKey:     "metric_reader",
+			passwordKey: randPassword(12),
+		},
+	}
+	if err := ctx.CreateOwned(metricSec); err != nil {
+		return nil, err
+	}
+
+	// 2. update the status
+	ctx.Obj.Status.ClusterMetrics.SecretRef = &corev1.LocalObjectReference{Name: metricSec.Name}
+	return metricSec, ctx.UpdateStatus(ctx.Obj)
 }
 
 func readyCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
@@ -375,10 +433,23 @@ func credentialName(mo *v1alpha1.MatrixOneCluster) string {
 	return fmt.Sprintf("%s-credential", mo.Name)
 }
 
+func metricCredentialName(mo *v1alpha1.MatrixOneCluster) string {
+	return fmt.Sprintf("%s-metric", mo.Name)
+}
+
 func updatingCondition() metav1.Condition {
 	return metav1.Condition{
 		Type:   recon.ConditionTypeSynced,
 		Status: metav1.ConditionFalse,
 		Reason: "Updating",
 	}
+}
+
+func randPassword(length int) string {
+	randomBytes := make([]byte, 32)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		panic(err)
+	}
+	return base64.URLEncoding.EncodeToString(randomBytes)[:length]
 }

@@ -89,6 +89,23 @@ _Appears in:_
 | `name` _string_ | Name is the CNGroup name, an error will be raised if duplicated name is found in a mo cluster |
 
 
+#### CNGroupStatus
+
+
+
+
+
+_Appears in:_
+- [CNGroupsStatus](#cngroupsstatus)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+| `serviceName` _string_ |  |
+| `ready` _boolean_ |  |
+| `synced` _boolean_ |  |
+
+
 
 
 #### CNLabel
@@ -160,6 +177,10 @@ _Appears in:_
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |
 | `role` _CNRole_ | [TP, AP], default to TP Deprecated: use labels instead |
 | `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
+| `scalingConfig` _[ScalingConfig](#scalingconfig)_ | ScalingConfig declares the CN scaling behavior |
+| `metricsSecretRef` _[ObjectRef](#objectref)_ | MetricsSecretRef is the secret reference for the operator to access CN metrics |
+
+
 
 
 
@@ -420,6 +441,21 @@ _Appears in:_
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
 
 
+#### ObjectRef
+
+
+
+
+
+_Appears in:_
+- [CNSetSpec](#cnsetspec)
+
+| Field | Description |
+| --- | --- |
+| `namespace` _string_ |  |
+| `name` _string_ |  |
+
+
 #### Overlay
 
 
@@ -602,6 +638,21 @@ _Underlying type:_ `string`
 _Appears in:_
 - [S3Provider](#s3provider)
 
+
+
+#### ScalingConfig
+
+
+
+
+
+_Appears in:_
+- [CNSetSpec](#cnsetspec)
+
+| Field | Description |
+| --- | --- |
+| `storeDrainEnabled` _boolean_ | StoreDrainEnabled is the flag to enable store draining |
+| `storeDrainTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | StoreDrainTimeout is the timeout for draining a CN store |
 
 
 #### SharedStorageCache
