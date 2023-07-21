@@ -64,7 +64,7 @@ func NewController(mgr *hacli.HAKeeperClientManager) *Controller {
 var _ recon.Actor[*corev1.Pod] = &Controller{}
 
 // OnDeleted delete CNStore and cleanup finalizer on Pod deletion
-func (c *withCNSet) OnDeleted(ctx *recon.Context[*corev1.Pod]) error {
+func (c *Controller) OnDeleted(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 	if err := ctx.Patch(pod, func() error {
 		controllerutil.RemoveFinalizer(pod, common.CNDrainingFinalizer)
@@ -209,6 +209,11 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 
 func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
+
+	if pod.DeletionTimestamp != nil {
+		return c.OnDeleted(ctx)
+	}
+
 	if component, ok := pod.Labels[common.ComponentLabelKey]; !ok || component != "CNSet" {
 		ctx.Log.V(4).Info("pod is not a CN pod, skip", zap.String("namespace", pod.Namespace), zap.String("name", pod.Name))
 		return nil
@@ -226,9 +231,6 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 		cn:         cn,
 	}
 
-	if pod.DeletionTimestamp != nil {
-		return wc.OnDeleted(ctx)
-	}
 	if state, ok := pod.Labels[pub.LifecycleStateKey]; ok && state == string(pub.LifecycleStatePreparingDelete) {
 		return wc.OnPreparingDelete(ctx)
 	}
