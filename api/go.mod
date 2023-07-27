@@ -3,7 +3,7 @@ module github.com/matrixorigin/matrixone-operator/api
 go 1.19
 
 require (
-	github.com/matrixorigin/controller-runtime v0.0.0-20221223020015-ec2798dfbabf
+	github.com/matrixorigin/controller-runtime v0.0.0-20230714041653-9b42b78bea23
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.7
