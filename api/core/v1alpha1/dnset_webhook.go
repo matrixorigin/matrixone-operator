@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func (r *DNSet) setupWebhookWithManager(mgr ctrl.Manager) error {
@@ -55,23 +56,24 @@ func (r *DNSetSpec) Default() {
 var _ webhook.Validator = &DNSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *DNSet) ValidateCreate() error {
+func (r *DNSet) ValidateCreate() (admission.Warnings, error) {
 	var errs field.ErrorList
 	errs = append(errs, validateLogSetRef(&r.Deps.LogSetRef, field.NewPath("deps"))...)
 	errs = append(errs, r.Spec.ValidateCreate()...)
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
-	return invalidOrNil(errs, r)
+	return nil, invalidOrNil(errs, r)
 }
 
-func (r *DNSet) ValidateUpdate(old runtime.Object) error {
-	if err := r.ValidateCreate(); err != nil {
-		return err
+func (r *DNSet) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	warnings, err := r.ValidateCreate()
+	if err != nil {
+		return warnings, err
 	}
-	return nil
+	return nil, nil
 }
 
-func (r *DNSet) ValidateDelete() error {
-	return nil
+func (r *DNSet) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (r *DNSetSpec) ValidateCreate() field.ErrorList {

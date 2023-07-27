@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"time"
 )
 
@@ -73,23 +74,24 @@ func (r *CNSetSpec) Default() {
 var _ webhook.Validator = &CNSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *CNSet) ValidateCreate() error {
+func (r *CNSet) ValidateCreate() (admission.Warnings, error) {
 	var errs field.ErrorList
 	errs = append(errs, validateLogSetRef(&r.Deps.LogSetRef, field.NewPath("deps"))...)
 	errs = append(errs, r.Spec.ValidateCreate()...)
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
-	return invalidOrNil(errs, r)
+	return nil, invalidOrNil(errs, r)
 }
 
-func (r *CNSet) ValidateUpdate(old runtime.Object) error {
-	if err := r.ValidateCreate(); err != nil {
-		return err
+func (r *CNSet) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	warnings, err := r.ValidateCreate()
+	if err != nil {
+		return warnings, err
 	}
-	return nil
+	return nil, nil
 }
 
-func (r *CNSet) ValidateDelete() error {
-	return nil
+func (r *CNSet) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (r *CNSetSpec) ValidateCreate() field.ErrorList {

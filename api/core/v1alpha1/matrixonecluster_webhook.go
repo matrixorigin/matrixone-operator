@@ -21,6 +21,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -56,20 +57,20 @@ func (r *MatrixOneCluster) Default() {
 var _ webhook.Validator = &MatrixOneCluster{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *MatrixOneCluster) ValidateCreate() error {
+func (r *MatrixOneCluster) ValidateCreate() (admission.Warnings, error) {
 	var errs field.ErrorList
 	errs = append(errs, r.validateMutateCommon()...)
 	errs = append(errs, r.Spec.LogService.ValidateCreate(LogSetKey(r))...)
-	return invalidOrNil(errs, r)
+	return nil, invalidOrNil(errs, r)
 }
 
-func (r *MatrixOneCluster) ValidateUpdate(o runtime.Object) error {
+func (r *MatrixOneCluster) ValidateUpdate(o runtime.Object) (admission.Warnings, error) {
 	var errs field.ErrorList
 	errs = append(errs, r.validateMutateCommon()...)
 
 	old := o.(*MatrixOneCluster)
 	errs = append(errs, r.Spec.LogService.ValidateUpdate(&old.Spec.LogService, LogSetKey(r))...)
-	return invalidOrNil(errs, r)
+	return nil, invalidOrNil(errs, r)
 }
 
 func (r *MatrixOneCluster) validateMutateCommon() field.ErrorList {
@@ -101,6 +102,6 @@ func (r *MatrixOneCluster) validateCNGroup(g CNGroup, parent *field.Path) field.
 	return errs
 }
 
-func (r *MatrixOneCluster) ValidateDelete() error {
-	return nil
+func (r *MatrixOneCluster) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }

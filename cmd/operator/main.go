@@ -28,6 +28,7 @@ import (
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/dnset"
@@ -38,8 +39,6 @@ import (
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"go.uber.org/zap/zapcore"
 	controllermetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -113,9 +112,9 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "0c8ab548.matrixorigin.io",
-		WebhookServer: &webhook.Server{
+		WebhookServer: webhook.NewServer(webhook.Options{
 			CertDir: webhookCertDir,
-		},
+		}),
 	})
 	exitIf(err, "failed to start manager")
 
