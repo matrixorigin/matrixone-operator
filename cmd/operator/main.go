@@ -17,6 +17,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/go-logr/zapr"
+	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
+	"os"
+
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/bucketclaim"
@@ -27,7 +31,6 @@ import (
 	"github.com/matrixorigin/matrixone/pkg/logutil"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
-	"os"
 
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/dnset"
@@ -93,8 +96,8 @@ func main() {
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(opts)))
+	zapLogger := zap.NewRaw(zap.UseFlagOptions(opts))
+	ctrl.SetLogger(zapr.NewLogger(zapLogger))
 	logutil.SetupMOLogger(&logutil.LogConfig{
 		Level: zapcore.ErrorLevel.String(),
 	})
@@ -179,8 +182,10 @@ func main() {
 		setupLog.Info(fmt.Sprintf("s3 reclaim feature not enabled, skip setup bucketclaim actor"))
 	}
 
+	qc, err := querycli.New(zapLogger)
+	exitIf(err, "unable to create query client")
 	if features.DefaultFeatureGate.Enabled(features.CNLabel) {
-		cnLabelController := cnstore.NewController(hacli.NewManager(mgr.GetClient(), mgr.GetLogger()))
+		cnLabelController := cnstore.NewController(hacli.NewManager(mgr.GetClient(), mgr.GetLogger()), qc)
 		err = cnLabelController.Reconcile(mgr)
 		exitIf(err, "unable to set up cnlabel controller")
 	} else {

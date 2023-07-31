@@ -20,7 +20,7 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mosql"
+	"github.com/matrixorigin/matrixone-operator/pkg/mosql"
 	. "github.com/onsi/gomega"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
