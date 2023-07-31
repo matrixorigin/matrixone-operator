@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 const (
@@ -123,20 +124,20 @@ func (r *LogSetSpec) setDefaultRetentionPolicy() {
 var _ webhook.Validator = &LogSet{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *LogSet) ValidateCreate() error {
+func (r *LogSet) ValidateCreate() (admission.Warnings, error) {
 	errs := r.Spec.ValidateCreate(r.ObjectMeta)
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
-	return invalidOrNil(errs, r)
+	return nil, invalidOrNil(errs, r)
 }
 
-func (r *LogSet) ValidateUpdate(o runtime.Object) error {
+func (r *LogSet) ValidateUpdate(o runtime.Object) (admission.Warnings, error) {
 	old := o.(*LogSet)
 	errs := r.Spec.ValidateUpdate(&old.Spec, r.ObjectMeta)
-	return invalidOrNil(errs, r)
+	return nil, invalidOrNil(errs, r)
 }
 
-func (r *LogSet) ValidateDelete() error {
-	return nil
+func (r *LogSet) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (r *LogSetSpec) validateMutateCommon() field.ErrorList {

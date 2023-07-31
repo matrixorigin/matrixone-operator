@@ -267,7 +267,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mosql.NewClient = mosql.NewFakeClient
-			cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(tt.objects...).WithObjects(tt.mo).Build()
+			cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(tt.objects...).WithObjects(tt.mo).WithStatusSubresource(tt.mo).Build()
 			g := NewGomegaWithT(t)
 			r := &MatrixOneClusterActor{}
 			mockCtrl := gomock.NewController(t)
