@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func (r *WebUI) setupWebhookWithManager(mgr ctrl.Manager) error {
@@ -40,19 +41,20 @@ func (r *WebUI) Default() {
 var _ webhook.Validator = &WebUI{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *WebUI) ValidateCreate() error {
+func (r *WebUI) ValidateCreate() (admission.Warnings, error) {
 	var errs field.ErrorList
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
-	return invalidOrNil(errs, r)
+	return nil, invalidOrNil(errs, r)
 }
 
-func (r *WebUI) ValidateUpdate(old runtime.Object) error {
-	if err := r.ValidateCreate(); err != nil {
-		return err
+func (r *WebUI) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	warnings, err := r.ValidateCreate()
+	if err != nil {
+		return warnings, err
 	}
-	return nil
+	return nil, nil
 }
 
-func (r *WebUI) ValidateDelete() error {
-	return nil
+func (r *WebUI) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
