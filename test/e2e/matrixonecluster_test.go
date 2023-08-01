@@ -29,6 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"time"
@@ -69,6 +70,9 @@ var _ = Describe("MatrixOneCluster test", func() {
 					CNSetSpec: v1alpha1.CNSetSpec{
 						PodSet: v1alpha1.PodSet{
 							Replicas: 2,
+						},
+						ScalingConfig: v1alpha1.ScalingConfig{
+							StoreDrainEnabled: pointer.Bool(true),
 						},
 						CacheVolume: &v1alpha1.Volume{
 							Size: resource.MustParse("100Mi"),

@@ -5,11 +5,12 @@ go 1.20
 require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/zapr v1.2.4
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
 	github.com/matrixorigin/controller-runtime v0.0.0-20230714041653-9b42b78bea23
-	github.com/matrixorigin/matrixone v0.7.1-0.20230713072420-174754d43da8
+	github.com/matrixorigin/matrixone v0.7.1-0.20230731055419-f0c95dc4d125
 	github.com/matrixorigin/matrixone-operator/api v0.0.0-20220926063007-e629f86256d2
 	github.com/minio/minio-go/v7 v7.0.51
 	github.com/onsi/ginkgo/v2 v2.9.5
@@ -75,7 +76,6 @@ require (
 	github.com/fagongzi/util v0.0.0-20210923134909-bccc37b5040d // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/getsentry/sentry-go v0.12.0 // indirect
-	github.com/go-logr/zapr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
@@ -118,6 +118,7 @@ require (
 	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/petermattis/goid v0.0.0-20230518223814-80aa455d8761 // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/plar/go-adaptive-radix-tree v1.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

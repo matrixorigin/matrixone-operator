@@ -21,8 +21,8 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mosql"
 	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
+	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
 	"github.com/matrixorigin/matrixone/pkg/logservice"
 	logpb "github.com/matrixorigin/matrixone/pkg/pb/logservice"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
@@ -49,6 +49,7 @@ const retryInterval = 15 * time.Second
 
 type Controller struct {
 	clientMgr *hacli.HAKeeperClientManager
+	queryCli  *querycli.Client
 }
 
 type withCNSet struct {
@@ -57,8 +58,8 @@ type withCNSet struct {
 	cn *v1alpha1.CNSet
 }
 
-func NewController(mgr *hacli.HAKeeperClientManager) *Controller {
-	return &Controller{clientMgr: mgr}
+func NewController(mgr *hacli.HAKeeperClientManager, qc *querycli.Client) *Controller {
+	return &Controller{clientMgr: mgr, queryCli: qc}
 }
 
 var _ recon.Actor[*corev1.Pod] = &Controller{}
@@ -121,23 +122,21 @@ func (c *withCNSet) OnPreparingDelete(ctx *recon.Context[*corev1.Pod]) error {
 		return err
 	}
 	ctx.Log.Info("call MO to collect Store status", "uuid", uid)
-	cnDrained := false
-	if c.cn.Spec.MetricsSecretRef == nil {
-		ctx.Log.Info("CN metric secret does not initialized, cannot query state")
-	} else {
-		// TODO: should use other CN to query conns
-		sqlcli := mosql.NewClient(fmt.Sprintf("%s:%d", pod.Status.PodIP, 6001), ctx.Client, c.cn.Spec.MetricsSecretRef.NamespacedName())
-		connCount, err := sqlcli.GetServerConnection(ctx, uid)
-		if err != nil {
-			return err
-		}
-		if connCount < 1 {
-			cnDrained = true
+	var accountSession int
+	// TODO: make query service port coherent after port refactor merged
+	resp, err := c.queryCli.ShowProcessList(ctx, fmt.Sprintf("%s:19998", pod.Status.PodIP))
+	if err != nil {
+		return errors.Wrap(err, "error query process list")
+	}
+	for _, sess := range resp.GetSessions() {
+		if sess.Account != "" && sess.Account != "sys" {
+			accountSession++
 		}
 	}
-	if cnDrained {
+	if accountSession == 0 {
 		return c.completeDraining(ctx)
 	}
+	ctx.Log.Info("CN draining", "account sessions", accountSession)
 	if time.Since(startTime) > sc.GetStoreDrainTimeout() {
 		ctx.Log.Info("store draining timeout, force delete CN", "uuid", uid)
 		return c.completeDraining(ctx)
