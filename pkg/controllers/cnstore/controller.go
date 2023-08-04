@@ -130,6 +130,7 @@ func (c *withCNSet) OnPreparingDelete(ctx *recon.Context[*corev1.Pod]) error {
 	}
 	for _, sess := range resp.GetSessions() {
 		if sess.Account != "" && sess.Account != "sys" {
+			ctx.Log.Info("session is not drained, session account", "account", sess.Account)
 			accountSession++
 		}
 	}

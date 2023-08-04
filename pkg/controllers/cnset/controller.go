@@ -255,7 +255,8 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	cs.Spec.UpdateStrategy.Type = kruisev1alpha1.InPlaceIfPossibleCloneSetUpdateStrategyType
 	cs.Spec.UpdateStrategy.MaxUnavailable = &maxUnavailable
 	cs.Spec.ScaleStrategy.DisablePVCReuse = true
-	cs.Spec.ScaleStrategy.MaxUnavailable = &maxUnavailable
+	// scale-out without maxUnavailable limit to avoid unavailable pod abort the fail-over
+	cs.Spec.ScaleStrategy.MaxUnavailable = nil
 	if cs.Spec.Lifecycle == nil {
 		cs.Spec.Lifecycle = &pub.Lifecycle{}
 	}
@@ -265,6 +266,9 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 		},
 		MarkPodNotReady: true,
 	}
+	// tune maxSurge fom 0 to 1 to ensure the session can be migrated to the newly created pod
+	maxSurge := intstr.FromInt(1)
+	cs.Spec.UpdateStrategy.MaxSurge = &maxSurge
 
 	if err := syncPodMeta(ctx.Obj, cs); err != nil {
 		return errors.Wrap(err, "sync pod meta")
