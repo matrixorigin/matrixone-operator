@@ -174,12 +174,15 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 		util.FieldRefEnv(common.PodIPEnvKey, "status.podIP"),
 	}
 
+	// add CN store readiness gate
+	common.AddReadinessGate(specRef, common.CNStoreReadiness)
+	common.AddReadinessGate(specRef, pub.KruisePodReadyConditionType)
+	common.AddReadinessGate(specRef, pub.InPlaceUpdateReady)
+
+	// process overlay
 	cn.Spec.Overlay.OverlayMainContainer(mainRef)
 
 	specRef.Containers = []corev1.Container{*mainRef}
-	specRef.ReadinessGates = []corev1.PodReadinessGate{{
-		ConditionType: pub.InPlaceUpdateReady,
-	}}
 	specRef.NodeSelector = cn.Spec.NodeSelector
 	common.SetStorageProviderConfig(sp, specRef)
 	common.SyncTopology(cn.Spec.TopologyEvenSpread, specRef, cs.Spec.Selector)

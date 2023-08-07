@@ -179,6 +179,7 @@ _Appears in:_
 | `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
 | `scalingConfig` _[ScalingConfig](#scalingconfig)_ | ScalingConfig declares the CN scaling behavior |
 | `metricsSecretRef` _[ObjectRef](#objectref)_ | MetricsSecretRef is the secret reference for the operator to access CN metrics |
+| `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy is the rolling-update strategy of CN |
 
 
 
@@ -601,12 +602,13 @@ _Appears in:_
 
 
 _Appears in:_
+- [CNSetSpec](#cnsetspec)
 - [WebUISpec](#webuispec)
 
 | Field | Description |
 | --- | --- |
-| `maxSurge` _integer_ | MaxSurge is an optional field that specifies the maximum number of Pods that can be created over the desired number of Pods. |
-| `maxUnavailable` _integer_ | MaxUnavailable an optional field that specifies the maximum number of Pods that can be unavailable during the update process. |
+| `maxSurge` _IntOrString_ | MaxSurge is an optional field that specifies the maximum number of Pods that can be created over the desired number of Pods. |
+| `maxUnavailable` _IntOrString_ | MaxUnavailable an optional field that specifies the maximum number of Pods that can be unavailable during the update process. |
 
 
 #### S3Provider

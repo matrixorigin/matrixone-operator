@@ -53,14 +53,10 @@ func syncPodSpec(wi *v1alpha1.WebUI, dp *appsv1.Deployment) {
 	maxUnavailable := &intstr.IntOrString{}
 	maxSurge := &intstr.IntOrString{}
 	if wi.Spec.UpdateStrategy.MaxUnavailable != nil {
-		maxUnavailable = &intstr.IntOrString{
-			IntVal: *wi.Spec.UpdateStrategy.MaxUnavailable,
-		}
+		maxUnavailable = wi.Spec.UpdateStrategy.MaxUnavailable
 	}
 	if wi.Spec.UpdateStrategy.MaxSurge != nil {
-		maxSurge = &intstr.IntOrString{
-			IntVal: *wi.Spec.UpdateStrategy.MaxSurge,
-		}
+		maxSurge = wi.Spec.UpdateStrategy.MaxSurge
 	}
 
 	updateStrategy = appsv1.DeploymentStrategy{
