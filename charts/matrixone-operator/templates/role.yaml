@@ -21,13 +21,10 @@ rules:
       - configmaps
       - secrets
       - persistentvolumeclaims
+      - pods/status
+      - pods/exec
     verbs:
-      - list
-      - watch
-      - create
-      - update
-      - delete
-      - patch
+      - '*'
   - apiGroups:
     - "apps"
     resources:

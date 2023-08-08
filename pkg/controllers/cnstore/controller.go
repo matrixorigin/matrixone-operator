@@ -30,6 +30,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -43,6 +44,9 @@ import (
 
 const (
 	storeDrainingStartAnno = "matrixorigin.io/store-draining-start"
+
+	messageCNPrepareStop = "CNStorePrepareStop"
+	messageCNStoreReady  = "CNStoreReady"
 )
 
 const retryInterval = 15 * time.Second
@@ -76,14 +80,30 @@ func (c *Controller) OnDeleted(ctx *recon.Context[*corev1.Pod]) error {
 	return nil
 }
 
-// OnPreparingDelete drains CN connections
-func (c *withCNSet) OnPreparingDelete(ctx *recon.Context[*corev1.Pod]) error {
+// OnPreparingStop drains CN connections
+func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 	uid := v1alpha1.GetCNPodUUID(ctx.Obj)
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
 	}
 
+	if err := ctx.PatchStatus(pod, func() error {
+		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
+		if cond == nil {
+			pod.Status.Conditions = append(pod.Status.Conditions, common.NewCNReadinessCondition(corev1.ConditionFalse, messageCNPrepareStop))
+		} else {
+			if cond.Status != corev1.ConditionFalse {
+				cond.Status = corev1.ConditionFalse
+				cond.LastTransitionTime = metav1.Now()
+			}
+			cond.Message = messageCNPrepareStop
+		}
+		c.setCNState(pod, v1alpha1.CNStoreStateDraining)
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "patch pod readiness")
+	}
 	// store draining disabled, cleanup finalizers and skip
 	sc := c.cn.Spec.ScalingConfig
 	if !sc.GetStoreDrainEnabled() {
@@ -118,9 +138,6 @@ func (c *withCNSet) OnPreparingDelete(ctx *recon.Context[*corev1.Pod]) error {
 	if err != nil {
 		return errors.Wrap(err, "error set CN state draining")
 	}
-	if err := c.setCNState(ctx, v1alpha1.CNStoreStateDraining); err != nil {
-		return err
-	}
 	ctx.Log.Info("call MO to collect Store status", "uuid", uid)
 	var accountSession int
 	// TODO: make query service port coherent after port refactor merged
@@ -134,10 +151,10 @@ func (c *withCNSet) OnPreparingDelete(ctx *recon.Context[*corev1.Pod]) error {
 			accountSession++
 		}
 	}
+	ctx.Log.Info("CN draining", "account sessions", accountSession)
 	if accountSession == 0 {
 		return c.completeDraining(ctx)
 	}
-	ctx.Log.Info("CN draining", "account sessions", accountSession)
 	if time.Since(startTime) > sc.GetStoreDrainTimeout() {
 		ctx.Log.Info("store draining timeout, force delete CN", "uuid", uid)
 		return c.completeDraining(ctx)
@@ -204,7 +221,23 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		ctx.Log.Error(err, "update CN failed", "uuid", uid)
 		return recon.ErrReSync("update cn failed", retryInterval)
 	}
-	return c.setCNState(ctx, v1alpha1.CNStoreStateUp)
+	if err := ctx.PatchStatus(pod, func() error {
+		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
+		if cond == nil {
+			pod.Status.Conditions = append(pod.Status.Conditions, common.NewCNReadinessCondition(corev1.ConditionTrue, messageCNStoreReady))
+		} else {
+			if cond.Status != corev1.ConditionTrue {
+				cond.Status = corev1.ConditionTrue
+				cond.LastTransitionTime = metav1.Now()
+			}
+			cond.Message = messageCNStoreReady
+		}
+		c.setCNState(pod, v1alpha1.CNStoreStateUp)
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "patch pod readiness")
+	}
+	return nil
 }
 
 func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
@@ -231,8 +264,9 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 		cn:         cn,
 	}
 
-	if state, ok := pod.Labels[pub.LifecycleStateKey]; ok && state == string(pub.LifecycleStatePreparingDelete) {
-		return wc.OnPreparingDelete(ctx)
+	lifecycleState := pod.Labels[pub.LifecycleStateKey]
+	if lifecycleState == string(pub.LifecycleStatePreparingUpdate) || lifecycleState == string(pub.LifecycleStatePreparingDelete) {
+		return wc.OnPreparingStop(ctx)
 	}
 	return wc.OnNormal(ctx)
 }
@@ -264,18 +298,11 @@ func (c *withCNSet) withHAKeeperClient(ctx *recon.Context[*corev1.Pod], fn func(
 	return nil
 }
 
-func (c *Controller) setCNState(ctx *recon.Context[*corev1.Pod], state string) error {
-	err := ctx.Patch(ctx.Obj, func() error {
-		if ctx.Obj.Annotations == nil {
-			ctx.Obj.Annotations = map[string]string{}
-		}
-		ctx.Obj.Annotations[common.CNStateAnno] = state
-		return nil
-	})
-	if err != nil {
-		return errors.Wrap(err, "error set cn state")
+func (c *Controller) setCNState(pod *corev1.Pod, state string) {
+	if pod.Annotations == nil {
+		pod.Annotations = map[string]string{}
 	}
-	return nil
+	pod.Annotations[common.CNStateAnno] = state
 }
 
 func toStoreLabels(labels []v1alpha1.CNLabel) map[string]metadata.LabelList {

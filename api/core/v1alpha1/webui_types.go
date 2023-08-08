@@ -37,18 +37,6 @@ type WebUISpec struct {
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 }
 
-type RollingUpdateStrategy struct {
-	// MaxSurge is an optional field that specifies the maximum number of Pods that
-	// can be created over the desired number of Pods.
-	// +optional
-	MaxSurge *int32 `json:"maxSurge,omitempty"`
-
-	// MaxUnavailable an optional field that specifies the maximum number of Pods that
-	// can be unavailable during the update process.
-	// +optional
-	MaxUnavailable *int32 `json:"maxUnavailable,omitempty"`
-}
-
 type WebUIDeps struct {
 	// The WebUI it depends on
 	// +kubebuilder:validation:Schemaless

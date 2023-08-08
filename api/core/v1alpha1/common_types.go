@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type PVCRetentionPolicy string
@@ -336,6 +337,18 @@ type ObjectRef struct {
 	Namespace string `json:"namespace,omitempty"`
 	// +required
 	Name string `json:"name"`
+}
+
+type RollingUpdateStrategy struct {
+	// MaxSurge is an optional field that specifies the maximum number of Pods that
+	// can be created over the desired number of Pods.
+	// +optional
+	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty"`
+
+	// MaxUnavailable an optional field that specifies the maximum number of Pods that
+	// can be unavailable during the update process.
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 }
 
 func (o *ObjectRef) NamespacedName() types.NamespacedName {

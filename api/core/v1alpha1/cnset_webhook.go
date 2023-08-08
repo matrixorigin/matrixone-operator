@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -27,6 +28,9 @@ import (
 
 const (
 	defaultStoreDrainTimeout = 5 * time.Minute
+
+	defaultMaxSurge       = 1
+	defaultMaxUnavailable = 0
 )
 
 func (r *CNSet) setupWebhookWithManager(mgr ctrl.Manager) error {
@@ -65,6 +69,14 @@ func (r *CNSetSpec) Default() {
 		if r.ScalingConfig.StoreDrainTimeout == nil {
 			r.ScalingConfig.StoreDrainTimeout = &metav1.Duration{Duration: defaultStoreDrainTimeout}
 		}
+	}
+	if r.UpdateStrategy.MaxSurge == nil {
+		maxSurge := intstr.FromInt(defaultMaxSurge)
+		r.UpdateStrategy.MaxSurge = &maxSurge
+	}
+	if r.UpdateStrategy.MaxUnavailable == nil {
+		maxUnavailable := intstr.FromInt(defaultMaxUnavailable)
+		r.UpdateStrategy.MaxUnavailable = &maxUnavailable
 	}
 	setDefaultServiceArgs(r)
 }

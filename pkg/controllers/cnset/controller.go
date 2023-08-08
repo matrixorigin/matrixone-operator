@@ -19,7 +19,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"time"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -41,8 +40,9 @@ import (
 
 // reconcile configuration
 const (
-	storeDownTimeOut = 1 * time.Minute
-	reSyncAfter      = 10 * time.Second
+	cnReadySeconds = 30
+
+	reSyncAfter = 10 * time.Second
 )
 
 type Actor struct{}
@@ -251,24 +251,25 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 	return nil
 }
 func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneSet) error {
-	maxUnavailable := intstr.FromInt(1)
+	cn := ctx.Obj
 	cs.Spec.UpdateStrategy.Type = kruisev1alpha1.InPlaceIfPossibleCloneSetUpdateStrategyType
-	cs.Spec.UpdateStrategy.MaxUnavailable = &maxUnavailable
-	cs.Spec.ScaleStrategy.DisablePVCReuse = true
+	cs.Spec.UpdateStrategy.MaxUnavailable = cn.Spec.UpdateStrategy.MaxUnavailable
+	cs.Spec.UpdateStrategy.MaxSurge = cn.Spec.UpdateStrategy.MaxSurge
+	cs.Spec.MinReadySeconds = cnReadySeconds
+
 	// scale-out without maxUnavailable limit to avoid unavailable pod abort the fail-over
 	cs.Spec.ScaleStrategy.MaxUnavailable = nil
 	if cs.Spec.Lifecycle == nil {
 		cs.Spec.Lifecycle = &pub.Lifecycle{}
 	}
-	cs.Spec.Lifecycle.PreDelete = &pub.LifecycleHook{
+	preStop := &pub.LifecycleHook{
 		FinalizersHandler: []string{
 			common.CNDrainingFinalizer,
 		},
 		MarkPodNotReady: true,
 	}
-	// tune maxSurge fom 0 to 1 to ensure the session can be migrated to the newly created pod
-	maxSurge := intstr.FromInt(1)
-	cs.Spec.UpdateStrategy.MaxSurge = &maxSurge
+	cs.Spec.Lifecycle.PreDelete = preStop
+	cs.Spec.Lifecycle.InPlaceUpdate = preStop
 
 	if err := syncPodMeta(ctx.Obj, cs); err != nil {
 		return errors.Wrap(err, "sync pod meta")

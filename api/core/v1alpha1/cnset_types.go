@@ -73,6 +73,9 @@ type CNSetSpec struct {
 
 	// MetricsSecretRef is the secret reference for the operator to access CN metrics
 	MetricsSecretRef *ObjectRef `json:"metricsSecretRef,omitempty"`
+
+	// UpdateStrategy is the rolling-update strategy of CN
+	UpdateStrategy RollingUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 type ScalingConfig struct {
