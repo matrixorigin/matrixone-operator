@@ -96,6 +96,27 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-core-matrixorigin-io-v1alpha1-proxyset
+  failurePolicy: Fail
+  name: mproxyset.kb.io
+  rules:
+  - apiGroups:
+    - core.matrixorigin.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - proxysets
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-core-matrixorigin-io-v1alpha1-webui
   failurePolicy: Fail
   name: mwebui.kb.io
@@ -200,6 +221,27 @@ webhooks:
     - UPDATE
     resources:
     - matrixoneclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-core-matrixorigin-io-v1alpha1-proxyset
+  failurePolicy: Fail
+  name: vproxyset.kb.io
+  rules:
+  - apiGroups:
+    - core.matrixorigin.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - proxysets
   sideEffects: None
 - admissionReviewVersions:
   - v1

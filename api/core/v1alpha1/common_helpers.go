@@ -201,6 +201,7 @@ type DefaultArgs struct {
 	LogService []string `json:"logService,omitempty"`
 	DN         []string `json:"dn,omitempty"`
 	CN         []string `json:"cn,omitempty"`
+	Proxy      []string `json:"proxy,omitempty"`
 }
 
 // setDefaultServiceArgs set default args for service, we only set default args when there is service args config in service spec
@@ -221,6 +222,10 @@ func setDefaultServiceArgs(object interface{}) {
 	case *CNSetSpec:
 		if len(obj.ServiceArgs) == 0 {
 			obj.ServiceArgs = ServiceDefaultArgs.CN
+		}
+	case *ProxySetSpec:
+		if len(obj.ServiceArgs) == 0 {
+			obj.ServiceArgs = ServiceDefaultArgs.Proxy
 		}
 	default:
 		moLog.Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetSpec, *DNSetSpec, *CNSetSpec")
