@@ -45,6 +45,8 @@ import (
 const (
 	storeDrainingStartAnno = "matrixorigin.io/store-draining-start"
 
+	storeCordonAnno = "matrixorigin.io/store-cordon"
+
 	messageCNPrepareStop = "CNStorePrepareStop"
 	messageCNStoreReady  = "CNStoreReady"
 )
@@ -199,18 +201,16 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 	}
 
 	// 3. sync CN labels for store and mark store as UP state
-	labelStr, ok := pod.Annotations[common.CNLabelAnnotation]
-	if !ok {
-		// no label to sync
-		return nil
-	}
 	var cnLabels []v1alpha1.CNLabel
-	err := json.Unmarshal([]byte(labelStr), &cnLabels)
-	if err != nil {
-		return errors.Wrap(err, "unmarshal CNLabels")
+	labelStr, ok := pod.Annotations[common.CNLabelAnnotation]
+	if ok {
+		err := json.Unmarshal([]byte(labelStr), &cnLabels)
+		if err != nil {
+			return errors.Wrap(err, "unmarshal CNLabels")
+		}
 	}
 	uid := v1alpha1.GetCNPodUUID(pod)
-	err = c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
+	err := c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
 		return hc.PatchCNStore(timeout, logpb.CNStateLabel{
 			UUID:   uid,
 			State:  metadata.WorkState_Working,
@@ -240,6 +240,21 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 	return nil
 }
 
+func (c *withCNSet) OnCordon(ctx *recon.Context[*corev1.Pod]) error {
+	uid := v1alpha1.GetCNPodUUID(ctx.Obj)
+	ctx.Log.Info("call HAKeeper to cordon CN store", "uuid", uid)
+	err := c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
+		return hc.PatchCNStore(timeout, logpb.CNStateLabel{
+			UUID:  uid,
+			State: metadata.WorkState_Draining,
+		})
+	})
+	if err != nil {
+		return errors.Wrap(err, "error cordon cn store")
+	}
+	return nil
+}
+
 func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 
@@ -262,6 +277,11 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	wc := &withCNSet{
 		Controller: c,
 		cn:         cn,
+	}
+
+	// store is asked to be cordoned
+	if _, ok := pod.Annotations[storeCordonAnno]; ok {
+		return wc.OnCordon(ctx)
 	}
 
 	lifecycleState := pod.Labels[pub.LifecycleStateKey]
