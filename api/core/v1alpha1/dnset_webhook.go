@@ -81,5 +81,6 @@ func (r *DNSetSpec) ValidateCreate() field.ErrorList {
 	if r.CacheVolume != nil {
 		errs = append(errs, validateVolume(r.CacheVolume, field.NewPath("spec").Child("cacheVolume"))...)
 	}
+	errs = append(errs, validateGoMemLimitPercent(r.MemoryLimitPercent, field.NewPath("spec").Child("memoryLimitPercent"))...)
 	return errs
 }

@@ -80,6 +80,11 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 		util.FieldRefEnv(PodIPEnvKey, "status.podIP"),
 		{Name: HeadlessSvcEnvKey, Value: headlessSvcName(ls)},
 	}
+	memLimitEnv := common.GoMemLimitEnv(ls.Spec.MemoryLimitPercent, ls.Spec.Resources.Limits.Memory(), ls.Spec.Overlay)
+	if memLimitEnv != nil {
+		mainRef.Env = append(mainRef.Env, *memLimitEnv)
+	}
+
 	//if ls.Spec.DNSBasedIdentity {
 	//	mainRef.Env = append(mainRef.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
 	//}

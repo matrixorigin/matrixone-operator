@@ -111,6 +111,11 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryLimitPercent:
+                    description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                      env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                      * MemoryLimitPercent / 100
+                    type: integer
                   metricsSecretRef:
                     description: MetricsSecretRef is the secret reference for the
                       operator to access CN metrics
@@ -347,6 +352,11 @@ spec:
                     image:
                       description: Image is the docker image of the main container
                       type: string
+                    memoryLimitPercent:
+                      description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                        env, its value must be in interval (0, 100]. GOMEMLIMIT =
+                        limits.memory * MemoryLimitPercent / 100
+                      type: integer
                     metricsSecretRef:
                       description: MetricsSecretRef is the secret reference for the
                         operator to access CN metrics
@@ -578,6 +588,11 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryLimitPercent:
+                    description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                      env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                      * MemoryLimitPercent / 100
+                    type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -737,6 +752,11 @@ spec:
                           to 1
                         type: integer
                     type: object
+                  memoryLimitPercent:
+                    description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                      env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                      * MemoryLimitPercent / 100
+                    type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -937,6 +957,11 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryLimitPercent:
+                    description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                      env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                      * MemoryLimitPercent / 100
+                    type: integer
                   nodePort:
                     description: NodePort specifies the node port to use when ServiceType
                       is NodePort or LoadBalancer, reconciling will fail if the node
@@ -1091,6 +1116,11 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryLimitPercent:
+                    description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                      env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                      * MemoryLimitPercent / 100
+                    type: integer
                   metricsSecretRef:
                     description: MetricsSecretRef is the secret reference for the
                       operator to access CN metrics
@@ -1295,6 +1325,11 @@ spec:
                     description: PullPolicy describes a policy for if/when to pull
                       a container image
                     type: string
+                  memoryLimitPercent:
+                    description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                      env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                      * MemoryLimitPercent / 100
+                    type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string

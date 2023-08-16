@@ -38,6 +38,8 @@ const (
 
 const (
 	ContainerMain = "main"
+
+	EnvGoMemLimit = "GOMEMLIMIT"
 )
 
 type ConditionalStatus struct {
@@ -79,6 +81,11 @@ type PodSet struct {
 	// NOTE: user should not define "-cfg" argument in this field, which is defined default by controller
 	// +optional
 	ServiceArgs []string `json:"serviceArgs,omitempty"`
+
+	// MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
+	// GOMEMLIMIT = limits.memory * MemoryLimitPercent / 100
+	// +optional
+	MemoryLimitPercent *int `json:"memoryLimitPercent,omitempty"`
 }
 
 // MainContainer is the description of the main container of a Pod
