@@ -76,6 +76,11 @@ spec:
               image:
                 description: Image is the docker image of the main container
                 type: string
+              memoryLimitPercent:
+                description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                  env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                  * MemoryLimitPercent / 100
+                type: integer
               nodePort:
                 description: NodePort specifies the node port to use when ServiceType
                   is NodePort or LoadBalancer, reconciling will fail if the node port

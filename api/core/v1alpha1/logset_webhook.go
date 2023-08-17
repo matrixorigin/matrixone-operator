@@ -145,6 +145,7 @@ func (r *LogSetSpec) validateMutateCommon() field.ErrorList {
 	errs = append(errs, validateVolume(&r.Volume, field.NewPath("spec").Child("volume"))...)
 	errs = append(errs, r.validateInitialConfig()...)
 	errs = append(errs, r.validateSharedStorage()...)
+	errs = append(errs, validateGoMemLimitPercent(r.MemoryLimitPercent, field.NewPath("spec").Child("memoryLimitPercent"))...)
 	return errs
 }
 

@@ -22,7 +22,9 @@ import (
 	"github.com/openkruise/kruise-api/apps/pub"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strconv"
 )
 
 type SyncMOPodTask struct {
@@ -84,6 +86,11 @@ func syncMainContainer(p *v1alpha1.PodSet, c *corev1.Container, mutateFn func(c 
 		util.FieldRefEnv(PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(NamespaceEnvKey, "metadata.namespace"),
 	}
+	memLimitEnv := GoMemLimitEnv(p.MemoryLimitPercent, c.Resources.Limits.Memory(), p.Overlay)
+	if memLimitEnv != nil {
+		c.Env = append(c.Env, *memLimitEnv)
+	}
+
 	// TODO: consider migration strategy
 	// c.Env = append(c.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
 	c.VolumeMounts = []corev1.VolumeMount{
@@ -97,4 +104,28 @@ func syncMainContainer(p *v1alpha1.PodSet, c *corev1.Container, mutateFn func(c 
 		mutateFn(c)
 	}
 	p.Overlay.OverlayMainContainer(c)
+}
+
+func GoMemLimitEnv(memPercent *int, memoryLimit *resource.Quantity, overlay *v1alpha1.Overlay) *corev1.EnvVar {
+	if memPercent == nil {
+		return nil
+	}
+	if memoryLimit == nil || memoryLimit.Value() == 0 {
+		return nil
+	}
+
+	// skip add GOMEMLIMIT env if it already added in overlay
+	overLayEnv := util.FindFirst(overlay.Env, func(envVar corev1.EnvVar) bool {
+		return envVar.Name == v1alpha1.EnvGoMemLimit
+	})
+	if overLayEnv != nil {
+		return nil
+	}
+
+	memLimit := memoryLimit.Value() * int64(*memPercent) / 100
+	envVar := &corev1.EnvVar{
+		Name:  v1alpha1.EnvGoMemLimit,
+		Value: strconv.Itoa(int(memLimit)),
+	}
+	return envVar
 }

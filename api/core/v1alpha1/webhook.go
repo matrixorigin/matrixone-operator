@@ -82,6 +82,17 @@ func validateVolume(v *Volume, parent *field.Path) field.ErrorList {
 	return errs
 }
 
+func validateGoMemLimitPercent(memPercent *int, path *field.Path) field.ErrorList {
+	if memPercent == nil {
+		return nil
+	}
+	var errs field.ErrorList
+	if *memPercent <= 0 || *memPercent > 100 {
+		errs = append(errs, field.Invalid(path, memPercent, "memoryLimitPercent value must be in interval (0, 100]"))
+	}
+	return errs
+}
+
 func defaultDiskCacheSize(total *resource.Quantity) *resource.Quantity {
 	// shrink the total size since a small amount of space will be used for filesystem and metadata
 	shrunk := total.Value() * 9 / 10

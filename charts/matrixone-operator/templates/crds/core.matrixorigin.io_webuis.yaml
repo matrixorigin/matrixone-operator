@@ -71,6 +71,11 @@ spec:
                 description: PullPolicy describes a policy for if/when to pull a container
                   image
                 type: string
+              memoryLimitPercent:
+                description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                  env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                  * MemoryLimitPercent / 100
+                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string
