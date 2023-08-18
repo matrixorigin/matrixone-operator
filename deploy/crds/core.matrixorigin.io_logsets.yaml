@@ -82,6 +82,11 @@ spec:
                       be tuned after cluster creation currently. default to 1
                     type: integer
                 type: object
+              memoryLimitPercent:
+                description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                  env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                  * MemoryLimitPercent / 100
+                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string

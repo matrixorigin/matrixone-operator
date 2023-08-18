@@ -524,6 +524,7 @@ _Appears in:_
 | `dnsBasedIdentity` _boolean_ | If enabled, use the Pod dns name as the Pod identity |
 | `clusterDomain` _string_ | ClusterDomain is the cluster-domain of current kubernetes cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ for details |
 | `serviceArgs` _string array_ | ServiceArgs define command line options for process, used by logset/cnset/dnset service. NOTE: user should not define "-cfg" argument in this field, which is defined default by controller |
+| `memoryLimitPercent` _integer_ | MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory * MemoryLimitPercent / 100 |
 
 
 #### ProxySet

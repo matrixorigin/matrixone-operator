@@ -173,6 +173,10 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
 		util.FieldRefEnv(common.PodIPEnvKey, "status.podIP"),
 	}
+	memLimitEnv := common.GoMemLimitEnv(cn.Spec.MemoryLimitPercent, cn.Spec.Resources.Limits.Memory(), cn.Spec.Overlay)
+	if memLimitEnv != nil {
+		mainRef.Env = append(mainRef.Env, *memLimitEnv)
+	}
 
 	// add CN store readiness gate
 	common.AddReadinessGate(specRef, common.CNStoreReadiness)

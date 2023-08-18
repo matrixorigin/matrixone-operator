@@ -130,5 +130,6 @@ func (r *CNSetSpec) ValidateCreate() field.ErrorList {
 			}
 		}
 	}
+	errs = append(errs, validateGoMemLimitPercent(r.MemoryLimitPercent, field.NewPath("spec").Child("memoryLimitPercent"))...)
 	return errs
 }

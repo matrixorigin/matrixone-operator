@@ -144,6 +144,10 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
 	}
+	memLimitEnv := common.GoMemLimitEnv(dn.Spec.MemoryLimitPercent, dn.Spec.Resources.Limits.Memory(), dn.Spec.Overlay)
+	if memLimitEnv != nil {
+		mainRef.Env = append(mainRef.Env, *memLimitEnv)
+	}
 
 	if dn.GetDNSBasedIdentity() {
 		mainRef.Env = append(mainRef.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
