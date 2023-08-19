@@ -124,9 +124,13 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 				}
 				tpl.Spec.Config.Set([]string{"cn", "frontend", "proxy-enabled"}, true)
 			}
+			tpl.Spec.Overlay = g.Overlay
+
+			// inherit global policies from MO
 			setPodSetDefault(&tpl.Spec.PodSet, mo)
 			setOverlay(&tpl.Spec.Overlay, mo)
-			tpl.Spec.Overlay.Env = []corev1.EnvVar{{
+			// upsert DEFAULT_PASSWORD env
+			tpl.Spec.Overlay.Env = util.UpsertByKey(tpl.Spec.Overlay.Env, corev1.EnvVar{
 				Name: "DEFAULT_PASSWORD",
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
@@ -134,7 +138,9 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 						Key:                  "password",
 					},
 				},
-			}}
+			}, func(e corev1.EnvVar) string {
+				return e.Name
+			})
 			if mo.Status.ClusterMetrics.Initialized {
 				tpl.Spec.MetricsSecretRef = &v1alpha1.ObjectRef{
 					Namespace: mo.Namespace,
