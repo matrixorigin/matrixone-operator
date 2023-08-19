@@ -210,17 +210,29 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		}
 	}
 	uid := v1alpha1.GetCNPodUUID(pod)
-	err := c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
-		return hc.PatchCNStore(timeout, logpb.CNStateLabel{
-			UUID:   uid,
-			State:  metadata.WorkState_Working,
-			Labels: toStoreLabels(cnLabels),
+
+	var err error
+	if c.cn.Spec.ScalingConfig.GetStoreDrainEnabled() {
+		err = c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
+			return hc.PatchCNStore(timeout, logpb.CNStateLabel{
+				UUID:   uid,
+				State:  metadata.WorkState_Working,
+				Labels: toStoreLabels(cnLabels),
+			})
 		})
-	})
+	} else {
+		err = c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
+			return hc.UpdateCNLabel(timeout, logpb.CNStoreLabel{
+				UUID:   uid,
+				Labels: toStoreLabels(cnLabels),
+			})
+		})
+	}
 	if err != nil {
 		ctx.Log.Error(err, "update CN failed", "uuid", uid)
 		return recon.ErrReSync("update cn failed", retryInterval)
 	}
+
 	if err := ctx.PatchStatus(pod, func() error {
 		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
 		if cond == nil {
