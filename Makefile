@@ -100,6 +100,9 @@ api-test:
 e2e-kind: ginkgo
 	REPO=${REPO} TAG=${TAG}	MO_IMAGE_REPO=$(MO_IMAGE_REPO) MO_VERSION=$(MO_VERSION) GINKGO=$(GINKGO) ./hack/kind-e2e.sh
 
+# Launch a kind cluster and install mo operator
+up:
+	REPO=${REPO} TAG=${TAG}	MO_IMAGE_REPO=$(MO_IMAGE_REPO) MO_VERSION=$(MO_VERSION) ./hack/kind.sh up
 
 # Run e2e tests
 # KUBECONFIG is your kubernetes config path, OP_IMAGE_TAG is operator image tag

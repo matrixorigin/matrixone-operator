@@ -50,4 +50,11 @@ spec:
       resources:
         requests:
           storage: 10Gi
-
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio
+stringData:
+  AWS_ACCESS_KEY_ID: "minio"
+  AWS_SECRET_ACCESS_KEY: "minio123"
