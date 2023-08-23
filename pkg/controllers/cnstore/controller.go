@@ -143,7 +143,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	ctx.Log.Info("call MO to collect Store status", "uuid", uid)
 	var accountSession int
 	// TODO: make query service port coherent after port refactor merged
-	resp, err := c.queryCli.ShowProcessList(ctx, fmt.Sprintf("%s:19998", pod.Status.PodIP))
+	resp, err := c.queryCli.ShowProcessList(ctx, fmt.Sprintf("%s:6005", pod.Status.PodIP))
 	if err != nil {
 		return errors.Wrap(err, "error query process list")
 	}
