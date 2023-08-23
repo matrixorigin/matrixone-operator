@@ -32,6 +32,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// for MO < v1.0.0, service-address (and port) must be configured for each rpc service;
+// for MO >= v1.0.0, port-base and service-host is introduced to allocate address for all rpc services.
+// to keep backward-compatibility, we keep the old way to configure service-address (and port) for each rpc service.
+// FIXME(aylei): https://github.com/matrixorigin/matrixone-operator/issues/411
 var startScriptTpl = template.Must(template.New("cn-start-script").Parse(`
 #!/bin/sh
 set -eu
@@ -45,6 +49,7 @@ uuid = "${UUID}"
 listen-address = "0.0.0.0:{{ .CNRpcPort }}"
 service-address = "${POD_IP}:{{ .CNRpcPort }}"
 sql-address = "${POD_IP}:{{ .CNSQLPort }}"
+service-host = "${POD_IP}"
 EOF
 # build instance config
 sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
@@ -207,6 +212,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	// cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
 	cfg.Set([]string{"cn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
+	cfg.Set([]string{"cn", "port-base"}, cnPortBase)
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err

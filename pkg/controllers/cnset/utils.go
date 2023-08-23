@@ -24,6 +24,7 @@ const (
 	nameSuffix = "-cn"
 	CNSQLPort  = 6001
 	cnRPCPort  = 6002
+	cnPortBase = 6002
 )
 
 func getCNServicePort() corev1.ServicePort {

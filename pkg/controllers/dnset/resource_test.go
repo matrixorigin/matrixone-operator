@@ -65,6 +65,7 @@ service-type = "DN"
 
 [dn]
 listen-address = "0.0.0.0:41010"
+port-base = 41010
 
 [dn.LogtailServer]
 listen-address = "0.0.0.0:32003"
@@ -140,6 +141,7 @@ type = "distributed-tae"
 
 [dn]
 listen-address = "0.0.0.0:41010"
+port-base = 41010
 
 [dn.LogtailServer]
 listen-address = "0.0.0.0:32003"
