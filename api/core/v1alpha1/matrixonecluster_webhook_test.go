@@ -247,4 +247,67 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 			Expect(k8sClient.Create(context.TODO(), setDefault)).NotTo(Succeed())
 		}
 	})
+
+	It("should reject duplicate CNGroups", func() {
+		cluster := &MatrixOneCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mo-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: MatrixOneClusterSpec{
+				LogService: LogSetSpec{
+					PodSet: PodSet{
+						Replicas: 3,
+					},
+					Volume: Volume{
+						Size: resource.MustParse("10Gi"),
+					},
+					SharedStorage: SharedStorageProvider{
+						S3: &S3Provider{
+							Path: "test/data",
+						},
+					},
+				},
+				DN: DNSetSpec{
+					PodSet: PodSet{
+						Replicas: 1,
+					},
+				},
+				Version: "test",
+				TP: &CNSetSpec{
+					PodSet: PodSet{
+						Replicas: 3,
+					},
+				},
+			},
+		}
+		dupTP := cluster.DeepCopy()
+		dupTP.Spec.CNGroups = []CNGroup{{
+			Name: "tp",
+			CNSetSpec: CNSetSpec{
+				PodSet: PodSet{
+					Replicas: 3,
+				},
+			},
+		}}
+		Expect(k8sClient.Create(context.TODO(), dupTP)).NotTo(Succeed())
+
+		dupCNGroup := cluster.DeepCopy()
+		dupCNGroup.Spec.CNGroups = []CNGroup{{
+			Name: "a",
+			CNSetSpec: CNSetSpec{
+				PodSet: PodSet{
+					Replicas: 3,
+				},
+			},
+		}, {
+			Name: "a",
+			CNSetSpec: CNSetSpec{
+				PodSet: PodSet{
+					Replicas: 3,
+				},
+			},
+		}}
+		Expect(k8sClient.Create(context.TODO(), dupCNGroup)).NotTo(Succeed())
+	})
 })
