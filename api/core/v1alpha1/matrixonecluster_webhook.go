@@ -76,14 +76,21 @@ func (r *MatrixOneCluster) ValidateUpdate(o runtime.Object) (admission.Warnings,
 func (r *MatrixOneCluster) validateMutateCommon() field.ErrorList {
 	var errs field.ErrorList
 	errs = append(errs, r.Spec.DN.ValidateCreate()...)
+	groups := map[string]bool{}
 	if r.Spec.TP != nil {
 		errs = append(errs, r.Spec.TP.ValidateCreate()...)
+		groups["tp"] = true
 	}
 	if r.Spec.AP != nil {
 		errs = append(errs, r.Spec.AP.ValidateCreate()...)
+		groups["ap"] = true
 	}
 	for i, cn := range r.Spec.CNGroups {
 		errs = append(errs, r.validateCNGroup(cn, field.NewPath("spec").Child("cnGroups").Index(i))...)
+		if groups[cn.Name] {
+			errs = append(errs, field.Invalid(field.NewPath("spec").Child("cnGroups").Index(i).Child("name"), cn.Name, "name must be unique"))
+		}
+		groups[cn.Name] = true
 	}
 	if r.Spec.Version == "" {
 		errs = append(errs, field.Invalid(field.NewPath("spec").Child("version"), "", "version must be set"))
