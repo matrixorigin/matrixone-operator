@@ -35,6 +35,10 @@ const (
 	serviceType = "DN"
 )
 
+// for MO < v1.0.0, service-address (and port) must be configured for each rpc service;
+// for MO >= v1.0.0, port-base and service-host is introduced to allocate address for all rpc services.
+// to keep backward-compatibility, we keep the old way to configure service-address (and port) for each rpc service.
+// FIXME(aylei): https://github.com/matrixorigin/matrixone-operator/issues/411
 // dn service entrypoint script
 var startScriptTpl = template.Must(template.New("dn-start-script").Parse(`
 #!/bin/sh
@@ -52,6 +56,7 @@ bc=$(mktemp)
 cat <<EOF > ${bc}
 uuid = "${UUID}"
 service-address = "${ADDR}:{{ .DNServicePort }}"
+service-host = "${ADDR}"
 EOF
 # build instance config
 sed "/\[dn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
@@ -182,6 +187,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
 	conf.Set([]string{"dn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
 	conf.Set([]string{"dn", "LogtailServer", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LogtailPort))
+	conf.Set([]string{"dn", "port-base"}, dnServicePort)
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
