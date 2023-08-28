@@ -119,6 +119,10 @@ type InitialConfig struct {
 	// default to 3 if LogSet replicas >= 3, to 1 otherwise
 	// +required
 	LogShardReplicas *int `json:"logShardReplicas,omitempty"`
+
+	// RestoreFrom declares the HAKeeper data should be restored
+	// from the given path when hakeeper is bootstrapped
+	RestoreFrom *string `json:"restoreFrom,omitempty"`
 }
 
 // TODO: figure out what status should be exposed

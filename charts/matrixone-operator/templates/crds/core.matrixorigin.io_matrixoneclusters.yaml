@@ -751,6 +751,10 @@ spec:
                           cannot be tuned after cluster creation currently. default
                           to 1
                         type: integer
+                      restoreFrom:
+                        description: RestoreFrom declares the HAKeeper data should
+                          be restored from the given path when hakeeper is bootstrapped
+                        type: string
                     type: object
                   memoryLimitPercent:
                     description: MemoryLimitPercent is percent used to set GOMEMLIMIT

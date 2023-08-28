@@ -304,6 +304,7 @@ _Appears in:_
 | `logShards` _integer_ | LogShards is the initial number of log shards, cannot be tuned after cluster creation currently. default to 1 |
 | `dnShards` _integer_ | DNShards is the initial number of DN shards, cannot be tuned after cluster creation currently. default to 1 |
 | `logShardReplicas` _integer_ | LogShardReplicas is the replica numbers of each log shard, cannot be tuned after cluster creation currently. default to 3 if LogSet replicas >= 3, to 1 otherwise |
+| `restoreFrom` _string_ | RestoreFrom declares the HAKeeper data should be restored from the given path when hakeeper is bootstrapped |
 
 
 #### LogSet

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +50,12 @@ func buildBootstrapConfig(ctx *recon.Context[*v1alpha1.LogSet]) (*corev1.ConfigM
 		"num-of-dn-shards":          ls.Spec.InitialConfig.DNShards,
 		"num-of-log-shard-replicas": ls.Spec.InitialConfig.LogShardReplicas,
 		"init-hakeeper-members":     encodeSeeds(brs),
+	}
+	if ls.Spec.InitialConfig.RestoreFrom != nil {
+		// if RestoreFrom is specified, read the backup data from the backup fileservice
+		m["restore"] = map[string]interface{}{
+			"file-path": fmt.Sprintf("%s://%s", common.BackupFileServiceName, *ls.Spec.InitialConfig.RestoreFrom),
+		}
 	}
 	t := v1alpha1.NewTomlConfig(map[string]interface{}{})
 	t.Set([]string{"logservice", "BootstrapConfig"}, m)

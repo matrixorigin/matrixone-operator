@@ -24,6 +24,11 @@ import (
 )
 
 const (
+	// BackupFileServiceName names the fileservice instance (defined by mo-operator) from which the hakeeper backup data can be read
+	BackupFileServiceName = "BACKUP"
+)
+
+const (
 	// s3FileServiceName names the fileservice instance used as shared data storage
 	s3FileServiceName = "S3"
 	// localFileServiceName names the fileservice instance used as local data or cache storage
@@ -86,6 +91,17 @@ func FileServiceConfig(localPath string, sp v1alpha1.SharedStorageProvider, cach
 			localFS,
 			s3FS,
 			etlFS,
+		},
+	}
+}
+
+// LogServiceFSConfig generate the fileservice config for log-service
+func LogServiceFSConfig(localPath string, sp v1alpha1.SharedStorageProvider) map[string]interface{} {
+	backupFS := sharedFileServiceConfig(sp, nil, BackupFileServiceName, "")
+	return map[string]interface{}{
+		"data-dir": localPath,
+		"fileservice": []map[string]interface{}{
+			backupFS,
 		},
 	}
 }
