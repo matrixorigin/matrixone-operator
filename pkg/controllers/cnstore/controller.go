@@ -47,6 +47,7 @@ const (
 
 	storeCordonAnno = "matrixorigin.io/store-cordon"
 
+	messageCNCordon      = "CNStoreCordon"
 	messageCNPrepareStop = "CNStorePrepareStop"
 	messageCNStoreReady  = "CNStoreReady"
 )
@@ -253,7 +254,8 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 }
 
 func (c *withCNSet) OnCordon(ctx *recon.Context[*corev1.Pod]) error {
-	uid := v1alpha1.GetCNPodUUID(ctx.Obj)
+	pod := ctx.Obj
+	uid := v1alpha1.GetCNPodUUID(pod)
 	ctx.Log.Info("call HAKeeper to cordon CN store", "uuid", uid)
 	err := c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
 		return hc.PatchCNStore(timeout, logpb.CNStateLabel{
@@ -263,6 +265,22 @@ func (c *withCNSet) OnCordon(ctx *recon.Context[*corev1.Pod]) error {
 	})
 	if err != nil {
 		return errors.Wrap(err, "error cordon cn store")
+	}
+	// set pod unready to unregister the pod from internal service
+	if err := ctx.PatchStatus(pod, func() error {
+		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
+		if cond == nil {
+			pod.Status.Conditions = append(pod.Status.Conditions, common.NewCNReadinessCondition(corev1.ConditionFalse, messageCNCordon))
+		} else {
+			if cond.Status != corev1.ConditionFalse {
+				cond.Status = corev1.ConditionFalse
+				cond.LastTransitionTime = metav1.Now()
+			}
+			cond.Message = messageCNCordon
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "patch pod readiness")
 	}
 	return nil
 }
