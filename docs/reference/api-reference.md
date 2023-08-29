@@ -12,6 +12,10 @@ Other resources types represent sub-resources managed by MatrixOneCluster but al
 Refer to https://docs.matrixorigin.io/ for more information about MatrixOne database and matrixone-operator.
 
 ### Resource Types
+- [Backup](#backup)
+- [BackupJob](#backupjob)
+- [BackupJobList](#backupjoblist)
+- [BackupList](#backuplist)
 - [BucketClaim](#bucketclaim)
 - [BucketClaimList](#bucketclaimlist)
 - [CNSet](#cnset)
@@ -20,8 +24,130 @@ Refer to https://docs.matrixorigin.io/ for more information about MatrixOne data
 - [MatrixOneCluster](#matrixonecluster)
 - [ProxySet](#proxyset)
 - [ProxySetList](#proxysetlist)
+- [RestoreJob](#restorejob)
+- [RestoreJobList](#restorejoblist)
 - [WebUI](#webui)
 
+
+
+#### Backup
+
+
+
+A Backup is a resource that represents an MO physical backup
+
+_Appears in:_
+- [BackupList](#backuplist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `Backup`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `meta` _[BackupMeta](#backupmeta)_ | Meta is the backupMeta |
+
+
+#### BackupJob
+
+
+
+A BackupJob is a resource that represents an MO backup job
+
+_Appears in:_
+- [BackupJobList](#backupjoblist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `BackupJob`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[BackupJobSpec](#backupjobspec)_ | Spec is the backupJobSpec |
+
+
+#### BackupJobList
+
+
+
+BackupJobList contains a list of BackupJob
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `BackupJobList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[BackupJob](#backupjob) array_ |  |
+
+
+#### BackupJobSpec
+
+
+
+BackupJobSpec specifies the backup job
+
+_Appears in:_
+- [BackupJob](#backupjob)
+
+| Field | Description |
+| --- | --- |
+| `ttl` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | ttl defines the time to live of the backup job after completed or failed |
+| `source` _[BackupSource](#backupsource)_ | source the backup source |
+| `target` _[SharedStorageProvider](#sharedstorageprovider)_ |  |
+
+
+
+
+#### BackupList
+
+
+
+BackupList contains a list of BackupJ
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `BackupList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[Backup](#backup) array_ |  |
+
+
+#### BackupMeta
+
+
+
+BackupMeta specifies the backup
+
+_Appears in:_
+- [Backup](#backup)
+
+| Field | Description |
+| --- | --- |
+| `location` _[SharedStorageProvider](#sharedstorageprovider)_ | location is the data location of the backup |
+| `id` _string_ | id uniquely identifies the backup |
+| `size` _Quantity_ | size is the backup data size |
+| `atTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | atTime is the backup start time |
+| `completeTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | completeTime the backup complete time |
+| `clusterRef` _string_ | clusterRef is the reference to the cluster that produce this backup |
+
+
+#### BackupSource
+
+
+
+BackupSource is the source of the backup job
+
+_Appears in:_
+- [BackupJobSpec](#backupjobspec)
+
+| Field | Description |
+| --- | --- |
+| `clusterRef` _string_ | clusterRef is the name of the cluster to back up, mutual exclusive with cnSetRef |
+| `cnSetRef` _string_ | cnSetRef is the name of the cnSet to back up, mutual exclusive with clusterRef |
+| `secretRef` _string_ | optional, secretRef is the name of the secret to use for authentication |
+| `namespace` _string_ | optional, namespace is the namespace of the target cluster/cnset, default to current job's namespace |
 
 
 #### BucketClaim
@@ -193,8 +319,10 @@ _Appears in:_
 
 
 _Appears in:_
+- [BackupJobStatus](#backupjobstatus)
 - [BucketClaimStatus](#bucketclaimstatus)
 - [ProxySetStatus](#proxysetstatus)
+- [RestoreJobStatus](#restorejobstatus)
 
 | Field | Description |
 | --- | --- |
@@ -288,6 +416,9 @@ _Appears in:_
 _Appears in:_
 - [SharedStorageProvider](#sharedstorageprovider)
 
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path the path that the shared fileSystem mounted to |
 
 
 #### InitialConfig
@@ -441,6 +572,7 @@ _Appears in:_
 | `topologySpread` _string array_ | TopologyEvenSpread specifies default topology policy for all components, this will be overridden by component-level config |
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector specifies default node selector for all components, this will be overridden by component-level config |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
+| `restoreFrom` _string_ |  |
 
 
 #### ObjectRef
@@ -597,6 +729,58 @@ _Appears in:_
 
 
 
+#### RestoreJob
+
+
+
+A RestoreJob is a resource that represents an MO restore job
+
+_Appears in:_
+- [RestoreJobList](#restorejoblist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `RestoreJob`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[RestoreJobSpec](#restorejobspec)_ | Spec is the restoreJobSpec |
+
+
+#### RestoreJobList
+
+
+
+RestoreJobList contains a list of RestoreJob
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `RestoreJobList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[RestoreJob](#restorejob) array_ |  |
+
+
+#### RestoreJobSpec
+
+
+
+
+
+_Appears in:_
+- [RestoreJob](#restorejob)
+
+| Field | Description |
+| --- | --- |
+| `ttl` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | ttl defines the time to live of the backup job after completed or failed |
+| `backupName` _string_ | backupName specifies the backup to restore, must be set UNLESS externalSource is set |
+| `externalSource` _[SharedStorageProvider](#sharedstorageprovider)_ | optional, restore from an external source, mutual exclusive with backupName |
+| `target` _[SharedStorageProvider](#sharedstorageprovider)_ | target specifies the restore location |
+
+
+
+
 #### RollingUpdateStrategy
 
 
@@ -682,7 +866,10 @@ _Appears in:_
 
 
 _Appears in:_
+- [BackupJobSpec](#backupjobspec)
+- [BackupMeta](#backupmeta)
 - [LogSetSpec](#logsetspec)
+- [RestoreJobSpec](#restorejobspec)
 
 | Field | Description |
 | --- | --- |

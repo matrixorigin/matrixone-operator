@@ -1057,6 +1057,8 @@ spec:
                 required:
                 - replicas
                 type: object
+              restoreFrom:
+                type: string
               topologySpread:
                 description: TopologyEvenSpread specifies default topology policy
                   for all components, this will be overridden by component-level config

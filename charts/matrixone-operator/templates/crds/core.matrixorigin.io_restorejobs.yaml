@@ -1,0 +1,255 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: restorejobs.core.matrixorigin.io
+spec:
+  group: core.matrixorigin.io
+  names:
+    kind: RestoreJob
+    listKind: RestoreJobList
+    plural: restorejobs
+    singular: restorejob
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: A RestoreJob is a resource that represents an MO restore job
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec is the restoreJobSpec
+            properties:
+              backupName:
+                description: backupName specifies the backup to restore, must be set
+                  UNLESS externalSource is set
+                type: string
+              externalSource:
+                description: optional, restore from an external source, mutual exclusive
+                  with backupName
+                properties:
+                  fileSystem:
+                    description: FileSystem specified a fileSystem path as the shared
+                      storage provider, it assumes a shared filesystem is mounted
+                      to this path and instances can safely read-write this path in
+                      current manner.
+                    properties:
+                      path:
+                        description: Path the path that the shared fileSystem mounted
+                          to
+                        type: string
+                    required:
+                    - path
+                    type: object
+                  s3:
+                    description: S3 specifies an S3 bucket as the shared storage provider,
+                      mutual-exclusive with other providers.
+                    properties:
+                      endpoint:
+                        description: Endpoint is the endpoint of the S3 compatible
+                          service default to aws S3 well known endpoint
+                        type: string
+                      path:
+                        description: Path is the s3 storage path in <bucket-name>/<folder>
+                          format, e.g. "my-bucket/my-folder"
+                        type: string
+                      region:
+                        description: Region of the bucket the default region will
+                          be inferred from the deployment environment
+                        type: string
+                      s3RetentionPolicy:
+                        description: S3RetentionPolicy defines the retention policy
+                          of orphaned S3 bucket storage
+                        enum:
+                        - Delete
+                        - Retain
+                        type: string
+                      secretRef:
+                        description: Credentials for s3, the client will automatically
+                          discover credential sources from the environment if not
+                          specified
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      type:
+                        description: 'S3ProviderType is type of this s3 provider,
+                          options: [aws, minio] default to aws'
+                        type: string
+                    required:
+                    - path
+                    type: object
+                type: object
+              target:
+                description: target specifies the restore location
+                properties:
+                  fileSystem:
+                    description: FileSystem specified a fileSystem path as the shared
+                      storage provider, it assumes a shared filesystem is mounted
+                      to this path and instances can safely read-write this path in
+                      current manner.
+                    properties:
+                      path:
+                        description: Path the path that the shared fileSystem mounted
+                          to
+                        type: string
+                    required:
+                    - path
+                    type: object
+                  s3:
+                    description: S3 specifies an S3 bucket as the shared storage provider,
+                      mutual-exclusive with other providers.
+                    properties:
+                      endpoint:
+                        description: Endpoint is the endpoint of the S3 compatible
+                          service default to aws S3 well known endpoint
+                        type: string
+                      path:
+                        description: Path is the s3 storage path in <bucket-name>/<folder>
+                          format, e.g. "my-bucket/my-folder"
+                        type: string
+                      region:
+                        description: Region of the bucket the default region will
+                          be inferred from the deployment environment
+                        type: string
+                      s3RetentionPolicy:
+                        description: S3RetentionPolicy defines the retention policy
+                          of orphaned S3 bucket storage
+                        enum:
+                        - Delete
+                        - Retain
+                        type: string
+                      secretRef:
+                        description: Credentials for s3, the client will automatically
+                          discover credential sources from the environment if not
+                          specified
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      type:
+                        description: 'S3ProviderType is type of this s3 provider,
+                          options: [aws, minio] default to aws'
+                        type: string
+                    required:
+                    - path
+                    type: object
+                type: object
+              ttl:
+                description: ttl defines the time to live of the backup job after
+                  completed or failed
+                type: string
+            required:
+            - target
+            type: object
+          status:
+            description: Spec is the restoreJobStatus
+            properties:
+              conditions:
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              phase:
+                type: string
+            required:
+            - phase
+            type: object
+        required:
+        - spec
+        - status
+        type: object
+    served: true
+    storage: true
+    subresources: {}

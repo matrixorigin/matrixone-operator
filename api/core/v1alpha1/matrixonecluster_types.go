@@ -76,6 +76,10 @@ type MatrixOneClusterSpec struct {
 
 	// +optional
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+
+	// +optional
+	// +immutable
+	RestoreFrom *string `json:"restoreFrom,omitempty"`
 }
 
 type CNGroup struct {
