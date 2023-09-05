@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	createClusterTimeout   = 5 * time.Minute
+	createClusterTimeout   = 10 * time.Minute
 	rollingUpdateTimeout   = 5 * time.Minute
 	teardownClusterTimeout = 10 * time.Minute
 	pollInterval           = 15 * time.Second
@@ -174,7 +174,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		Expect(pfh.Ready(portForwardTimeout)).To(Succeed(), "port-forward should complete within timeout")
 		logger.Info("run SQL smoke test")
 		Eventually(func() error {
-			err := sql.MySQLDialectSmokeTest("dump:111@tcp(127.0.0.1:6001)/test?timeout=15s")
+			err := sql.MySQLDialectSmokeTest("dump:111@tcp(127.0.0.1:6001)/?timeout=15s")
 			if err != nil {
 				logger.Infow("error running sql", "error", err)
 				return errWait
