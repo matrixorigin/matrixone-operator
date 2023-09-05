@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/go-logr/zapr"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/br"
 	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
 	"os"
 
@@ -164,6 +165,28 @@ func main() {
 	moActor := &mocluster.MatrixOneClusterActor{}
 	err = moActor.Reconcile(mgr)
 	exitIf(err, "unable to set up matrixone cluster controller")
+
+	if features.DefaultFeatureGate.Enabled(features.BRSupport) {
+		backupActor := br.NewBackupActor(operatorCfg.BRConfig.Image)
+		err = backupActor.Reconcile(mgr)
+		exitIf(err, "unable to setup backup actor")
+
+		restoreActor := br.NewRestoreActor(operatorCfg.BRConfig.Image)
+		err = restoreActor.Reconcile(mgr)
+		exitIf(err, "unable to setup restore actor")
+
+		backupGC := &br.GCActor[*v1alpha1.BackupJob]{
+			ConditionType: v1alpha1.JobConditionTypeEnded,
+		}
+		err = br.StartJobGCer(mgr, backupGC, &v1alpha1.BackupJob{})
+		exitIf(err, "unable to setup backup GCer")
+
+		restoreGC := &br.GCActor[*v1alpha1.RestoreJob]{
+			ConditionType: v1alpha1.JobConditionTypeEnded,
+		}
+		err = br.StartJobGCer(mgr, restoreGC, &v1alpha1.RestoreJob{})
+		exitIf(err, "unable to setup restore GCer")
+	}
 
 	if features.DefaultFeatureGate.Enabled(features.ProxySupport) {
 		proxyActor := &proxyset.Actor{}

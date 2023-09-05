@@ -26,6 +26,11 @@ import (
 type OperatorConfig struct {
 	DefaultArgs  *v1alpha1.DefaultArgs `json:"defaultArgs,omitempty" yaml:"defaultArgs,omitempty"`
 	FeatureGates map[string]bool       `json:"featureGates,omitempty" yaml:"featureGates,omitempty"`
+	BRConfig     BrConfig              `json:"brConfig,omitempty" yaml:"brConfig,omitempty"`
+}
+
+type BrConfig struct {
+	Image string `json:"image,omitempty" yaml:"image,omitempty"`
 }
 
 // LoadOperatorConfig read all operator configurations from configmap mount path, and load it into OperatorConfig struct

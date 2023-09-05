@@ -15,6 +15,9 @@
 package common
 
 const (
+	PreNameLabelKey = "matrixorigin.io/pre-name"
+	PreUUIDLabelKey = "matrixorigin.io/pre-uuid"
+
 	// ReasonNoEnoughReadyStores means the resource fall into current condition due to there is no enough ready stores
 	ReasonNoEnoughReadyStores = "NoEnoughReadyStores"
 

@@ -1472,12 +1472,12 @@ spec:
                   groups:
                     items:
                       properties:
+                        host:
+                          type: string
                         name:
                           type: string
                         ready:
                           type: boolean
-                        serviceName:
-                          type: string
                         synced:
                           type: boolean
                       type: object
@@ -1664,6 +1664,8 @@ spec:
                       type: object
                     type: array
                 type: object
+              host:
+                type: string
               logService:
                 description: LogService is the LogService status
                 properties:
@@ -1776,6 +1778,8 @@ spec:
                   condition, programmatic client should rely on ConditionalStatus
                   rather than phase.
                 type: string
+              port:
+                type: integer
               proxy:
                 description: Proxy is the Proxy set status
                 properties:
@@ -1850,6 +1854,10 @@ spec:
                       - type
                       type: object
                     type: array
+                  host:
+                    type: string
+                  port:
+                    type: integer
                 type: object
               readable:
                 description: Readable is the readable status for human

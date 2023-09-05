@@ -26,6 +26,10 @@ import (
 const (
 	// BackupFileServiceName names the fileservice instance (defined by mo-operator) from which the hakeeper backup data can be read
 	BackupFileServiceName = "BACKUP"
+
+	AWSAccessKeyID     = "AWS_ACCESS_KEY_ID"
+	AWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
+	AWSRegion          = "AWS_REGION"
 )
 
 const (
@@ -41,10 +45,7 @@ const (
 	fsBackendTypeS3      = "S3"
 	fsBackendTypeMinio   = "MINIO"
 
-	awsAccessKeyID     = "AWS_ACCESS_KEY_ID"
-	awsSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
-	awsRegion          = "AWS_REGION"
-	defaultAWSRegion   = "us-west-2"
+	defaultAWSRegion = "us-west-2"
 
 	byteSuffix = "B"
 )
@@ -54,7 +55,7 @@ func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1
 	for i := range podSpec.Containers {
 		if s3p := sp.S3; s3p != nil {
 			if s3p.SecretRef != nil {
-				for _, key := range []string{awsAccessKeyID, awsSecretAccessKey} {
+				for _, key := range []string{AWSAccessKeyID, AWSSecretAccessKey} {
 					podSpec.Containers[i].Env = util.UpsertByKey(podSpec.Containers[i].Env, corev1.EnvVar{Name: key, ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
 							LocalObjectReference: *s3p.SecretRef,
@@ -67,7 +68,7 @@ func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1
 			if region == "" {
 				region = defaultAWSRegion
 			}
-			podSpec.Containers[i].Env = util.UpsertByKey(podSpec.Containers[i].Env, corev1.EnvVar{Name: awsRegion, Value: region}, util.EnvVarKey)
+			podSpec.Containers[i].Env = util.UpsertByKey(podSpec.Containers[i].Env, corev1.EnvVar{Name: AWSRegion, Value: region}, util.EnvVarKey)
 		}
 	}
 }

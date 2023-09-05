@@ -12,6 +12,9 @@ image:
   tag: "0.8.0-alpha.7"
   pullPolicy: IfNotPresent
 
+backupRestore:
+  image: aylei/mobr
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
@@ -80,3 +83,4 @@ featureGates:
   s3Reclaim: true
   proxySupport: true
   cnLabel: true
+  backupRestore: true

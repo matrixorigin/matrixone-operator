@@ -17,7 +17,7 @@ spec:
     volume:
       size: 10Gi
   dn:
-    replicas: 2
+    replicas: 1
     cacheVolume:
       size: 10Gi
   cnGroups:

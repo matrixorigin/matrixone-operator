@@ -16,3 +16,6 @@ data:
     {{- range $key, $value := .Values.featureGates }}
     {{ $key }}: {{ $value }}
     {{- end }}
+
+  brConfig: |
+    image: {{ .Values.backupRestore.image }}

@@ -37,6 +37,9 @@ type ProxySetSpec struct {
 
 type ProxySetStatus struct {
 	ConditionalStatus `json:",inline"`
+
+	Host string `json:"host,omitempty"`
+	Port int    `json:"port,omitempty"`
 }
 
 type ProxySetDeps struct {

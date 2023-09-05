@@ -128,6 +128,10 @@ var _ = Describe("MatrixOneCluster test", func() {
 				logger.Infow("wait mo cluster ready", "cluster", mo.Name)
 				return errWait
 			}
+			if !recon.IsSynced(mo) {
+				logger.Infow("wait mo cluster synced", "cluster", mo.Name)
+				return errWait
+			}
 			return nil
 		}, createClusterTimeout, pollInterval).Should(Succeed())
 		var proxyPod *corev1.Pod
