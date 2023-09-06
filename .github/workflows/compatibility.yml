@@ -1,0 +1,28 @@
+name: compatibility_test
+
+on:
+  schedule:
+  - cron: '30 5 * * *'
+  workflow_dispatch:
+    inputs:
+      moVersions:
+        description: "MO versions"
+        default: '["0.8.0", "1.0.0-rc1"]'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event-name }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        moVersion: ${{ fromJSON(github.event.inputs.moVersions)}}
+    steps:
+    - uses: actions/checkout@v3
+    - name: run
+      uses: ./.github/actions/e2e
+      with:
+        mo_version: ${{ matrix.moVersion }}

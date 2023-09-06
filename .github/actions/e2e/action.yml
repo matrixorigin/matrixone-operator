@@ -1,5 +1,9 @@
 name: e2e
 description: "operator e2e test"
+inputs:
+  mo_version:
+    description: "MO_VERSION"
+    required: false
 
 runs:
   using: "composite"
@@ -21,5 +25,7 @@ runs:
 
     - name: Run kind test
       shell: bash
+      env:
+        MO_VERSION: ${{ inputs.mo_version }}
       run:  |
         make e2e-kind TAG=e2e-kind
