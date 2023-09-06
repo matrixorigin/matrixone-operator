@@ -364,8 +364,12 @@ spec:
                   - type
                   type: object
                 type: array
+              host:
+                type: string
               labelSelector:
                 type: string
+              port:
+                type: integer
               replicas:
                 format: int32
                 type: integer

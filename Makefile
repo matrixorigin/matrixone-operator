@@ -4,7 +4,7 @@ SHELL=/usr/bin/env bash -o pipefail
 REPO ?= "matrixorigin/matrixone-operator"
 TAG ?= "latest"
 GOPROXY ?= "https://proxy.golang.org,direct"
-MO_VERSION ?= "nightly-fbcc4fca"
+MO_VERSION ?= "nightly-c929fdf9"
 MO_IMAGE_REPO ?= "matrixorigin/matrixone"
 BRANCH ?= main
 

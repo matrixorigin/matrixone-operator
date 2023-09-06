@@ -23,7 +23,7 @@ spec:
       jsonPath: .meta.atTime
       name: At
       type: string
-    - jsonPath: .meta.clusterRef
+    - jsonPath: .meta.sourceRef
       name: Source
       type: string
     name: v1alpha1
@@ -47,10 +47,6 @@ spec:
               atTime:
                 description: atTime is the backup start time
                 format: date-time
-                type: string
-              clusterRef:
-                description: clusterRef is the reference to the cluster that produce
-                  this backup
                 type: string
               completeTime:
                 description: completeTime the backup complete time
@@ -117,6 +113,8 @@ spec:
                     - path
                     type: object
                 type: object
+              raw:
+                type: string
               size:
                 anyOf:
                 - type: integer
@@ -124,13 +122,17 @@ spec:
                 description: size is the backup data size
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
+              sourceRef:
+                description: clusterRef is the reference to the cluster that produce
+                  this backup
+                type: string
             required:
             - atTime
-            - clusterRef
             - completeTime
             - id
             - location
-            - size
+            - raw
+            - sourceRef
             type: object
           metadata:
             type: object

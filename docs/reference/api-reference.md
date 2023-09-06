@@ -94,6 +94,7 @@ _Appears in:_
 | `ttl` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | ttl defines the time to live of the backup job after completed or failed |
 | `source` _[BackupSource](#backupsource)_ | source the backup source |
 | `target` _[SharedStorageProvider](#sharedstorageprovider)_ |  |
+| `overlay` _[Overlay](#overlay)_ |  |
 
 
 
@@ -130,7 +131,8 @@ _Appears in:_
 | `size` _Quantity_ | size is the backup data size |
 | `atTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | atTime is the backup start time |
 | `completeTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | completeTime the backup complete time |
-| `clusterRef` _string_ | clusterRef is the reference to the cluster that produce this backup |
+| `sourceRef` _string_ | clusterRef is the reference to the cluster that produce this backup |
+| `raw` _string_ |  |
 
 
 #### BackupSource
@@ -147,7 +149,6 @@ _Appears in:_
 | `clusterRef` _string_ | clusterRef is the name of the cluster to back up, mutual exclusive with cnSetRef |
 | `cnSetRef` _string_ | cnSetRef is the name of the cnSet to back up, mutual exclusive with clusterRef |
 | `secretRef` _string_ | optional, secretRef is the name of the secret to use for authentication |
-| `namespace` _string_ | optional, namespace is the namespace of the target cluster/cnset, default to current job's namespace |
 
 
 #### BucketClaim
@@ -227,7 +228,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `name` _string_ |  |
-| `serviceName` _string_ |  |
+| `host` _string_ |  |
 | `ready` _boolean_ |  |
 | `synced` _boolean_ |  |
 
@@ -597,7 +598,9 @@ _Appears in:_
 Overlay allows advanced customization of the pod spec in the set
 
 _Appears in:_
+- [BackupJobSpec](#backupjobspec)
 - [PodSet](#podset)
+- [RestoreJob](#restorejob)
 
 | Field | Description |
 | --- | --- |
@@ -744,6 +747,7 @@ _Appears in:_
 | `kind` _string_ | `RestoreJob`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[RestoreJobSpec](#restorejobspec)_ | Spec is the restoreJobSpec |
+| `overlay` _[Overlay](#overlay)_ |  |
 
 
 #### RestoreJobList

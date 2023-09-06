@@ -29,6 +29,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+const (
+	ProxyPort = 6001
+)
+
 type Actor struct{}
 
 var _ recon.Actor[*v1alpha1.ProxySet] = &Actor{}
@@ -56,6 +60,8 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.ProxySet]) (recon.Action[*v
 			Status:  metav1.ConditionTrue,
 			Message: "proxy ready",
 		})
+		p.Status.Host = fmt.Sprintf("%s.%s", svc.Name, svc.Namespace)
+		p.Status.Port = ProxyPort
 		return nil, nil
 	}
 	// proxy not ready

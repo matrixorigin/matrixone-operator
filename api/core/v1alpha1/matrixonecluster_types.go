@@ -119,6 +119,9 @@ type MatrixOneClusterStatus struct {
 
 	// Readable is the readable status for human
 	Readable *ReadableStatus `json:"readable,omitempty"`
+
+	Host string `json:"host,omitempty"`
+	Port int    `json:"port,omitempty"`
 }
 
 type ClusterMetrics struct {
@@ -144,10 +147,10 @@ type CNGroupsStatus struct {
 }
 
 type CNGroupStatus struct {
-	Name        string `json:"name,omitempty"`
-	ServiceName string `json:"serviceName,omitempty"`
-	Ready       bool   `json:"ready,omitempty"`
-	Synced      bool   `json:"synced,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Host   string `json:"host,omitempty"`
+	Ready  bool   `json:"ready,omitempty"`
+	Synced bool   `json:"synced,omitempty"`
 }
 
 func (s CNGroupsStatus) Synced() bool {

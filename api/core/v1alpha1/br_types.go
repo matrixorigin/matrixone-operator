@@ -15,8 +15,25 @@
 package v1alpha1
 
 import (
+	fmt "fmt"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
+)
+
+const (
+	JobPhasePending   = "Pending"
+	JobPhaseRunning   = "Running"
+	JobPhaseCompleted = "Completed"
+	JobPhaseFailed    = "Failed"
+)
+
+const (
+	JobConditionTypeEnded = "Ended"
+)
+
+const (
+	defaultTTL = 1 * time.Hour
 )
 
 // BackupJobSpec specifies the backup job
@@ -28,6 +45,8 @@ type BackupJobSpec struct {
 	Source BackupSource `json:"source"`
 
 	Target SharedStorageProvider `json:"target"`
+
+	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
 // BackupSource is the source of the backup job
@@ -40,9 +59,16 @@ type BackupSource struct {
 
 	// optional, secretRef is the name of the secret to use for authentication
 	SecretRef *string `json:"secretRef,omitempty"`
+}
 
-	// optional, namespace is the namespace of the target cluster/cnset, default to current job's namespace
-	Namespace *string `json:"namespace,omitempty"`
+func (r *BackupJob) GetSourceRef() string {
+	if r.Spec.Source.ClusterRef != nil {
+		return fmt.Sprintf("matrixonecluster/%s/%s", r.Namespace, *r.Spec.Source.ClusterRef)
+	}
+	if r.Spec.Source.CNSetRef != nil {
+		return fmt.Sprintf("cnset/%s/%s", r.Namespace, *r.Spec.Source.CNSetRef)
+	}
+	return ""
 }
 
 type BackupJobStatus struct {
@@ -59,6 +85,7 @@ type BackupJobStatus struct {
 // +kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Backup",type="string",JSONPath=".status.backup"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:subresource:status
 type BackupJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -67,7 +94,14 @@ type BackupJob struct {
 	Spec BackupJobSpec `json:"spec"`
 
 	// Spec is the backupJobStatus
-	Status BackupJobStatus `json:"status"`
+	Status BackupJobStatus `json:"status,omitempty"`
+}
+
+func (r *BackupJob) GetTTL() time.Duration {
+	if r.Spec.TTL != nil {
+		return r.Spec.TTL.Duration
+	}
+	return defaultTTL
 }
 
 // BackupMeta specifies the backup
@@ -79,7 +113,7 @@ type BackupMeta struct {
 	ID string `json:"id"`
 
 	// size is the backup data size
-	Size resource.Quantity `json:"size"`
+	Size *resource.Quantity `json:"size,omitempty"`
 
 	// atTime is the backup start time
 	AtTime metav1.Time `json:"atTime"`
@@ -88,7 +122,9 @@ type BackupMeta struct {
 	CompleteTime metav1.Time `json:"completeTime"`
 
 	// clusterRef is the reference to the cluster that produce this backup
-	ClusterRef string `json:"clusterRef"`
+	SourceRef string `json:"sourceRef"`
+
+	Raw string `json:"raw"`
 }
 
 // A Backup is a resource that represents an MO physical backup
@@ -96,7 +132,7 @@ type BackupMeta struct {
 // +kubebuilder:resource:scope="Cluster"
 // +kubebuilder:printcolumn:name="ID",type="string",JSONPath=".meta.id"
 // +kubebuilder:printcolumn:name="At",type="string",format="date-time",JSONPath=".meta.atTime"
-// +kubebuilder:printcolumn:name="Source",type="string",JSONPath=".meta.clusterRef"
+// +kubebuilder:printcolumn:name="Source",type="string",JSONPath=".meta.sourceRef"
 type Backup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -130,6 +166,7 @@ type RestoreJobStatus struct {
 // +kubebuilder:resource:scope="Namespaced"
 // +kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:subresource:status
 type RestoreJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -138,7 +175,20 @@ type RestoreJob struct {
 	Spec RestoreJobSpec `json:"spec"`
 
 	// Spec is the restoreJobStatus
-	Status RestoreJobStatus `json:"status"`
+	Status RestoreJobStatus `json:"status,omitempty"`
+
+	Overlay *Overlay `json:"overlay,omitempty"`
+}
+
+func (r *RestoreJob) GetTTL() time.Duration {
+	if r.Spec.TTL != nil {
+		return r.Spec.TTL.Duration
+	}
+	return defaultTTL
+}
+
+func (r *RestoreJob) GetOverlay() *Overlay {
+	return r.Overlay
 }
 
 func (r *RestoreJob) SetCondition(condition metav1.Condition) {
@@ -149,12 +199,32 @@ func (r *RestoreJob) GetConditions() []metav1.Condition {
 	return r.Status.GetConditions()
 }
 
+func (r *RestoreJob) GetPhase() string {
+	return r.Status.Phase
+}
+
+func (r *RestoreJob) SetPhase(phase string) {
+	r.Status.Phase = phase
+}
+
+func (r *BackupJob) GetOverlay() *Overlay {
+	return r.Spec.Overlay
+}
+
 func (r *BackupJob) SetCondition(condition metav1.Condition) {
 	r.Status.SetCondition(condition)
 }
 
 func (r *BackupJob) GetConditions() []metav1.Condition {
 	return r.Status.GetConditions()
+}
+
+func (r *BackupJob) GetPhase() string {
+	return r.Status.Phase
+}
+
+func (r *BackupJob) SetPhase(phase string) {
+	r.Status.Phase = phase
 }
 
 // BackupJobList contains a list of BackupJob
