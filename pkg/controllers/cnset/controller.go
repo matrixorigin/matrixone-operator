@@ -264,14 +264,21 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	if cs.Spec.Lifecycle == nil {
 		cs.Spec.Lifecycle = &pub.Lifecycle{}
 	}
-	preStop := &pub.LifecycleHook{
+	cs.Spec.Lifecycle.PreDelete = &pub.LifecycleHook{
 		FinalizersHandler: []string{
 			common.CNDrainingFinalizer,
 		},
 		MarkPodNotReady: true,
 	}
-	cs.Spec.Lifecycle.PreDelete = preStop
-	cs.Spec.Lifecycle.InPlaceUpdate = preStop
+	cs.Spec.Lifecycle.InPlaceUpdate = &pub.LifecycleHook{
+		FinalizersHandler: []string{
+			common.CNDrainingFinalizer,
+		},
+		// there is a bug the kruise cannot patch pod readiness after in-place update,
+		// so we cannot MarkPodNotReady in this case, instead, we mark the pod as not ready
+		// through our cn-store readiness-gate.
+		MarkPodNotReady: false,
+	}
 
 	if err := syncPodMeta(ctx.Obj, cs); err != nil {
 		return errors.Wrap(err, "sync pod meta")
