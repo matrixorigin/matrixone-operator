@@ -79,7 +79,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 						},
 					},
 				}},
-				DN: v1alpha1.DNSetSpec{
+				TN: &v1alpha1.DNSetSpec{
 					PodSet: v1alpha1.PodSet{
 						// test multiple DN replicas
 						Replicas: 1,
@@ -161,7 +161,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 					proxyN++
 				}
 			}
-			if logN >= mo.Spec.LogService.Replicas && dnN >= mo.Spec.DN.Replicas && cnN >= mo.Spec.CNGroups[0].Replicas && proxyN >= mo.Spec.Proxy.Replicas {
+			if logN >= mo.Spec.LogService.Replicas && dnN >= mo.GetTN().Replicas && cnN >= mo.Spec.CNGroups[0].Replicas && proxyN >= mo.Spec.Proxy.Replicas {
 				return nil
 			}
 			logger.Infow("wait enough pods running", "log pods count", logN, "cn pods count", cnN, "dn pods count", dnN)
@@ -191,7 +191,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		})
 		Expect(kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo)).To(Succeed())
 		mo.Spec.LogService.Config = configTemplate.DeepCopy()
-		mo.Spec.DN.Config = configTemplate.DeepCopy()
+		mo.GetTN().Config = configTemplate.DeepCopy()
 		mo.Spec.CNGroups[0].Config = configTemplate.DeepCopy()
 		Expect(kubeCli.Update(ctx, mo)).To(Succeed())
 		verifyConfig := func(pods []corev1.Pod, comp string) error {

@@ -66,8 +66,8 @@ spec:
 #        # secretRef specifies the secret used to access S3, must be created in advance
 #        secretRef:
 #          name: minio
-  # required, specification of DN
-  dn:
+  # required, specification of TN
+  tn:
     # required, DN replicas
     replicas: 1
     # optional, cacheVolume will add an extra volume for DNs as the shared storage cache
