@@ -39,7 +39,11 @@ type MatrixOneClusterSpec struct {
 	CNGroups []CNGroup `json:"cnGroups,omitempty"`
 
 	// DN is the default DN pod set of this Cluster
-	DN DNSetSpec `json:"dn"`
+	// Deprecated: use TN instead
+	DN *DNSetSpec `json:"dn,omitempty"`
+
+	// TN is the default TN pod set of this Cluster
+	TN *DNSetSpec `json:"tn,omitempty"`
 
 	// LogService is the default LogService pod set of this cluster
 	LogService LogSetSpec `json:"logService"`
@@ -80,6 +84,13 @@ type MatrixOneClusterSpec struct {
 	// +optional
 	// +immutable
 	RestoreFrom *string `json:"restoreFrom,omitempty"`
+}
+
+func (m *MatrixOneCluster) GetTN() *DNSetSpec {
+	if m.Spec.TN == nil {
+		return m.Spec.DN
+	}
+	return m.Spec.TN
 }
 
 type CNGroup struct {

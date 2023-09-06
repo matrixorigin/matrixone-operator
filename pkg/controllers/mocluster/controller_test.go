@@ -54,7 +54,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 					S3: &v1alpha1.S3Provider{Path: "test/data"},
 				},
 			},
-			DN: v1alpha1.DNSetSpec{
+			TN: &v1alpha1.DNSetSpec{
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 				},

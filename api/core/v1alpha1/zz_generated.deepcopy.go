@@ -1178,7 +1178,16 @@ func (in *MatrixOneClusterSpec) DeepCopyInto(out *MatrixOneClusterSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.DN.DeepCopyInto(&out.DN)
+	if in.DN != nil {
+		in, out := &in.DN, &out.DN
+		*out = new(DNSetSpec)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.TN != nil {
+		in, out := &in.TN, &out.TN
+		*out = new(DNSetSpec)
+		(*in).DeepCopyInto(*out)
+	}
 	in.LogService.DeepCopyInto(&out.LogService)
 	if in.WebUI != nil {
 		in, out := &in.WebUI, &out.WebUI

@@ -16,7 +16,7 @@ spec:
           name: minio
     volume:
       size: 10Gi
-  dn:
+  tn:
     replicas: 1
     cacheVolume:
       size: 10Gi
