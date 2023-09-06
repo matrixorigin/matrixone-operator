@@ -134,7 +134,12 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 		conf = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
 	// 1. build base config file
-	conf.Merge(common.LogServiceFSConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage))
+	if ls.Spec.InitialConfig.RestoreFrom != nil {
+		conf.Merge(common.LogServiceFSConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage))
+	} else {
+		// TODO(aylei): for 0.8 compatibility, remove this compatibility code after we drop 0.8 support in operator
+		conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, nil))
+	}
 	conf.Set([]string{"service-type"}, serviceTypeLog)
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentID(ls))
 	conf.Set([]string{"logservice", "logservice-listen-address"}, fmt.Sprintf("0.0.0.0:%d", logServicePort))

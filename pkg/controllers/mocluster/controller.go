@@ -232,7 +232,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 		}
 		cngs := v1alpha1.CNGroupStatus{
 			Name:   cnSet.Name,
-			Host:   fmt.Sprintf(cnSet.Name+"-cn", mo.Namespace),
+			Host:   fmt.Sprintf("%s.%s", cnSet.Name+"-cn", mo.Namespace),
 			Ready:  recon.IsReady(&cnSet),
 			Synced: recon.IsSynced(&cnSet),
 		}
