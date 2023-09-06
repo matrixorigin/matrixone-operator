@@ -132,7 +132,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 		return nil, errors.Wrap(err, "sync LogSet")
 	}
 	_, err = utils.CreateOwnedOrUpdate(ctx, dn, func() error {
-		dn.Spec = mo.Spec.DN
+		dn.Spec = *mo.GetTN()
 		setPodSetDefault(&dn.Spec.PodSet, mo)
 		setOverlay(&dn.Spec.Overlay, mo)
 		dn.Spec.Image = mo.DnSetImage()

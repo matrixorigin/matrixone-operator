@@ -40,7 +40,12 @@ var _ webhook.Defaulter = &MatrixOneCluster{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *MatrixOneCluster) Default() {
 	r.Spec.LogService.Default()
-	r.Spec.DN.Default()
+	if r.Spec.DN != nil {
+		r.Spec.DN.Default()
+	}
+	if r.Spec.TN != nil {
+		r.Spec.TN.Default()
+	}
 	if r.Spec.TP != nil {
 		r.Spec.TP.Default()
 	}
@@ -59,6 +64,12 @@ var _ webhook.Validator = &MatrixOneCluster{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *MatrixOneCluster) ValidateCreate() (admission.Warnings, error) {
 	var errs field.ErrorList
+	if r.Spec.DN == nil && r.Spec.TN == nil {
+		errs = append(errs, field.Invalid(field.NewPath("spec").Child("tn"), "", ".spec.tn must be set"))
+	}
+	if r.Spec.DN != nil && r.Spec.TN != nil {
+		errs = append(errs, field.Invalid(field.NewPath("spec").Child("dn"), "", "legacy component .spec.dn cannot be set when .spec.tn is set"))
+	}
 	errs = append(errs, r.validateMutateCommon()...)
 	errs = append(errs, r.Spec.LogService.ValidateCreate(LogSetKey(r))...)
 	return nil, invalidOrNil(errs, r)
@@ -75,7 +86,7 @@ func (r *MatrixOneCluster) ValidateUpdate(o runtime.Object) (admission.Warnings,
 
 func (r *MatrixOneCluster) validateMutateCommon() field.ErrorList {
 	var errs field.ErrorList
-	errs = append(errs, r.Spec.DN.ValidateCreate()...)
+	errs = append(errs, r.GetTN().ValidateCreate()...)
 	groups := map[string]bool{}
 	if r.Spec.TP != nil {
 		errs = append(errs, r.Spec.TP.ValidateCreate()...)

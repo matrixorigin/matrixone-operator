@@ -120,7 +120,7 @@ func NewMoTpl(namespace, version, repo string) *v1alpha1.MatrixOneCluster {
 					Size: resource.MustParse("100Mi"),
 				},
 			},
-			DN: v1alpha1.DNSetSpec{
+			TN: &v1alpha1.DNSetSpec{
 				PodSet: v1alpha1.PodSet{
 					// test multiple DN replicas
 					Replicas: 1,
