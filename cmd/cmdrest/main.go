@@ -19,7 +19,6 @@ import (
 	"errors"
 	"flag"
 	"github.com/gin-gonic/gin"
-	"github.com/matrixorigin/matrixone-operator/pkg/cmd"
 	"io"
 	"os"
 	"os/exec"
@@ -68,8 +67,8 @@ func (r *Runner) Start() {
 	}()
 }
 
-func (r *Runner) GetStatus() *cmd.Status {
-	return &cmd.Status{
+func (r *Runner) GetStatus() *Status {
+	return &Status{
 		Command:   r.cmd,
 		Completed: r.completed,
 		Stdout:    r.stdout,
@@ -97,4 +96,12 @@ func main() {
 	})
 
 	router.Run(listenAddr)
+}
+
+type Status struct {
+	Command   string `json:"command"`
+	Completed bool   `json:"completed"`
+	Stdout    string `json:"stdout"`
+	Stderr    string `json:"stderr"`
+	ExitCode  int    `json:"exitCode"`
 }
