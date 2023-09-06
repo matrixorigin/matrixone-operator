@@ -48,7 +48,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						S3: &S3Provider{Path: "test/data"},
 					},
 				},
-				DN: DNSetSpec{
+				TN: &DNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
@@ -65,7 +65,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		Expect(k8sClient.Create(context.TODO(), func() *MatrixOneCluster {
 			singleReplica := v06.DeepCopy()
 			singleReplica.Spec.LogService.Replicas = 1
-			singleReplica.Spec.DN.Replicas = 1
+			singleReplica.Spec.TN.Replicas = 1
 			singleReplica.Spec.TP.Replicas = 1
 			singleReplica.Name = "mo-" + randomString(5)
 			return singleReplica
@@ -90,7 +90,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						S3: &S3Provider{Path: "test/data"},
 					},
 				},
-				DN: DNSetSpec{
+				TN: &DNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
@@ -141,7 +141,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						},
 					},
 				},
-				DN: DNSetSpec{
+				TN: &DNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
@@ -200,7 +200,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						},
 					},
 				},
-				DN: DNSetSpec{
+				TN: &DNSetSpec{
 					PodSet: PodSet{
 						Replicas: 2,
 					},
@@ -268,7 +268,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 						},
 					},
 				},
-				DN: DNSetSpec{
+				TN: &DNSetSpec{
 					PodSet: PodSet{
 						Replicas: 1,
 					},

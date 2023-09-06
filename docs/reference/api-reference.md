@@ -564,7 +564,8 @@ _Appears in:_
 | `tp` _[CNSetSpec](#cnsetspec)_ | TP is the default CN pod set that accepts client connections and execute queries Deprecated: use cnGroups instead |
 | `ap` _[CNSetSpec](#cnsetspec)_ | AP is an optional CN pod set that accept MPP sub-plans to accelerate sql queries Deprecated: use cnGroups instead |
 | `cnGroups` _[CNGroup](#cngroup) array_ | CNGroups are CN pod sets that have different spec like resources, arch, store labels |
-| `dn` _[DNSetSpec](#dnsetspec)_ | DN is the default DN pod set of this Cluster |
+| `dn` _[DNSetSpec](#dnsetspec)_ | DN is the default DN pod set of this Cluster Deprecated: use TN instead |
+| `tn` _[DNSetSpec](#dnsetspec)_ | TN is the default TN pod set of this Cluster |
 | `logService` _[LogSetSpec](#logsetspec)_ | LogService is the default LogService pod set of this cluster |
 | `webui` _[WebUISpec](#webuispec)_ | WebUI is the default web ui pod of this cluster |
 | `proxy` _[ProxySetSpec](#proxysetspec)_ | Proxy defines an optional MO Proxy of this cluster |

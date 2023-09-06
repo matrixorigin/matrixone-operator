@@ -25,7 +25,7 @@ func (m *MatrixOneCluster) LogSetImage() string {
 }
 
 func (m *MatrixOneCluster) DnSetImage() string {
-	image := m.Spec.DN.Image
+	image := m.GetTN().Image
 	if image == "" {
 		image = m.DefaultImage()
 	}
