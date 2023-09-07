@@ -12,7 +12,7 @@ You can follow our [Get Started](./docs/getting_started.md) guide to quick start
 
 ## Contributing
 
-Contributions are welcome and greatly appreciated. See [develop guide](./docs/dev_guide.md) for details about Matrixone Operator develop story ideas.
+Contributions are welcome and greatly appreciated. See [develop guide](./docs/dev/dev_guide.md) for details about Matrixone Operator develop story ideas.
 
 ## License
 

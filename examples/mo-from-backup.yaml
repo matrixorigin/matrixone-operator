@@ -3,20 +3,22 @@ kind: MatrixOneCluster
 metadata:
   name: mo
 spec:
+  restoreFrom: #BackupName
   imageRepository: matrixorigin/matrixone
   version: #TAG
   logService:
     replicas: 3
     sharedStorage:
       s3:
-        path: maomao-moc-test/test
+        type: minio
+        path: matrixone/storage01
+        endpoint: http://minio.default:9000
         secretRef:
-          name: aws
+          name: minio
     volume:
       size: 10Gi
   tn:
     replicas: 1
-    # cacheVolume specifies a dedicated volume for TN's local cache
     cacheVolume:
       size: 10Gi
   cnGroups:
