@@ -11,79 +11,52 @@ Prerequisites:
 
 ## Prepare Your Kubernetes Cluster
 
-Verify the cluster meets the minimal version requirement:
+Verify the cluster meets the minimal version requirement, refer to [kubernetes setup](setup-k8s.md) to setup a kubernetes cluster if you don't have one:
 
 ```bash
 > kubectl version
 ```
 
 The server version should >= 1.18.
-If you do not have existing k8s installed or your cluster does not meet the version requirement, you use `kind` to create a test one locally (follow the [offical installation guide](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) to install `kind` if you do not have kind CLI available):
-
-```bash
-kind create cluster --name mo
-```
-
-For advanced usage, you can customize you kind cluster by following [this guide](https://kind.sigs.k8s.io/docs/user/configuration/), e.g. version and node count.
 
 ## Install MatrixOne Operator
 
-1. Clone the `matrixone-operator` git repo:
-
 ```bash
-> git clone https://github.com/matrixorigin/matrixone-operator.git
+helm repo add matrixone-operator https://matrixorigin.github.io/matrixone-operator
+helm repo update
+helm install mo matrixone-operator/matrixone-operator --version=1.0.0-alpha.1
 ```
-
-2. Create a namespace for `matrixone-operator`:
-
-```bash
-> kubectl create namespace mo-system
-```
-
-3. Install matrixone-operator with `helm`:
-
-```bash
-> helm -n mo-system install mo ./charts/matrixone-operator --dependency-update
-```
-
-4. Verify the installation:
-
-```bash
-> helm -n mo-system ls
-> kubectl -n mo-system get po
-```
-
-You should see at least one ready `matrixone-operator` Pod.
 
 ## Deploy MatrixOne Cluster
 
 1. MO cluster requires an external shared storage like S3 and MinIO. You can deploy a minial MinIO for test purpose if you do not have an available shared storage:
 
     ```bash
-    > kubectl -n mo-system apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/minio.yaml
+    kubectl -n mo-system apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/minio.yaml
     ```
 
 2. Create a namespace to deploy your MO cluster:
 
     ```bash
-    > kubectl create ns mo
+    NS=mo
+    kubectl create ns ${NS}
     ```
 
 3. Create a secret in `mo` namespace to access the MinIO instance deployed at step 1:
 
     ```bash
     # if you change the default AK/SK in the yaml spec at step 1, change it in this step accordingly
-    > kubectl -n mo create secret generic minio --from-literal=AWS_ACCESS_KEY_ID=minio --from-literal=AWS_SECRET_ACCESS_KEY=minio123
+    kubectl -n ${NS} create secret generic minio --from-literal=AWS_ACCESS_KEY_ID=minio --from-literal=AWS_SECRET_ACCESS_KEY=minio123
     ```
 
 4. Create a YAML spec of your MO cluster, edit the fields to match your requirment:
 
     ```bash
-    > curl https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/mo-cluster.yaml > mo.yaml
+    curl https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/mo-cluster.yaml | sed 's/#TAG/1.0.0-alpha.1/g' > mo.yaml
     # edit mo.yaml to match your environment, if you're exactly following this guide so far, no change is required
-    > vim mo.yaml
+    vim mo.yaml
     # create the cluster
-    > kubectl -n mo apply -f mo.yaml
+    kubectl -n ${NS} apply -f mo.yaml
     ```
 
 5. Wait your cluster to become ready:
@@ -109,16 +82,57 @@ You should see at least one ready `matrixone-operator` Pod.
     > nohup kubectl -n mo port-forward svc/mo-tp-cn 6001:6001 &
     > mysql -h 127.0.0.1 -P6001 -u${USERNAME} -p${PASSWORD}
     ```
-   
+
+## Backup and Restore
+
+Create a `BackupJob` to backup your cluster
+
+```bash
+# change this variable if you change the cluster name in YAML
+CLUSTER_NAME=mo
+curl https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/backupjob.yaml | sed "s/#SourceClusterName/$CLUSTER_NAME/g" > backupjob.yaml
+# inspect the backupjob spec   
+cat backupjob.yaml
+# apply the job if the looks good
+kubectl -n ${NS} apply -f backupjob.yaml
+# get job progress
+kubectl -n ${NS} get backupjob
+# list all backups in the cluster
+kubectl -n ${NS} get backup
+```
+
+Then you have two options to use the backup:
+
+- Option 1: Create a new cluster to launch from the backup, mo-operator will automatically restore the backup to the object storage location the cluster want to use and then launch the cluster for you:
+
+```bash
+BACKUP_NAME=<the backup you want to use, you can query available backups using "kubectl get backup">
+curl https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/mo-from-backup.yaml | sed 's/#TAG/1.0.0-alpha.1/g' | sed "s/#BackupName/$BACKUP_NAME/g" > new-mo.yaml
+# inspect the cluster spec
+cat new-mo.yaml
+# create the new cluster
+kubectl apply -f new-mo.yaml
+```
+
+- Option 2: Restore the backup to a new location and manually launch a cluster using the new data:
+
+```bash
+BACKUP_NAME=<the backup you want to use, you can query available backups using "kubectl get backup">
+curl https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/restorejob.yaml | sed "s/#BackupName/$BACKUP_NAME/g" > restorejob.yaml
+# inspect the restorejob
+cat restorejob.yaml
+# start restore data
+kubectl create -f restorejob.yaml
+# get restore progress
+kubectl get restorejob
+# after restore complete, create a cluster to start form the restored data dir
+```
 
 ## Teardown MO cluster
 
 To teardown the cluster, delete the mo object in k8s:
 
 ```bash
-> kubectl -n mo get matrixonecluster
-NAME   LOG   DN    TP    AP    UI    VERSION            AGE
-mo     3     2     2                 nightly-c371317c   13m
-> kubectl -n mo delete matrixonecluster mo
+> kubectl -n ${NS} delete matrixonecluster mo
 matrixonecluster.core.matrixorigin.io "mo" deleted
 ```

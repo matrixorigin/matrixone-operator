@@ -7,7 +7,7 @@ spec:
   # image repository of matrixone container image
   imageRepository: matrixorigin/matrixone
   # version of matrixone cluster, which will also be used as the image tag
-  version: nightly-63835b83
+  version: #TAG
   # optional, node selector filters the node that the cluster pods can be scheduled to, default to nil
   nodeSelector:
     kubernetes.io/arch: amd64

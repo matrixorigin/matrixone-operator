@@ -4,7 +4,7 @@ metadata:
   name: mo
 spec:
   imageRepository: matrixorigin/matrixone
-  version: nightly-fbcc4fca
+  version: #TAG
   logService:
     replicas: 3
     sharedStorage:

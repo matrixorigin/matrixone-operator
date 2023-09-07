@@ -1,0 +1,14 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: BackupJob
+metadata:
+  name: backupjob
+spec:
+  source:
+    clusterRef: #SourceClusterName
+  target:
+    s3:
+      type: minio
+      endpoint: http://minio.default:9000
+      path: matrixone/backup-01
+      secretRef:
+        name: minio

@@ -1,44 +1,9 @@
 # Create a Kubernetes cluster
 
-Kubernetes cluster deployment document.
-
-## Kind
+## Local
 
 ```shell
-# Install kind on MacOS
-brew install kind
-
-# Install kind on Linux 
-wget https://github.com/kubernetes-sigs/kind/releases/download/0.2.1/kind-linux-amd64
-mv kind-linux-amd64 kind
-chmod +x kind
-mv kind /usr/local/bin
-
-# start a cluster with default configuration
-kind create cluster --name mo
-
-# delete a cluster 
-kind delete cluster --name mo
-```
-
-## Minikube
-
-```shell
-# MacOS
-brew install minikube
-
-# Linux
-wget https://github.com/kubernetes/minikube/releases/download/v1.24.0/minikube-1.24.0-0.x86_64.rpm
-sudo rpm -ivh minikube-1.24.0-0.x86_64.rpm
-
-# start cluster
-minikube start
-
-# stop cluster
-minikube stop
-
-# minikube dashboard
-minikube dashboard
+make up
 ```
 
 ## AWS EKS
@@ -90,4 +55,4 @@ eksctl delete cluster --name mo
 
 ## Tencent cloud
 
-see more on [document](./tencentcloud/tencent.md)
+see more on [Tencent Cloud guide](./tencentcloud/tencent.md)
