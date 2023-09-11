@@ -291,9 +291,11 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 	if subResourcesReady.Status == metav1.ConditionTrue {
 		mo.Status.Phase = "Ready"
 	}
-	if !mo.Status.ClusterMetrics.Initialized && firstCN != nil {
-		if err := r.initializeMetricUser(ctx, firstCN.Status.Host); err != nil {
-			return nil, errors.Wrap(err, "initialize metric user")
+	if mo.GetMetricReaderEnabled() {
+		if !mo.Status.ClusterMetrics.Initialized && firstCN != nil {
+			if err := r.initializeMetricUser(ctx, firstCN.Status.Host); err != nil {
+				return nil, errors.Wrap(err, "initialize metric user")
+			}
 		}
 	}
 

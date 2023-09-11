@@ -939,6 +939,10 @@ spec:
                 - sharedStorage
                 - volume
                 type: object
+              metricReaderEnabled:
+                description: MetricReaderEnabled enables metric reader for operator
+                  and other apps to query metric from MO cluster
+                type: boolean
               nodeSelector:
                 additionalProperties:
                   type: string
