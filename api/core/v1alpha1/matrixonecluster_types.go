@@ -84,6 +84,18 @@ type MatrixOneClusterSpec struct {
 	// +optional
 	// +immutable
 	RestoreFrom *string `json:"restoreFrom,omitempty"`
+
+	// +optional
+	// MetricReaderEnabled enables metric reader for operator and other apps to query
+	// metric from MO cluster
+	MetricReaderEnabled *bool `json:"metricReaderEnabled,omitempty"`
+}
+
+func (m *MatrixOneCluster) GetMetricReaderEnabled() bool {
+	if m.Spec.MetricReaderEnabled == nil {
+		return false
+	}
+	return *m.Spec.MetricReaderEnabled
 }
 
 func (m *MatrixOneCluster) GetTN() *DNSetSpec {
