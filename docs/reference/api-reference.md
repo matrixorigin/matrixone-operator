@@ -575,6 +575,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector specifies default node selector for all components, this will be overridden by component-level config |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
 | `restoreFrom` _string_ |  |
+| `metricReaderEnabled` _boolean_ | MetricReaderEnabled enables metric reader for operator and other apps to query metric from MO cluster |
 
 
 #### ObjectRef
