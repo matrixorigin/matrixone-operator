@@ -33,6 +33,9 @@ import (
 
 const (
 	serviceType = "DN"
+
+	aliasTN = "tn"
+	aliasDN = "dn"
 )
 
 // for MO < v1.0.0, service-address (and port) must be configured for each rpc service;
@@ -59,21 +62,21 @@ service-address = "${ADDR}:{{ .DNServicePort }}"
 service-host = "${ADDR}"
 EOF
 # build instance config
-sed "/\[dn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
 
 # append lock-service configs
 lsc=$(mktemp)
 cat <<EOF > ${lsc}
 service-address = "${ADDR}:{{ .LockServicePort }}"
 EOF
-sed -i "/\[dn.lockservice\]/r ${lsc}" ${conf}
+sed -i "/\[{{ .ConfigAlias }}.lockservice\]/r ${lsc}" ${conf}
 
 # append logtail configs
 ltc=$(mktemp)
 cat <<EOF > ${ltc}
 service-address = "${ADDR}:{{ .LogtailPort }}"
 EOF
-sed -i "/\[dn.LogtailServer\]/r ${ltc}" ${conf}
+sed -i "/\[{{ .ConfigAlias }}.LogtailServer\]/r ${ltc}" ${conf}
 
 # there is a chance that the dns is not yet added to kubedns and the
 # server will crash, wait before myself to be resolvable
@@ -100,6 +103,7 @@ exec /mo-service -cfg ${conf} $@
 type model struct {
 	DNServicePort  int
 	ConfigFilePath string
+	ConfigAlias    string
 
 	LockServicePort int
 	LogtailPort     int
@@ -180,14 +184,19 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	if conf == nil {
 		conf = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
+	configAlias := aliasDN
+	if conf.Get(aliasTN) != nil {
+		// [tn] is configured, all config items should go to the [tn] toml table
+		configAlias = aliasTN
+	}
 	conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
 	// conf.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &dn.Spec.SharedStorageCache))
 	conf.Set([]string{"service-type"}, serviceType)
-	conf.Set([]string{"dn", "listen-address"}, getListenAddress())
-	conf.Set([]string{"dn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
-	conf.Set([]string{"dn", "LogtailServer", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LogtailPort))
-	conf.Set([]string{"dn", "port-base"}, dnServicePort)
+	conf.Set([]string{configAlias, "listen-address"}, getListenAddress())
+	conf.Set([]string{configAlias, "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
+	conf.Set([]string{configAlias, "LogtailServer", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LogtailPort))
+	conf.Set([]string{configAlias, "port-base"}, dnServicePort)
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
@@ -199,6 +208,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		LockServicePort: common.LockServicePort,
 		LogtailPort:     common.LogtailPort,
 		ConfigFilePath:  fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
+		ConfigAlias:     configAlias,
 	})
 	if err != nil {
 		return nil, err

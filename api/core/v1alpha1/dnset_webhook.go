@@ -61,6 +61,7 @@ func (r *DNSet) ValidateCreate() (admission.Warnings, error) {
 	errs = append(errs, validateLogSetRef(&r.Deps.LogSetRef, field.NewPath("deps"))...)
 	errs = append(errs, r.Spec.ValidateCreate()...)
 	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
+	errs = append(errs, r.Spec.validateConfig(r.Spec.Config, field.NewPath("spec").Child("config"))...)
 	return nil, invalidOrNil(errs, r)
 }
 
@@ -82,5 +83,16 @@ func (r *DNSetSpec) ValidateCreate() field.ErrorList {
 		errs = append(errs, validateVolume(r.CacheVolume, field.NewPath("spec").Child("cacheVolume"))...)
 	}
 	errs = append(errs, validateGoMemLimitPercent(r.MemoryLimitPercent, field.NewPath("spec").Child("memoryLimitPercent"))...)
+	return errs
+}
+
+func (r *DNSetSpec) validateConfig(c *TomlConfig, path *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	if c == nil {
+		return errs
+	}
+	if c.Get("tn") != nil && c.Get("dn") != nil {
+		errs = append(errs, field.Invalid(path, c, "[tn] and [dn] cannot be set at the same time"))
+	}
 	return errs
 }
