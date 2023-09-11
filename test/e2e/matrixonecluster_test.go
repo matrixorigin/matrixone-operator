@@ -83,6 +83,11 @@ var _ = Describe("MatrixOneCluster test", func() {
 					PodSet: v1alpha1.PodSet{
 						// test multiple DN replicas
 						Replicas: 1,
+						Config: v1alpha1.NewTomlConfig(map[string]interface{}{
+							"tn": map[string]interface{}{
+								"port-base": 41010,
+							},
+						}),
 					},
 					CacheVolume: &v1alpha1.Volume{
 						Size: resource.MustParse("100Mi"),

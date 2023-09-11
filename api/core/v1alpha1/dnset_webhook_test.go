@@ -82,4 +82,35 @@ var _ = Describe("DNSet Webhook", func() {
 		expected := resource.MustParse("18Gi")
 		Expect(dn.Spec.SharedStorageCache.DiskCacheSize.Value()).To(Equal(expected.Value()))
 	})
+
+	It("should reject duplicate [tn] and [dn] config", func() {
+		dn := &DNSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "dn-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: DNSetSpec{
+				PodSet: PodSet{
+					Replicas: 2,
+					MainContainer: MainContainer{
+						Image: "test",
+					},
+					Config: NewTomlConfig(map[string]interface{}{
+						"tn": map[string]interface{}{
+							"port-base": 1000,
+						},
+						"dn": map[string]interface{}{
+							"port-base": 2000,
+						},
+					}),
+				},
+			},
+			Deps: DNSetDeps{
+				LogSetRef: LogSetRef{
+					ExternalLogSet: &ExternalLogSet{},
+				},
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), dn)).NotTo(Succeed())
+	})
 })
