@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"strings"
 	"time"
 )
 
@@ -131,6 +132,11 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 			return errors.Wrap(err, "error patching store draining start time")
 		}
 	}
+	// check whether timeout is reached
+	if time.Since(startTime) > sc.GetStoreDrainTimeout() {
+		ctx.Log.Info("store draining timeout, force delete CN", "uuid", uid)
+		return c.completeDraining(ctx)
+	}
 	ctx.Log.Info("call HAKeeper to drain CN store", "uuid", uid)
 	err := c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
 		return hc.PatchCNStore(timeout, logpb.CNStateLabel{
@@ -139,6 +145,11 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		})
 	})
 	if err != nil {
+		// optimize: if the CN does not exist in HAKeeper, shortcut to complete draining
+		if strings.Contains(err.Error(), "does not exist") {
+			ctx.Log.Error(err, "uuid", uid)
+			return c.completeDraining(ctx)
+		}
 		return errors.Wrap(err, "error set CN state draining")
 	}
 	ctx.Log.Info("call MO to collect Store status", "uuid", uid)
@@ -156,10 +167,6 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	}
 	ctx.Log.Info("CN draining", "account sessions", accountSession)
 	if accountSession == 0 {
-		return c.completeDraining(ctx)
-	}
-	if time.Since(startTime) > sc.GetStoreDrainTimeout() {
-		ctx.Log.Info("store draining timeout, force delete CN", "uuid", uid)
 		return c.completeDraining(ctx)
 	}
 	return recon.ErrReSync("wait for CN store draining", retryInterval)
