@@ -131,6 +131,11 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 			return errors.Wrap(err, "error patching store draining start time")
 		}
 	}
+	// check whether timeout is reached
+	if time.Since(startTime) > sc.GetStoreDrainTimeout() {
+		ctx.Log.Info("store draining timeout, force delete CN", "uuid", uid)
+		return c.completeDraining(ctx)
+	}
 	ctx.Log.Info("call HAKeeper to drain CN store", "uuid", uid)
 	err := c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
 		return hc.PatchCNStore(timeout, logpb.CNStateLabel{
@@ -156,10 +161,6 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	}
 	ctx.Log.Info("CN draining", "account sessions", accountSession)
 	if accountSession == 0 {
-		return c.completeDraining(ctx)
-	}
-	if time.Since(startTime) > sc.GetStoreDrainTimeout() {
-		ctx.Log.Info("store draining timeout, force delete CN", "uuid", uid)
 		return c.completeDraining(ctx)
 	}
 	return recon.ErrReSync("wait for CN store draining", retryInterval)
