@@ -188,13 +188,11 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 
 	// 1. ensure finalizers
-	if c.cn.Spec.ScalingConfig.GetStoreDrainEnabled() {
-		if err := ctx.Patch(ctx.Obj, func() error {
-			controllerutil.AddFinalizer(ctx.Obj, common.CNDrainingFinalizer)
-			return nil
-		}); err != nil {
-			return errors.Wrap(err, "ensure finalizers for CNStore Pod")
-		}
+	if err := ctx.Patch(ctx.Obj, func() error {
+		controllerutil.AddFinalizer(ctx.Obj, common.CNDrainingFinalizer)
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "ensure finalizers for CNStore Pod")
 	}
 
 	// 2. remove draining start time in case we regret formal deletion decision

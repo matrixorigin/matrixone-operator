@@ -15,7 +15,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager
+all: build
 
 .PHONY: build
 # Build operator image
