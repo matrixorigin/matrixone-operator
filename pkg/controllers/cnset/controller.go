@@ -119,6 +119,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 	cn.Status.Stores = stores
 	cn.Status.Replicas = cs.Status.Replicas
+	cn.Status.ReadyReplicas = cs.Status.ReadyReplicas
 	cn.Status.LabelSelector = cs.Status.LabelSelector
 	// sync status from cloneset
 	if cs.Status.ReadyReplicas >= cn.Spec.Replicas {
