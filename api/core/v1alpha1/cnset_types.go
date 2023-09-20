@@ -113,6 +113,7 @@ type CNSetStatus struct {
 	Stores []CNStore `json:"stores,omitempty"`
 
 	Replicas      int32  `json:"replicas,omitempty"`
+	ReadyReplicas int32  `json:"readyReplicas,omitempty"`
 	LabelSelector string `json:"labelSelector,omitempty"`
 
 	Host string `json:"host,omitempty"`
