@@ -39,21 +39,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const (
+	deletionCostAnno       = "controller.kubernetes.io/pod-deletion-cost"
 	storeDrainingStartAnno = "matrixorigin.io/store-draining-start"
+	storeConnectionAnno    = "matrixorigin.io/connections"
 
 	storeCordonAnno = "matrixorigin.io/store-cordon"
 
 	messageCNCordon      = "CNStoreCordon"
 	messageCNPrepareStop = "CNStorePrepareStop"
 	messageCNStoreReady  = "CNStoreReady"
+	queryServicePort     = 6005
 )
 
-const retryInterval = 15 * time.Second
+const retryInterval = 5 * time.Second
+const resyncInterval = 30 * time.Second
 
 type Controller struct {
 	clientMgr *hacli.HAKeeperClientManager
@@ -152,21 +157,16 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		}
 		return errors.Wrap(err, "error set CN state draining")
 	}
-	ctx.Log.Info("call MO to collect Store status", "uuid", uid)
-	var accountSession int
-	// TODO: make query service port coherent after port refactor merged
-	resp, err := c.queryCli.ShowProcessList(ctx, fmt.Sprintf("%s:6005", pod.Status.PodIP))
+
+	connectionStr, ok := pod.Annotations[storeConnectionAnno]
+	if !ok {
+		return errors.Errorf("cannot find connection count for CN pod %s/%s, connection annotation is empty", pod.Namespace, pod.Name)
+	}
+	count, err := strconv.Atoi(connectionStr)
 	if err != nil {
-		return errors.Wrap(err, "error query process list")
+		return errors.Wrap(err, "error parsing connection count")
 	}
-	for _, sess := range resp.GetSessions() {
-		if sess.Account != "" && sess.Account != "sys" {
-			ctx.Log.Info("session is not drained, session account", "account", sess.Account)
-			accountSession++
-		}
-	}
-	ctx.Log.Info("CN draining", "account sessions", accountSession)
-	if accountSession == 0 {
+	if count == 0 {
 		return c.completeDraining(ctx)
 	}
 	return recon.ErrReSync("wait for CN store draining", retryInterval)
@@ -293,10 +293,12 @@ func (c *withCNSet) OnCordon(ctx *recon.Context[*corev1.Pod]) error {
 func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 
+	// 1. process delete
 	if pod.DeletionTimestamp != nil {
 		return c.OnDeleted(ctx)
 	}
 
+	// 2. pre-check
 	if component, ok := pod.Labels[common.ComponentLabelKey]; !ok || component != "CNSet" {
 		ctx.Log.V(4).Info("pod is not a CN pod, skip", zap.String("namespace", pod.Namespace), zap.String("name", pod.Name))
 		return nil
@@ -305,6 +307,13 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	if !ok || cnName == "" {
 		return errors.Errorf("cannot find CNSet for CN pod %s/%s, instance label is empty", pod.Namespace, pod.Name)
 	}
+
+	// 3. sync stats, including connections and deletion cost
+	if err := c.syncStats(ctx); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error sync stats for CN pod %s/%s", pod.Namespace, pod.Name))
+	}
+
+	// 4. build dep
 	cn := &v1alpha1.CNSet{}
 	if err := ctx.Get(types.NamespacedName{Namespace: pod.Namespace, Name: cnName}, cn); err != nil {
 		return errors.Wrap(err, "get CNSet")
@@ -314,7 +323,7 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 		cn:         cn,
 	}
 
-	// store is asked to be cordoned
+	// 5. optionally, store is asked to be cordoned
 	if _, ok := pod.Annotations[storeCordonAnno]; ok {
 		return wc.OnCordon(ctx)
 	}
@@ -323,7 +332,46 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	if lifecycleState == string(pub.LifecycleStatePreparingUpdate) || lifecycleState == string(pub.LifecycleStatePreparingDelete) {
 		return wc.OnPreparingStop(ctx)
 	}
-	return wc.OnNormal(ctx)
+	if err := wc.OnNormal(ctx); err != nil {
+		return errors.Wrap(err, "error set pod normal")
+	}
+	return recon.ErrReSync("resync cn", resyncInterval)
+}
+
+func (c *Controller) syncStats(ctx *recon.Context[*corev1.Pod]) error {
+	pod := ctx.Obj
+	count, err := c.getSessionCount(pod)
+	if err != nil {
+		ctx.Log.Error(err, "error get sessions")
+		// cannot get session, sync next time
+		return nil
+	}
+	// sync deletion cost
+	return ctx.Patch(pod, func() error {
+		if pod.Annotations == nil {
+			pod.Annotations = map[string]string{}
+		}
+		pod.Annotations[deletionCostAnno] = strconv.Itoa(count)
+		pod.Annotations[storeConnectionAnno] = strconv.Itoa(count)
+		return nil
+	})
+}
+
+func (c *Controller) getSessionCount(pod *corev1.Pod) (int, error) {
+	start := time.Now()
+	var accountSession int
+	resp, err := c.queryCli.ShowProcessList(context.Background(), fmt.Sprintf("%s:%d", pod.Status.PodIP, queryServicePort))
+	if err != nil {
+		CnRPCDuration.WithLabelValues("ShowProcessList", pod.Namespace, "error").Observe(time.Since(start).Seconds())
+		return 0, err
+	}
+	CnRPCDuration.WithLabelValues("ShowProcessList", pod.Namespace, "ok").Observe(time.Since(start).Seconds())
+	for _, sess := range resp.GetSessions() {
+		if sess.Account != "" && sess.Account != "sys" {
+			accountSession++
+		}
+	}
+	return accountSession, nil
 }
 
 func (c *withCNSet) withHAKeeperClient(ctx *recon.Context[*corev1.Pod], fn func(context.Context, logservice.ProxyHAKeeperClient) error) error {

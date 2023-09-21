@@ -17,6 +17,7 @@ require (
 	github.com/onsi/gomega v1.27.7
 	github.com/openkruise/kruise-api v1.4.0
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.15.1
 	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.3
 	go.uber.org/multierr v1.11.0
@@ -123,7 +124,6 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/plar/go-adaptive-radix-tree v1.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.15.1 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
