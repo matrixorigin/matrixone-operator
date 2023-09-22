@@ -69,7 +69,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 					Name: "tp",
 					CNSetSpec: v1alpha1.CNSetSpec{
 						PodSet: v1alpha1.PodSet{
-							Replicas: 2,
+							Replicas:           2,
+							ExportToPrometheus: pointer.Bool(true),
 						},
 						ScalingConfig: v1alpha1.ScalingConfig{
 							StoreDrainEnabled: pointer.Bool(true),
@@ -82,7 +83,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 				TN: &v1alpha1.DNSetSpec{
 					PodSet: v1alpha1.PodSet{
 						// test multiple DN replicas
-						Replicas: 1,
+						Replicas:           1,
+						ExportToPrometheus: pointer.Bool(true),
 						Config: v1alpha1.NewTomlConfig(map[string]interface{}{
 							"tn": map[string]interface{}{
 								"port-base": 41010,
@@ -95,7 +97,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 				},
 				LogService: v1alpha1.LogSetSpec{
 					PodSet: v1alpha1.PodSet{
-						Replicas: 3,
+						Replicas:           3,
+						ExportToPrometheus: pointer.Bool(true),
 					},
 					Volume: v1alpha1.Volume{
 						Size: resource.MustParse("100Mi"),
