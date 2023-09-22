@@ -125,6 +125,9 @@ func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
 		}
 	}
 	svc.Annotations = cn.Spec.ServiceAnnotations
+	if svc.Annotations == nil {
+		svc.Annotations = map[string]string{}
+	}
 	if cn.Spec.GetExportToPrometheus() {
 		svc.Annotations[common.PrometheusScrapeAnno] = "true"
 		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
