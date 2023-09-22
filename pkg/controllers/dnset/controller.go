@@ -17,6 +17,7 @@ package dnset
 import (
 	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/features"
+	"strconv"
 	"time"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -131,6 +132,10 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return d.with(sts, svc).Update, nil
 	}
 
+	if err := d.syncMetricService(ctx); err != nil {
+		return nil, errors.Wrap(err, "sync metric service")
+	}
+
 	if recon.IsReady(&dn.Status.ConditionalStatus) {
 		return nil, nil
 	}
@@ -214,6 +219,35 @@ func (r *WithResources) Scale(ctx *recon.Context[*v1alpha1.DNSet]) error {
 
 func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	return ctx.Update(r.sts)
+}
+
+func (d *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.DNSet]) error {
+	dn := ctx.Obj
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ctx.Obj.Namespace,
+			Name:      ctx.Obj.Name + "-metric",
+			Labels:    common.SubResourceLabels(dn),
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: common.SubResourceLabels(dn),
+			Ports: []corev1.ServicePort{{
+				Name: "metric",
+				Port: int32(common.MetricsPort),
+			}},
+		},
+	}
+	return recon.CreateOwnedOrUpdate(ctx, svc, func() error {
+		if !dn.Spec.GetExportToPrometheus() {
+			svc.Annotations = map[string]string{
+				common.PrometheusScrapeAnno: "true",
+				common.PrometheusPortAnno:   strconv.Itoa(common.MetricsPort),
+			}
+		} else {
+			delete(svc.Annotations, common.PrometheusScrapeAnno)
+		}
+		return nil
+	})
 }
 
 func bucketFinalizer(dn *v1alpha1.DNSet) string {

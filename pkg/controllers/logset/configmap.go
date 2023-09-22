@@ -148,6 +148,9 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 		// logservice cannot start up if this gossip option is not set when there is only one replica
 		conf.Set([]string{"logservice", "gossip-allow-self-as-seed"}, true)
 	}
+	if ls.Spec.GetExportToPrometheus() {
+		conf.Set([]string{"observability", "enableMetricToProm"}, true)
+	}
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err

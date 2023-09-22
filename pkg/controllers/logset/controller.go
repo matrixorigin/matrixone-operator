@@ -15,6 +15,7 @@
 package logset
 
 import (
+	"strconv"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -130,6 +131,9 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		if err = r.syncBucketEverRunningAnn(ctx); err != nil {
 			return nil, errors.Wrap(err, "sync bucket ever running annotation")
 		}
+	}
+	if err = r.syncMetricService(ctx); err != nil {
+		return nil, errors.Wrap(err, "sync metric service")
 	}
 
 	if recon.IsReady(&ls.Status.ConditionalStatus) && len(ls.Status.FailedStores) == 0 {
@@ -259,6 +263,35 @@ func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
 // TODO(aylei): should logset controller take care of graceful rolling?
 func (r *WithResources) Update(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	return ctx.Update(r.sts)
+}
+
+func (r *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.LogSet]) error {
+	ls := ctx.Obj
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ctx.Obj.Namespace,
+			Name:      ctx.Obj.Name + "-metric",
+			Labels:    common.SubResourceLabels(ls),
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: common.SubResourceLabels(ls),
+			Ports: []corev1.ServicePort{{
+				Name: "metric",
+				Port: int32(common.MetricsPort),
+			}},
+		},
+	}
+	return recon.CreateOwnedOrUpdate(ctx, svc, func() error {
+		if !ls.Spec.GetExportToPrometheus() {
+			svc.Annotations = map[string]string{
+				common.PrometheusScrapeAnno: "true",
+				common.PrometheusPortAnno:   strconv.Itoa(common.MetricsPort),
+			}
+		} else {
+			delete(svc.Annotations, common.PrometheusScrapeAnno)
+		}
+		return nil
+	})
 }
 
 func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.LogSet]) (bool, error) {
