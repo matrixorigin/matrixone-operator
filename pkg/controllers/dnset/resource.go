@@ -197,6 +197,9 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	conf.Set([]string{configAlias, "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
 	conf.Set([]string{configAlias, "LogtailServer", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LogtailPort))
 	conf.Set([]string{configAlias, "port-base"}, dnServicePort)
+	if dn.Spec.GetExportToPrometheus() {
+		conf.Set([]string{"observability", "enableMetricToProm"}, true)
+	}
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err

@@ -86,6 +86,15 @@ type PodSet struct {
 	// GOMEMLIMIT = limits.memory * MemoryLimitPercent / 100
 	// +optional
 	MemoryLimitPercent *int `json:"memoryLimitPercent,omitempty"`
+
+	ExportToPrometheus *bool `json:"exportToPrometheus,omitempty"`
+}
+
+func (p *PodSet) GetExportToPrometheus() bool {
+	if p.ExportToPrometheus == nil {
+		return false
+	}
+	return *p.ExportToPrometheus
 }
 
 // MainContainer is the description of the main container of a Pod

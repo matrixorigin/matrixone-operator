@@ -21,6 +21,7 @@ import (
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"golang.org/x/exp/slices"
+	"strconv"
 	"text/template"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -124,6 +125,12 @@ func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
 		}
 	}
 	svc.Annotations = cn.Spec.ServiceAnnotations
+	if cn.Spec.GetExportToPrometheus() {
+		svc.Annotations[common.PrometheusScrapeAnno] = "true"
+		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
+	} else {
+		delete(svc.Annotations, common.PrometheusScrapeAnno)
+	}
 }
 
 func syncPodMeta(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) error {
@@ -213,6 +220,9 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
 	cfg.Set([]string{"cn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
 	cfg.Set([]string{"cn", "port-base"}, cnPortBase)
+	if cn.Spec.GetExportToPrometheus() {
+		cfg.Set([]string{"observability", "enableMetricToProm"}, true)
+	}
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err

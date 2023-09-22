@@ -57,6 +57,8 @@ spec:
               dnsBasedIdentity:
                 description: If enabled, use the Pod dns name as the Pod identity
                 type: boolean
+              exportToPrometheus:
+                type: boolean
               failedPodStrategy:
                 description: FailedPodStrategy controls how to handle failed pod when
                   failover happens, default to Delete

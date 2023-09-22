@@ -108,6 +108,8 @@ spec:
                   dnsBasedIdentity:
                     description: If enabled, use the Pod dns name as the Pod identity
                     type: boolean
+                  exportToPrometheus:
+                    type: boolean
                   image:
                     description: Image is the docker image of the main container
                     type: string
@@ -349,6 +351,8 @@ spec:
                     dnsBasedIdentity:
                       description: If enabled, use the Pod dns name as the Pod identity
                       type: boolean
+                    exportToPrometheus:
+                      type: boolean
                     image:
                       description: Image is the docker image of the main container
                       type: string
@@ -586,6 +590,8 @@ spec:
                   dnsBasedIdentity:
                     description: If enabled, use the Pod dns name as the Pod identity
                     type: boolean
+                  exportToPrometheus:
+                    type: boolean
                   image:
                     description: Image is the docker image of the main container
                     type: string
@@ -725,6 +731,8 @@ spec:
                     type: string
                   dnsBasedIdentity:
                     description: If enabled, use the Pod dns name as the Pod identity
+                    type: boolean
+                  exportToPrometheus:
                     type: boolean
                   failedPodStrategy:
                     description: FailedPodStrategy controls how to handle failed pod
@@ -963,6 +971,8 @@ spec:
                   dnsBasedIdentity:
                     description: If enabled, use the Pod dns name as the Pod identity
                     type: boolean
+                  exportToPrometheus:
+                    type: boolean
                   image:
                     description: Image is the docker image of the main container
                     type: string
@@ -1101,6 +1111,8 @@ spec:
                     type: string
                   dnsBasedIdentity:
                     description: If enabled, use the Pod dns name as the Pod identity
+                    type: boolean
+                  exportToPrometheus:
                     type: boolean
                   image:
                     description: Image is the docker image of the main container
@@ -1278,6 +1290,8 @@ spec:
                     type: string
                   dnsBasedIdentity:
                     description: If enabled, use the Pod dns name as the Pod identity
+                    type: boolean
+                  exportToPrometheus:
                     type: boolean
                   image:
                     description: Image is the docker image of the main container
@@ -1483,6 +1497,8 @@ spec:
                     type: string
                   dnsBasedIdentity:
                     description: If enabled, use the Pod dns name as the Pod identity
+                    type: boolean
+                  exportToPrometheus:
                     type: boolean
                   image:
                     description: Image is the docker image of the main container
