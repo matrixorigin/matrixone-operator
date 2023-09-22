@@ -275,13 +275,13 @@ func (r *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.LogSet]) error {
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: common.SubResourceLabels(ls),
-			Ports: []corev1.ServicePort{{
-				Name: "metric",
-				Port: int32(common.MetricsPort),
-			}},
 		},
 	}
 	return recon.CreateOwnedOrUpdate(ctx, svc, func() error {
+		svc.Spec.Ports = []corev1.ServicePort{{
+			Name: "metric",
+			Port: int32(common.MetricsPort),
+		}}
 		if !ls.Spec.GetExportToPrometheus() {
 			svc.Annotations = map[string]string{
 				common.PrometheusScrapeAnno: "true",

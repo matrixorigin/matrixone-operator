@@ -18,7 +18,7 @@ const (
 	LockServicePort = 6003
 	LogtailPort     = 32003
 
-	MetricsPort = 6060
+	MetricsPort = 7001
 
 	CNLabelAnnotation    = "matrixone.cloud/cn-label"
 	PrometheusScrapeAnno = "prometheus.io/scrape"
