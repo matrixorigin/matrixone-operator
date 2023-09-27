@@ -152,7 +152,6 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	if err != nil {
 		// optimize: if the CN does not exist in HAKeeper, shortcut to complete draining
 		if strings.Contains(err.Error(), "does not exist") {
-			ctx.Log.Error(err, "uuid", uid)
 			return c.completeDraining(ctx)
 		}
 		return errors.Wrap(err, "error set CN state draining")
