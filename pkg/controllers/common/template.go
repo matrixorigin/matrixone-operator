@@ -16,6 +16,7 @@ package common
 
 import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	appspub "github.com/openkruise/kruise-api/apps/pub"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -191,6 +192,9 @@ func CloneSetTemplate(o client.Object, name string) *kruisev1alpha1.CloneSet {
 			},
 			UpdateStrategy: kruisev1alpha1.CloneSetUpdateStrategy{
 				Type: kruisev1alpha1.InPlaceIfPossibleCloneSetUpdateStrategyType,
+				InPlaceUpdateStrategy: &appspub.InPlaceUpdateStrategy{
+					GracePeriodSeconds: 10,
+				},
 			},
 		},
 	}
