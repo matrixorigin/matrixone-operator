@@ -261,6 +261,7 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	cs.Spec.MinReadySeconds = cnReadySeconds
 
 	// scale-out without maxUnavailable limit to avoid unavailable pod abort the fail-over
+	cs.Spec.ScaleStrategy.DisablePVCReuse = true
 	cs.Spec.ScaleStrategy.MaxUnavailable = nil
 	if cs.Spec.Lifecycle == nil {
 		cs.Spec.Lifecycle = &pub.Lifecycle{}
