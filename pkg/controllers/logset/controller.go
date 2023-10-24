@@ -270,7 +270,7 @@ func (r *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ctx.Obj.Namespace,
-			Name:      ctx.Obj.Name + "-metric",
+			Name:      ctx.Obj.Name + "-log-metric",
 			Labels:    common.SubResourceLabels(ls),
 		},
 		Spec: corev1.ServiceSpec{

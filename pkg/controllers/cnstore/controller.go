@@ -237,6 +237,7 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		ctx.Log.Error(err, "update CN failed", "uuid", uid)
 		return recon.ErrReSync("update cn failed", retryInterval)
 	}
+	ctx.Log.Info("successfully set CN working")
 
 	if err := ctx.PatchStatus(pod, func() error {
 		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
