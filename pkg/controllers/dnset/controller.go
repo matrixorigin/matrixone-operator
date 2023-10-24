@@ -226,7 +226,7 @@ func (d *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ctx.Obj.Namespace,
-			Name:      ctx.Obj.Name + "-metric",
+			Name:      ctx.Obj.Name + "-dn-metric",
 			Labels:    common.SubResourceLabels(dn),
 		},
 		Spec: corev1.ServiceSpec{
