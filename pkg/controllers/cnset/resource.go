@@ -226,6 +226,14 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	if cn.Spec.GetExportToPrometheus() {
 		cfg.Set([]string{"observability", "enableMetricToProm"}, true)
 	}
+	sidecar := cn.Spec.PythonUdfSidecar
+	if sidecar.Enabled {
+		port := 50051
+		if sidecar.Port != 0 {
+			port = sidecar.Port
+		}
+		cfg.Set([]string{"cn", "python-udf-client", "server-address"}, fmt.Sprintf("localhost:%d", port))
+	}
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err
