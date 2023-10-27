@@ -112,7 +112,7 @@ e2e: ginkgo
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests install
-	go run cmd/operator/main.go
+	CGO_ENABLED=0 go run cmd/operator/main.go
 
 # Install CRDs into a cluster
 install: manifests

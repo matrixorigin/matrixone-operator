@@ -34,6 +34,12 @@ const (
 	CNStoreStateUp       string = "Up"
 )
 
+const (
+	ContainerPythonUdf             string = "python_udf"
+	ContainerPythonUdfDefaultPort  int    = 50051
+	ContainerPythonUdfDefaultImage string = "composer000/mo-python-udf-server:latest" // TODO change it
+)
+
 type CNSetSpec struct {
 	PodSet `json:",inline"`
 
