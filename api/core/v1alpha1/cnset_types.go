@@ -35,7 +35,7 @@ const (
 )
 
 const (
-	ContainerPythonUdf             string = "python_udf"
+	ContainerPythonUdf             string = "python-udf"
 	ContainerPythonUdfDefaultPort  int    = 50051
 	ContainerPythonUdfDefaultImage string = "composer000/mo-python-udf-server:latest" // TODO change it
 )

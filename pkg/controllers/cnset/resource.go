@@ -214,11 +214,11 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 			return c.Name == v1alpha1.ContainerPythonUdf
 		})
 		if pythonUdfRef == nil {
-			mainRef = &corev1.Container{Name: v1alpha1.ContainerPythonUdf}
+			pythonUdfRef = &corev1.Container{Name: v1alpha1.ContainerPythonUdf}
 		}
-		pythonUdfRef.Image = sidecar.Image
-		if pythonUdfRef.Image == "" {
-			pythonUdfRef.Image = v1alpha1.ContainerPythonUdfDefaultImage
+		pythonUdfRef.Image = v1alpha1.ContainerPythonUdfDefaultImage
+		if sidecar.Image != "" {
+			pythonUdfRef.Image = sidecar.Image
 		}
 		pythonUdfRef.Resources = sidecar.Resources
 		port := v1alpha1.ContainerPythonUdfDefaultPort
