@@ -226,7 +226,7 @@ func (d *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ctx.Obj.Namespace,
-			Name:      ctx.Obj.Name + "-metric",
+			Name:      ctx.Obj.Name + "-dn-metric",
 			Labels:    common.SubResourceLabels(dn),
 		},
 		Spec: corev1.ServiceSpec{
@@ -238,7 +238,7 @@ func (d *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.DNSet]) error {
 			Name: "metric",
 			Port: int32(common.MetricsPort),
 		}}
-		if !dn.Spec.GetExportToPrometheus() {
+		if dn.Spec.GetExportToPrometheus() {
 			svc.Annotations = map[string]string{
 				common.PrometheusScrapeAnno: "true",
 				common.PrometheusPortAnno:   strconv.Itoa(common.MetricsPort),
