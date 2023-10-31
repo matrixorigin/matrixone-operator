@@ -307,6 +307,7 @@ _Appears in:_
 | `scalingConfig` _[ScalingConfig](#scalingconfig)_ | ScalingConfig declares the CN scaling behavior |
 | `metricsSecretRef` _[ObjectRef](#objectref)_ | MetricsSecretRef is the secret reference for the operator to access CN metrics |
 | `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy is the rolling-update strategy of CN |
+| `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the python udf server in CN |
 
 
 
@@ -519,6 +520,7 @@ _Appears in:_
 
 _Appears in:_
 - [Overlay](#overlay)
+- [PythonUdfSidecar](#pythonudfsidecar)
 
 | Field | Description |
 | --- | --- |
@@ -731,6 +733,24 @@ _Appears in:_
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
 
 
+
+
+#### PythonUdfSidecar
+
+
+
+
+
+_Appears in:_
+- [CNSetSpec](#cnsetspec)
+
+| Field | Description |
+| --- | --- |
+| `enabled` _boolean_ |  |
+| `port` _integer_ |  |
+| `image` _string_ | Image is the docker image of the python udf server |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcerequirements-v1-core)_ | Resources is the resource requirement of the python udf server |
+| `overlay` _[MainContainerOverlay](#maincontaineroverlay)_ |  |
 
 
 

@@ -34,6 +34,12 @@ const (
 	CNStoreStateUp       string = "Up"
 )
 
+const (
+	ContainerPythonUdf             string = "python-udf"
+	ContainerPythonUdfDefaultPort  int    = 50051
+	ContainerPythonUdfDefaultImage string = "composer000/mo-python-udf-server:latest" // TODO change it
+)
+
 type CNSetSpec struct {
 	PodSet `json:",inline"`
 
@@ -76,6 +82,9 @@ type CNSetSpec struct {
 
 	// UpdateStrategy is the rolling-update strategy of CN
 	UpdateStrategy RollingUpdateStrategy `json:"updateStrategy,omitempty"`
+
+	// PythonUdfSidecar is the python udf server in CN
+	PythonUdfSidecar PythonUdfSidecar `json:"pythonUdfSidecar,omitempty"`
 }
 
 type ScalingConfig struct {
@@ -97,6 +106,22 @@ func (s *ScalingConfig) GetStoreDrainTimeout() time.Duration {
 		return 0
 	}
 	return s.StoreDrainTimeout.Duration
+}
+
+type PythonUdfSidecar struct {
+	Enabled bool `json:"enabled,omitempty"`
+
+	Port int `json:"port,omitempty"`
+
+	// Image is the docker image of the python udf server
+	Image string `json:"image,omitempty"`
+
+	// Resources is the resource requirement of the python udf server
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	Overlay *MainContainerOverlay `json:"overlay,omitempty"`
 }
 
 type CNLabel struct {

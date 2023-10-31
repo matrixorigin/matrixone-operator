@@ -206,6 +206,36 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	common.SetStorageProviderConfig(sp, specRef)
 	common.SyncTopology(cn.Spec.TopologyEvenSpread, specRef, cs.Spec.Selector)
 	cn.Spec.Overlay.OverlayPodSpec(specRef)
+
+	// create or delete python udf sidecar
+	sidecar := cn.Spec.PythonUdfSidecar
+	if sidecar.Enabled {
+		pythonUdfRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
+			return c.Name == v1alpha1.ContainerPythonUdf
+		})
+		if pythonUdfRef == nil {
+			pythonUdfRef = &corev1.Container{Name: v1alpha1.ContainerPythonUdf}
+		}
+		pythonUdfRef.Image = v1alpha1.ContainerPythonUdfDefaultImage
+		if sidecar.Image != "" {
+			pythonUdfRef.Image = sidecar.Image
+		}
+		pythonUdfRef.Resources = sidecar.Resources
+		port := v1alpha1.ContainerPythonUdfDefaultPort
+		if sidecar.Port != 0 {
+			port = sidecar.Port
+		}
+		pythonUdfRef.Command = []string{"/bin/bash", "-c", fmt.Sprintf("python -u server.py --address=localhost:%d", port)}
+		if sidecar.Overlay != nil {
+			tmpOverlay := &v1alpha1.Overlay{
+				MainContainerOverlay: *sidecar.Overlay,
+			}
+			tmpOverlay.OverlayMainContainer(pythonUdfRef)
+		}
+		specRef.Containers = append(specRef.Containers, *pythonUdfRef)
+	} else {
+		// do nothing, because all containers except main have been deleted in the previous code
+	}
 }
 
 func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
@@ -225,6 +255,14 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	cfg.Set([]string{"cn", "port-base"}, cnPortBase)
 	if cn.Spec.GetExportToPrometheus() {
 		cfg.Set([]string{"observability", "enableMetricToProm"}, true)
+	}
+	sidecar := cn.Spec.PythonUdfSidecar
+	if sidecar.Enabled {
+		port := v1alpha1.ContainerPythonUdfDefaultPort
+		if sidecar.Port != 0 {
+			port = sidecar.Port
+		}
+		cfg.Set([]string{"cn", "python-udf-client", "server-address"}, fmt.Sprintf("localhost:%d", port))
 	}
 	s, err := cfg.ToString()
 	if err != nil {

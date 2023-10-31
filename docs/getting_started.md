@@ -32,7 +32,7 @@ helm install mo matrixone-operator/matrixone-operator --version=1.0.0-alpha.1
 1. MO cluster requires an external shared storage like S3 and MinIO. You can deploy a minial MinIO for test purpose if you do not have an available shared storage:
 
     ```bash
-    kubectl -n mo-system apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/minio.yaml
+    kubectl apply -f https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/minio.yaml
     ```
 
 2. Create a namespace to deploy your MO cluster:
@@ -52,7 +52,7 @@ helm install mo matrixone-operator/matrixone-operator --version=1.0.0-alpha.1
 4. Create a YAML spec of your MO cluster, edit the fields to match your requirment:
 
     ```bash
-    curl https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/mo-cluster.yaml | sed 's/#TAG/1.0.0-alpha.1/g' > mo.yaml
+    curl https://raw.githubusercontent.com/matrixorigin/matrixone-operator/main/examples/mo-cluster.yaml | sed 's/#TAG/1.0.0-rc1/g' > mo.yaml
     # edit mo.yaml to match your environment, if you're exactly following this guide so far, no change is required
     vim mo.yaml
     # create the cluster
