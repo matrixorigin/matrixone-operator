@@ -39,7 +39,9 @@ const (
 const (
 	ContainerMain = "main"
 
-	EnvGoMemLimit = "GOMEMLIMIT"
+	EnvGoMemLimit  = "GOMEMLIMIT"
+	EnvGoDebug     = "GODEBUG"
+	DefaultGODebug = "madvdontneed=1,gctrace=2"
 )
 
 type ConditionalStatus struct {

@@ -30,7 +30,7 @@ spec:
     spec:
       containers:
         - name: minio
-          image: minio/minio:RELEASE.2022-10-08T20-11-00Z.fips
+          image: minio/minio:RELEASE.2023-11-01T01-57-10Z
           command: ["/bin/sh", "-c"]
           args:
             - "/usr/bin/docker-entrypoint.sh server --address 0.0.0.0:9301 --console-address 0.0.0.0:9400 /data"

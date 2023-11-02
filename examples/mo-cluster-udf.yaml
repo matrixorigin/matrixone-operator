@@ -3,8 +3,8 @@ kind: MatrixOneCluster
 metadata:
   name: mo
 spec:
-  imageRepository: composer000/matrixone
-  version: latest
+  imageRepository: matrixorigin/matrixone
+  version: nightly-b3da04e0
   logService:
     replicas: 3
     sharedStorage:

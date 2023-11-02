@@ -233,6 +233,25 @@ func setDefaultServiceArgs(object interface{}) {
 	}
 }
 
+// setPodSetDefaults set default values in pod set
+func setPodSetDefaults(s *PodSet) {
+	if s.Overlay == nil {
+		s.Overlay = &Overlay{}
+	}
+	s.Overlay.Env = appendIfNotExist(s.Overlay.Env, corev1.EnvVar{Name: EnvGoDebug, Value: DefaultGODebug}, func(v corev1.EnvVar) string {
+		return v.Name
+	})
+}
+
+func appendIfNotExist[K comparable, V any](list []V, elem V, keyFunc func(V) K) []V {
+	for _, o := range list {
+		if keyFunc(o) == keyFunc(elem) {
+			return list
+		}
+	}
+	return append(list, elem)
+}
+
 func GetCNPodUUID(pod *corev1.Pod) string {
 	addr := fmt.Sprintf("%s.%s.%s.svc\n", pod.Name, pod.Spec.Subdomain, pod.Namespace)
 	sum := sha256.Sum256([]byte(addr))
