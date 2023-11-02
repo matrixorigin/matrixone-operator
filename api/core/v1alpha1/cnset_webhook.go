@@ -79,6 +79,7 @@ func (r *CNSetSpec) Default() {
 		r.UpdateStrategy.MaxUnavailable = &maxUnavailable
 	}
 	setDefaultServiceArgs(r)
+	setPodSetDefaults(&r.PodSet)
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-cnset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=cnsets,verbs=create;update,versions=v1alpha1,name=vcnset.kb.io,admissionReviewVersions={v1,v1beta1}

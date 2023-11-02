@@ -85,6 +85,7 @@ func (r *LogSetSpec) Default() {
 	}
 	r.setDefaultRetentionPolicy()
 	setDefaultServiceArgs(r)
+	setPodSetDefaults(&r.PodSet)
 }
 
 // setDefaultRetentionPolicy always set PVCRetentionPolicy, and always set S3RetentionPolicy only if S3 is not nil

@@ -38,6 +38,8 @@ spec:
     image: matrixorigin/matrixone:latest
     # optional, override cluster-level node selector
     nodeSelector: {}
+    # optional, enable export metrics to prometheus
+    exportToPrometheus: true
     # optional, specify the configuration of logservice pods, default to empty (use default config of logservice)
     config: |
       # TOML format config file below
@@ -92,6 +94,8 @@ spec:
       limits:
         cpu: 4
         memory: 12Gi
+    # optional, enable export metrics to prometheus
+    exportToPrometheus: true
     # optional, topologySpread ensures the pods of LogService are evenly spread by the labels listed below
     topologySpread:
     - kubernetes.io/hostname
@@ -121,6 +125,8 @@ spec:
       memoryCacheSize: 5Gi
       # optional, the cache size on disk, default to the size of cacheVolume if not set
       diskCacheSize: 10Gi
+    # optional, enable export metrics to prometheus
+    exportToPrometheus: true
     # optioanl, the container resources of logservice pods, default to no request and no limit
     resources:
       # requests are the requested resources, this will also be used to schedule the LogService Pod

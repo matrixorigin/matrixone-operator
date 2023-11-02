@@ -84,7 +84,7 @@ function kind::ensure-kind() {
 function kind::load-image() {
     kind::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
     kind::prepare_image ${CLUSTER} openkruise/kruise-manager:v1.2.0
-    kind::prepare_image ${CLUSTER} minio/minio:RELEASE.2022-10-08T20-11-00Z.fips
+    kind::prepare_image ${CLUSTER} minio/minio:RELEASE.2023-11-01T01-57-10Z
 }
 
 function kind::install-minio() {
