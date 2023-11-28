@@ -73,3 +73,10 @@ caBundle: {{ $ca.Cert | b64enc }}
 tls.crt: {{ $cert.Cert | b64enc }}
 tls.key: {{ $cert.Key | b64enc }}
 {{- end -}}
+
+{{/*
+Generate default image
+*/}}
+{{- define "matrixone-operator.image" -}}
+"{{ .Values.globalRegistryPrefix }}{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+{{- end }}

@@ -18,4 +18,4 @@ data:
     {{- end }}
 
   brConfig: |
-    image: {{ .Values.backupRestore.image }}
+    image: "{{- .Values.globalRegistryPrefix -}}{{- .Values.backupRestore.image -}}"
