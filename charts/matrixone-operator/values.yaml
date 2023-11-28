@@ -13,7 +13,11 @@ image:
   pullPolicy: IfNotPresent
 
 backupRestore:
-  image: aylei/mobr
+  image: matrixorigin/mobr:1.0.0-rc1
+
+# globalRegistryPrefix add a registry prefix to every image operator used, which is useful when switching operator
+# to a private registry
+globalRegistryPrefix: ""
 
 imagePullSecrets: []
 nameOverride: ""
@@ -64,6 +68,9 @@ affinity: {}
 
 kruise:
   featureGates: "StatefulSetAutoDeletePVC=true,PodUnavailableBudgetDeleteGate=true,PodUnavailableBudgetUpdateGate=true"
+  manager:
+    image:
+      repository: openkruise/kruise-manager
 
 defaultArgs:
   - name: logService
