@@ -30,6 +30,9 @@ const (
 	AWSAccessKeyID     = "AWS_ACCESS_KEY_ID"
 	AWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
 	AWSRegion          = "AWS_REGION"
+
+	S3CertificateVolume = "s3-ssl"
+	S3CertificatePath   = "/etc/s3-ssl"
 )
 
 const (
@@ -52,8 +55,22 @@ const (
 
 // SetStorageProviderConfig set inject configuration of storage provider to Pods
 func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1.PodSpec) {
-	for i := range podSpec.Containers {
-		if s3p := sp.S3; s3p != nil {
+	// S3 storage provider config
+	if s3p := sp.S3; s3p != nil {
+		// mount optional certificate secret volume
+		if s3p.CertificateRef != nil {
+			podSpec.Volumes = util.UpsertByKey(podSpec.Volumes, corev1.Volume{
+				Name: S3CertificateVolume,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: s3p.CertificateRef.Name,
+					},
+				},
+			}, func(v corev1.Volume) string {
+				return v.Name
+			})
+		}
+		for i := range podSpec.Containers {
 			if s3p.SecretRef != nil {
 				for _, key := range []string{AWSAccessKeyID, AWSSecretAccessKey} {
 					podSpec.Containers[i].Env = util.UpsertByKey(podSpec.Containers[i].Env, corev1.EnvVar{Name: key, ValueFrom: &corev1.EnvVarSource{
@@ -63,6 +80,15 @@ func SetStorageProviderConfig(sp v1alpha1.SharedStorageProvider, podSpec *corev1
 						},
 					}}, util.EnvVarKey)
 				}
+			}
+			if s3p.CertificateRef != nil {
+				podSpec.Containers[i].VolumeMounts = util.UpsertByKey(podSpec.Containers[i].VolumeMounts, corev1.VolumeMount{
+					Name:      S3CertificateVolume,
+					MountPath: S3CertificatePath,
+					ReadOnly:  true,
+				}, func(v corev1.VolumeMount) string {
+					return v.Name
+				})
 			}
 			region := s3p.Region
 			if region == "" {
@@ -111,6 +137,7 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 	m := map[string]interface{}{
 		"name": name,
 	}
+	// S3 file service config
 	if s3 := sp.S3; s3 != nil {
 		switch s3.GetProviderType() {
 		case v1alpha1.S3ProviderTypeMinIO:
@@ -134,7 +161,16 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 		s3Config["key-prefix"] = keyPrefix
 
 		m["s3"] = s3Config
+
+		if s3.CertificateRef != nil {
+			var certFiles []string
+			for _, f := range s3.CertificateRef.Files {
+				certFiles = append(certFiles, fmt.Sprintf("%s/%s", S3CertificatePath, f))
+			}
+			m["cert-files"] = certFiles
+		}
 	}
+	// filesystem file service config
 	if fs := sp.FileSystem; fs != nil {
 		if name == etlFileServiceName {
 			m["backend"] = fsBackendTypeDiskETL
