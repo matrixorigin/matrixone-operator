@@ -75,6 +75,22 @@ spec:
                     description: S3 specifies an S3 bucket as the shared storage provider,
                       mutual-exclusive with other providers.
                     properties:
+                      certificateRef:
+                        description: CertificateRef allow specifies custom CA certificate
+                          for the object storage
+                        properties:
+                          files:
+                            description: cert files in the secret
+                            items:
+                              type: string
+                            type: array
+                          name:
+                            description: secret name
+                            type: string
+                        required:
+                        - files
+                        - name
+                        type: object
                       endpoint:
                         description: Endpoint is the endpoint of the S3 compatible
                           service default to aws S3 well known endpoint

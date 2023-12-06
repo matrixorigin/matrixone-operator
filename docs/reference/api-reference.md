@@ -312,6 +312,21 @@ _Appears in:_
 
 
 
+#### CertificateRef
+
+
+
+
+
+_Appears in:_
+- [S3Provider](#s3provider)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | secret name |
+| `files` _string array_ | cert files in the secret |
+
+
 
 
 #### ConditionalStatus
@@ -841,6 +856,7 @@ _Appears in:_
 | `region` _string_ | Region of the bucket the default region will be inferred from the deployment environment |
 | `endpoint` _string_ | Endpoint is the endpoint of the S3 compatible service default to aws S3 well known endpoint |
 | `secretRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core)_ | Credentials for s3, the client will automatically discover credential sources from the environment if not specified |
+| `certificateRef` _[CertificateRef](#certificateref)_ | CertificateRef allow specifies custom CA certificate for the object storage |
 | `s3RetentionPolicy` _[PVCRetentionPolicy](#pvcretentionpolicy)_ | S3RetentionPolicy defines the retention policy of orphaned S3 bucket storage |
 
 

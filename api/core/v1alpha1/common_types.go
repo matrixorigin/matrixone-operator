@@ -304,10 +304,22 @@ type S3Provider struct {
 	// from the environment if not specified
 	// +optional
 	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
-
+	// CertificateRef allow specifies custom CA certificate for the object storage
+	CertificateRef *CertificateRef `json:"certificateRef,omitempty"`
+	// +optional
 	// S3RetentionPolicy defines the retention policy of orphaned S3 bucket storage
 	// +kubebuilder:validation:Enum=Delete;Retain
 	S3RetentionPolicy *PVCRetentionPolicy `json:"s3RetentionPolicy,omitempty"`
+}
+
+type CertificateRef struct {
+	// secret name
+	// +required
+	Name string `json:"name"`
+
+	// cert files in the secret
+	// +required
+	Files []string `json:"files"`
 }
 
 func (p *S3Provider) GetProviderType() S3ProviderType {

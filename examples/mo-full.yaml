@@ -58,6 +58,13 @@ spec:
         # secretRef is required when there is no environment based auth available.
         secretRef:
           name: aws
+        # optional, certificateRef specifies custom certificates to use when communicate with the
+        # object storage, name is the name of the secret that encrypts custom certificate files, files are
+        # the file keys in the secret that should be used as certificates.
+        certificateRef:
+          name: cert
+          files:
+          - cert.pem
       # use an S3 compatible object storage (minio-backend) as shared storage
 #      s3:
 #        type: minio
