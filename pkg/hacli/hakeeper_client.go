@@ -30,6 +30,8 @@ import (
 
 const (
 	HAKeeperTimeout = 2 * time.Second
+
+	RefreshInterval = 15 * time.Second
 )
 
 type HAKeeperClientManager struct {
@@ -41,9 +43,19 @@ type HAKeeperClientManager struct {
 	logSetToClients map[types.UID]proxyClient
 }
 
+type Handler struct {
+	Client     logservice.ProxyHAKeeperClient
+	StoreCache *StoreCache
+}
+
+func (h *Handler) Close() error {
+	h.StoreCache.Close()
+	return h.Client.Close()
+}
+
 type proxyClient struct {
-	client logservice.ProxyHAKeeperClient
-	lsRef  types.NamespacedName
+	lsRef   types.NamespacedName
+	handler *Handler
 }
 
 func NewManager(kubeCli client.Client, logger logr.Logger) *HAKeeperClientManager {
@@ -57,7 +69,7 @@ func NewManager(kubeCli client.Client, logger logr.Logger) *HAKeeperClientManage
 	return mgr
 }
 
-func (m *HAKeeperClientManager) GetClient(ls *v1alpha1.LogSet) (logservice.ProxyHAKeeperClient, error) {
+func (m *HAKeeperClientManager) GetClient(ls *v1alpha1.LogSet) (*Handler, error) {
 	// FIXME: this is would be bottleneck if we concurrently reconcile a large amount of
 	// matrixone clusters, we can concurrently initialize the HAKeeper clients here if necessary.
 	m.Lock()
@@ -65,14 +77,18 @@ func (m *HAKeeperClientManager) GetClient(ls *v1alpha1.LogSet) (logservice.Proxy
 	if _, ok := m.logSetToClients[ls.UID]; !ok {
 		cli, err := m.newHAKeeperClient(ls)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "error new HAKeeperClient")
 		}
+		mc := NewCNCache(cli, RefreshInterval, m.logger.WithName(ls.Name+"-store-cache"))
 		m.logSetToClients[ls.UID] = proxyClient{
-			client: cli,
-			lsRef:  client.ObjectKeyFromObject(ls),
+			handler: &Handler{
+				Client:     cli,
+				StoreCache: mc,
+			},
+			lsRef: client.ObjectKeyFromObject(ls),
 		}
 	}
-	return m.logSetToClients[ls.UID].client, nil
+	return m.logSetToClients[ls.UID].handler, nil
 }
 
 func (m *HAKeeperClientManager) Close() {
@@ -95,7 +111,7 @@ func (m *HAKeeperClientManager) doGC() {
 	defer m.Unlock()
 	for uid, v := range m.logSetToClients {
 		closeFn := func() {
-			err := v.client.Close()
+			err := v.handler.Close()
 			if err != nil {
 				m.logger.Error(err, "error closing HAKeeper client", "logset", v.lsRef, "uid", uid)
 			}

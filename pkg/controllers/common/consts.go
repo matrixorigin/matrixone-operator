@@ -20,7 +20,10 @@ const (
 
 	MetricsPort = 7001
 
-	CNLabelAnnotation    = "matrixone.cloud/cn-label"
+	CNLabelAnnotation = "matrixone.cloud/cn-label"
+
+	CNUUIDAnnotation = "matrixone.cloud/cn-uuid"
+
 	PrometheusScrapeAnno = "prometheus.io/scrape"
 	PrometheusPortAnno   = "prometheus.io/port"
 	PrometheusPathAnno   = "prometheus.io/path"

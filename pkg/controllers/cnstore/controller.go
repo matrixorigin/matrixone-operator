@@ -23,7 +23,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
 	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
-	"github.com/matrixorigin/matrixone/pkg/logservice"
 	logpb "github.com/matrixorigin/matrixone/pkg/pb/logservice"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
 	"github.com/openkruise/kruise-api/apps/pub"
@@ -54,7 +53,6 @@ const (
 	messageCNCordon      = "CNStoreCordon"
 	messageCNPrepareStop = "CNStorePrepareStop"
 	messageCNStoreReady  = "CNStoreReady"
-	queryServicePort     = 6005
 )
 
 const retryInterval = 5 * time.Second
@@ -143,8 +141,8 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		return c.completeDraining(ctx)
 	}
 	ctx.Log.Info("call HAKeeper to drain CN store", "uuid", uid)
-	err := c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
-		return hc.PatchCNStore(timeout, logpb.CNStateLabel{
+	err := c.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
+		return h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
 			UUID:  uid,
 			State: metadata.WorkState_Draining,
 		})
@@ -185,6 +183,7 @@ func (c *withCNSet) completeDraining(ctx *recon.Context[*corev1.Pod]) error {
 // OnNormal ensure CNStore labels and transit CN store to UP state
 func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
+	uid := v1alpha1.GetCNPodUUID(pod)
 
 	// 1. ensure finalizers
 	if err := ctx.Patch(ctx.Obj, func() error {
@@ -194,7 +193,7 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		return errors.Wrap(err, "ensure finalizers for CNStore Pod")
 	}
 
-	// 2. remove draining start time in case we regret formal deletion decision
+	// 2 remove draining start time in case we regret formal deletion decision
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
 	}
@@ -214,20 +213,19 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 			return errors.Wrap(err, "unmarshal CNLabels")
 		}
 	}
-	uid := v1alpha1.GetCNPodUUID(pod)
 
 	var err error
 	if c.cn.Spec.ScalingConfig.GetStoreDrainEnabled() {
-		err = c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
-			return hc.PatchCNStore(timeout, logpb.CNStateLabel{
+		err = c.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
+			return h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
 				UUID:   uid,
 				State:  metadata.WorkState_Working,
 				Labels: toStoreLabels(cnLabels),
 			})
 		})
 	} else {
-		err = c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
-			return hc.UpdateCNLabel(timeout, logpb.CNStoreLabel{
+		err = c.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
+			return h.Client.UpdateCNLabel(timeout, logpb.CNStoreLabel{
 				UUID:   uid,
 				Labels: toStoreLabels(cnLabels),
 			})
@@ -262,8 +260,8 @@ func (c *withCNSet) OnCordon(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 	uid := v1alpha1.GetCNPodUUID(pod)
 	ctx.Log.Info("call HAKeeper to cordon CN store", "uuid", uid)
-	err := c.withHAKeeperClient(ctx, func(timeout context.Context, hc logservice.ProxyHAKeeperClient) error {
-		return hc.PatchCNStore(timeout, logpb.CNStateLabel{
+	err := c.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
+		return h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
 			UUID:  uid,
 			State: metadata.WorkState_Draining,
 		})
@@ -308,12 +306,7 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 		return errors.Errorf("cannot find CNSet for CN pod %s/%s, instance label is empty", pod.Namespace, pod.Name)
 	}
 
-	// 3. sync stats, including connections and deletion cost
-	if err := c.syncStats(ctx); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error sync stats for CN pod %s/%s", pod.Namespace, pod.Name))
-	}
-
-	// 4. build dep
+	// 3. build dep
 	cn := &v1alpha1.CNSet{}
 	if err := ctx.Get(types.NamespacedName{Namespace: pod.Namespace, Name: cnName}, cn); err != nil {
 		return errors.Wrap(err, "get CNSet")
@@ -321,6 +314,11 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	wc := &withCNSet{
 		Controller: c,
 		cn:         cn,
+	}
+
+	// 4. sync stats, including connections and deletion cost
+	if err := wc.syncStats(ctx); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error sync stats for CN pod %s/%s", pod.Namespace, pod.Name))
 	}
 
 	// 5. optionally, store is asked to be cordoned
@@ -338,9 +336,21 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	return recon.ErrReSync("resync cn", resyncInterval)
 }
 
-func (c *Controller) syncStats(ctx *recon.Context[*corev1.Pod]) error {
+func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
-	count, err := c.getSessionCount(pod)
+	uid := v1alpha1.GetCNPodUUID(pod)
+	var queryAddress string
+	if err := c.withHAKeeperClient(ctx, func(ctx context.Context, handler *hacli.Handler) error {
+		cn, ok := handler.StoreCache.GetCN(uid)
+		if !ok {
+			return errors.Errorf("CN with uuid %s not found", uid)
+		}
+		queryAddress = cn.QueryAddress
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "get cn query address")
+	}
+	count, err := c.getSessionCount(pod, queryAddress)
 	if err != nil {
 		ctx.Log.Error(err, "error get sessions")
 		// cannot get session, sync next time
@@ -351,19 +361,20 @@ func (c *Controller) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		if pod.Annotations == nil {
 			pod.Annotations = map[string]string{}
 		}
+		pod.Annotations[common.CNUUIDAnnotation] = uid
 		pod.Annotations[deletionCostAnno] = strconv.Itoa(count)
 		pod.Annotations[storeConnectionAnno] = strconv.Itoa(count)
 		return nil
 	})
 }
 
-func (c *Controller) getSessionCount(pod *corev1.Pod) (int, error) {
+func (c *Controller) getSessionCount(pod *corev1.Pod, queryAddress string) (int, error) {
 	start := time.Now()
 	var accountSession int
-	resp, err := c.queryCli.ShowProcessList(context.Background(), fmt.Sprintf("%s:%d", pod.Status.PodIP, queryServicePort))
+	resp, err := c.queryCli.ShowProcessList(context.Background(), queryAddress)
 	if err != nil {
 		CnRPCDuration.WithLabelValues("ShowProcessList", pod.Namespace, "error").Observe(time.Since(start).Seconds())
-		return 0, err
+		return 0, errors.Wrap(err, "show processlist")
 	}
 	CnRPCDuration.WithLabelValues("ShowProcessList", pod.Namespace, "ok").Observe(time.Since(start).Seconds())
 	for _, sess := range resp.GetSessions() {
@@ -374,7 +385,7 @@ func (c *Controller) getSessionCount(pod *corev1.Pod) (int, error) {
 	return accountSession, nil
 }
 
-func (c *withCNSet) withHAKeeperClient(ctx *recon.Context[*corev1.Pod], fn func(context.Context, logservice.ProxyHAKeeperClient) error) error {
+func (c *withCNSet) withHAKeeperClient(ctx *recon.Context[*corev1.Pod], fn func(context.Context, *hacli.Handler) error) error {
 	pod := ctx.Obj
 	cn := c.cn
 	// TODO: consider edge cluster federation scenario
@@ -389,13 +400,13 @@ func (c *withCNSet) withHAKeeperClient(ctx *recon.Context[*corev1.Pod], fn func(
 	if !recon.IsReady(ls) {
 		return recon.ErrReSync(fmt.Sprintf("logset is not ready for Pod %s, cannot update CN labels", pod.Name), retryInterval)
 	}
-	haClient, err := c.clientMgr.GetClient(ls)
+	handler, err := c.clientMgr.GetClient(ls)
 	if err != nil {
 		return errors.Wrap(err, "get HAKeeper client")
 	}
 	timeout, cancel := context.WithTimeout(context.Background(), hacli.HAKeeperTimeout)
 	defer cancel()
-	if err := fn(timeout, haClient); err != nil {
+	if err := fn(timeout, handler); err != nil {
 		return err
 	}
 	return nil
