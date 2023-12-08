@@ -160,15 +160,14 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 		}
 		s3Config["key-prefix"] = keyPrefix
 
-		m["s3"] = s3Config
-
 		if s3.CertificateRef != nil {
 			var certFiles []string
 			for _, f := range s3.CertificateRef.Files {
 				certFiles = append(certFiles, fmt.Sprintf("%s/%s", S3CertificatePath, f))
 			}
-			m["cert-files"] = certFiles
+			s3Config["cert-files"] = certFiles
 		}
+		m["s3"] = s3Config
 	}
 	// filesystem file service config
 	if fs := sp.FileSystem; fs != nil {
