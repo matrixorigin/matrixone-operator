@@ -58,11 +58,11 @@ func (c *Client) ShowProcessList(ctx context.Context, address string) (*pb.ShowP
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error show process list")
 	}
 	msg, err := f.Get()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error get msg")
 	}
 	resp, ok := msg.(*pb.Response)
 	if !ok {
