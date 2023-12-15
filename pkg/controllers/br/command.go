@@ -80,6 +80,7 @@ type RestoreCommand struct {
 func (c *RestoreCommand) String() string {
 	sb := strings.Builder{}
 	sb.WriteString(fmt.Sprintf("echo $%s > /mo_br.meta", RawMetaEnv))
+	sb.WriteString(` && sha256sum mo_br.meta | awk '{printf "%s",$1}' > mo_br.meta.sha256`)
 	sb.WriteString(" && /mo_br restore")
 	sb.WriteString(fmt.Sprintf(" %s", c.BackupID))
 	sb.WriteString(" --restore_dir s3")
