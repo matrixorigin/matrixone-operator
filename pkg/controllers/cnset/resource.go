@@ -264,6 +264,9 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		}
 		cfg.Set([]string{"cn", "python-udf-client", "server-address"}, fmt.Sprintf("localhost:%d", port))
 	}
+	if cn.Spec.ScalingConfig.GetStoreDrainEnabled() {
+		cfg.Set([]string{"cn", "init-work-state"}, "Draining")
+	}
 	s, err := cfg.ToString()
 	if err != nil {
 		return nil, err
