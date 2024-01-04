@@ -74,6 +74,10 @@ type CNSetSpec struct {
 	// Labels are the CN labels for all the CN stores managed by this CNSet
 	Labels []CNLabel `json:"cnLabels,omitempty"`
 
+	// ExternalStoreControl indicates mo-operator should not sync CN store state and label
+	// so that the store state can be safely managed externally
+	ExternalStoreControl bool `json:"externalStoreControl,omitempty"`
+
 	// ScalingConfig declares the CN scaling behavior
 	ScalingConfig ScalingConfig `json:"scalingConfig,omitempty"`
 

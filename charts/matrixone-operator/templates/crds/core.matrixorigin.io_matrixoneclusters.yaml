@@ -110,6 +110,11 @@ spec:
                     type: boolean
                   exportToPrometheus:
                     type: boolean
+                  externalStoreControl:
+                    description: ExternalStoreControl indicates mo-operator should
+                      not sync CN store state and label so that the store state can
+                      be safely managed externally
+                    type: boolean
                   image:
                     description: Image is the docker image of the main container
                     type: string
@@ -415,6 +420,11 @@ spec:
                       description: If enabled, use the Pod dns name as the Pod identity
                       type: boolean
                     exportToPrometheus:
+                      type: boolean
+                    externalStoreControl:
+                      description: ExternalStoreControl indicates mo-operator should
+                        not sync CN store state and label so that the store state
+                        can be safely managed externally
                       type: boolean
                     image:
                       description: Image is the docker image of the main container
@@ -1436,6 +1446,11 @@ spec:
                     description: If enabled, use the Pod dns name as the Pod identity
                     type: boolean
                   exportToPrometheus:
+                    type: boolean
+                  externalStoreControl:
+                    description: ExternalStoreControl indicates mo-operator should
+                      not sync CN store state and label so that the store state can
+                      be safely managed externally
                     type: boolean
                   image:
                     description: Image is the docker image of the main container

@@ -304,6 +304,7 @@ _Appears in:_
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |
 | `role` _CNRole_ | [TP, AP], default to TP Deprecated: use labels instead |
 | `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
+| `externalStoreControl` _boolean_ | ExternalStoreControl indicates mo-operator should not sync CN store state and label so that the store state can be safely managed externally |
 | `scalingConfig` _[ScalingConfig](#scalingconfig)_ | ScalingConfig declares the CN scaling behavior |
 | `metricsSecretRef` _[ObjectRef](#objectref)_ | MetricsSecretRef is the secret reference for the operator to access CN metrics |
 | `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy is the rolling-update strategy of CN |

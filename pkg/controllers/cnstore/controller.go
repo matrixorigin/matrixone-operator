@@ -44,11 +44,7 @@ import (
 )
 
 const (
-	deletionCostAnno       = "controller.kubernetes.io/pod-deletion-cost"
-	storeDrainingStartAnno = "matrixorigin.io/store-draining-start"
-	storeConnectionAnno    = "matrixorigin.io/connections"
-
-	storeCordonAnno = "matrixorigin.io/store-cordon"
+	deletionCostAnno = "controller.kubernetes.io/pod-deletion-cost"
 
 	messageCNCordon      = "CNStoreCordon"
 	messageCNPrepareStop = "CNStorePrepareStop"
@@ -119,7 +115,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 
 	// start draining
 	var startTime time.Time
-	startTimeStr, ok := pod.Annotations[storeDrainingStartAnno]
+	startTimeStr, ok := pod.Annotations[v1alpha1.StoreDrainingStartAnno]
 	if ok {
 		parsed, err := time.Parse(time.RFC3339, startTimeStr)
 		if err != nil {
@@ -129,7 +125,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	} else {
 		startTime = time.Now()
 		if err := ctx.Patch(pod, func() error {
-			pod.Annotations[storeDrainingStartAnno] = startTime.Format(time.RFC3339)
+			pod.Annotations[v1alpha1.StoreDrainingStartAnno] = startTime.Format(time.RFC3339)
 			return nil
 		}); err != nil {
 			return errors.Wrap(err, "error patching store draining start time")
@@ -155,7 +151,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		return errors.Wrap(err, "error set CN state draining")
 	}
 
-	connectionStr, ok := pod.Annotations[storeConnectionAnno]
+	connectionStr, ok := pod.Annotations[v1alpha1.StoreConnectionAnno]
 	if !ok {
 		return errors.Errorf("cannot find connection count for CN pod %s/%s, connection annotation is empty", pod.Namespace, pod.Name)
 	}
@@ -172,7 +168,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 func (c *withCNSet) completeDraining(ctx *recon.Context[*corev1.Pod]) error {
 	if err := ctx.Patch(ctx.Obj, func() error {
 		controllerutil.RemoveFinalizer(ctx.Obj, common.CNDrainingFinalizer)
-		delete(ctx.Obj.Annotations, storeDrainingStartAnno)
+		delete(ctx.Obj.Annotations, v1alpha1.StoreDrainingStartAnno)
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "error removing CN draining finalizer")
@@ -198,13 +194,18 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		pod.Annotations = map[string]string{}
 	}
 	if err := ctx.Patch(pod, func() error {
-		delete(pod.Annotations, storeDrainingStartAnno)
+		delete(pod.Annotations, v1alpha1.StoreDrainingStartAnno)
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "removing CN draining start time")
 	}
 
-	// 3. sync CN labels for store and mark store as UP state
+	// 3. if CN label is controlled externally, skip the following sync
+	if _, ok := pod.Annotations[v1alpha1.StoreExternalControlledAnno]; ok {
+		return c.markCNReady(ctx)
+	}
+
+	// 4. sync CN labels for store and mark store as UP state
 	var cnLabels []v1alpha1.CNLabel
 	labelStr, ok := pod.Annotations[common.CNLabelAnnotation]
 	if ok {
@@ -235,8 +236,13 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		ctx.Log.Error(err, "update CN failed", "uuid", uid)
 		return recon.ErrReSync("update cn failed", retryInterval)
 	}
-	ctx.Log.Info("successfully set CN working")
+	ctx.Log.V(4).Info("successfully set CN working")
 
+	return c.markCNReady(ctx)
+}
+
+func (c *withCNSet) markCNReady(ctx *recon.Context[*corev1.Pod]) error {
+	pod := ctx.Obj
 	if err := ctx.PatchStatus(pod, func() error {
 		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
 		if cond == nil {
@@ -322,7 +328,7 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	}
 
 	// 5. optionally, store is asked to be cordoned
-	if _, ok := pod.Annotations[storeCordonAnno]; ok {
+	if _, ok := pod.Annotations[v1alpha1.StoreCordonAnno]; ok {
 		return wc.OnCordon(ctx)
 	}
 
@@ -330,10 +336,13 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	if lifecycleState == string(pub.LifecycleStatePreparingUpdate) || lifecycleState == string(pub.LifecycleStatePreparingDelete) {
 		return wc.OnPreparingStop(ctx)
 	}
+
 	if err := wc.OnNormal(ctx); err != nil {
 		return errors.Wrap(err, "error set pod normal")
 	}
-	return recon.ErrReSync("resync cn", resyncInterval)
+	// trigger next reconciliation later to refresh the stats
+	// TODO(aylei): better stats handling
+	return recon.ErrReSync("resync", resyncInterval)
 }
 
 func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
@@ -361,9 +370,12 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		if pod.Annotations == nil {
 			pod.Annotations = map[string]string{}
 		}
-		pod.Annotations[common.CNUUIDAnnotation] = uid
 		pod.Annotations[deletionCostAnno] = strconv.Itoa(count)
-		pod.Annotations[storeConnectionAnno] = strconv.Itoa(count)
+		pod.Annotations[v1alpha1.StoreConnectionAnno] = strconv.Itoa(count)
+		if pod.Labels == nil {
+			pod.Labels = map[string]string{}
+		}
+		pod.Labels[common.CNUUIDLabelKey] = uid
 		return nil
 	})
 }
@@ -444,8 +456,8 @@ func (c *Controller) Reconcile(mgr manager.Manager) error {
 		recon.SkipStatusSync(),
 		recon.WithPredicate(
 			predicate.Or(predicate.LabelChangedPredicate{},
-				predicate.AnnotationChangedPredicate{},
 				predicate.GenerationChangedPredicate{},
+				annotationChangedExcludeStats{},
 				deletedPredicate{})),
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -463,6 +475,24 @@ func (c *Controller) Reconcile(mgr manager.Manager) error {
 			}))
 		}),
 	)
+}
+
+// annotationChangedExcludeStats reconciles the object when annotations are changed (exclude stats)
+type annotationChangedExcludeStats struct {
+	predicate.Funcs
+}
+
+func (annotationChangedExcludeStats) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+	oldAnnos := e.ObjectOld.GetAnnotations()
+	newAnnos := e.ObjectNew.GetAnnotations()
+	for _, key := range []string{deletionCostAnno, v1alpha1.StoreCordonAnno} {
+		delete(oldAnnos, key)
+		delete(newAnnos, key)
+	}
+	return !reflect.DeepEqual(oldAnnos, newAnnos)
 }
 
 // deletePredicate reconciles the object when the deletionTimestamp field is changed
