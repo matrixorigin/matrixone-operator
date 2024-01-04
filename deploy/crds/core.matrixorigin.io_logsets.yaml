@@ -278,7 +278,6 @@ spec:
                     type: string
                 type: object
             required:
-            - replicas
             - sharedStorage
             - volume
             type: object
