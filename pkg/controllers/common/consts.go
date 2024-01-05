@@ -20,10 +20,15 @@ const (
 
 	MetricsPort = 7001
 
+	DeletionCostAnno = "controller.kubernetes.io/pod-deletion-cost"
+
 	CNUUIDLabelKey = "matrixone.cloud/cn-uuid"
 
 	CNLabelAnnotation    = "matrixone.cloud/cn-label"
 	PrometheusScrapeAnno = "prometheus.io/scrape"
 	PrometheusPortAnno   = "prometheus.io/port"
 	PrometheusPathAnno   = "prometheus.io/path"
+
+	LabelManagedBy = "matrixorigin.io/managed-by"
+	LabelOwnerUID  = "matrixorigin.io/owner-uid"
 )

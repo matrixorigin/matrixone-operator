@@ -46,6 +46,8 @@ spec:
           image: {{ include "matrixone-operator.image" . }}
           command:
           - /manager
+          args:
+          - -leader-elect
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             {{- range $key, $value :=  .Values.env }}

@@ -63,6 +63,12 @@ rules:
     verbs:
       - '*'
   - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - '*'
+    verbs:
+    - '*'
+  - apiGroups:
     - admissionregistration.k8s.io
     resources:
     - mutatingwebhookconfigurations

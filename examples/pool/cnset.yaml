@@ -1,0 +1,14 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+deps:
+  logSet:
+    metadata:
+      name: mo
+      namespace: default
+kind: CNSet
+metadata:
+  name: mo
+  namespace: default
+spec:
+  dnsBasedIdentity: true
+  image: matrixorigin/matrixone:1.1.0
+  replicas: 1

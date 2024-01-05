@@ -14,13 +14,8 @@
 
 package v1alpha1
 
-const (
-	// StoreDrainingStartAnno is the annotation key that used to record the store draining start time
-	StoreDrainingStartAnno = "matrixorigin.io/store-draining-start"
+import corev1 "k8s.io/api/core/v1"
 
-	// StoreConnectionAnno expose the connection count of the store
-	StoreConnectionAnno = "matrixorigin.io/connections"
-
-	// StoreCordonAnno cordons a CN store
-	StoreCordonAnno = "matrixorigin.io/store-cordon"
-)
+func IsPoolingPolicy(pod *corev1.Pod) bool {
+	return pod.Annotations[PodManagementPolicyAnno] == PodManagementPolicyPooling
+}

@@ -1,0 +1,20 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: CNPool
+metadata:
+  name: test
+  namespace: default
+spec:
+  deps:
+    logSet:
+      metadata:
+        name: mo
+        namespace: default
+  strategy:
+    scaleStrategy:
+      maxIdle: 2
+    updateStrategy:
+      reclaimTimeout: 24h
+  podLabels:
+    pool: default
+  template:
+    image: matrixorigin/matrixone:1.1.0

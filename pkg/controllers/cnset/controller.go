@@ -95,7 +95,11 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, errors.Wrap(err, "dry run update cnset")
 	}
 	if !equality.Semantic.DeepEqual(origin, cs) {
-		return c.with(cs).Update, nil
+		if cn.Spec.PauseUpdate {
+			ctx.Log.Info("CNSet does not reach desired state, but update is paused")
+		} else {
+			return c.with(cs).Update, nil
+		}
 	}
 	// calculate status
 	var stores []v1alpha1.CNStore
@@ -105,6 +109,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	if err != nil {
 		return nil, errors.Wrap(err, "list cn pods")
 	}
+	livePods := map[string]bool{}
 	for _, pod := range podList.Items {
 		uid := v1alpha1.GetCNPodUUID(&pod)
 		cnState := pod.Annotations[common.CNStateAnno]
@@ -116,6 +121,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 			PodName: pod.Name,
 			State:   cnState,
 		})
+		livePods[pod.Name] = true
 	}
 	cn.Status.Stores = stores
 	cn.Status.Replicas = cs.Status.Replicas
@@ -141,7 +147,8 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 			}
 		}
 	}
-	if cn.Spec.Replicas != *cs.Spec.Replicas {
+	if cn.Spec.Replicas != *cs.Spec.Replicas ||
+		!equality.Semantic.DeepEqual(cn.Spec.PodsToDelete, cs.Spec.ScaleStrategy.PodsToDelete) {
 		return c.with(cs).Scale, nil
 	}
 
@@ -156,7 +163,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 
 func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return ctx.Patch(c.cs, func() error {
-		syncReplicas(ctx.Obj, c.cs)
+		scaleSet(ctx.Obj, c.cs)
 		return nil
 	})
 }
@@ -219,7 +226,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	hSvc := buildHeadlessSvc(cn)
 	cnSet := buildCNSet(cn, hSvc)
 	svc := buildSvc(cn)
-	syncReplicas(cn, cnSet)
+	scaleSet(cn, cnSet)
 	if err := syncCloneSet(ctx, cnSet); err != nil {
 		return errors.Wrap(err, "sync clone set")
 	}

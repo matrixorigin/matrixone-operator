@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"github.com/go-logr/zapr"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/br"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnclaim"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnpool"
 	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
 	"os"
 
@@ -206,13 +208,22 @@ func main() {
 
 	qc, err := querycli.New(zapLogger)
 	exitIf(err, "unable to create query client")
+	haCliMgr := hacli.NewManager(mgr.GetClient(), mgr.GetLogger())
 	if features.DefaultFeatureGate.Enabled(features.CNLabel) {
-		cnLabelController := cnstore.NewController(hacli.NewManager(mgr.GetClient(), mgr.GetLogger()), qc)
+		cnLabelController := cnstore.NewController(haCliMgr, qc)
 		err = cnLabelController.Reconcile(mgr)
 		exitIf(err, "unable to set up cnlabel controller")
 	} else {
 		setupLog.Info(fmt.Sprintf("cn label not enabled, skip setup cnlabel"))
 	}
+
+	poolController := cnpool.Actor{Logger: mgr.GetLogger().WithName("pool-controller")}
+	err = poolController.Start(mgr)
+	exitIf(err, "error running pool controller")
+
+	claimController := cnclaim.NewActor(haCliMgr)
+	err = claimController.Start(mgr)
+	exitIf(err, "error running claim controller")
 
 	err = mgr.AddHealthzCheck("healthz", healthz.Ping)
 	exitIf(err, "unable to set up health check")

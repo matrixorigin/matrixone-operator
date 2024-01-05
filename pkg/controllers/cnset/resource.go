@@ -110,8 +110,9 @@ func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) 
 	}
 }
 
-func syncReplicas(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) {
+func scaleSet(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) {
 	cs.Spec.Replicas = &cn.Spec.Replicas
+	cs.Spec.ScaleStrategy.PodsToDelete = cn.Spec.PodsToDelete
 }
 
 func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
@@ -146,8 +147,8 @@ func syncPodMeta(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) error {
 		return err
 	}
 	meta.Annotations[common.CNLabelAnnotation] = string(s)
-	if cn.Spec.ExternalStoreControl {
-		meta.Annotations[v1alpha1.StoreExternalControlledAnno] = string(metav1.ConditionTrue)
+	if cn.Spec.PodManagementPolicy != nil {
+		meta.Annotations[v1alpha1.PodManagementPolicyAnno] = *cn.Spec.PodManagementPolicy
 	}
 	cn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 	return nil

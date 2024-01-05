@@ -117,11 +117,6 @@ spec:
                 type: boolean
               exportToPrometheus:
                 type: boolean
-              externalStoreControl:
-                description: ExternalStoreControl indicates mo-operator should not
-                  sync CN store state and label so that the store state can be safely
-                  managed externally
-                type: boolean
               image:
                 description: Image is the docker image of the main container
                 type: string
@@ -153,6 +148,18 @@ spec:
                 type: object
               overlay:
                 x-kubernetes-preserve-unknown-fields: true
+              pauseUpdate:
+                description: PauseUpdate means the CNSet should pause rolling-update
+                type: boolean
+              podManagementPolicy:
+                description: PodManagementPolicy is the pod management policy of the
+                  Pod in this Set
+                type: string
+              podsToDelete:
+                description: PodsToDelete are the Pods to delete in the CNSet
+                items:
+                  type: string
+                type: array
               pythonUdfSidecar:
                 description: PythonUdfSidecar is the python udf server in CN
                 properties:

@@ -18,6 +18,12 @@ Refer to https://docs.matrixorigin.io/ for more information about MatrixOne data
 - [BackupList](#backuplist)
 - [BucketClaim](#bucketclaim)
 - [BucketClaimList](#bucketclaimlist)
+- [CNClaim](#cnclaim)
+- [CNClaimList](#cnclaimlist)
+- [CNClaimSet](#cnclaimset)
+- [CNClaimSetList](#cnclaimsetlist)
+- [CNPool](#cnpool)
+- [CNPoolList](#cnpoollist)
 - [CNSet](#cnset)
 - [DNSet](#dnset)
 - [LogSet](#logset)
@@ -201,6 +207,138 @@ _Appears in:_
 
 
 
+#### CNClaim
+
+
+
+CNClaim claim a CN to use
+
+_Appears in:_
+- [CNClaimList](#cnclaimlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `CNClaim`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[CNClaimSpec](#cnclaimspec)_ |  |
+
+
+#### CNClaimList
+
+
+
+CNClaimList contains a list of CNClaims
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `CNClaimList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[CNClaim](#cnclaim) array_ |  |
+
+
+#### CNClaimSet
+
+
+
+CNClaimSet orchestrates a set of CNClaims
+
+_Appears in:_
+- [CNClaimSetList](#cnclaimsetlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `CNClaimSet`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[CNClaimSetSpec](#cnclaimsetspec)_ |  |
+
+
+#### CNClaimSetList
+
+
+
+CNClaimSetList contains a list of CNClaimSet
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `CNClaimSetList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[CNClaimSet](#cnclaimset) array_ |  |
+
+
+#### CNClaimSetSpec
+
+
+
+
+
+_Appears in:_
+- [CNClaimSet](#cnclaimset)
+
+| Field | Description |
+| --- | --- |
+| `replicas` _integer_ |  |
+| `template` _[CNClaimTemplate](#cnclaimtemplate)_ |  |
+| `selector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#labelselector-v1-meta)_ |  |
+
+
+
+
+#### CNClaimSpec
+
+
+
+
+
+_Appears in:_
+- [CNClaim](#cnclaim)
+- [CNClaimTemplate](#cnclaimtemplate)
+
+| Field | Description |
+| --- | --- |
+| `selector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#labelselector-v1-meta)_ |  |
+| `cnLabels` _[CNLabel](#cnlabel) array_ |  |
+| `podName` _string_ | PodName is usually populated by controller and would be part of the claim spec that must be persisted once bound |
+| `poolName` _string_ | PoolName is usually populated by controller that which pool the claim is nominated |
+
+
+#### CNClaimStatus
+
+
+
+
+
+_Appears in:_
+- [CNClaimSetStatus](#cnclaimsetstatus)
+
+| Field | Description |
+| --- | --- |
+| `phase` _CNClaimPhase_ |  |
+| `store` _[CNStoreStatus](#cnstorestatus)_ |  |
+
+
+#### CNClaimTemplate
+
+
+
+
+
+_Appears in:_
+- [CNClaimSetSpec](#cnclaimsetspec)
+
+| Field | Description |
+| --- | --- |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[CNClaimSpec](#cnclaimspec)_ |  |
+
+
 #### CNGroup
 
 
@@ -242,12 +380,77 @@ _Appears in:_
 
 
 _Appears in:_
+- [CNClaimSpec](#cnclaimspec)
 - [CNSetSpec](#cnsetspec)
+- [CNStoreStatus](#cnstorestatus)
 
 | Field | Description |
 | --- | --- |
 | `key` _string_ | Key is the store label key |
 | `values` _string array_ | Values are the store label values |
+
+
+#### CNPool
+
+
+
+CNPool maintains a pool of CN Pods
+
+_Appears in:_
+- [CNPoolList](#cnpoollist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `CNPool`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[CNPoolSpec](#cnpoolspec)_ |  |
+
+
+#### CNPoolList
+
+
+
+CNPoolList contains a list of CNPool
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `core.matrixorigin.io/v1alpha1`
+| `kind` _string_ | `CNPoolList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[CNPool](#cnpool) array_ |  |
+
+
+#### CNPoolSpec
+
+
+
+
+
+_Appears in:_
+- [CNPool](#cnpool)
+
+| Field | Description |
+| --- | --- |
+| `template` _[CNSetSpec](#cnsetspec)_ | Template is the CNSet template of the Pool |
+| `podLabels` _object (keys:string, values:string)_ | PodLabels is the Pod labels of the CN in Pool |
+| `deps` _[CNSetDeps](#cnsetdeps)_ | Deps is the dependencies of the Pool |
+| `strategy` _[PoolStrategy](#poolstrategy)_ |  |
+
+
+
+
+#### CNRole
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [CNSetSpec](#cnsetspec)
+
 
 
 #### CNSet
@@ -275,6 +478,7 @@ _Appears in:_
 
 
 _Appears in:_
+- [CNPoolSpec](#cnpoolspec)
 - [CNSet](#cnset)
 
 | Field | Description |
@@ -291,6 +495,7 @@ _Appears in:_
 
 _Appears in:_
 - [CNGroup](#cngroup)
+- [CNPoolSpec](#cnpoolspec)
 - [CNSet](#cnset)
 - [MatrixOneClusterSpec](#matrixoneclusterspec)
 
@@ -302,15 +507,37 @@ _Appears in:_
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet, node storage will be used if not specified |
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |
-| `role` _CNRole_ | [TP, AP], default to TP Deprecated: use labels instead |
+| `role` _[CNRole](#cnrole)_ | [TP, AP], default to TP Deprecated: use labels instead |
 | `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
-| `externalStoreControl` _boolean_ | ExternalStoreControl indicates mo-operator should not sync CN store state and label so that the store state can be safely managed externally |
 | `scalingConfig` _[ScalingConfig](#scalingconfig)_ | ScalingConfig declares the CN scaling behavior |
 | `metricsSecretRef` _[ObjectRef](#objectref)_ | MetricsSecretRef is the secret reference for the operator to access CN metrics |
 | `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy is the rolling-update strategy of CN |
 | `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the python udf server in CN |
+| `podManagementPolicy` _string_ | PodManagementPolicy is the pod management policy of the Pod in this Set |
+| `podsToDelete` _string array_ | PodsToDelete are the Pods to delete in the CNSet |
+| `pauseUpdate` _boolean_ | PauseUpdate means the CNSet should pause rolling-update |
 
 
+
+
+#### CNStoreStatus
+
+
+
+
+
+_Appears in:_
+- [CNClaimStatus](#cnclaimstatus)
+
+| Field | Description |
+| --- | --- |
+| `serviceID` _string_ |  |
+| `lockServiceAddress` _string_ |  |
+| `pipelineServiceAddress` _string_ |  |
+| `sqlAddress` _string_ |  |
+| `queryAddress` _string_ |  |
+| `workState` _integer_ |  |
+| `labels` _[CNLabel](#cnlabel) array_ |  |
 
 
 #### CertificateRef
@@ -450,10 +677,10 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `logShards` _integer_ | LogShards is the initial number of log shards, cannot be tuned after cluster creation currently. default to 1 |
-| `dnShards` _integer_ | DNShards is the initial number of DN shards, cannot be tuned after cluster creation currently. default to 1 |
-| `logShardReplicas` _integer_ | LogShardReplicas is the replica numbers of each log shard, cannot be tuned after cluster creation currently. default to 3 if LogSet replicas >= 3, to 1 otherwise |
-| `restoreFrom` _string_ | RestoreFrom declares the HAKeeper data should be restored from the given path when hakeeper is bootstrapped |
+| `logShards` _[int](#int)_ | LogShards is the initial number of log shards, cannot be tuned after cluster creation currently. default to 1 |
+| `dnShards` _[int](#int)_ | DNShards is the initial number of DN shards, cannot be tuned after cluster creation currently. default to 1 |
+| `logShardReplicas` _[int](#int)_ | LogShardReplicas is the replica numbers of each log shard, cannot be tuned after cluster creation currently. default to 3 if LogSet replicas >= 3, to 1 otherwise |
+| `restoreFrom` _[string](#string)_ | RestoreFrom declares the HAKeeper data should be restored from the given path when hakeeper is bootstrapped |
 
 
 #### LogSet
@@ -682,6 +909,50 @@ _Appears in:_
 | `serviceArgs` _string array_ | ServiceArgs define command line options for process, used by logset/cnset/dnset service. NOTE: user should not define "-cfg" argument in this field, which is defined default by controller |
 | `memoryLimitPercent` _integer_ | MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory * MemoryLimitPercent / 100 |
 | `exportToPrometheus` _boolean_ |  |
+
+
+#### PoolScaleStrategy
+
+
+
+
+
+_Appears in:_
+- [PoolStrategy](#poolstrategy)
+
+| Field | Description |
+| --- | --- |
+| `maxIdle` _integer_ |  |
+| `maxPods` _integer_ | MaxPods allowed in this Pool, nil means no limit |
+
+
+#### PoolStrategy
+
+
+
+
+
+_Appears in:_
+- [CNPoolSpec](#cnpoolspec)
+
+| Field | Description |
+| --- | --- |
+| `updateStrategy` _[PoolUpdateStrategy](#poolupdatestrategy)_ | UpdateStrategy defines the strategy for pool updating |
+| `scaleStrategy` _[PoolScaleStrategy](#poolscalestrategy)_ | UpdateStrategy defines the strategy for pool scaling |
+
+
+#### PoolUpdateStrategy
+
+
+
+
+
+_Appears in:_
+- [PoolStrategy](#poolstrategy)
+
+| Field | Description |
+| --- | --- |
+| `reclaimTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ |  |
 
 
 #### ProxySet
