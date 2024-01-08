@@ -1,4 +1,4 @@
-// Copyright 2023 Matrix Origin
+// Copyright 2024 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,11 +20,15 @@ const (
 
 	MetricsPort = 7001
 
-	CNLabelAnnotation = "matrixone.cloud/cn-label"
+	DeletionCostAnno = "controller.kubernetes.io/pod-deletion-cost"
 
-	CNUUIDAnnotation = "matrixone.cloud/cn-uuid"
+	CNUUIDLabelKey = "matrixone.cloud/cn-uuid"
 
+	CNLabelAnnotation    = "matrixone.cloud/cn-label"
 	PrometheusScrapeAnno = "prometheus.io/scrape"
 	PrometheusPortAnno   = "prometheus.io/port"
 	PrometheusPathAnno   = "prometheus.io/path"
+
+	LabelManagedBy = "matrixorigin.io/managed-by"
+	LabelOwnerUID  = "matrixorigin.io/owner-uid"
 )

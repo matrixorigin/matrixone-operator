@@ -208,8 +208,6 @@ spec:
                 items:
                   type: string
                 type: array
-            required:
-            - replicas
             type: object
           status:
             properties:

@@ -148,6 +148,18 @@ spec:
                 type: object
               overlay:
                 x-kubernetes-preserve-unknown-fields: true
+              pauseUpdate:
+                description: PauseUpdate means the CNSet should pause rolling-update
+                type: boolean
+              podManagementPolicy:
+                description: PodManagementPolicy is the pod management policy of the
+                  Pod in this Set
+                type: string
+              podsToDelete:
+                description: PodsToDelete are the Pods to delete in the CNSet
+                items:
+                  type: string
+                type: array
               pythonUdfSidecar:
                 description: PythonUdfSidecar is the python udf server in CN
                 properties:
@@ -355,8 +367,6 @@ spec:
                       process.
                     x-kubernetes-int-or-string: true
                 type: object
-            required:
-            - replicas
             type: object
           status:
             description: CNSetStatus Figure out what status should be exposed

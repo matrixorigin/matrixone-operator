@@ -1,4 +1,4 @@
-// Copyright 2023 Matrix Origin
+// Copyright 2024 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -110,8 +110,9 @@ func syncPersistentVolumeClaim(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) 
 	}
 }
 
-func syncReplicas(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) {
+func scaleSet(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) {
 	cs.Spec.Replicas = &cn.Spec.Replicas
+	cs.Spec.ScaleStrategy.PodsToDelete = cn.Spec.PodsToDelete
 }
 
 func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
@@ -146,6 +147,9 @@ func syncPodMeta(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) error {
 		return err
 	}
 	meta.Annotations[common.CNLabelAnnotation] = string(s)
+	if cn.Spec.PodManagementPolicy != nil {
+		meta.Annotations[v1alpha1.PodManagementPolicyAnno] = *cn.Spec.PodManagementPolicy
+	}
 	cn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 	return nil
 }

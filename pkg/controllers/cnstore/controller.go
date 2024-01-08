@@ -1,4 +1,4 @@
-// Copyright 2023 Matrix Origin
+// Copyright 2024 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,10 +27,8 @@ import (
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
 	"github.com/openkruise/kruise-api/apps/pub"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,12 +42,6 @@ import (
 )
 
 const (
-	deletionCostAnno       = "controller.kubernetes.io/pod-deletion-cost"
-	storeDrainingStartAnno = "matrixorigin.io/store-draining-start"
-	storeConnectionAnno    = "matrixorigin.io/connections"
-
-	storeCordonAnno = "matrixorigin.io/store-cordon"
-
 	messageCNCordon      = "CNStoreCordon"
 	messageCNPrepareStop = "CNStorePrepareStop"
 	messageCNStoreReady  = "CNStoreReady"
@@ -119,7 +111,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 
 	// start draining
 	var startTime time.Time
-	startTimeStr, ok := pod.Annotations[storeDrainingStartAnno]
+	startTimeStr, ok := pod.Annotations[v1alpha1.StoreDrainingStartAnno]
 	if ok {
 		parsed, err := time.Parse(time.RFC3339, startTimeStr)
 		if err != nil {
@@ -129,7 +121,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	} else {
 		startTime = time.Now()
 		if err := ctx.Patch(pod, func() error {
-			pod.Annotations[storeDrainingStartAnno] = startTime.Format(time.RFC3339)
+			pod.Annotations[v1alpha1.StoreDrainingStartAnno] = startTime.Format(time.RFC3339)
 			return nil
 		}); err != nil {
 			return errors.Wrap(err, "error patching store draining start time")
@@ -155,13 +147,9 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		return errors.Wrap(err, "error set CN state draining")
 	}
 
-	connectionStr, ok := pod.Annotations[storeConnectionAnno]
-	if !ok {
-		return errors.Errorf("cannot find connection count for CN pod %s/%s, connection annotation is empty", pod.Namespace, pod.Name)
-	}
-	count, err := strconv.Atoi(connectionStr)
+	count, err := common.GetStoreConnection(pod)
 	if err != nil {
-		return errors.Wrap(err, "error parsing connection count")
+		return errors.Wrap(err, "error get store connection count")
 	}
 	if count == 0 {
 		return c.completeDraining(ctx)
@@ -172,7 +160,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 func (c *withCNSet) completeDraining(ctx *recon.Context[*corev1.Pod]) error {
 	if err := ctx.Patch(ctx.Obj, func() error {
 		controllerutil.RemoveFinalizer(ctx.Obj, common.CNDrainingFinalizer)
-		delete(ctx.Obj.Annotations, storeDrainingStartAnno)
+		delete(ctx.Obj.Annotations, v1alpha1.StoreDrainingStartAnno)
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "error removing CN draining finalizer")
@@ -183,28 +171,37 @@ func (c *withCNSet) completeDraining(ctx *recon.Context[*corev1.Pod]) error {
 // OnNormal ensure CNStore labels and transit CN store to UP state
 func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
-	uid := v1alpha1.GetCNPodUUID(pod)
 
-	// 1. ensure finalizers
-	if err := ctx.Patch(ctx.Obj, func() error {
+	// ensure finalizers
+	if err := ctx.Patch(pod, func() error {
 		controllerutil.AddFinalizer(ctx.Obj, common.CNDrainingFinalizer)
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "ensure finalizers for CNStore Pod")
 	}
-
-	// 2 remove draining start time in case we regret formal deletion decision
+	// remove draining start time in case we regret formal deletion decision
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
 	}
 	if err := ctx.Patch(pod, func() error {
-		delete(pod.Annotations, storeDrainingStartAnno)
+		delete(pod.Annotations, v1alpha1.StoreDrainingStartAnno)
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "removing CN draining start time")
 	}
 
-	// 3. sync CN labels for store and mark store as UP state
+	// policy based reconciliation
+	if v1alpha1.IsPoolingPolicy(ctx.Obj) {
+		return c.poolingCNReconcile(ctx)
+	}
+	return c.defaultCNNormalReconcile(ctx)
+}
+
+func (c *withCNSet) defaultCNNormalReconcile(ctx *recon.Context[*corev1.Pod]) error {
+	pod := ctx.Obj
+	uid := v1alpha1.GetCNPodUUID(pod)
+
+	// sync CN labels for store and mark store as UP state
 	var cnLabels []v1alpha1.CNLabel
 	labelStr, ok := pod.Annotations[common.CNLabelAnnotation]
 	if ok {
@@ -220,14 +217,14 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 			return h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
 				UUID:   uid,
 				State:  metadata.WorkState_Working,
-				Labels: toStoreLabels(cnLabels),
+				Labels: common.ToStoreLabels(cnLabels),
 			})
 		})
 	} else {
 		err = c.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
 			return h.Client.UpdateCNLabel(timeout, logpb.CNStoreLabel{
 				UUID:   uid,
-				Labels: toStoreLabels(cnLabels),
+				Labels: common.ToStoreLabels(cnLabels),
 			})
 		})
 	}
@@ -235,8 +232,13 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		ctx.Log.Error(err, "update CN failed", "uuid", uid)
 		return recon.ErrReSync("update cn failed", retryInterval)
 	}
-	ctx.Log.Info("successfully set CN working")
+	ctx.Log.V(4).Info("successfully set CN working")
 
+	return c.markCNReady(ctx)
+}
+
+func (c *withCNSet) markCNReady(ctx *recon.Context[*corev1.Pod]) error {
+	pod := ctx.Obj
 	if err := ctx.PatchStatus(pod, func() error {
 		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
 		if cond == nil {
@@ -296,33 +298,23 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 		return c.OnDeleted(ctx)
 	}
 
-	// 2. pre-check
-	if component, ok := pod.Labels[common.ComponentLabelKey]; !ok || component != "CNSet" {
-		ctx.Log.V(4).Info("pod is not a CN pod, skip", zap.String("namespace", pod.Namespace), zap.String("name", pod.Name))
-		return nil
-	}
-	cnName, ok := pod.Labels[common.InstanceLabelKey]
-	if !ok || cnName == "" {
-		return errors.Errorf("cannot find CNSet for CN pod %s/%s, instance label is empty", pod.Namespace, pod.Name)
-	}
-
-	// 3. build dep
-	cn := &v1alpha1.CNSet{}
-	if err := ctx.Get(types.NamespacedName{Namespace: pod.Namespace, Name: cnName}, cn); err != nil {
-		return errors.Wrap(err, "get CNSet")
+	// 2. resolve CNSet
+	cnSet, err := common.ResolveCNSet(ctx, pod)
+	if err != nil {
+		return errors.Wrap(err, "error resolve CNSet")
 	}
 	wc := &withCNSet{
 		Controller: c,
-		cn:         cn,
+		cn:         cnSet,
 	}
 
-	// 4. sync stats, including connections and deletion cost
+	// 3. sync stats, including connections and deletion cost
 	if err := wc.syncStats(ctx); err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error sync stats for CN pod %s/%s", pod.Namespace, pod.Name))
 	}
 
-	// 5. optionally, store is asked to be cordoned
-	if _, ok := pod.Annotations[storeCordonAnno]; ok {
+	// 4. optionally, store is asked to be cordoned
+	if _, ok := pod.Annotations[v1alpha1.StoreCordonAnno]; ok {
 		return wc.OnCordon(ctx)
 	}
 
@@ -330,10 +322,13 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	if lifecycleState == string(pub.LifecycleStatePreparingUpdate) || lifecycleState == string(pub.LifecycleStatePreparingDelete) {
 		return wc.OnPreparingStop(ctx)
 	}
+
 	if err := wc.OnNormal(ctx); err != nil {
 		return errors.Wrap(err, "error set pod normal")
 	}
-	return recon.ErrReSync("resync cn", resyncInterval)
+	// trigger next reconciliation later to refresh the stats
+	// TODO(aylei): better stats handling
+	return recon.ErrReSync("resync", resyncInterval)
 }
 
 func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
@@ -356,16 +351,24 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		// cannot get session, sync next time
 		return nil
 	}
-	// sync deletion cost
-	return ctx.Patch(pod, func() error {
+	// cost is equal to connection count by default
+	cost := count
+	err = ctx.Patch(pod, func() error {
 		if pod.Annotations == nil {
 			pod.Annotations = map[string]string{}
 		}
-		pod.Annotations[common.CNUUIDAnnotation] = uid
-		pod.Annotations[deletionCostAnno] = strconv.Itoa(count)
-		pod.Annotations[storeConnectionAnno] = strconv.Itoa(count)
+		pod.Annotations[common.DeletionCostAnno] = strconv.Itoa(cost)
+		pod.Annotations[v1alpha1.StoreConnectionAnno] = strconv.Itoa(count)
+		if pod.Labels == nil {
+			pod.Labels = map[string]string{}
+		}
+		pod.Labels[common.CNUUIDLabelKey] = uid
 		return nil
 	})
+	if err != nil {
+		return errors.Wrap(err, "error patch stats to pod anno")
+	}
+	return nil
 }
 
 func (c *Controller) getSessionCount(pod *corev1.Pod, queryAddress string) (int, error) {
@@ -387,15 +390,9 @@ func (c *Controller) getSessionCount(pod *corev1.Pod, queryAddress string) (int,
 
 func (c *withCNSet) withHAKeeperClient(ctx *recon.Context[*corev1.Pod], fn func(context.Context, *hacli.Handler) error) error {
 	pod := ctx.Obj
-	cn := c.cn
-	// TODO: consider edge cluster federation scenario
-	if cn.Deps.LogSet == nil {
-		return errors.Errorf("cannot get logset of CN pod %s/%s, logset dep is nil", pod.Namespace, pod.Name)
-	}
-	ls := &v1alpha1.LogSet{}
-	// refresh logset status
-	if err := ctx.Get(client.ObjectKeyFromObject(cn.Deps.LogSet), ls); err != nil {
-		return errors.Wrap(err, "error get logset")
+	ls, err := common.ResolveLogSet(ctx, c.cn)
+	if err != nil {
+		return errors.Wrap(err, "error resolve logset")
 	}
 	if !recon.IsReady(ls) {
 		return recon.ErrReSync(fmt.Sprintf("logset is not ready for Pod %s, cannot update CN labels", pod.Name), retryInterval)
@@ -419,16 +416,6 @@ func (c *Controller) setCNState(pod *corev1.Pod, state string) {
 	pod.Annotations[common.CNStateAnno] = state
 }
 
-func toStoreLabels(labels []v1alpha1.CNLabel) map[string]metadata.LabelList {
-	lm := make(map[string]metadata.LabelList, len(labels))
-	for _, l := range labels {
-		lm[l.Key] = metadata.LabelList{
-			Labels: l.Values,
-		}
-	}
-	return lm
-}
-
 func (c *Controller) Observe(ctx *recon.Context[*corev1.Pod]) (recon.Action[*corev1.Pod], error) {
 	return nil, c.observe(ctx)
 }
@@ -444,8 +431,8 @@ func (c *Controller) Reconcile(mgr manager.Manager) error {
 		recon.SkipStatusSync(),
 		recon.WithPredicate(
 			predicate.Or(predicate.LabelChangedPredicate{},
-				predicate.AnnotationChangedPredicate{},
 				predicate.GenerationChangedPredicate{},
+				annotationChangedExcludeStats{},
 				deletedPredicate{})),
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -463,6 +450,24 @@ func (c *Controller) Reconcile(mgr manager.Manager) error {
 			}))
 		}),
 	)
+}
+
+// annotationChangedExcludeStats reconciles the object when annotations are changed (exclude stats)
+type annotationChangedExcludeStats struct {
+	predicate.Funcs
+}
+
+func (annotationChangedExcludeStats) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+	oldAnnos := e.ObjectOld.GetAnnotations()
+	newAnnos := e.ObjectNew.GetAnnotations()
+	for _, key := range []string{common.DeletionCostAnno, v1alpha1.StoreCordonAnno} {
+		delete(oldAnnos, key)
+		delete(newAnnos, key)
+	}
+	return !reflect.DeepEqual(oldAnnos, newAnnos)
 }
 
 // deletePredicate reconciles the object when the deletionTimestamp field is changed

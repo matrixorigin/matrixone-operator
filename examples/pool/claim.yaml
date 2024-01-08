@@ -1,0 +1,13 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: CNClaim
+metadata:
+  name: test
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      pool: default
+  cnLabels:
+  - key: role
+    values:
+    - test

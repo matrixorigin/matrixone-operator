@@ -1,0 +1,18 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: LogSet
+metadata:
+  name: mo
+  namespace: default
+spec:
+  image: matrixorigin/matrixone:1.1.0
+  replicas: 3
+  sharedStorage:
+    s3:
+      type: minio
+      path: matrixone
+      endpoint: http://minio.default:9000
+      secretRef:
+        name: minio
+  storeFailureTimeout: 30m0s
+  volume:
+    size: 10Gi

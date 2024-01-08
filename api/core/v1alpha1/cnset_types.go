@@ -1,4 +1,4 @@
-// Copyright 2023 Matrix Origin
+// Copyright 2024 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,6 +85,15 @@ type CNSetSpec struct {
 
 	// PythonUdfSidecar is the python udf server in CN
 	PythonUdfSidecar PythonUdfSidecar `json:"pythonUdfSidecar,omitempty"`
+
+	// PodManagementPolicy is the pod management policy of the Pod in this Set
+	PodManagementPolicy *string `json:"podManagementPolicy,omitempty"`
+
+	// PodsToDelete are the Pods to delete in the CNSet
+	PodsToDelete []string `json:"podsToDelete,omitempty"`
+
+	// PauseUpdate means the CNSet should pause rolling-update
+	PauseUpdate bool `json:"pauseUpdate,omitempty"`
 }
 
 type ScalingConfig struct {

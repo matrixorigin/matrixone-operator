@@ -1,0 +1,418 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: cnpools.core.matrixorigin.io
+spec:
+  group: core.matrixorigin.io
+  names:
+    kind: CNPool
+    listKind: CNPoolList
+    plural: cnpools
+    singular: cnpool
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: CNPool maintains a pool of CN Pods
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              deps:
+                description: Deps is the dependencies of the Pool
+                properties:
+                  dnSet:
+                    description: The DNSet it depends on
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  externalLogSet:
+                    description: 'An external LogSet the CNSet should connected to,
+                      mutual exclusive with LogSet TODO: rethink the schema of ExternalLogSet'
+                    properties:
+                      haKeeperEndpoint:
+                        description: HAKeeperEndpoint of the ExternalLogSet
+                        type: string
+                    type: object
+                  logSet:
+                    description: The LogSet it depends on, mutual exclusive with ExternalLogSet
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                type: object
+              podLabels:
+                additionalProperties:
+                  type: string
+                description: PodLabels is the Pod labels of the CN in Pool
+                type: object
+              strategy:
+                properties:
+                  scaleStrategy:
+                    description: UpdateStrategy defines the strategy for pool scaling
+                    properties:
+                      maxIdle:
+                        format: int32
+                        type: integer
+                      maxPods:
+                        description: MaxPods allowed in this Pool, nil means no limit
+                        format: int32
+                        type: integer
+                    required:
+                    - maxIdle
+                    type: object
+                  updateStrategy:
+                    description: UpdateStrategy defines the strategy for pool updating
+                    properties:
+                      reclaimTimeout:
+                        type: string
+                    type: object
+                required:
+                - scaleStrategy
+                - updateStrategy
+                type: object
+              template:
+                description: Template is the CNSet template of the Pool
+                properties:
+                  cacheVolume:
+                    description: CacheVolume is the desired local cache volume for
+                      CNSet, node storage will be used if not specified
+                    properties:
+                      memoryCacheSize:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: 'Deprecated: use SharedStorageCache instead'
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      size:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: Size is the desired storage size of the volume
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      storageClassName:
+                        description: StorageClassName reference to the storageclass
+                          of the desired volume, the default storageclass of the cluster
+                          would be used if no specified.
+                        type: string
+                    type: object
+                  clusterDomain:
+                    description: ClusterDomain is the cluster-domain of current kubernetes
+                      cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+                      for details
+                    type: string
+                  cnLabels:
+                    description: Labels are the CN labels for all the CN stores managed
+                      by this CNSet
+                    items:
+                      properties:
+                        key:
+                          description: Key is the store label key
+                          type: string
+                        values:
+                          description: Values are the store label values
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    type: array
+                  config:
+                    description: Config is the raw config for pods
+                    type: string
+                  dnsBasedIdentity:
+                    description: If enabled, use the Pod dns name as the Pod identity
+                    type: boolean
+                  exportToPrometheus:
+                    type: boolean
+                  image:
+                    description: Image is the docker image of the main container
+                    type: string
+                  memoryLimitPercent:
+                    description: MemoryLimitPercent is percent used to set GOMEMLIMIT
+                      env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
+                      * MemoryLimitPercent / 100
+                    type: integer
+                  metricsSecretRef:
+                    description: MetricsSecretRef is the secret reference for the
+                      operator to access CN metrics
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  nodePort:
+                    description: NodePort specifies the node port to use when ServiceType
+                      is NodePort or LoadBalancer, reconciling will fail if the node
+                      port is not available.
+                    format: int32
+                    type: integer
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  overlay:
+                    x-kubernetes-preserve-unknown-fields: true
+                  pauseUpdate:
+                    description: PauseUpdate means the CNSet should pause rolling-update
+                    type: boolean
+                  podManagementPolicy:
+                    description: PodManagementPolicy is the pod management policy
+                      of the Pod in this Set
+                    type: string
+                  podsToDelete:
+                    description: PodsToDelete are the Pods to delete in the CNSet
+                    items:
+                      type: string
+                    type: array
+                  pythonUdfSidecar:
+                    description: PythonUdfSidecar is the python udf server in CN
+                    properties:
+                      enabled:
+                        type: boolean
+                      image:
+                        description: Image is the docker image of the python udf server
+                        type: string
+                      overlay:
+                        x-kubernetes-preserve-unknown-fields: true
+                      port:
+                        type: integer
+                      resources:
+                        description: Resources is the resource requirement of the
+                          python udf server
+                        properties:
+                          claims:
+                            description: "Claims lists the names of resources, defined
+                              in spec.resourceClaims, that are used by this container.
+                              \n This is an alpha field and requires enabling the
+                              DynamicResourceAllocation feature gate. \n This field
+                              is immutable. It can only be set for containers."
+                            items:
+                              description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                              properties:
+                                name:
+                                  description: Name must match the name of one entry
+                                    in pod.spec.resourceClaims of the Pod where this
+                                    field is used. It makes that resource available
+                                    inside a container.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: 'Limits describes the maximum amount of compute
+                              resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: 'Requests describes the minimum amount of
+                              compute resources required. If Requests is omitted for
+                              a container, it defaults to Limits if that is explicitly
+                              specified, otherwise to an implementation-defined value.
+                              Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            type: object
+                        type: object
+                    type: object
+                  replicas:
+                    description: Replicas is the desired number of pods of this set
+                    format: int32
+                    type: integer
+                  resources:
+                    description: Resources is the resource requirement of the main
+                      conainer
+                    properties:
+                      claims:
+                        description: "Claims lists the names of resources, defined
+                          in spec.resourceClaims, that are used by this container.
+                          \n This is an alpha field and requires enabling the DynamicResourceAllocation
+                          feature gate. \n This field is immutable. It can only be
+                          set for containers."
+                        items:
+                          description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                          properties:
+                            name:
+                              description: Name must match the name of one entry in
+                                pod.spec.resourceClaims of the Pod where this field
+                                is used. It makes that resource available inside a
+                                container.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. Requests cannot exceed
+                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  role:
+                    description: '[TP, AP], default to TP Deprecated: use labels instead'
+                    type: string
+                  scalingConfig:
+                    description: ScalingConfig declares the CN scaling behavior
+                    properties:
+                      storeDrainEnabled:
+                        description: StoreDrainEnabled is the flag to enable store
+                          draining
+                        type: boolean
+                      storeDrainTimeout:
+                        description: StoreDrainTimeout is the timeout for draining
+                          a CN store
+                        type: string
+                    type: object
+                  serviceAnnotations:
+                    additionalProperties:
+                      type: string
+                    description: ServiceAnnotations are the annotations for the cn
+                      service
+                    type: object
+                  serviceArgs:
+                    description: 'ServiceArgs define command line options for process,
+                      used by logset/cnset/dnset service. NOTE: user should not define
+                      "-cfg" argument in this field, which is defined default by controller'
+                    items:
+                      type: string
+                    type: array
+                  serviceType:
+                    default: ClusterIP
+                    description: ServiceType is the service type of cn service
+                    enum:
+                    - ClusterIP
+                    - NodePort
+                    - LoadBalancer
+                    type: string
+                  sharedStorageCache:
+                    description: SharedStorageCache is the configuration of the S3
+                      sharedStorageCache
+                    properties:
+                      diskCacheSize:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: 'DiskCacheSize specifies how much disk space
+                          can be used to cache the object in shared storage, the default
+                          size would be 90% of the cacheVolume size to reserve some
+                          space to the filesystem metadata and avoid disk space exhaustion
+                          DiskCache would be disabled if CacheVolume is not set for
+                          DN/CN, and if DiskCacheSize is set while the CacheVolume
+                          is not set for DN/CN, an error would be raised to indicate
+                          the misconfiguration. NOTE: Unless there is a specific reason
+                          not to set this field, it is usually more reasonable to
+                          let the operator set the available disk cache size according
+                          to the actual size of the cacheVolume.'
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      memoryCacheSize:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: MemoryCacheSize specifies how much memory would
+                          be used to cache the object in shared storage, the default
+                          size would be 50% of the container memory request MemoryCache
+                          cannot be completely disabled due to MO limitation currently,
+                          you can set MemoryCacheSize to 1B to achieve an effect similar
+                          to disabling
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                    type: object
+                  topologySpread:
+                    description: TopologyEvenSpread specifies what topology domains
+                      the Pods in set should be evenly spread in. This will be overridden
+                      by .overlay.TopologySpreadConstraints
+                    items:
+                      type: string
+                    type: array
+                  updateStrategy:
+                    description: UpdateStrategy is the rolling-update strategy of
+                      CN
+                    properties:
+                      maxSurge:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: MaxSurge is an optional field that specifies
+                          the maximum number of Pods that can be created over the
+                          desired number of Pods.
+                        x-kubernetes-int-or-string: true
+                      maxUnavailable:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: MaxUnavailable an optional field that specifies
+                          the maximum number of Pods that can be unavailable during
+                          the update process.
+                        x-kubernetes-int-or-string: true
+                    type: object
+                type: object
+            required:
+            - deps
+            - strategy
+            - template
+            type: object
+          status:
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

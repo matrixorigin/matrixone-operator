@@ -1,4 +1,4 @@
-// Copyright 2023 Matrix Origin
+// Copyright 2024 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,7 +58,8 @@ type PodSet struct {
 	Overlay *Overlay `json:"overlay,omitempty"`
 
 	// Replicas is the desired number of pods of this set
-	Replicas int32 `json:"replicas"`
+	// +optional
+	Replicas int32 `json:"replicas,omitempty"`
 
 	// TopologyEvenSpread specifies what topology domains the Pods in set should be
 	// evenly spread in.
