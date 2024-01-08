@@ -224,17 +224,24 @@ func main() {
 		setupLog.Info(fmt.Sprintf("cn label not enabled, skip setup cnlabel"))
 	}
 
-	poolController := cnpool.Actor{Logger: mgr.GetLogger().WithName("pool-controller")}
-	err = poolController.Start(mgr)
-	exitIf(err, "error running pool controller")
+	if features.DefaultFeatureGate.Enabled(features.CNPool) {
+		if !features.DefaultFeatureGate.Enabled(features.CNLabel) {
+			panic("cn label must be enabled when cn pool is enabled")
+		}
+		poolController := cnpool.Actor{Logger: mgr.GetLogger().WithName("pool-controller")}
+		err = poolController.Start(mgr)
+		exitIf(err, "error running pool controller")
 
-	claimController := cnclaim.NewActor(haCliMgr)
-	err = claimController.Start(mgr)
-	exitIf(err, "error running claim controller")
+		claimController := cnclaim.NewActor(haCliMgr)
+		err = claimController.Start(mgr)
+		exitIf(err, "error running claim controller")
 
-	claimSetController := cnclaimset.NewActor(directClient)
-	err = claimSetController.Start(mgr)
-	exitIf(err, "error running claim set controller")
+		claimSetController := cnclaimset.NewActor(directClient)
+		err = claimSetController.Start(mgr)
+		exitIf(err, "error running claim set controller")
+	} else {
+		setupLog.Info(fmt.Sprintf("cn pool not enabled, skip setup pool related controller"))
+	}
 
 	err = mgr.AddHealthzCheck("healthz", healthz.Ping)
 	exitIf(err, "unable to set up health check")

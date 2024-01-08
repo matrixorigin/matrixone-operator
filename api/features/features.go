@@ -38,6 +38,8 @@ const (
 	BRSupport featuregate.Feature = "backupRestore"
 
 	CNLabel featuregate.Feature = "cnLabel"
+
+	CNPool featuregate.Feature = "cnPool"
 )
 
 var defaultFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -45,6 +47,7 @@ var defaultFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ProxySupport: {Default: false, PreRelease: featuregate.Alpha},
 	CNLabel:      {Default: false, PreRelease: featuregate.Alpha},
 	BRSupport:    {Default: false, PreRelease: featuregate.Alpha},
+	CNPool:       {Default: false, PreRelease: featuregate.Alpha},
 }
 
 func init() {
