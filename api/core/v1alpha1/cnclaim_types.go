@@ -50,6 +50,8 @@ type CNClaimSpec struct {
 type CNClaimStatus struct {
 	Phase CNClaimPhase  `json:"phase,omitempty"`
 	Store CNStoreStatus `json:"store,omitempty"`
+
+	BoundTime *metav1.Time `json:"boundTime,omitempty"`
 }
 
 type CNStoreStatus struct {
@@ -115,8 +117,9 @@ type EmbeddedMetadata struct {
 }
 
 type CNClaimSetStatus struct {
-	Replicas int32           `json:"replicas"`
-	Claims   []CNClaimStatus `json:"claims,omitempty"`
+	Replicas      int32           `json:"replicas"`
+	ReadyReplicas int32           `json:"readyReplicas"`
+	Claims        []CNClaimStatus `json:"claims,omitempty"`
 
 	PodSelector string `json:"podSelector,omitempty"`
 }

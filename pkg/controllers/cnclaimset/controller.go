@@ -99,11 +99,22 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 	}
 	// collect status
 	var claimStatuses []v1alpha1.CNClaimStatus
+	s.Status.Replicas = int32(len(oc.active))
+	var readyReplicas int32
 	for _, c := range oc.active {
 		claimStatuses = append(claimStatuses, c.Status)
+		if c.Status.Phase == v1alpha1.CNPodPhaseBound {
+			readyReplicas++
+		}
 	}
-	s.Status.Replicas = int32(len(oc.active))
+	// used to resolve all CN pods belonged to this CNSet
+	podSelector := common.MustAsSelector(&metav1.LabelSelector{MatchLabels: map[string]string{
+		v1alpha1.ClaimOwnerNameLabel: s.Name,
+		v1alpha1.CNPodPhaseLabel:     v1alpha1.CNPodPhaseBound,
+	}})
+	s.Status.ReadyReplicas = readyReplicas
 	s.Status.Claims = claimStatuses
+	s.Status.PodSelector = podSelector.String()
 	return nil
 }
 
@@ -143,6 +154,7 @@ func makeClaim(cs *v1alpha1.CNClaimSet, id string) *v1alpha1.CNClaim {
 	tpl := cs.Spec.Template
 	labels := tpl.Labels
 	labels[ClaimInstanceIDLabel] = id
+	tpl.Spec.OwnerName = &cs.Name
 	return &v1alpha1.CNClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   cs.Namespace,

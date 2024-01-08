@@ -323,6 +323,7 @@ _Appears in:_
 | --- | --- |
 | `phase` _CNClaimPhase_ |  |
 | `store` _[CNStoreStatus](#cnstorestatus)_ |  |
+| `boundTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ |  |
 
 
 #### CNClaimTemplate
