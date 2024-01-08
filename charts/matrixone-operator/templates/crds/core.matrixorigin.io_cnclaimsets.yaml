@@ -16,6 +16,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.replicas
+      name: Replicas
+      type: integer
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -119,6 +122,8 @@ spec:
                               type: array
                           type: object
                         type: array
+                      ownerName:
+                        type: string
                       podName:
                         description: PodName is usually populated by controller and
                           would be part of the claim spec that must be persisted once
@@ -223,6 +228,8 @@ spec:
                       type: object
                   type: object
                 type: array
+              podSelector:
+                type: string
               replicas:
                 format: int32
                 type: integer
@@ -233,4 +240,8 @@ spec:
     served: true
     storage: true
     subresources:
+      scale:
+        labelSelectorPath: .status.labelSelector
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
       status: {}

@@ -57,6 +57,8 @@ spec:
                       type: array
                   type: object
                 type: array
+              ownerName:
+                type: string
               podName:
                 description: PodName is usually populated by controller and would
                   be part of the claim spec that must be persisted once bound
