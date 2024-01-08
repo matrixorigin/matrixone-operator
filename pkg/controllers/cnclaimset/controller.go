@@ -15,6 +15,7 @@
 package cnclaimset
 
 import (
+	"context"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -30,7 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"strconv"
+	"time"
 )
 
 const (
@@ -45,12 +48,20 @@ var podPhaseToOrdinal = map[corev1.PodPhase]int{
 	corev1.PodRunning: 2,
 }
 
-// Actor reconciles CNClaimSet
-type Actor struct {
+type ownedClaims struct {
+	active []v1alpha1.CNClaim
+	lost   []v1alpha1.CNClaim
 }
 
-func NewActor() *Actor {
-	return &Actor{}
+// Actor reconciles CNClaimSet
+type Actor struct {
+	ClientNoCache client.Client
+}
+
+func NewActor(clientNoCache client.Client) *Actor {
+	return &Actor{
+		ClientNoCache: clientNoCache,
+	}
 }
 
 func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.CNClaimSet]) (recon.Action[*v1alpha1.CNClaimSet], error) {
@@ -59,60 +70,87 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.CNClaimSet]) (recon.Action[
 
 func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 	s := ctx.Obj
-	filteredClaims, filterOutClaims, err := listClaims(ctx, s)
+	oc, err := listOwnedClaims(ctx, ctx.Client, s)
 	if err != nil {
 		return errors.Wrap(err, "error filter claims")
 	}
-	if s.Spec.Replicas > int32(len(filteredClaims)) {
-		if err := r.scaleOut(ctx, filteredClaims, filterOutClaims, int(s.Spec.Replicas)-len(filterOutClaims)); err != nil {
-			return errors.Wrap(err, "error scale out cn claim set")
+	if int32(len(oc.active)) != s.Status.Replicas {
+		// check whether the cache is in sync
+		realC, err := listOwnedClaims(ctx, r.ClientNoCache, s)
+		if err != nil {
+			return errors.Wrap(err, "error list claims directly")
 		}
-	} else if s.Spec.Replicas < int32(len(filteredClaims)) {
-		if err := r.scaleIn(ctx, filteredClaims, len(filterOutClaims)-int(s.Spec.Replicas)); err != nil {
-			return errors.Wrap(err, "error scale out cn claim set")
+		if len(oc.active) != len(realC.active) || len(oc.lost) != len(realC.lost) {
+			// simply requeue to wait cache sync, since we heavily rely on cache in the following reconciliation
+			ctx.Log.Info("cache not synced, wait",
+				"cached active", len(oc.active),
+				"real active", len(realC.active),
+				"cached lost", len(oc.lost),
+				"real lost", len(realC.lost))
+			return recon.ErrReSync("wait cache sync", time.Second)
 		}
 	}
+	if err := r.scale(ctx, oc); err != nil {
+		return errors.Wrap(err, "error scale cnclaimset")
+	}
 	// clean lost claims
-	if err := cleanClaims(ctx, filterOutClaims); err != nil {
+	if err := cleanClaims(ctx, oc.lost); err != nil {
 		return errors.Wrap(err, "clean filter out claims")
 	}
 	// collect status
-	s.Status.Replicas = int32(len(filteredClaims))
 	var claimStatuses []v1alpha1.CNClaimStatus
-	for _, c := range filteredClaims {
+	for _, c := range oc.active {
 		claimStatuses = append(claimStatuses, c.Status)
+	}
+	s.Status.Replicas = int32(len(oc.active))
+	s.Status.Claims = claimStatuses
+	return nil
+}
+
+func (r *Actor) scale(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaims) error {
+	s := ctx.Obj
+	current := len(oc.active)
+	ctx.Log.Info("scale claimset", "desiredReplicas", s.Spec.Replicas, "currentReplicas", current)
+	if s.Spec.Replicas > int32(current) {
+		return r.scaleOut(ctx, oc, int(s.Spec.Replicas)-current)
+	} else if s.Spec.Replicas < int32(current) {
+		return r.scaleIn(ctx, oc, current-int(s.Spec.Replicas))
 	}
 	return nil
 }
 
-func (r *Actor) scaleOut(ctx *recon.Context[*v1alpha1.CNClaimSet], filtered []v1alpha1.CNClaim, filteredOut []v1alpha1.CNClaim, count int) error {
+func (r *Actor) scaleOut(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaims, count int) error {
 	used := sets.New[string]()
-	for _, c := range filtered {
+	for _, c := range oc.active {
 		used.Insert(c.Labels[ClaimInstanceIDLabel])
 	}
-	for _, c := range filteredOut {
+	for _, c := range oc.lost {
 		used.Insert(c.Labels[ClaimInstanceIDLabel])
 	}
 	ids := genAvailableIds(count, used)
 	for _, id := range ids {
-		err := ctx.Create(makeClaim(ctx.Obj, id))
+		claim := makeClaim(ctx.Obj, id)
+		err := ctx.CreateOwned(claim)
 		if err != nil {
 			return errors.Wrap(err, "error create new claim")
 		}
+		oc.active = append(oc.active, *claim)
 	}
 	return nil
 }
 
 func makeClaim(cs *v1alpha1.CNClaimSet, id string) *v1alpha1.CNClaim {
+	tpl := cs.Spec.Template
+	labels := tpl.Labels
+	labels[ClaimInstanceIDLabel] = id
 	return &v1alpha1.CNClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: cs.Namespace,
-			Name:      cs.Name + "-" + id,
-			Labels: map[string]string{
-				ClaimInstanceIDLabel: id,
-			},
+			Namespace:   cs.Namespace,
+			Name:        cs.Name + "-" + id,
+			Labels:      labels,
+			Annotations: tpl.Annotations,
 		},
-		Spec: *cs.Spec.Template.Spec.DeepCopy(),
+		Spec: tpl.Spec,
 	}
 }
 
@@ -128,10 +166,10 @@ func (c *claimAndPod) scoreHasPod() int {
 	return 0
 }
 
-func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], filtered []v1alpha1.CNClaim, count int) error {
+func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaims, count int) error {
 	var cps []claimAndPod
-	for i := range filtered {
-		c := filtered[i]
+	for i := range oc.active {
+		c := oc.active[i]
 		pod, err := getClaimedPod(ctx, &c)
 		if err != nil {
 			return errors.Wrap(err, "error get claimed pod")
@@ -147,7 +185,8 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], filtered []v1a
 	} else {
 		slices.SortFunc(cps, claimDeletionOrder)
 	}
-	for i := 0; i < count; i++ {
+	var i int
+	for ; i < count; i++ {
 		c := cps[i].claim
 		if err := ctx.Delete(c); err != nil {
 			if !apierrors.IsNotFound(err) {
@@ -155,21 +194,26 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], filtered []v1a
 			}
 		}
 	}
+	var left []v1alpha1.CNClaim
+	for ; i < len(cps); i++ {
+		left = append(left, *cps[i].claim)
+	}
+	oc.active = left
 	return nil
 }
 
 func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaimSet]) (bool, error) {
-	c1, c2, err := listClaims(ctx, ctx.Obj)
+	oc, err := listOwnedClaims(ctx, ctx.Client, ctx.Obj)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
 		return false, errors.Wrap(err, "error list claims")
 	}
-	if len(c1) == 0 && len(c2) == 0 {
+	if len(oc.active) == 0 && len(oc.lost) == 0 {
 		return true, nil
 	}
-	for _, c := range append(c1, c2...) {
+	for _, c := range append(oc.active, oc.lost...) {
 		if err := ctx.Delete(&c); err != nil && !apierrors.IsNotFound(err) {
 			return false, errors.Wrapf(err, "error delete claim %s", c.Name)
 		}
@@ -279,27 +323,29 @@ func cleanClaims(ctx recon.KubeClient, cs []v1alpha1.CNClaim) error {
 	return nil
 }
 
-func listClaims(cli recon.KubeClient, s *v1alpha1.CNClaimSet) (filtered []v1alpha1.CNClaim, filterOut []v1alpha1.CNClaim, err error) {
+func listOwnedClaims(ctx context.Context, cli client.Client, s *v1alpha1.CNClaimSet) (*ownedClaims, error) {
 	cList := &v1alpha1.CNClaimList{}
-	err = cli.List(cList, client.InNamespace(s.Namespace), client.MatchingLabelsSelector{
+	err := cli.List(ctx, cList, client.InNamespace(s.Namespace), client.MatchingLabelsSelector{
 		Selector: common.MustAsSelector(s.Spec.Selector),
 	})
 	if err != nil {
-		return
+		return nil, err
 	}
+	res := &ownedClaims{}
 	for i := range cList.Items {
 		c := cList.Items[i]
 		if c.Status.Phase == v1alpha1.CNClaimPhaseLost || c.Labels[ClaimInstanceIDLabel] == "" {
-			filterOut = append(filterOut, c)
+			res.lost = append(res.lost, c)
 		} else {
-			filtered = append(filtered, c)
+			res.active = append(res.active, c)
 		}
 	}
-	return
+	return res, nil
 }
 
 func (r *Actor) Start(mgr manager.Manager) error {
 	return recon.Setup[*v1alpha1.CNClaimSet](&v1alpha1.CNClaimSet{}, "cn-claimset-manager", mgr, r, recon.WithBuildFn(func(b *builder.Builder) {
-		b.Owns(&v1alpha1.CNClaim{})
+		// watch all updates to owned claims
+		b.Owns(&v1alpha1.CNClaim{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
 	}))
 }

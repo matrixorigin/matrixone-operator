@@ -39,18 +39,6 @@ func NewCNClaimHook(cli client.Client, logger logr.Logger) *CNClaimHook {
 	}
 }
 
-func (h *CNClaimHook) Default(ctx context.Context, obj runtime.Object) error {
-	c, ok := obj.(*v1alpha1.CNClaim)
-	if !ok {
-		return nil
-	}
-	// claim has not been reconciled, shortcut to take an CN
-	if c.Spec.PodName == "" && c.Spec.PoolName == "" {
-
-	}
-	return nil
-}
-
 func (h *CNClaimHook) ValidateCreate(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
@@ -78,7 +66,6 @@ func (h *CNClaimHook) ValidateDelete(ctx context.Context, obj runtime.Object) (w
 func (h *CNClaimHook) Setup(mgr manager.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&v1alpha1.CNClaim{}).
-		WithDefaulter(h).
 		WithValidator(h).
 		Complete()
 }

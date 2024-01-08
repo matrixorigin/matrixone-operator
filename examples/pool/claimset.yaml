@@ -1,0 +1,22 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: CNClaimSet
+metadata:
+  name: test
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      selector:
+        matchLabels:
+          pool: default
+      cnLabels:
+      - key: role
+        values:
+        - test
+  replicas: 2

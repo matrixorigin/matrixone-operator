@@ -142,6 +142,9 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 		pod := &idleCNs[i]
 		pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseBound
 		pod.Labels[v1alpha1.PodClaimedByLabel] = c.Name
+		if c.Spec.OwnerName != nil {
+			pod.Labels[v1alpha1.ClaimOwnerNameLabel] = *c.Spec.OwnerName
+		}
 		// atomic operation with optimistic concurrency control, succeed means claimed
 		if err := ctx.Update(pod); err != nil {
 			if apierrors.IsConflict(err) {
@@ -210,6 +213,7 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 		// set the CN Pod to draining phase and let the draining process handle recycling
 		if err := ctx.Patch(&cn, func() error {
 			cn.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseDraining
+			delete(cn.Labels, v1alpha1.ClaimOwnerNameLabel)
 			return nil
 		}); err != nil {
 			return false, errors.Wrapf(err, "error reclaim CN %s/%s", cn.Namespace, cn.Name)

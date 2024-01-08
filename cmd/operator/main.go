@@ -20,9 +20,11 @@ import (
 	"github.com/go-logr/zapr"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/br"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnclaim"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnclaimset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnpool"
 	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
 	"github.com/matrixorigin/matrixone-operator/api/features"
@@ -110,7 +112,8 @@ func main() {
 	err = features.DefaultMutableFeatureGate.SetFromMap(operatorCfg.FeatureGates)
 	exitIf(err, "failed to set feature gate")
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	restCfg := ctrl.GetConfigOrDie()
+	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
 		Scheme:                 scheme,
 		Host:                   "0.0.0.0",
 		Port:                   9443,
@@ -123,6 +126,10 @@ func main() {
 		}),
 	})
 	exitIf(err, "failed to start manager")
+	directClient, err := client.New(restCfg, client.Options{
+		Scheme: scheme,
+	})
+	exitIf(err, "failed to create direct client")
 
 	collector := metrics.NewMetricsCollector("matrixone", mgr.GetClient())
 	err = collector.RegisterResource(&v1alpha1.LogSetList{})
@@ -224,6 +231,10 @@ func main() {
 	claimController := cnclaim.NewActor(haCliMgr)
 	err = claimController.Start(mgr)
 	exitIf(err, "error running claim controller")
+
+	claimSetController := cnclaimset.NewActor(directClient)
+	err = claimSetController.Start(mgr)
+	exitIf(err, "error running claim set controller")
 
 	err = mgr.AddHealthzCheck("healthz", healthz.Ping)
 	exitIf(err, "unable to set up health check")

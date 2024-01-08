@@ -24,12 +24,18 @@ const (
 	CNClaimPhasePending CNClaimPhase = "Pending"
 	CNClaimPhaseBound   CNClaimPhase = "Bound"
 	CNClaimPhaseLost    CNClaimPhase = "Lost"
+
+	ClaimOwnerNameLabel = "matrixorigin.io/claim-owner"
 )
 
 type CNClaimSpec struct {
 	Selector *metav1.LabelSelector `json:"selector"`
+
 	// +optional
 	CNLabels []CNLabel `json:"cnLabels,omitempty"`
+
+	// +optional
+	OwnerName *string `json:"ownerName,omitempty"`
 
 	// +optional
 	// PodName is usually populated by controller and would be part of the claim spec
@@ -92,22 +98,40 @@ type CNClaimSetSpec struct {
 }
 
 type CNClaimTemplate struct {
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	EmbeddedMetadata `json:"metadata,omitempty"`
 
 	Spec CNClaimSpec `json:"spec,omitempty"`
+}
+
+type EmbeddedMetadata struct {
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 type CNClaimSetStatus struct {
 	Replicas int32           `json:"replicas"`
 	Claims   []CNClaimStatus `json:"claims,omitempty"`
+
+	PodSelector string `json:"podSelector,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
 // CNClaimSet orchestrates a set of CNClaims
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Replicas",type="integer",JSONPath=".spec.replicas"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:scope="Namespaced"
+
+// A CNClaimSet manages a set of CNClaims
+// +kubebuilder:subresource:status
+// +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector
 type CNClaimSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

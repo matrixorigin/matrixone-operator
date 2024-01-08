@@ -335,7 +335,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[EmbeddedMetadata](#embeddedmetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[CNClaimSpec](#cnclaimspec)_ |  |
 
 
@@ -623,6 +623,22 @@ _Appears in:_
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |
 
 
+
+
+#### EmbeddedMetadata
+
+
+
+
+
+_Appears in:_
+- [CNClaimTemplate](#cnclaimtemplate)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+| `labels` _object (keys:string, values:string)_ |  |
+| `annotations` _object (keys:string, values:string)_ |  |
 
 
 #### ExternalLogSet

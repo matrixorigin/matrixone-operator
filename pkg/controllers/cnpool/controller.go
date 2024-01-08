@@ -39,14 +39,10 @@ import (
 
 // Actor reconciles CN Pool
 type Actor struct {
-	PodWatched     int
-	PoolReconciled int
-	Logger         logr.Logger
+	Logger logr.Logger
 }
 
 func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.CNPool]) (recon.Action[*v1alpha1.CNPool], error) {
-	r.PoolReconciled++
-	r.Logger.Info("watched pool", "name", ctx.Obj.Name, "watched", r.PoolReconciled)
 	return nil, r.Sync(ctx)
 }
 
@@ -133,7 +129,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 				ctx.Log.Info("pool has pods terminating, wait",
 					"current replicas", desired.Spec.Replicas,
 					"desired replicas", desiredReplicas,
-					"terminating pods", terminatingPods)
+					"terminating pods", len(terminatingPods))
 				return nil
 			}
 			scaleInCount := desired.Spec.Replicas - desiredReplicas
@@ -350,8 +346,6 @@ func (r *Actor) Start(mgr manager.Manager) error {
 			if !ok {
 				return nil
 			}
-			r.PodWatched++
-			r.Logger.Info("watched pod", "name", pod.Name, "watched", r.PodWatched)
 			poolName, ok := pod.Labels[v1alpha1.PoolNameLabel]
 			if !ok {
 				return nil
