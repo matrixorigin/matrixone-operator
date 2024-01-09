@@ -121,14 +121,16 @@ func (m *HAKeeperClientManager) doGC() {
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				delete(m.logSetToClients, uid)
-				go closeFn()
+				closeFn()
+				continue
 			}
 			m.logger.Error(err, "error gc HAKeeper client", "logset", v.lsRef, "uid", uid)
 			continue
 		}
-		if ls.UID != uid || recon.IsReady(ls) {
+		// logset has been re-created, clean stale cache
+		if ls.UID != uid && recon.IsReady(ls) {
 			delete(m.logSetToClients, uid)
-			go closeFn()
+			closeFn()
 		}
 	}
 }
@@ -136,6 +138,9 @@ func (m *HAKeeperClientManager) doGC() {
 func (m *HAKeeperClientManager) newHAKeeperClient(ls *v1alpha1.LogSet) (logservice.ProxyHAKeeperClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), HAKeeperTimeout)
 	defer cancel()
+	if ls.Status.Discovery.String() == "" {
+		return nil, errors.Errorf("logset discovery address not ready, logset: %s/%s", ls.Namespace, ls.Name)
+	}
 	cli, err := logservice.NewProxyHAKeeperClient(ctx, logservice.HAKeeperClientConfig{DiscoveryAddress: ls.Status.Discovery.String()})
 	if err != nil {
 		return nil, errors.Wrap(err, "build HAKeeper client")
