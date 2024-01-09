@@ -139,7 +139,7 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 	baseSelector := common.MustAsSelector(c.Spec.Selector)
 	podSelector := baseSelector.Add(common.MustEqual(v1alpha1.CNPodPhaseLabel, v1alpha1.CNPodPhaseIdle))
 	if c.Spec.PoolName != "" {
-		podSelector = podSelector.Add(common.MustEqual(v1alpha1.PoolNameLabel, c.Spec.PodName))
+		podSelector = podSelector.Add(common.MustEqual(v1alpha1.PoolNameLabel, c.Spec.PoolName))
 	}
 	idleCNs, err := common.ListPods(ctx, client.InNamespace(c.Namespace), client.MatchingLabelsSelector{Selector: podSelector})
 	if err != nil && !apierrors.IsNotFound(err) {
