@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -173,6 +174,7 @@ func (r *Actor) bindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, 
 
 	c.Status.Phase = v1alpha1.CNPodPhaseBound
 	c.Status.Store = toStoreStatus(store)
+	c.Status.BoundTime = &metav1.Time{Time: time.Now()}
 	// if we failed to update status here, observe would help fulfill the status later
 	if err := ctx.UpdateStatus(c); err != nil {
 		return errors.Wrap(err, "error update claim status")

@@ -120,6 +120,9 @@ spec:
             type: object
           status:
             properties:
+              boundTime:
+                format: date-time
+                type: string
               phase:
                 type: string
               store:

@@ -195,6 +195,9 @@ spec:
               claims:
                 items:
                   properties:
+                    boundTime:
+                      format: date-time
+                      type: string
                     phase:
                       type: string
                     store:
@@ -230,10 +233,14 @@ spec:
                 type: array
               podSelector:
                 type: string
+              readyReplicas:
+                format: int32
+                type: integer
               replicas:
                 format: int32
                 type: integer
             required:
+            - readyReplicas
             - replicas
             type: object
         type: object
