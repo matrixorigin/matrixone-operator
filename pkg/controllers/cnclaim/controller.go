@@ -52,6 +52,8 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.CNClaim]) (recon.Action[*v1
 
 func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 	c := ctx.Obj
+	c.Status.Phase = v1alpha1.CNClaimPhasePending
+	ctx.Log.Info("start bind cn claim")
 
 	// collect orphan CNs left by former broken reconciliation
 	orphanCNs, err := common.ListPods(ctx, client.InNamespace(c.Namespace), client.MatchingLabels{
@@ -70,6 +72,7 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 
 	// no pod available, bound to a certain Pool (maybe we can loosen this constrain)
 	if claimedPod == nil && c.Spec.PoolName == "" {
+		ctx.Log.Info("no idle CN available, try to find a matching pool")
 		poolList := &v1alpha1.CNPoolList{}
 		if err := ctx.List(poolList, client.InNamespace(c.Namespace)); err != nil {
 			return errors.Wrap(err, "error get list CN pools")
@@ -85,6 +88,11 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 		}
 		if pool == nil {
 			return errors.Wrapf(err, "no matching pool for claim %s/%s", c.Namespace, c.Name)
+		}
+		c.Spec.PoolName = pool.Name
+		c.Labels[v1alpha1.PoolNameLabel] = c.Spec.PoolName
+		if err := ctx.Update(c); err != nil {
+			return errors.Wrap(err, "error bind claim to pool")
 		}
 	}
 	// re-bound later
