@@ -122,6 +122,7 @@ func (m *HAKeeperClientManager) doGC() {
 			if apierrors.IsNotFound(err) {
 				delete(m.logSetToClients, uid)
 				go closeFn()
+				continue
 			}
 			m.logger.Error(err, "error gc HAKeeper client", "logset", v.lsRef, "uid", uid)
 			continue
