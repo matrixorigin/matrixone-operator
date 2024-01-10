@@ -224,6 +224,10 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 		if err := ctx.Patch(&cn, func() error {
 			cn.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseDraining
 			delete(cn.Labels, v1alpha1.ClaimOwnerNameLabel)
+			if cn.Annotations == nil {
+				cn.Annotations = map[string]string{}
+			}
+			cn.Annotations[common.ReclaimedAt] = time.Now().Format(time.RFC3339)
 			return nil
 		}); err != nil {
 			return false, errors.Wrapf(err, "error reclaim CN %s/%s", cn.Namespace, cn.Name)
@@ -289,16 +293,23 @@ func toStoreStatus(cn *metadata.CNService) v1alpha1.CNStoreStatus {
 	}
 }
 
-// TODO: label similarity
 func priorityFunc(c *v1alpha1.CNClaim) func(a, b corev1.Pod) int {
 	return func(a, b corev1.Pod) int {
-		return getScore(c, a) - getScore(c, b)
+		// 1. claim the previously used pod first
+		ownedA := previouslyOwned(c, a)
+		ownedB := previouslyOwned(c, b)
+		if ownedA != ownedB {
+			return ownedA - ownedB
+		}
+
+		// 2. then we prefer older pod
+		return a.CreationTimestamp.Second() - b.CreationTimestamp.Second()
 	}
 }
 
-func getScore(c *v1alpha1.CNClaim, p corev1.Pod) int {
-	if c.Labels[v1alpha1.PodClaimedByLabel] == p.Name {
-		return -1
+func previouslyOwned(c *v1alpha1.CNClaim, p corev1.Pod) int {
+	if c.Spec.OwnerName != nil && p.Labels[v1alpha1.ClaimOwnerNameLabel] == *c.Spec.OwnerName {
+		return 0
 	}
-	return 0
+	return 1
 }

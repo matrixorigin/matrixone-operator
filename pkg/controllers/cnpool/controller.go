@@ -124,14 +124,6 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 					"in use pods", inUse)
 				return nil
 			}
-			if len(terminatingPods) > 0 {
-				// wait former termination complete first
-				ctx.Log.Info("pool has pods terminating, wait",
-					"current replicas", desired.Spec.Replicas,
-					"desired replicas", desiredReplicas,
-					"terminating pods", len(terminatingPods))
-				return nil
-			}
 			scaleInCount := desired.Spec.Replicas - desiredReplicas
 			slices.SortFunc(idlePods, deletionOrder)
 			if int32(len(idlePods)) > scaleInCount {
@@ -152,7 +144,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 			}
 			ctx.Log.Info("scale-in CN Pool complete", "deleted", len(deleted))
 			desired.Spec.Replicas = desired.Spec.Replicas - int32(len(deleted))
-			desired.Spec.PodsToDelete = podNames(deleted)
+			desired.Spec.PodsToDelete = append(desired.Spec.PodsToDelete, podNames(deleted)...)
 		} else {
 			// scale-out, if we have terminating pods left, replace them
 			desired.Spec.Replicas = desiredReplicas

@@ -22,6 +22,12 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"time"
+)
+
+const (
+	// TODO(aylei): configurable
+	recycleTimeout = 5 * time.Minute
 )
 
 func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
@@ -39,24 +45,28 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 	switch pod.Labels[v1alpha1.CNPodPhaseLabel] {
 	case v1alpha1.CNPodPhaseDraining:
 		// recycle the pod
-		// TODO(aylei): timeout
+		timeStr, ok := pod.Annotations[common.ReclaimedAt]
+		if !ok {
+			// legacy pod, simply timeout
+			return c.patchPhase(ctx, v1alpha1.CNPodPhaseIdle)
+		}
+		parsed, err := time.Parse(time.RFC3339, timeStr)
+		if err != nil {
+			return errors.Wrapf(err, "error parsing start time %s", timeStr)
+		}
+		if time.Since(parsed) > recycleTimeout {
+			return c.patchPhase(ctx, v1alpha1.CNPodPhaseIdle)
+		}
 		count, err := common.GetStoreConnection(pod)
 		if err != nil {
 			return errors.Wrap(err, "error get store connection count")
 		}
 		if count == 0 {
-			err := ctx.Patch(pod, func() error {
-				pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseIdle
-				return nil
-			})
-			if err != nil {
-				return errors.Wrap(err, "error patch CN phase idle")
-			}
-			return nil
+			return c.patchPhase(ctx, v1alpha1.CNPodPhaseIdle)
 		}
 		return recon.ErrReSync("store is still draining", retryInterval)
 	case v1alpha1.CNPodPhaseBound, v1alpha1.CNPodPhaseIdle:
-		// noop
+		return c.patchCNReadiness(ctx, corev1.ConditionTrue, messageCNStoreReady)
 	case v1alpha1.CNPodPhaseUnknown:
 		if ready {
 			err := ctx.Patch(pod, func() error {
@@ -66,11 +76,24 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 			if err != nil {
 				return errors.Wrap(err, "error patch CN phase idle")
 			}
-		} else {
-			ctx.Log.V(4).Info("CN Pod not ready")
+			return c.patchCNReadiness(ctx, corev1.ConditionTrue, messageCNStoreReady)
 		}
+		ctx.Log.V(4).Info("CN Pod not ready")
+		return c.patchCNReadiness(ctx, corev1.ConditionFalse, messageCNStoreNotRegistered)
+	case v1alpha1.CNPodPhaseTerminating:
+		return nil
 	default:
 		return errors.Errorf("unkown CN phase %s", pod.Labels[v1alpha1.CNPodPhaseLabel])
+	}
+}
+
+func (c *withCNSet) patchPhase(ctx *recon.Context[*corev1.Pod], phase string) error {
+	err := ctx.Patch(ctx.Obj, func() error {
+		ctx.Obj.Labels[v1alpha1.CNPodPhaseLabel] = phase
+		return nil
+	})
+	if err != nil {
+		return errors.Wrap(err, "error patch CN phase idle")
 	}
 	return nil
 }

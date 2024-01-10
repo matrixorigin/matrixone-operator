@@ -120,7 +120,10 @@ type CNClaimSetStatus struct {
 	Replicas      int32           `json:"replicas"`
 	ReadyReplicas int32           `json:"readyReplicas"`
 	Claims        []CNClaimStatus `json:"claims,omitempty"`
+	LabelSelector string          `json:"labelSelector,omitempty"`
 
+	// +optional
+	// deprecated
 	PodSelector string `json:"podSelector,omitempty"`
 }
 

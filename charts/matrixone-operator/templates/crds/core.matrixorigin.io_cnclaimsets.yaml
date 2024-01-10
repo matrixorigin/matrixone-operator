@@ -231,7 +231,10 @@ spec:
                       type: object
                   type: object
                 type: array
+              labelSelector:
+                type: string
               podSelector:
+                description: deprecated
                 type: string
               readyReplicas:
                 format: int32

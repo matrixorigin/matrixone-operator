@@ -114,7 +114,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 	}})
 	s.Status.ReadyReplicas = readyReplicas
 	s.Status.Claims = claimStatuses
-	s.Status.PodSelector = podSelector.String()
+	s.Status.LabelSelector = podSelector.String()
 	return nil
 }
 
