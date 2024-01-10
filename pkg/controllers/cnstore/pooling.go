@@ -66,6 +66,8 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 			if err != nil {
 				return errors.Wrap(err, "error patch CN phase idle")
 			}
+		} else {
+			ctx.Log.V(4).Info("CN Pod not ready")
 		}
 	default:
 		return errors.Errorf("unkown CN phase %s", pod.Labels[v1alpha1.CNPodPhaseLabel])

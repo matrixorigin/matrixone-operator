@@ -120,6 +120,7 @@ func (m *HAKeeperClientManager) doGC() {
 		err := m.kubeCli.Get(context.TODO(), v.lsRef, ls)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
+				m.logger.Info("logset deleted, clean handler", "logset", v.lsRef)
 				delete(m.logSetToClients, uid)
 				closeFn()
 				continue
@@ -129,6 +130,7 @@ func (m *HAKeeperClientManager) doGC() {
 		}
 		// logset has been re-created, clean stale cache
 		if ls.UID != uid && recon.IsReady(ls) {
+			m.logger.Info("logset recreated, clean legeacy handler", "logset", v.lsRef, "old UID", uid, "new UID", ls.UID)
 			delete(m.logSetToClients, uid)
 			closeFn()
 		}
