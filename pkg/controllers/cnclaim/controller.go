@@ -146,7 +146,7 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 		return nil, errors.Wrap(err, "error list idle Pods")
 	}
 
-	slices.SortFunc(idleCNs, priorityFunc(c))
+	sortCNByPriority(c, idleCNs)
 	for i := range idleCNs {
 		pod := &idleCNs[i]
 		pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseBound
@@ -291,6 +291,10 @@ func toStoreStatus(cn *metadata.CNService) v1alpha1.CNStoreStatus {
 		WorkState:              int32(cn.WorkState),
 		Labels:                 ls,
 	}
+}
+
+func sortCNByPriority(c *v1alpha1.CNClaim, pods []corev1.Pod) {
+	slices.SortFunc(pods, priorityFunc(c))
 }
 
 func priorityFunc(c *v1alpha1.CNClaim) func(a, b corev1.Pod) int {

@@ -125,7 +125,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 				return nil
 			}
 			scaleInCount := desired.Spec.Replicas - desiredReplicas
-			slices.SortFunc(idlePods, deletionOrder)
+			sortPodByDeletionOrder(idlePods)
 			if int32(len(idlePods)) > scaleInCount {
 				// pick first N to scale-in
 				idlePods = idlePods[0:scaleInCount]
@@ -294,6 +294,11 @@ func podInUse(pod *corev1.Pod) bool {
 		pod.Labels[v1alpha1.CNPodPhaseLabel] == v1alpha1.CNPodPhaseDraining
 }
 
+// sortPodByDeletionOrder sort the pool pods to be deleted
+func sortPodByDeletionOrder(pods []*corev1.Pod) {
+	slices.SortFunc(pods, deletionOrder)
+}
+
 func deletionOrder(a, b *corev1.Pod) int {
 	c := deletionCost(a) - deletionCost(b)
 	if c == 0 {
@@ -301,14 +306,6 @@ func deletionOrder(a, b *corev1.Pod) int {
 		return -(a.CreationTimestamp.Second() - b.CreationTimestamp.Second())
 	}
 	return c
-}
-
-func podNames(pods []*corev1.Pod) []string {
-	var ss []string
-	for _, pod := range pods {
-		ss = append(ss, pod.Name)
-	}
-	return ss
 }
 
 func deletionCost(pod *corev1.Pod) int {
@@ -332,7 +329,6 @@ func deletionCost(pod *corev1.Pod) int {
 
 func (r *Actor) Start(mgr manager.Manager) error {
 	return recon.Setup[*v1alpha1.CNPool](&v1alpha1.CNPool{}, "cn-pool-manager", mgr, r, recon.WithBuildFn(func(b *builder.Builder) {
-		// TODO: watch Pods in Pool
 		b.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 			pod, ok := object.(*corev1.Pod)
 			if !ok {
@@ -349,6 +345,28 @@ func (r *Actor) Start(mgr manager.Manager) error {
 				},
 			}}
 		}))
+		b.Watches(&v1alpha1.CNClaim{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+			claim, ok := object.(*v1alpha1.CNClaim)
+			if !ok {
+				return nil
+			}
+			if claim.Spec.PoolName == "" {
+				return nil
+			}
+			return []reconcile.Request{{
+				NamespacedName: types.NamespacedName{
+					Namespace: claim.Namespace,
+					Name:      claim.Spec.PoolName,
+				},
+			}}
+		}))
 		b.Owns(&v1alpha1.CNSet{})
 	}))
+}
+func podNames(pods []*corev1.Pod) []string {
+	var ss []string
+	for _, pod := range pods {
+		ss = append(ss, pod.Name)
+	}
+	return ss
 }
