@@ -231,7 +231,10 @@ spec:
                       type: object
                   type: object
                 type: array
+              labelSelector:
+                type: string
               podSelector:
+                description: deprecated
                 type: string
               readyReplicas:
                 format: int32
@@ -248,7 +251,7 @@ spec:
     storage: true
     subresources:
       scale:
-        labelSelectorPath: .status.podSelector
+        labelSelectorPath: .status.labelSelector
         specReplicasPath: .spec.replicas
         statusReplicasPath: .status.replicas
       status: {}

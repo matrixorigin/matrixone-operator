@@ -224,6 +224,10 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 		if err := ctx.Patch(&cn, func() error {
 			cn.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseDraining
 			delete(cn.Labels, v1alpha1.ClaimOwnerNameLabel)
+			if cn.Annotations == nil {
+				cn.Annotations = map[string]string{}
+			}
+			cn.Annotations[common.ReclaimedAt] = time.Now().Format(time.RFC3339)
 			return nil
 		}); err != nil {
 			return false, errors.Wrapf(err, "error reclaim CN %s/%s", cn.Namespace, cn.Name)

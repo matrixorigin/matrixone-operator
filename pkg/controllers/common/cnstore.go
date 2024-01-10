@@ -32,6 +32,8 @@ const (
 	CNDrainingFinalizer = "matrixorigin.io/cn-draining"
 
 	CNStoreReadiness corev1.PodConditionType = "matrixorigin.io/cn-store"
+
+	ReclaimedAt = "matrixorigin.io/reclaimed-at"
 )
 
 func AddReadinessGate(podSpec *corev1.PodSpec, ct corev1.PodConditionType) {

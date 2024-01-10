@@ -120,7 +120,10 @@ type CNClaimSetStatus struct {
 	Replicas      int32           `json:"replicas"`
 	ReadyReplicas int32           `json:"readyReplicas"`
 	Claims        []CNClaimStatus `json:"claims,omitempty"`
+	LabelSelector string          `json:"labelSelector,omitempty"`
 
+	// +optional
+	// deprecated
 	PodSelector string `json:"podSelector,omitempty"`
 }
 
@@ -132,7 +135,7 @@ type CNClaimSetStatus struct {
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:scope="Namespaced"
 // +kubebuilder:subresource:status
-// +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.podSelector
+// +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector
 type CNClaimSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

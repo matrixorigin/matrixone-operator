@@ -42,9 +42,10 @@ import (
 )
 
 const (
-	messageCNCordon      = "CNStoreCordon"
-	messageCNPrepareStop = "CNStorePrepareStop"
-	messageCNStoreReady  = "CNStoreReady"
+	messageCNCordon             = "CNStoreCordon"
+	messageCNPrepareStop        = "CNStorePrepareStop"
+	messageCNStoreReady         = "CNStoreReady"
+	messageCNStoreNotRegistered = "CNStoreNotRegistered"
 )
 
 const retryInterval = 5 * time.Second
@@ -87,20 +88,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		pod.Annotations = map[string]string{}
 	}
 
-	if err := ctx.PatchStatus(pod, func() error {
-		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
-		if cond == nil {
-			pod.Status.Conditions = append(pod.Status.Conditions, common.NewCNReadinessCondition(corev1.ConditionFalse, messageCNPrepareStop))
-		} else {
-			if cond.Status != corev1.ConditionFalse {
-				cond.Status = corev1.ConditionFalse
-				cond.LastTransitionTime = metav1.Now()
-			}
-			cond.Message = messageCNPrepareStop
-		}
-		c.setCNState(pod, v1alpha1.CNStoreStateDraining)
-		return nil
-	}); err != nil {
+	if err := c.patchCNReadiness(ctx, corev1.ConditionFalse, messageCNPrepareStop); err != nil {
 		return errors.Wrap(err, "patch pod readiness")
 	}
 	// store draining disabled, cleanup finalizers and skip
@@ -234,21 +222,21 @@ func (c *withCNSet) defaultCNNormalReconcile(ctx *recon.Context[*corev1.Pod]) er
 	}
 	ctx.Log.V(4).Info("successfully set CN working")
 
-	return c.markCNReady(ctx)
+	return c.patchCNReadiness(ctx, corev1.ConditionTrue, messageCNStoreReady)
 }
 
-func (c *withCNSet) markCNReady(ctx *recon.Context[*corev1.Pod]) error {
+func (c *withCNSet) patchCNReadiness(ctx *recon.Context[*corev1.Pod], newC corev1.ConditionStatus, reason string) error {
 	pod := ctx.Obj
 	if err := ctx.PatchStatus(pod, func() error {
 		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
 		if cond == nil {
-			pod.Status.Conditions = append(pod.Status.Conditions, common.NewCNReadinessCondition(corev1.ConditionTrue, messageCNStoreReady))
+			pod.Status.Conditions = append(pod.Status.Conditions, common.NewCNReadinessCondition(newC, reason))
 		} else {
-			if cond.Status != corev1.ConditionTrue {
-				cond.Status = corev1.ConditionTrue
+			if cond.Status != newC {
+				cond.Status = newC
 				cond.LastTransitionTime = metav1.Now()
 			}
-			cond.Message = messageCNStoreReady
+			cond.Message = reason
 		}
 		c.setCNState(pod, v1alpha1.CNStoreStateUp)
 		return nil
@@ -272,22 +260,7 @@ func (c *withCNSet) OnCordon(ctx *recon.Context[*corev1.Pod]) error {
 		return errors.Wrap(err, "error cordon cn store")
 	}
 	// set pod unready to unregister the pod from internal service
-	if err := ctx.PatchStatus(pod, func() error {
-		cond := common.GetReadinessCondition(pod, common.CNStoreReadiness)
-		if cond == nil {
-			pod.Status.Conditions = append(pod.Status.Conditions, common.NewCNReadinessCondition(corev1.ConditionFalse, messageCNCordon))
-		} else {
-			if cond.Status != corev1.ConditionFalse {
-				cond.Status = corev1.ConditionFalse
-				cond.LastTransitionTime = metav1.Now()
-			}
-			cond.Message = messageCNCordon
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "patch pod readiness")
-	}
-	return nil
+	return c.patchCNReadiness(ctx, corev1.ConditionFalse, messageCNCordon)
 }
 
 func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
