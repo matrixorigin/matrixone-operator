@@ -48,9 +48,16 @@ var podPhaseToOrdinal = map[corev1.PodPhase]int{
 	corev1.PodRunning: 2,
 }
 
+var claimPhaseToOrdinal = map[v1alpha1.CNClaimPhase]int{
+	v1alpha1.CNClaimPhasePending:  0,
+	v1alpha1.CNClaimPhaseLost:     1,
+	v1alpha1.CNClaimPhaseOutdated: 2,
+	v1alpha1.CNClaimPhaseBound:    3,
+}
+
 type ownedClaims struct {
-	active []v1alpha1.CNClaim
-	lost   []v1alpha1.CNClaim
+	owned []v1alpha1.CNClaim
+	lost  []v1alpha1.CNClaim
 }
 
 // Actor reconciles CNClaimSet
@@ -74,17 +81,17 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 	if err != nil {
 		return errors.Wrap(err, "error filter claims")
 	}
-	if int32(len(oc.active)) != s.Status.Replicas {
+	if int32(len(oc.owned)) != s.Status.Replicas {
 		// check whether the cache is in sync
 		realC, err := listOwnedClaims(ctx, r.ClientNoCache, s)
 		if err != nil {
 			return errors.Wrap(err, "error list claims directly")
 		}
-		if len(oc.active) != len(realC.active) || len(oc.lost) != len(realC.lost) {
+		if len(oc.owned) != len(realC.owned) || len(oc.lost) != len(realC.lost) {
 			// simply requeue to wait cache sync, since we heavily rely on cache in the following reconciliation
 			ctx.Log.Info("cache not synced, wait",
-				"cached active", len(oc.active),
-				"real active", len(realC.active),
+				"cached owned", len(oc.owned),
+				"real owned", len(realC.owned),
 				"cached lost", len(oc.lost),
 				"real lost", len(realC.lost))
 			return recon.ErrReSync("wait cache sync", time.Second)
@@ -99,11 +106,11 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 	}
 	// collect status
 	var claimStatuses []v1alpha1.CNClaimStatus
-	s.Status.Replicas = int32(len(oc.active))
+	s.Status.Replicas = int32(len(oc.owned))
 	var readyReplicas int32
-	for _, c := range oc.active {
+	for _, c := range oc.owned {
 		claimStatuses = append(claimStatuses, c.Status)
-		if c.Status.Phase == v1alpha1.CNPodPhaseBound {
+		if c.IsReady() {
 			readyReplicas++
 		}
 	}
@@ -120,19 +127,42 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 
 func (r *Actor) scale(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaims) error {
 	s := ctx.Obj
-	current := len(oc.active)
-	ctx.Log.Info("scale claimset", "desiredReplicas", s.Spec.Replicas, "currentReplicas", current)
-	if s.Spec.Replicas > int32(current) {
-		return r.scaleOut(ctx, oc, int(s.Spec.Replicas)-current)
-	} else if s.Spec.Replicas < int32(current) {
-		return r.scaleIn(ctx, oc, current-int(s.Spec.Replicas))
+	var updated int
+	var outdated int
+	for _, c := range oc.owned {
+		if c.IsReady() {
+			if c.IsUpdated() {
+				updated++
+			} else {
+				outdated++
+			}
+		}
+	}
+	current := len(oc.owned)
+	ctx.Log.Info("scale claimset", "desiredReplicas", s.Spec.Replicas, "updatedReplicas", updated, "outdatedReplicas", outdated)
+	desiredReplicas := int(s.Spec.Replicas)
+	// TODO(aylei): simplify the following logic, hard to understand
+	// total bound claim exceed replicas, scale-in
+	if updated+outdated > desiredReplicas {
+		return r.scaleIn(ctx, oc, current-desiredReplicas)
+	}
+	// if the updated replicas < desiredReplicas, add 1 surge replica to rollout the claimset
+	if updated+outdated >= desiredReplicas && updated < desiredReplicas {
+		desiredReplicas++
+	}
+	// normal scaling
+	if desiredReplicas > current {
+		return r.scaleOut(ctx, oc, desiredReplicas-current)
+	}
+	if desiredReplicas < current {
+		return r.scaleOut(ctx, oc, desiredReplicas-current)
 	}
 	return nil
 }
 
 func (r *Actor) scaleOut(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaims, count int) error {
 	used := sets.New[string]()
-	for _, c := range oc.active {
+	for _, c := range oc.owned {
 		used.Insert(c.Labels[ClaimInstanceIDLabel])
 	}
 	for _, c := range oc.lost {
@@ -145,7 +175,7 @@ func (r *Actor) scaleOut(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClai
 		if err != nil {
 			return errors.Wrap(err, "error create new claim")
 		}
-		oc.active = append(oc.active, *claim)
+		oc.owned = append(oc.owned, *claim)
 	}
 	return nil
 }
@@ -180,8 +210,8 @@ func (c *claimAndPod) scoreHasPod() int {
 
 func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaims, count int) error {
 	var cps []claimAndPod
-	for i := range oc.active {
-		c := oc.active[i]
+	for i := range oc.owned {
+		c := oc.owned[i]
 		pod, err := getClaimedPod(ctx, &c)
 		if err != nil {
 			return errors.Wrap(err, "error get claimed pod")
@@ -210,7 +240,7 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaim
 	for ; i < len(cps); i++ {
 		left = append(left, *cps[i].claim)
 	}
-	oc.active = left
+	oc.owned = left
 	return nil
 }
 
@@ -222,10 +252,10 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaimSet]) (bool, error)
 		}
 		return false, errors.Wrap(err, "error list claims")
 	}
-	if len(oc.active) == 0 && len(oc.lost) == 0 {
+	if len(oc.owned) == 0 && len(oc.lost) == 0 {
 		return true, nil
 	}
-	for _, c := range append(oc.active, oc.lost...) {
+	for _, c := range append(oc.owned, oc.lost...) {
 		if err := ctx.Delete(&c); err != nil && !apierrors.IsNotFound(err) {
 			return false, errors.Wrapf(err, "error delete claim %s", c.Name)
 		}
@@ -254,7 +284,12 @@ func claimDeletionOrder(a, b claimAndPod) int {
 	if hasPod != 0 {
 		return hasPod
 	}
-	// 2. there is a tie, two cases:
+	// 2. delete outdated claim < updated claim
+	if claimPhaseToOrdinal[a.claim.Status.Phase] != claimPhaseToOrdinal[b.claim.Status.Phase] {
+		return claimPhaseToOrdinal[a.claim.Status.Phase] - claimPhaseToOrdinal[b.claim.Status.Phase]
+	}
+
+	// 3. there is a tie, two cases:
 	if a.scoreHasPod() == 1 {
 		// has pod, compare pod deletion order
 		return podDeletionOrder(a.pod, b.pod)
@@ -326,6 +361,10 @@ func podDeletionCost(pod *corev1.Pod) int64 {
 
 func cleanClaims(ctx recon.KubeClient, cs []v1alpha1.CNClaim) error {
 	for i := range cs {
+		if cs[i].DeletionTimestamp != nil {
+			// already deleted
+			continue
+		}
 		if err := ctx.Delete(&cs[i]); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return errors.Wrap(err, "error delete lost claim")
@@ -346,10 +385,12 @@ func listOwnedClaims(ctx context.Context, cli client.Client, s *v1alpha1.CNClaim
 	res := &ownedClaims{}
 	for i := range cList.Items {
 		c := cList.Items[i]
-		if c.Status.Phase == v1alpha1.CNClaimPhaseLost || c.Labels[ClaimInstanceIDLabel] == "" {
+		if c.Status.Phase == v1alpha1.CNClaimPhaseLost ||
+			c.Labels[ClaimInstanceIDLabel] == "" ||
+			c.DeletionTimestamp != nil {
 			res.lost = append(res.lost, c)
 		} else {
-			res.active = append(res.active, c)
+			res.owned = append(res.owned, c)
 		}
 	}
 	return res, nil

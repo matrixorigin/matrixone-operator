@@ -28,10 +28,18 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"slices"
 	"time"
+)
+
+const (
+	waitCacheTimeout = 10 * time.Second
 )
 
 // Actor reconciles CN Claim
@@ -191,7 +199,32 @@ func (r *Actor) bindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, 
 }
 
 func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
-	// TODO: monitor pod health
+	c := ctx.Obj
+	switch c.Status.Phase {
+	case v1alpha1.CNClaimPhasePending:
+		return errors.Errorf("CN Claim %s/%s is pending, should bind it first", c.Namespace, c.Name)
+	case v1alpha1.CNClaimPhaseLost:
+		return nil
+	case v1alpha1.CNClaimPhaseBound, v1alpha1.CNClaimPhaseOutdated:
+		// noop
+	default:
+		return errors.Errorf("CN Claim %s/%s is in unknown phase %s", c.Namespace, c.Name, c.Status.Phase)
+	}
+	pod := &corev1.Pod{}
+	err := ctx.Get(types.NamespacedName{Namespace: c.Namespace, Name: c.Spec.PodName}, pod)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			if c.Status.BoundTime != nil && time.Since(c.Status.BoundTime.Time) < waitCacheTimeout {
+				return recon.ErrReSync("pod status may be not update to date, wait", waitCacheTimeout)
+			}
+			c.Status.Phase = v1alpha1.CNClaimPhaseLost
+			return nil
+		}
+	}
+	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodUnknown {
+		c.Status.Phase = v1alpha1.CNClaimPhaseLost
+		return nil
+	}
 	return nil
 }
 
@@ -223,7 +256,7 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 		// set the CN Pod to draining phase and let the draining process handle recycling
 		if err := ctx.Patch(&cn, func() error {
 			cn.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseDraining
-			delete(cn.Labels, v1alpha1.ClaimOwnerNameLabel)
+			delete(cn.Labels, v1alpha1.PodClaimedByLabel)
 			if cn.Annotations == nil {
 				cn.Annotations = map[string]string{}
 			}
@@ -268,7 +301,24 @@ func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Po
 }
 
 func (r *Actor) Start(mgr manager.Manager) error {
-	return recon.Setup[*v1alpha1.CNClaim](&v1alpha1.CNClaim{}, "cn-claim-manager", mgr, r)
+	return recon.Setup[*v1alpha1.CNClaim](&v1alpha1.CNClaim{}, "cn-claim-manager", mgr, r, recon.WithBuildFn(func(b *builder.Builder) {
+		b.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+			pod, ok := object.(*corev1.Pod)
+			if !ok {
+				return nil
+			}
+			claimName, ok := pod.Labels[v1alpha1.PodClaimedByLabel]
+			if !ok {
+				return nil
+			}
+			return []reconcile.Request{{
+				NamespacedName: types.NamespacedName{
+					Namespace: pod.Namespace,
+					Name:      claimName,
+				},
+			}}
+		}))
+	}))
 }
 
 func toStoreStatus(cn *metadata.CNService) v1alpha1.CNStoreStatus {

@@ -25,6 +25,8 @@ const (
 	CNClaimPhaseBound   CNClaimPhase = "Bound"
 	CNClaimPhaseLost    CNClaimPhase = "Lost"
 
+	CNClaimPhaseOutdated CNClaimPhase = "Outdated"
+
 	ClaimOwnerNameLabel = "matrixorigin.io/claim-owner"
 )
 

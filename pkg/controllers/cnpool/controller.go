@@ -158,6 +158,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	return nil
 }
 
+// TODO(aylei): rethink here, operator should try it best to reuse cache
 func (r *Actor) syncLegacySet(ctx *recon.Context[*v1alpha1.CNPool], cnSet *v1alpha1.CNSet) (int32, error) {
 	var replicas int32
 	pods, err := listCNSetPods(ctx, cnSet)
@@ -169,7 +170,10 @@ func (r *Actor) syncLegacySet(ctx *recon.Context[*v1alpha1.CNPool], cnSet *v1alp
 		pod := pods[i]
 		// TODO(aylei): reclaim timeout logic
 		if podInUse(&pod) {
-			// keep in-use CN
+			// keep in-use CN but try reclaim the cnclaim
+			if err := r.reclaimLegacyCNClaim(ctx, &pod); err != nil {
+				return replicas, err
+			}
 			replicas++
 		} else {
 			// recalim other CN
@@ -185,12 +189,38 @@ func (r *Actor) syncLegacySet(ctx *recon.Context[*v1alpha1.CNPool], cnSet *v1alp
 		return replicas, errors.Wrapf(err, "error patch CNSet replicas, CNSet %s", cnSet.Name)
 	}
 	// legacy CNSet is scaled to zero the scaling has been done, GC it
-	//if cnSet.Spec.Replicas == 0 && cnSet.Status.Replicas == 0 {
-	//	if err := ctx.Delete(cnSet); err != nil {
-	//		return replicas, errors.Wrapf(err, "error GC legacy CNSet %s", cnSet.Name)
-	//	}
-	//}
+	if cnSet.Spec.Replicas == 0 && cnSet.Status.Replicas == 0 {
+		if err := ctx.Delete(cnSet); err != nil {
+			return replicas, errors.Wrapf(err, "error GC legacy CNSet %s", cnSet.Name)
+		}
+	}
 	return replicas, nil
+}
+
+func (r *Actor) reclaimLegacyCNClaim(ctx *recon.Context[*v1alpha1.CNPool], pod *corev1.Pod) error {
+	if pod.Labels[v1alpha1.CNPodPhaseLabel] != v1alpha1.CNPodPhaseBound {
+		return nil
+	}
+	claimName := pod.Labels[v1alpha1.PodClaimedByLabel]
+	if claimName == "" {
+		return nil
+	}
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: pod.Namespace,
+			Name:      claimName,
+		},
+	}
+	if err := ctx.Get(client.ObjectKeyFromObject(claim), claim); err != nil {
+		if apierrors.IsNotFound(err) {
+			return errors.Errorf("CNClaim %s/%s not found while pod is bound", pod.Namespace, claimName)
+		}
+		return errors.Wrap(err, "error get claim")
+	}
+	return ctx.PatchStatus(claim, func() error {
+		claim.Status.Phase = v1alpha1.CNClaimPhaseOutdated
+		return nil
+	})
 }
 
 // listNominatedClaims list all claims that are nominated to this pool

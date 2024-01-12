@@ -65,7 +65,11 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 			return errors.Wrap(err, "error get store connection count")
 		}
 		if count == 0 {
-			return c.patchPhase(ctx, v1alpha1.CNPodPhaseIdle)
+			return ctx.Patch(pod, func() error {
+				delete(pod.Annotations, common.ReclaimedAt)
+				pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseIdle
+				return nil
+			})
 		}
 		return recon.ErrReSync("store is still draining", retryInterval)
 	case v1alpha1.CNPodPhaseBound, v1alpha1.CNPodPhaseIdle:
