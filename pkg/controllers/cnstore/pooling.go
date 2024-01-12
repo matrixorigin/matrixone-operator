@@ -17,11 +17,13 @@ package cnstore
 import (
 	"context"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
 )
 
@@ -47,7 +49,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		// recycle the pod
 		timeStr, ok := pod.Annotations[common.ReclaimedAt]
 		if !ok {
-			// legacy pod, simply timeout
+			// legacy pod, simply return it to the pool
 			return c.patchPhase(ctx, v1alpha1.CNPodPhaseIdle)
 		}
 		parsed, err := time.Parse(time.RFC3339, timeStr)
@@ -55,14 +57,19 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 			return errors.Wrapf(err, "error parsing start time %s", timeStr)
 		}
 		if time.Since(parsed) > recycleTimeout {
-			return c.patchPhase(ctx, v1alpha1.CNPodPhaseIdle)
+			ctx.Log.Info("drain pool pod timeout, delete it to avoid workload intervention")
+			return util.Ignore(apierrors.IsNotFound, ctx.Delete(pod))
 		}
 		count, err := common.GetStoreConnection(pod)
 		if err != nil {
 			return errors.Wrap(err, "error get store connection count")
 		}
 		if count == 0 {
-			return c.patchPhase(ctx, v1alpha1.CNPodPhaseIdle)
+			return ctx.Patch(pod, func() error {
+				delete(pod.Annotations, common.ReclaimedAt)
+				pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseIdle
+				return nil
+			})
 		}
 		return recon.ErrReSync("store is still draining", retryInterval)
 	case v1alpha1.CNPodPhaseBound, v1alpha1.CNPodPhaseIdle:

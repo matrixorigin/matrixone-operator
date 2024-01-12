@@ -91,7 +91,7 @@ test: api-test unit
 
 # Run unit tests
 unit: generate fmt vet manifests
-	go test ./pkg/... -coverprofile cover.out
+	CGO_ENABLED=0 go test ./pkg/... -coverprofile cover.out
 
 api-test:
 	cd api && make test
