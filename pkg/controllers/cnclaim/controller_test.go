@@ -52,8 +52,8 @@ func Test_sortCNByPriority(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "previously-claimed",
 					Labels: map[string]string{
-						v1alpha1.CNPodPhaseLabel:     v1alpha1.CNPodPhaseIdle,
-						v1alpha1.ClaimOwnerNameLabel: "set1",
+						v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseIdle,
+						v1alpha1.PodOwnerNameLabel: "set1",
 					},
 					CreationTimestamp: metav1.Unix(10, 0),
 				},
@@ -62,8 +62,8 @@ func Test_sortCNByPriority(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "previously-claimed-by-other-set",
 					Labels: map[string]string{
-						v1alpha1.CNPodPhaseLabel:     v1alpha1.CNPodPhaseIdle,
-						v1alpha1.ClaimOwnerNameLabel: "set2",
+						v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseIdle,
+						v1alpha1.PodOwnerNameLabel: "set2",
 					},
 					CreationTimestamp: metav1.Unix(10, 0),
 				},

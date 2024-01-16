@@ -116,8 +116,8 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 	}
 	// used to resolve all CN pods belonged to this CNSet
 	podSelector := common.MustAsSelector(&metav1.LabelSelector{MatchLabels: map[string]string{
-		v1alpha1.ClaimOwnerNameLabel: s.Name,
-		v1alpha1.CNPodPhaseLabel:     v1alpha1.CNPodPhaseBound,
+		v1alpha1.PodOwnerNameLabel: s.Name,
+		v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
 	}})
 	s.Status.ReadyReplicas = readyReplicas
 	s.Status.Claims = claimStatuses
@@ -184,7 +184,10 @@ func makeClaim(cs *v1alpha1.CNClaimSet, id string) *v1alpha1.CNClaim {
 	tpl := cs.Spec.Template
 	labels := tpl.Labels
 	labels[ClaimInstanceIDLabel] = id
-	tpl.Spec.OwnerName = &cs.Name
+	// allow client to override ownerName in claimTemplate
+	if tpl.Spec.OwnerName == nil {
+		tpl.Spec.OwnerName = &cs.Name
+	}
 	return &v1alpha1.CNClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   cs.Namespace,
