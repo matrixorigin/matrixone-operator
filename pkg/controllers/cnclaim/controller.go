@@ -160,7 +160,7 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 		pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseBound
 		pod.Labels[v1alpha1.PodClaimedByLabel] = c.Name
 		if c.Spec.OwnerName != nil {
-			pod.Labels[v1alpha1.ClaimOwnerNameLabel] = *c.Spec.OwnerName
+			pod.Labels[v1alpha1.PodOwnerNameLabel] = *c.Spec.OwnerName
 		}
 		// atomic operation with optimistic concurrency control, succeed means claimed
 		if err := ctx.Update(pod); err != nil {
@@ -362,7 +362,7 @@ func priorityFunc(c *v1alpha1.CNClaim) func(a, b corev1.Pod) int {
 }
 
 func previouslyOwned(c *v1alpha1.CNClaim, p corev1.Pod) int {
-	if c.Spec.OwnerName != nil && p.Labels[v1alpha1.ClaimOwnerNameLabel] == *c.Spec.OwnerName {
+	if c.Spec.OwnerName != nil && p.Labels[v1alpha1.PodOwnerNameLabel] == *c.Spec.OwnerName {
 		return 0
 	}
 	return 1
