@@ -159,6 +159,11 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 		pod := &idleCNs[i]
 		pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseBound
 		pod.Labels[v1alpha1.PodClaimedByLabel] = c.Name
+		// pod belongs to a ClaimSet
+		csName := c.Labels[v1alpha1.ClaimSetNameLabel]
+		if csName != "" {
+			pod.Labels[v1alpha1.ClaimSetNameLabel] = csName
+		}
 		if c.Spec.OwnerName != nil {
 			pod.Labels[v1alpha1.PodOwnerNameLabel] = *c.Spec.OwnerName
 		}

@@ -116,7 +116,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 	}
 	// used to resolve all CN pods belonged to this CNSet
 	podSelector := common.MustAsSelector(&metav1.LabelSelector{MatchLabels: map[string]string{
-		v1alpha1.PodOwnerNameLabel: s.Name,
+		v1alpha1.ClaimSetNameLabel: s.Name,
 		v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
 	}})
 	s.Status.ReadyReplicas = readyReplicas
@@ -183,6 +183,7 @@ func (r *Actor) scaleOut(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClai
 func makeClaim(cs *v1alpha1.CNClaimSet, id string) *v1alpha1.CNClaim {
 	tpl := cs.Spec.Template
 	labels := tpl.Labels
+	labels[v1alpha1.ClaimSetNameLabel] = cs.Name
 	labels[ClaimInstanceIDLabel] = id
 	// allow client to override ownerName in claimTemplate
 	if tpl.Spec.OwnerName == nil {
