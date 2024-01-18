@@ -28,6 +28,8 @@ const (
 	CNClaimPhaseOutdated CNClaimPhase = "Outdated"
 
 	PodOwnerNameLabel = "matrixorigin.io/owner"
+
+	ClaimSetNameLabel = "matrixorigin.io/claimset"
 )
 
 type CNClaimSpec struct {
