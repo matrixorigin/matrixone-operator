@@ -283,7 +283,7 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 
 	// 3. sync stats, including connections and deletion cost
 	if err := wc.syncStats(ctx); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error sync stats for CN pod %s/%s", pod.Namespace, pod.Name))
+		return err
 	}
 
 	// 4. optionally, store is asked to be cordoned
@@ -316,7 +316,7 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		queryAddress = cn.QueryAddress
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "get cn query address")
+		return recon.ErrReSync(fmt.Sprintf("CN %s/%s is not ready, wait", pod.Namespace, pod.Name), retryInterval)
 	}
 	count, err := c.getSessionCount(pod, queryAddress)
 	if err != nil {
@@ -394,7 +394,7 @@ func (c *Controller) Observe(ctx *recon.Context[*corev1.Pod]) (recon.Action[*cor
 }
 
 func (c *Controller) Finalize(ctx *recon.Context[*corev1.Pod]) (bool, error) {
-	// deletion alo handled by observe
+	// deletion also handled by observe
 	return true, c.observe(ctx)
 }
 
