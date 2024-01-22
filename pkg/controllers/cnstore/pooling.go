@@ -65,6 +65,10 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 			return errors.Wrap(err, "error get store connection count")
 		}
 		if count == 0 {
+			if _, ok := pod.Annotations[v1alpha1.DeleteOnReclaimAnno]; ok {
+				ctx.Log.Info("delete pod since deleteOnReclaim is set")
+				return util.Ignore(apierrors.IsNotFound, ctx.Delete(pod))
+			}
 			return ctx.Patch(pod, func() error {
 				delete(pod.Annotations, common.ReclaimedAt)
 				pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseIdle

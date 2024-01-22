@@ -30,6 +30,8 @@ const (
 	PodOwnerNameLabel = "matrixorigin.io/owner"
 
 	ClaimSetNameLabel = "matrixorigin.io/claimset"
+
+	DeleteOnReclaimAnno = "matrixorigin.io/delete-on-reclaim"
 )
 
 type CNClaimSpec struct {
