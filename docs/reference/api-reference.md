@@ -887,6 +887,7 @@ _Appears in:_
 | `dnsConfig` _[PodDNSConfig](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#poddnsconfig-v1-core)_ |  |
 | `podLabels` _object (keys:string, values:string)_ |  |
 | `podAnnotations` _object (keys:string, values:string)_ |  |
+| `shareProcessNamespace` _boolean_ |  |
 
 
 #### PVCRetentionPolicy

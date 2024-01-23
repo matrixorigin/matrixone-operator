@@ -102,6 +102,8 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                   serviceAccountName:
                     type: string
+                  shareProcessNamespace:
+                    type: boolean
                   sidecarContainers:
                     x-kubernetes-preserve-unknown-fields: true
                   startupProbe:

@@ -236,6 +236,9 @@ type Overlay struct {
 
 	// +optional
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+
+	// +optional
+	ShareProcessNamespace *bool `json:"shareProcessNamespace,omitempty"`
 }
 
 type Volume struct {

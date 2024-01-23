@@ -136,6 +136,9 @@ func (o *Overlay) OverlayPodSpec(pod *corev1.PodSpec) {
 		containers = append(containers, o.SidecarContainers...)
 		pod.Containers = containers
 	}
+	if o.ShareProcessNamespace != nil {
+		pod.ShareProcessNamespace = o.ShareProcessNamespace
+	}
 }
 
 func (o *Overlay) OverlayMainContainer(c *corev1.Container) {
