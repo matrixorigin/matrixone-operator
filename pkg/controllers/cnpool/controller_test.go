@@ -20,11 +20,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math/rand"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 )
 
 func Test_sortPodByDeletionOrder(t *testing.T) {
+	now := time.Now()
 	tests := []struct {
 		name  string
 		pods  []*corev1.Pod
@@ -38,7 +40,7 @@ func Test_sortPodByDeletionOrder(t *testing.T) {
 					Labels: map[string]string{
 						v1alpha1.CNPodPhaseLabel: v1alpha1.CNPodPhaseIdle,
 					},
-					CreationTimestamp: metav1.Unix(10, 0),
+					CreationTimestamp: metav1.NewTime(now),
 				},
 			},
 			{
@@ -47,7 +49,7 @@ func Test_sortPodByDeletionOrder(t *testing.T) {
 					Labels: map[string]string{
 						v1alpha1.CNPodPhaseLabel: v1alpha1.CNPodPhaseUnknown,
 					},
-					CreationTimestamp: metav1.Unix(10, 0),
+					CreationTimestamp: metav1.NewTime(now),
 				},
 			},
 			{
@@ -56,7 +58,7 @@ func Test_sortPodByDeletionOrder(t *testing.T) {
 					Labels: map[string]string{
 						v1alpha1.CNPodPhaseLabel: v1alpha1.CNPodPhaseIdle,
 					},
-					CreationTimestamp: metav1.Unix(0, 0),
+					CreationTimestamp: metav1.NewTime(now.Add(-time.Hour)),
 				},
 			},
 			{
@@ -65,7 +67,7 @@ func Test_sortPodByDeletionOrder(t *testing.T) {
 					Labels: map[string]string{
 						v1alpha1.CNPodPhaseLabel: v1alpha1.CNPodPhaseTerminating,
 					},
-					CreationTimestamp: metav1.Unix(10, 0),
+					CreationTimestamp: metav1.NewTime(now),
 				},
 			},
 		},
