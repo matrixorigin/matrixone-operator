@@ -229,7 +229,7 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaim
 		// simply delete all claims
 		count = len(cps)
 	} else {
-		slices.SortFunc(cps, claimDeletionOrder)
+		sortClaimsToDelete(cps)
 	}
 	var i int
 	for ; i < count; i++ {
@@ -282,6 +282,10 @@ func getClaimedPod(cli recon.KubeClient, c *v1alpha1.CNClaim) (*corev1.Pod, erro
 	return pod, nil
 }
 
+func sortClaimsToDelete(cps []claimAndPod) {
+	slices.SortFunc(cps, claimDeletionOrder)
+}
+
 func claimDeletionOrder(a, b claimAndPod) int {
 	// 1. delete pending/lost claim first
 	hasPod := a.scoreHasPod() - b.scoreHasPod()
@@ -296,10 +300,11 @@ func claimDeletionOrder(a, b claimAndPod) int {
 	// 3. there is a tie, two cases:
 	if a.scoreHasPod() == 1 {
 		// has pod, compare pod deletion order
-		return podDeletionOrder(a.pod, b.pod)
+		res := podDeletionOrder(a.pod, b.pod)
+		return res
 	}
 	// both no pod, compare creation time, delete newer one first
-	return -(a.claim.CreationTimestamp.Second() - b.claim.CreationTimestamp.Second())
+	return -int(a.claim.CreationTimestamp.Sub(b.claim.CreationTimestamp.Time).Seconds())
 }
 
 // TODO(aylei): pod deletion order should be fine-tuned
@@ -328,7 +333,8 @@ func podDeletionOrder(a, b *corev1.Pod) int {
 		}
 		return 1
 	}
-	return -(a.CreationTimestamp.Second() - b.CreationTimestamp.Second())
+	// delete the claim with newer pod first
+	return -int(a.CreationTimestamp.Sub(b.CreationTimestamp.Time).Seconds())
 }
 
 func genAvailableIds(num int, used sets.Set[string]) []string {

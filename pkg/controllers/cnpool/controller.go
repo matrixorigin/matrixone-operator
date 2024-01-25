@@ -333,7 +333,7 @@ func deletionOrder(a, b *corev1.Pod) int {
 	c := deletionCost(a) - deletionCost(b)
 	if c == 0 {
 		// if two pods have same deletion cost, delete the newly created one first
-		return -(a.CreationTimestamp.Second() - b.CreationTimestamp.Second())
+		return -int(a.CreationTimestamp.Sub(b.CreationTimestamp.Time).Seconds())
 	}
 	return c
 }
