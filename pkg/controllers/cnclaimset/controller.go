@@ -230,6 +230,7 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaim
 		count = len(cps)
 	} else {
 		sortClaimsToDelete(cps)
+		ctx.Log.Info("sort claims to scale-in", "sorted", cps)
 	}
 	var i int
 	for ; i < count; i++ {
