@@ -142,7 +142,7 @@ func (r *Actor) scale(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaims)
 	ctx.Log.Info("scale claimset", "desiredReplicas", s.Spec.Replicas, "updatedReplicas", updated, "outdatedReplicas", outdated)
 	desiredReplicas := int(s.Spec.Replicas)
 	// TODO(aylei): simplify the following logic, hard to understand
-	// total bound claim exceed replicas, scale-in
+	// total bound Claim exceed replicas, scale-in
 	if updated+outdated > desiredReplicas {
 		return r.scaleIn(ctx, oc, current-desiredReplicas)
 	}
@@ -173,7 +173,7 @@ func (r *Actor) scaleOut(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClai
 		claim := makeClaim(ctx.Obj, id)
 		err := ctx.CreateOwned(claim)
 		if err != nil {
-			return errors.Wrap(err, "error create new claim")
+			return errors.Wrap(err, "error create new Claim")
 		}
 		oc.owned = append(oc.owned, *claim)
 	}
@@ -200,29 +200,29 @@ func makeClaim(cs *v1alpha1.CNClaimSet, id string) *v1alpha1.CNClaim {
 	}
 }
 
-type claimAndPod struct {
-	claim *v1alpha1.CNClaim
-	pod   *corev1.Pod
+type ClaimAndPod struct {
+	Claim *v1alpha1.CNClaim
+	Pod   *corev1.Pod
 }
 
-func (c *claimAndPod) scoreHasPod() int {
-	if c.pod != nil {
+func (c *ClaimAndPod) scoreHasPod() int {
+	if c.Pod != nil {
 		return 1
 	}
 	return 0
 }
 
 func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaims, count int) error {
-	var cps []claimAndPod
+	var cps []ClaimAndPod
 	for i := range oc.owned {
 		c := oc.owned[i]
 		pod, err := getClaimedPod(ctx, &c)
 		if err != nil {
-			return errors.Wrap(err, "error get claimed pod")
+			return errors.Wrap(err, "error get claimed Pod")
 		}
-		cps = append(cps, claimAndPod{
-			claim: &c,
-			pod:   pod,
+		cps = append(cps, ClaimAndPod{
+			Claim: &c,
+			Pod:   pod,
 		})
 	}
 	if count >= len(cps) {
@@ -234,16 +234,16 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaim
 	}
 	var i int
 	for ; i < count; i++ {
-		c := cps[i].claim
+		c := cps[i].Claim
 		if err := ctx.Delete(c); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return errors.Wrapf(err, "error scale-in claim %s", c.Name)
+				return errors.Wrapf(err, "error scale-in Claim %s", c.Name)
 			}
 		}
 	}
 	var left []v1alpha1.CNClaim
 	for ; i < len(cps); i++ {
-		left = append(left, *cps[i].claim)
+		left = append(left, *cps[i].Claim)
 	}
 	oc.owned = left
 	return nil
@@ -262,7 +262,7 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaimSet]) (bool, error)
 	}
 	for _, c := range append(oc.owned, oc.lost...) {
 		if err := ctx.Delete(&c); err != nil && !apierrors.IsNotFound(err) {
-			return false, errors.Wrapf(err, "error delete claim %s", c.Name)
+			return false, errors.Wrapf(err, "error delete Claim %s", c.Name)
 		}
 	}
 	return false, nil
@@ -278,37 +278,37 @@ func getClaimedPod(cli recon.KubeClient, c *v1alpha1.CNClaim) (*corev1.Pod, erro
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, errors.Wrap(err, "error get claimed pod")
+		return nil, errors.Wrap(err, "error get claimed Pod")
 	}
 	return pod, nil
 }
 
-func sortClaimsToDelete(cps []claimAndPod) {
+func sortClaimsToDelete(cps []ClaimAndPod) {
 	slices.SortFunc(cps, claimDeletionOrder)
 }
 
-func claimDeletionOrder(a, b claimAndPod) int {
-	// 1. delete pending/lost claim first
+func claimDeletionOrder(a, b ClaimAndPod) int {
+	// 1. delete pending/lost Claim first
 	hasPod := a.scoreHasPod() - b.scoreHasPod()
 	if hasPod != 0 {
 		return hasPod
 	}
-	// 2. delete outdated claim < updated claim
-	if claimPhaseToOrdinal[a.claim.Status.Phase] != claimPhaseToOrdinal[b.claim.Status.Phase] {
-		return claimPhaseToOrdinal[a.claim.Status.Phase] - claimPhaseToOrdinal[b.claim.Status.Phase]
+	// 2. delete outdated Claim < updated Claim
+	if claimPhaseToOrdinal[a.Claim.Status.Phase] != claimPhaseToOrdinal[b.Claim.Status.Phase] {
+		return claimPhaseToOrdinal[a.Claim.Status.Phase] - claimPhaseToOrdinal[b.Claim.Status.Phase]
 	}
 
 	// 3. there is a tie, two cases:
 	if a.scoreHasPod() == 1 {
-		// has pod, compare pod deletion order
-		res := podDeletionOrder(a.pod, b.pod)
+		// has Pod, compare Pod deletion order
+		res := podDeletionOrder(a.Pod, b.Pod)
 		return res
 	}
-	// both no pod, compare creation time, delete newer one first
-	return -int(a.claim.CreationTimestamp.Sub(b.claim.CreationTimestamp.Time).Seconds())
+	// both no Pod, compare creation time, delete newer one first
+	return -int(a.Claim.CreationTimestamp.Sub(b.Claim.CreationTimestamp.Time).Seconds())
 }
 
-// TODO(aylei): pod deletion order should be fine-tuned
+// TODO(aylei): Pod deletion order should be fine-tuned
 func podDeletionOrder(a, b *corev1.Pod) int {
 	// 1. UnScheduled < Scheduled
 	if a.Spec.NodeName != b.Spec.NodeName && (a.Spec.NodeName == "" || b.Spec.NodeName == "") {
@@ -334,7 +334,7 @@ func podDeletionOrder(a, b *corev1.Pod) int {
 		}
 		return 1
 	}
-	// delete the claim with newer pod first
+	// delete the Claim with newer Pod first
 	return -int(a.CreationTimestamp.Sub(b.CreationTimestamp.Time).Seconds())
 }
 
@@ -378,7 +378,7 @@ func cleanClaims(ctx recon.KubeClient, cs []v1alpha1.CNClaim) error {
 		}
 		if err := ctx.Delete(&cs[i]); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return errors.Wrap(err, "error delete lost claim")
+				return errors.Wrap(err, "error delete lost Claim")
 			}
 		}
 	}
