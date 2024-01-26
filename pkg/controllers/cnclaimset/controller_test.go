@@ -27,18 +27,18 @@ import (
 
 func Test_sortClaimsToDelete(t *testing.T) {
 	type args struct {
-		cps []claimAndPod
+		cps []ClaimAndPod
 	}
 	now := time.Now()
 	tests := []struct {
 		name  string
-		cps   []claimAndPod
+		cps   []ClaimAndPod
 		order []string
 	}{{
 		name: "basic",
-		cps: []claimAndPod{
+		cps: []ClaimAndPod{
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "pod-old",
 					},
@@ -46,7 +46,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhaseBound,
 					},
 				},
-				pod: &corev1.Pod{
+				Pod: &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "old-pod",
 						CreationTimestamp: metav1.Time{Time: now.Add(-time.Hour)},
@@ -60,7 +60,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 				},
 			},
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "pod-high-deletion-cost",
 					},
@@ -68,7 +68,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhaseBound,
 					},
 				},
-				pod: &corev1.Pod{
+				Pod: &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						CreationTimestamp: metav1.Time{Time: now},
 						Annotations: map[string]string{
@@ -84,7 +84,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 				},
 			},
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "pod-pending",
 					},
@@ -92,7 +92,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhaseBound,
 					},
 				},
-				pod: &corev1.Pod{
+				Pod: &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						CreationTimestamp: metav1.Time{Time: now},
 					},
@@ -105,7 +105,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 				},
 			},
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "pod-middle-deletion-cost",
 					},
@@ -113,7 +113,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhaseBound,
 					},
 				},
-				pod: &corev1.Pod{
+				Pod: &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						CreationTimestamp: metav1.Time{Time: now},
 						Annotations: map[string]string{
@@ -129,7 +129,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 				},
 			},
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "pod-unscheduled",
 					},
@@ -137,7 +137,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhaseBound,
 					},
 				},
-				pod: &corev1.Pod{
+				Pod: &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						CreationTimestamp: metav1.Time{Time: now},
 					},
@@ -147,7 +147,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 				},
 			},
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "just-bind",
 					},
@@ -155,7 +155,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhaseBound,
 					},
 				},
-				pod: &corev1.Pod{
+				Pod: &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "current-pod",
 						CreationTimestamp: metav1.Time{Time: now},
@@ -169,7 +169,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 				},
 			},
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "claim-outdated",
 					},
@@ -177,7 +177,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhaseOutdated,
 					},
 				},
-				pod: &corev1.Pod{
+				Pod: &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						CreationTimestamp: metav1.Time{Time: now},
 					},
@@ -190,7 +190,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 				},
 			},
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "claim-lost",
 					},
@@ -198,10 +198,10 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhaseLost,
 					},
 				},
-				pod: nil,
+				Pod: nil,
 			},
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "claim-pending",
 						CreationTimestamp: metav1.NewTime(now),
@@ -210,10 +210,10 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhasePending,
 					},
 				},
-				pod: nil,
+				Pod: nil,
 			},
 			{
-				claim: &v1alpha1.CNClaim{
+				Claim: &v1alpha1.CNClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "claim-pending-old",
 						CreationTimestamp: metav1.NewTime(now.Add(-time.Hour)),
@@ -222,7 +222,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 						Phase: v1alpha1.CNClaimPhasePending,
 					},
 				},
-				pod: nil,
+				Pod: nil,
 			},
 		},
 		order: []string{
@@ -244,7 +244,7 @@ func Test_sortClaimsToDelete(t *testing.T) {
 			g := NewGomegaWithT(t)
 			var res []string
 			for _, cp := range tt.cps {
-				res = append(res, cp.claim.Name)
+				res = append(res, cp.Claim.Name)
 			}
 			g.Expect(res).To(Equal(tt.order))
 		})
