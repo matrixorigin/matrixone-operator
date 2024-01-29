@@ -283,7 +283,8 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 
 	// 3. sync stats, including connections and deletion cost
 	if err := wc.syncStats(ctx); err != nil {
-		return err
+		ctx.Log.Info("error sync stats", "error", err.Error())
+		// sync stats should not block state sync, continue
 	}
 
 	// 4. optionally, store is asked to be cordoned
@@ -321,9 +322,7 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	}
 	count, err := c.getSessionCount(pod, queryAddress)
 	if err != nil {
-		ctx.Log.Error(err, "error get sessions")
-		// cannot get session, sync next time
-		return nil
+		return errors.Wrap(err, "error get sessions")
 	}
 	// cost is equal to connection count by default
 	cost := count
