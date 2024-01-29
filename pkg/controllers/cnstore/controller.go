@@ -316,7 +316,8 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		queryAddress = cn.QueryAddress
 		return nil
 	}); err != nil {
-		return recon.ErrReSync(fmt.Sprintf("CN %s/%s is not ready, wait", pod.Namespace, pod.Name), retryInterval)
+		ctx.Log.Info("error sync stats, cn not found in store-cache", "error", err.Error())
+		return nil
 	}
 	count, err := c.getSessionCount(pod, queryAddress)
 	if err != nil {
