@@ -1,0 +1,7 @@
+1. Get MO Pods by following command :
+
+kubectl get pods -n {{ .Release.Namespace }}
+
+2. Get MO Services by following command:
+
+kubectl get svc -n {{ .Release.Namespace }}
