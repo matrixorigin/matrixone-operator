@@ -1,0 +1,31 @@
+# Default values for matrixone.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+version: 1.1.0
+imageRepository: matrixorigin/matrixone
+logService:
+  replicas: 3
+  sharedStorage:
+    s3:
+      type: minio
+      path: matrixone
+      endpoint: http://minio.default:9000
+      secretRef:
+        name: minio
+  volume:
+    size: 10Gi
+tn:
+  replicas: 1
+  cacheVolume:
+    size: 10Gi
+cnGroups:
+- name: tp
+  replicas: 2
+  cacheVolume:
+    size: 10Gi
+
+# nodeSelector: {}
+# imagePullPolicy: IfNotPresent
+# restoreFrom: ""
+# topologySpread: []
