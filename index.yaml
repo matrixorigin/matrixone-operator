@@ -1,5 +1,16 @@
 apiVersion: v1
 entries:
+  matrixone:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-01-31T09:54:47.695791241Z"
+    description: A Helm chart to deploy MatrixOne on K8S
+    digest: 01531c3767d1cb7b7007299ba5feceea7144d0270e007d5d0fe713aade8bd6df
+    name: matrixone
+    type: application
+    urls:
+    - https://github.com/matrixorigin/matrixone-operator/releases/download/chart-0.1.0/matrixone-0.1.0.tgz
+    version: 0.1.0
   matrixone-operator:
   - apiVersion: v2
     appVersion: 0.1.0
@@ -90,6 +101,22 @@ entries:
       version: 1.4.0
     description: Matrixone Kubernetes Operator
     digest: 7979f1e3893c68d51d4ba4a8707cbceabaf9f5afa3fdecad5247e5db05a51bae
+    icon: https://raw.githubusercontent.com/matrixorigin/artwork/main/docs/overview/logo.png
+    kubeVersion: '>=1.19.0-0'
+    name: matrixone-operator
+    type: application
+    urls:
+    - https://github.com/matrixorigin/matrixone-operator/releases/download/chart-1.1.0-alpha1/matrixone-operator-1.1.0-alpha1.tgz
+    version: 1.1.0-alpha1
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2024-01-31T09:54:47.807768512Z"
+    dependencies:
+    - name: kruise
+      repository: https://openkruise.github.io/charts/
+      version: 1.4.0
+    description: Matrixone Kubernetes Operator
+    digest: 595772566b3fffd10a05341f1d9e85e3617cf24a7b5d96b5dba82dd5b4103e0b
     icon: https://raw.githubusercontent.com/matrixorigin/artwork/main/docs/overview/logo.png
     kubeVersion: '>=1.19.0-0'
     name: matrixone-operator
@@ -1153,4 +1180,4 @@ entries:
     urls:
     - https://github.com/matrixorigin/matrixone-operator/releases/download/0.7.0-alpha.1/matrixone-operator-0.7.0-alpha.1.tgz
     version: 0.7.0-alpha.1
-generated: "2024-01-29T08:57:07.764173886Z"
+generated: "2024-01-31T09:54:47.808130869Z"
