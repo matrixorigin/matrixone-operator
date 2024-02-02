@@ -94,6 +94,16 @@ type CNSetSpec struct {
 
 	// PauseUpdate means the CNSet should pause rolling-update
 	PauseUpdate bool `json:"pauseUpdate,omitempty"`
+
+	// ReusePVC means whether CNSet should reuse PVC
+	ReusePVC *bool `json:"reusePVC,omitempty"`
+}
+
+func (s *CNSetSpec) GetReusePVC() bool {
+	if s.ReusePVC == nil {
+		return false
+	}
+	return *s.ReusePVC
 }
 
 type ScalingConfig struct {
