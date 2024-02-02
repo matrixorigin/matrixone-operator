@@ -518,6 +518,7 @@ _Appears in:_
 | `podManagementPolicy` _string_ | PodManagementPolicy is the pod management policy of the Pod in this Set |
 | `podsToDelete` _string array_ | PodsToDelete are the Pods to delete in the CNSet |
 | `pauseUpdate` _boolean_ | PauseUpdate means the CNSet should pause rolling-update |
+| `reusePVC` _boolean_ | ReusePVC means whether CNSet should reuse PVC |
 
 
 
