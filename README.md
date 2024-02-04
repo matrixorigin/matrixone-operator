@@ -48,3 +48,10 @@ helm install -n <NS> <RELEASE_NAME> matrixone-operator/matrixone --version <VERS
 ```
 
 values.yaml 的格式和 mo-cluster.yaml 相同, 可以参考默认的 values.yaml: https://github.com/matrixorigin/matrixone-operator/blob/main/charts/matrixone/values.yaml
+
+开启 reusePVC:
+```yaml
+...
+  cnGroups:
+    - reusePVC: true
+```
