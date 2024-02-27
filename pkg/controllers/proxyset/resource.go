@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"strconv"
 	"text/template"
 )
 
@@ -126,6 +127,12 @@ func syncSvc(proxy *v1alpha1.ProxySet, svc *corev1.Service) {
 			svc.Spec.Ports[portIndex].NodePort = *proxy.Spec.NodePort
 		}
 	}
+	if proxy.Spec.GetExportToPrometheus() {
+		svc.Annotations[common.PrometheusScrapeAnno] = "true"
+		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
+	} else {
+		delete(svc.Annotations, common.PrometheusScrapeAnno)
+	}
 }
 
 func buildProxyConfigMap(proxy *v1alpha1.ProxySet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
@@ -140,6 +147,9 @@ func buildProxyConfigMap(proxy *v1alpha1.ProxySet, ls *v1alpha1.LogSet) (*corev1
 	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, nil))
 	conf.Set([]string{"service-type"}, "PROXY")
 	conf.Set([]string{"proxy", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", port))
+	if proxy.Spec.GetExportToPrometheus() {
+		conf.Set([]string{"observability", "enableMetricToProm"}, true)
+	}
 	s, err := conf.ToString()
 	if err != nil {
 		return nil, err
