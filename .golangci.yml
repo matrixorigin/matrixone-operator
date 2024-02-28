@@ -1,6 +1,6 @@
 run:
   timeout: 30m
-  go: '1.19'
+  go: '1.21'
   skip-files:
     - "^zz_generated.*"
 
@@ -29,6 +29,14 @@ linters-settings:
       "-SA1019",
       "-SA2002"
     ]
+
+  revive:
+    rules:
+    - name: unused-parameter
+      severity: warning
+      disabled: false
+      arguments:
+      - allowRegex: "^_"
 
   unused:
     go: "1.19"

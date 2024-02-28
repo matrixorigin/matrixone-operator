@@ -27,10 +27,10 @@ func NewFakeClient(_ string, _ client.Client, _ types.NamespacedName) Client {
 
 type fakeClient struct{}
 
-func (c *fakeClient) GetServerConnection(ctx context.Context, uid string) (int, error) {
+func (c *fakeClient) GetServerConnection(_ context.Context, _ string) (int, error) {
 	return 0, nil
 }
 
-func (c *fakeClient) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+func (c *fakeClient) Query(_ context.Context, _ string, _ ...any) (*sql.Rows, error) {
 	return nil, nil
 }
