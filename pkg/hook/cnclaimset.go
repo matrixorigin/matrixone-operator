@@ -37,15 +37,15 @@ func NewCNClaimSetHook(cli client.Client, logger logr.Logger) *CNClaimSetHook {
 	}
 }
 
-func (h *CNClaimSetHook) Default(ctx context.Context, obj runtime.Object) error {
+func (h *CNClaimSetHook) Default(_ context.Context, _ runtime.Object) error {
 	return nil
 }
 
-func (h *CNClaimSetHook) ValidateCreate(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (h *CNClaimSetHook) ValidateCreate(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (h *CNClaimSetHook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (h *CNClaimSetHook) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
 	oldCS, ok := oldObj.(*v1alpha1.CNClaimSet)
 	if !ok {
 		return nil, nil
@@ -62,7 +62,7 @@ func (h *CNClaimSetHook) ValidateUpdate(ctx context.Context, oldObj, newObj runt
 	return nil, nil
 }
 
-func (h *CNClaimSetHook) ValidateDelete(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (h *CNClaimSetHook) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 

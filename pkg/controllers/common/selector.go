@@ -41,7 +41,7 @@ func MustAsSelector(ps *metav1.LabelSelector) labels.Selector {
 	return ls
 }
 
-func MustNewRequirement(key string, op selection.Operator, vals []string, opts ...field.PathOption) labels.Requirement {
+func MustNewRequirement(key string, op selection.Operator, vals []string, _ ...field.PathOption) labels.Requirement {
 	r, err := labels.NewRequirement(key, op, vals)
 	if err != nil {
 		panic(errors.Wrap(err, "impossible path: new requirement failed"))

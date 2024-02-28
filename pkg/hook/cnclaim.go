@@ -39,11 +39,11 @@ func NewCNClaimHook(cli client.Client, logger logr.Logger) *CNClaimHook {
 	}
 }
 
-func (h *CNClaimHook) ValidateCreate(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (h *CNClaimHook) ValidateCreate(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (h *CNClaimHook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (h *CNClaimHook) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
 	var errs field.ErrorList
 	oldClaim, ok := oldObj.(*v1alpha1.CNClaim)
 	if !ok {
@@ -59,7 +59,7 @@ func (h *CNClaimHook) ValidateUpdate(ctx context.Context, oldObj, newObj runtime
 	return nil, invalidOrNil(errs, newClaim)
 }
 
-func (h *CNClaimHook) ValidateDelete(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (h *CNClaimHook) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
