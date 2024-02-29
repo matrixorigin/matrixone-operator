@@ -13,29 +13,3 @@
 // limitations under the License.
 
 package cnstore
-
-import (
-	"github.com/matrixorigin/matrixone-operator/pkg/metric"
-	"github.com/prometheus/client_golang/prometheus"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
-)
-
-func init() {
-	metrics.Registry.MustRegister(CnRPCDuration)
-}
-
-var (
-	CnRPCDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: metric.Namespace,
-		Name:      "cn_rpc_duration",
-		Help:      "The client request histogram of CN RPC",
-		Buckets:   prometheus.ExponentialBuckets(10, 2, 6),
-	}, []string{"type", "pod", "response"})
-
-	HAKeeperRPCDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: "mo_operator",
-		Name:      "hakeeper_rpc_duration",
-		Help:      "The client request histogram of HAKeeper RPC",
-		Buckets:   prometheus.ExponentialBuckets(10, 2, 6),
-	}, []string{"type", "logset", "response"})
-)

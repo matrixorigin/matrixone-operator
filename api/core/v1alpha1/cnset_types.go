@@ -32,6 +32,8 @@ const (
 	CNStoreStateUnknown  string = "Unknown"
 	CNStoreStateDraining string = "Draining"
 	CNStoreStateUp       string = "Up"
+
+	defaultMinDelaySeconds = 15
 )
 
 const (
@@ -111,6 +113,11 @@ type ScalingConfig struct {
 	StoreDrainEnabled *bool `json:"storeDrainEnabled,omitempty"`
 	// StoreDrainTimeout is the timeout for draining a CN store
 	StoreDrainTimeout *metav1.Duration `json:"storeDrainTimeout,omitempty"`
+	// waitPipeline let the scaling wait for pipeline to be drained
+	WaitPipeline *bool `json:"waitPipeline,omitempty"`
+	// minDelaySeconds is the minimum delay when drain CN store, usually
+	// be used to waiting for CN draining be propagated to the whole cluster
+	MinDelaySeconds *int32 `json:"minDelaySeconds,omitempty"`
 }
 
 func (s *ScalingConfig) GetStoreDrainEnabled() bool {
@@ -125,6 +132,20 @@ func (s *ScalingConfig) GetStoreDrainTimeout() time.Duration {
 		return 0
 	}
 	return s.StoreDrainTimeout.Duration
+}
+
+func (s *ScalingConfig) GetMinDelayDuration() time.Duration {
+	if s.MinDelaySeconds == nil {
+		return time.Duration(defaultMinDelaySeconds) * time.Second
+	}
+	return time.Duration(*s.MinDelaySeconds) * time.Second
+}
+
+func (s *ScalingConfig) ShouldWaitPipeline() bool {
+	if s.WaitPipeline == nil {
+		return false
+	}
+	return *s.WaitPipeline
 }
 
 type PythonUdfSidecar struct {

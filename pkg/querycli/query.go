@@ -16,6 +16,7 @@ package querycli
 
 import (
 	"context"
+	"github.com/matrixorigin/matrixone-operator/pkg/metric"
 	"github.com/matrixorigin/matrixone/pkg/common/morpc"
 	pb "github.com/matrixorigin/matrixone/pkg/pb/query"
 	"github.com/matrixorigin/matrixone/pkg/txn/rpc"
@@ -45,20 +46,49 @@ func New(logger *zap.Logger) (*Client, error) {
 }
 
 func (c *Client) ShowProcessList(ctx context.Context, address string) (*pb.ShowProcessListResponse, error) {
-	queryCtx := ctx
-	if _, ok := ctx.Deadline(); !ok {
-		var cancel context.CancelFunc
-		queryCtx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
-	}
-	f, err := c.c.Send(queryCtx, address, &pb.Request{
+	resp, err := c.SendReq(ctx, address, &pb.Request{
 		CmdMethod: pb.CmdMethod_ShowProcessList,
 		ShowProcessListRequest: &pb.ShowProcessListRequest{
 			SysTenant: true,
 		},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "error show process list")
+		return nil, errors.Wrap(err, "error send request")
+	}
+	return resp.ShowProcessListResponse, nil
+}
+
+func (c *Client) GetPipelineInfo(ctx context.Context, address string) (*pb.GetPipelineInfoResponse, error) {
+	resp, err := c.SendReq(ctx, address, &pb.Request{
+		CmdMethod:              pb.CmdMethod_GetPipelineInfo,
+		GetPipelineInfoRequest: &pb.GetPipelineInfoRequest{},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error send request")
+	}
+	return resp.GetPipelineInfoResponse, nil
+}
+
+func (c *Client) SendReq(ctx context.Context, address string, req *pb.Request) (*pb.Response, error) {
+	var err error
+	start := time.Now()
+	defer func() {
+		resp := "ok"
+		if err != nil {
+			resp = "error"
+		}
+		metric.CnRPCDuration.WithLabelValues(req.GetCmdMethod().String(), address, resp).Observe(time.Since(start).Seconds())
+	}()
+
+	queryCtx := ctx
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		queryCtx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+	f, err := c.c.Send(queryCtx, address, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "error send request")
 	}
 	msg, err := f.Get()
 	if err != nil {
@@ -66,7 +96,7 @@ func (c *Client) ShowProcessList(ctx context.Context, address string) (*pb.ShowP
 	}
 	resp, ok := msg.(*pb.Response)
 	if !ok {
-		return nil, errors.Errorf("message is not a valid showprocesslist response: %s", msg.DebugString())
+		return nil, errors.Errorf("message is not a valid response: %s", msg.DebugString())
 	}
-	return resp.ShowProcessListResponse, nil
+	return resp, nil
 }

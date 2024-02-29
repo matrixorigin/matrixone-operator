@@ -1176,6 +1176,8 @@ _Appears in:_
 | --- | --- |
 | `storeDrainEnabled` _boolean_ | StoreDrainEnabled is the flag to enable store draining |
 | `storeDrainTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | StoreDrainTimeout is the timeout for draining a CN store |
+| `waitPipeline` _boolean_ | waitPipeline let the scaling wait for pipeline to be drained |
+| `minDelaySeconds` _integer_ | minDelaySeconds is the minimum delay when drain CN store, usually be used to waiting for CN draining be propagated to the whole cluster |
 
 
 #### SharedStorageCache
