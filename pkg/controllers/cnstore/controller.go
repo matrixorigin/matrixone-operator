@@ -436,11 +436,18 @@ func (annotationChangedExcludeStats) Update(e event.UpdateEvent) bool {
 	}
 	oldAnnos := e.ObjectOld.GetAnnotations()
 	newAnnos := e.ObjectNew.GetAnnotations()
-	for _, key := range []string{common.DeletionCostAnno, v1alpha1.StoreCordonAnno} {
-		delete(oldAnnos, key)
-		delete(newAnnos, key)
+	for k, v := range newAnnos {
+		// exclude stats
+		if k == common.DeletionCostAnno || k == v1alpha1.StoreCordonAnno {
+			continue
+		}
+		// only consider newly added annotations or annotation value change, deletion of annotation key
+		// do not need to be reconciled
+		if oldAnnos[k] != v {
+			return true
+		}
 	}
-	return !reflect.DeepEqual(oldAnnos, newAnnos)
+	return false
 }
 
 // deletePredicate reconciles the object when the deletionTimestamp field is changed
