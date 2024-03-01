@@ -312,6 +312,12 @@ spec:
                   scalingConfig:
                     description: ScalingConfig declares the CN scaling behavior
                     properties:
+                      minDelaySeconds:
+                        description: minDelaySeconds is the minimum delay when drain
+                          CN store, usually be used to waiting for CN draining be
+                          propagated to the whole cluster
+                        format: int32
+                        type: integer
                       storeDrainEnabled:
                         description: StoreDrainEnabled is the flag to enable store
                           draining
@@ -320,6 +326,10 @@ spec:
                         description: StoreDrainTimeout is the timeout for draining
                           a CN store
                         type: string
+                      waitPipeline:
+                        description: waitPipeline let the scaling wait for pipeline
+                          to be drained
+                        type: boolean
                     type: object
                   serviceAnnotations:
                     additionalProperties:

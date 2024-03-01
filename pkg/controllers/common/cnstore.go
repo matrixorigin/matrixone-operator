@@ -15,6 +15,7 @@
 package common
 
 import (
+	"encoding/json"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
@@ -141,15 +142,50 @@ func ToStoreLabels(labels []v1alpha1.CNLabel) map[string]metadata.LabelList {
 	return lm
 }
 
+type StoreConnection struct {
+	SessionCount  int `json:"sessionCount"`
+	PipelineCount int `json:"pipelineCount"`
+}
+
+func (s *StoreConnection) GenDeletionCost() int {
+	return s.SessionCount
+}
+
+func (s *StoreConnection) IsSafeToReclaim() bool {
+	return s.SessionCount == 0 && s.PipelineCount == 0
+}
+
 // GetStoreConnection get the store connection count from Pod anno
-func GetStoreConnection(pod *corev1.Pod) (int, error) {
+func GetStoreConnection(pod *corev1.Pod) (*StoreConnection, error) {
 	connectionStr, ok := pod.Annotations[v1alpha1.StoreConnectionAnno]
 	if !ok {
-		return 0, errors.Errorf("cannot find connection count for CN pod %s/%s, connection annotation is empty", pod.Namespace, pod.Name)
+		return nil, errors.Errorf("cannot find connection count for CN pod %s/%s, connection annotation is empty", pod.Namespace, pod.Name)
 	}
-	count, err := strconv.Atoi(connectionStr)
+	s := &StoreConnection{}
+	if len(connectionStr) == 0 {
+		return s, nil
+	}
+	if err := json.Unmarshal([]byte(connectionStr), s); err != nil {
+		// fallback to old format
+		count, atoiErr := strconv.Atoi(connectionStr)
+		if atoiErr != nil {
+			return nil, errors.Wrap(err, "error parsing connection anno")
+		}
+		s.SessionCount = count
+		return s, nil
+	}
+	return s, nil
+}
+
+// SetStoreConnection set the store connection info to Pod anno
+func SetStoreConnection(pod *corev1.Pod, s *StoreConnection) error {
+	b, err := json.Marshal(s)
 	if err != nil {
-		return 0, errors.Wrap(err, "error parsing connection count")
+		return errors.Wrap(err, "error marshal connection info")
 	}
-	return count, nil
+	if pod.Annotations == nil {
+		pod.Annotations = map[string]string{}
+	}
+	pod.Annotations[v1alpha1.StoreConnectionAnno] = string(b)
+	return nil
 }

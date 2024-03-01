@@ -134,12 +134,15 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		}
 		return errors.Wrap(err, "error set CN state draining")
 	}
+	if time.Since(startTime) < sc.GetMinDelayDuration() {
+		return recon.ErrReSync("wait for min delay", retryInterval)
+	}
 
-	count, err := common.GetStoreConnection(pod)
+	storeConnection, err := common.GetStoreConnection(pod)
 	if err != nil {
 		return errors.Wrap(err, "error get store connection count")
 	}
-	if count == 0 {
+	if storeConnection.IsSafeToReclaim() {
 		return c.completeDraining(ctx)
 	}
 	return recon.ErrReSync("wait for CN store draining", retryInterval)
@@ -320,18 +323,27 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		ctx.Log.Info("error sync stats, cn not found in store-cache", "error", err.Error())
 		return nil
 	}
-	count, err := c.getSessionCount(pod, queryAddress)
+	count, err := c.getSessionCount(queryAddress)
 	if err != nil {
 		return errors.Wrap(err, "error get sessions")
 	}
-	// cost is equal to connection count by default
-	cost := count
-	err = ctx.Patch(pod, func() error {
-		if pod.Annotations == nil {
-			pod.Annotations = map[string]string{}
+	var pipelineCount int
+	if c.cn.Spec.ScalingConfig.ShouldWaitPipeline() {
+		pipelineCount, err = c.getPipelineCount(queryAddress)
+		if err != nil {
+			return errors.Wrap(err, "error get pipeline count")
 		}
-		pod.Annotations[common.DeletionCostAnno] = strconv.Itoa(cost)
-		pod.Annotations[v1alpha1.StoreConnectionAnno] = strconv.Itoa(count)
+	}
+
+	sc := &common.StoreConnection{
+		SessionCount:  count,
+		PipelineCount: pipelineCount,
+	}
+	err = ctx.Patch(pod, func() error {
+		if err := common.SetStoreConnection(pod, sc); err != nil {
+			return err
+		}
+		pod.Annotations[common.DeletionCostAnno] = strconv.Itoa(sc.GenDeletionCost())
 		if pod.Labels == nil {
 			pod.Labels = map[string]string{}
 		}
@@ -344,21 +356,26 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	return nil
 }
 
-func (c *Controller) getSessionCount(pod *corev1.Pod, queryAddress string) (int, error) {
-	start := time.Now()
+func (c *Controller) getSessionCount(queryAddress string) (int, error) {
 	var accountSession int
 	resp, err := c.queryCli.ShowProcessList(context.Background(), queryAddress)
 	if err != nil {
-		CnRPCDuration.WithLabelValues("ShowProcessList", pod.Namespace, "error").Observe(time.Since(start).Seconds())
 		return 0, errors.Wrap(err, "show processlist")
 	}
-	CnRPCDuration.WithLabelValues("ShowProcessList", pod.Namespace, "ok").Observe(time.Since(start).Seconds())
 	for _, sess := range resp.GetSessions() {
 		if sess.Account != "" && sess.Account != "sys" {
 			accountSession++
 		}
 	}
 	return accountSession, nil
+}
+
+func (c *Controller) getPipelineCount(queryAddress string) (int, error) {
+	resp, err := c.queryCli.GetPipelineInfo(context.Background(), queryAddress)
+	if err != nil {
+		return 0, errors.Wrap(err, "get pipeline info")
+	}
+	return int(resp.GetCount()), nil
 }
 
 func (c *withCNSet) withHAKeeperClient(ctx *recon.Context[*corev1.Pod], fn func(context.Context, *hacli.Handler) error) error {
@@ -438,7 +455,7 @@ func (annotationChangedExcludeStats) Update(e event.UpdateEvent) bool {
 	newAnnos := e.ObjectNew.GetAnnotations()
 	for k, v := range newAnnos {
 		// exclude stats
-		if k == common.DeletionCostAnno || k == v1alpha1.StoreCordonAnno {
+		if k == common.DeletionCostAnno || k == v1alpha1.StoreConnectionAnno {
 			continue
 		}
 		// only consider newly added annotations or annotation value change, deletion of annotation key

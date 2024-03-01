@@ -60,11 +60,14 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 			ctx.Log.Info("drain pool pod timeout, delete it to avoid workload intervention")
 			return util.Ignore(apierrors.IsNotFound, ctx.Delete(pod))
 		}
-		count, err := common.GetStoreConnection(pod)
+		if time.Since(parsed) < c.cn.Spec.ScalingConfig.GetMinDelayDuration() {
+			return recon.ErrReSync("wait min delay duration", retryInterval)
+		}
+		storeConnection, err := common.GetStoreConnection(pod)
 		if err != nil {
 			return errors.Wrap(err, "error get store connection count")
 		}
-		if count == 0 {
+		if storeConnection.IsSafeToReclaim() {
 			if _, ok := pod.Annotations[v1alpha1.DeleteOnReclaimAnno]; ok {
 				ctx.Log.Info("delete pod since deleteOnReclaim is set")
 				return util.Ignore(apierrors.IsNotFound, ctx.Delete(pod))
