@@ -51,12 +51,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+Selector labels
 */}}
-{{- define "matrixone.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "matrixone.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
+{{- define "matrixone.debuggerSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "matrixone.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}-debugger
 {{- end }}

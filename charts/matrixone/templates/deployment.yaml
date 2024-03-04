@@ -1,0 +1,67 @@
+{{- if .Values.debugger.enabled -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "matrixone.fullname" . }}-debugger
+  labels:
+    {{- include "matrixone.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "matrixone.debuggerSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "matrixone.debuggerSelectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.debugger.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "matrixone.fullname" . }}
+      containers:
+        - name: debugger
+          image: {{ .Values.debugger.image }}
+          command:
+          - tail
+          - -f
+          - /dev/null
+          imagePullPolicy: {{ .Values.debugger.imagePullPolicy }}
+          {{- with .Values.debugger.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "matrixone.fullname" . }}
+  labels:
+    {{- include "matrixone.debuggerSelectorLabels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "matrixone.fullname" . }}-debugger
+  labels:
+    {{- include "matrixone.debuggerSelectorLabels" . | nindent 4 }}
+rules:
+  {{- toYaml .Values.debugger.rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "matrixone.fullname" . }}-debugger
+  labels:
+    {{- include "matrixone.debuggerSelectorLabels" . | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "matrixone.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "matrixone.fullname" . }}-debugger
+  apiGroup: rbac.authorization.k8s.io
+{{- end -}}
