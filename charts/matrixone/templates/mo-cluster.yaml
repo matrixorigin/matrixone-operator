@@ -4,32 +4,7 @@ metadata:
   name: {{ include "matrixone.fullname" . }}
   labels:
     {{- include "matrixone.labels" . | nindent 4 }}
+{{- with .Values.spec }}
 spec:
-  imageRepository: {{ .Values.imageRepository }}
-  version: {{ .Values.version }}
-  {{- with .Values.logService }}
-  logService:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  {{- with .Values.tn }}
-  tn:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  {{- with .Values.cnGroups }}
-  cnGroups:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  {{- with .Values.nodeSelector }}
-  nodeSelector:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  {{- with .Values.imagePullPolicy }}
-  imagePullPolicy: {{ . }}
-  {{- end }}
-  {{- with .Values.restoreFrom }}
-  restoreFrom: {{ . }}
-  {{- end }}
-  {{- with .Values.topologySpread }}
-  topologySpread:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+  {{- toYaml . | nindent 2 }}
+{{- end }}
