@@ -106,7 +106,9 @@ spec:
                     description: Config is the raw config for pods
                     type: string
                   dnsBasedIdentity:
-                    description: If enabled, use the Pod dns name as the Pod identity
+                    description: 'If enabled, use the Pod dns name as the Pod identity
+                      Deprecated: DNSBasedIdentity is barely for keeping backward
+                      compatibility'
                     type: boolean
                   exportToPrometheus:
                     type: boolean
@@ -293,11 +295,14 @@ spec:
                         description: StoreDrainTimeout is the timeout for draining
                           a CN store
                         type: string
-                      waitPipeline:
-                        description: waitPipeline let the scaling wait for pipeline
-                          to be drained
-                        type: boolean
                     type: object
+                  semanticVersion:
+                    description: SemanticVersion override the semantic version of
+                      CN if set, the semantic version of CN will be default to the
+                      image tag, if the semantic version is not set, nor the image
+                      tag is a valid semantic version, operator will treat the MO
+                      as unknown version and will not apply any version-specific reconciliations
+                    type: string
                   serviceAnnotations:
                     additionalProperties:
                       type: string
@@ -435,7 +440,9 @@ spec:
                       description: Config is the raw config for pods
                       type: string
                     dnsBasedIdentity:
-                      description: If enabled, use the Pod dns name as the Pod identity
+                      description: 'If enabled, use the Pod dns name as the Pod identity
+                        Deprecated: DNSBasedIdentity is barely for keeping backward
+                        compatibility'
                       type: boolean
                     exportToPrometheus:
                       type: boolean
@@ -630,11 +637,15 @@ spec:
                           description: StoreDrainTimeout is the timeout for draining
                             a CN store
                           type: string
-                        waitPipeline:
-                          description: waitPipeline let the scaling wait for pipeline
-                            to be drained
-                          type: boolean
                       type: object
+                    semanticVersion:
+                      description: SemanticVersion override the semantic version of
+                        CN if set, the semantic version of CN will be default to the
+                        image tag, if the semantic version is not set, nor the image
+                        tag is a valid semantic version, operator will treat the MO
+                        as unknown version and will not apply any version-specific
+                        reconciliations
+                      type: string
                     serviceAnnotations:
                       additionalProperties:
                         type: string
@@ -763,7 +774,9 @@ spec:
                     description: Config is the raw config for pods
                     type: string
                   dnsBasedIdentity:
-                    description: If enabled, use the Pod dns name as the Pod identity
+                    description: 'If enabled, use the Pod dns name as the Pod identity
+                      Deprecated: DNSBasedIdentity is barely for keeping backward
+                      compatibility'
                     type: boolean
                   exportToPrometheus:
                     type: boolean
@@ -835,6 +848,13 @@ spec:
                           Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  semanticVersion:
+                    description: SemanticVersion override the semantic version of
+                      CN if set, the semantic version of CN will be default to the
+                      image tag, if the semantic version is not set, nor the image
+                      tag is a valid semantic version, operator will treat the MO
+                      as unknown version and will not apply any version-specific reconciliations
+                    type: string
                   serviceArgs:
                     description: 'ServiceArgs define command line options for process,
                       used by logset/cnset/dnset service. NOTE: user should not define
@@ -903,7 +923,9 @@ spec:
                     description: Config is the raw config for pods
                     type: string
                   dnsBasedIdentity:
-                    description: If enabled, use the Pod dns name as the Pod identity
+                    description: 'If enabled, use the Pod dns name as the Pod identity
+                      Deprecated: DNSBasedIdentity is barely for keeping backward
+                      compatibility'
                     type: boolean
                   exportToPrometheus:
                     type: boolean
@@ -1013,6 +1035,13 @@ spec:
                           Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  semanticVersion:
+                    description: SemanticVersion override the semantic version of
+                      CN if set, the semantic version of CN will be default to the
+                      image tag, if the semantic version is not set, nor the image
+                      tag is a valid semantic version, operator will treat the MO
+                      as unknown version and will not apply any version-specific reconciliations
+                    type: string
                   serviceArgs:
                     description: 'ServiceArgs define command line options for process,
                       used by logset/cnset/dnset service. NOTE: user should not define
@@ -1157,7 +1186,9 @@ spec:
                     description: Config is the raw config for pods
                     type: string
                   dnsBasedIdentity:
-                    description: If enabled, use the Pod dns name as the Pod identity
+                    description: 'If enabled, use the Pod dns name as the Pod identity
+                      Deprecated: DNSBasedIdentity is barely for keeping backward
+                      compatibility'
                     type: boolean
                   exportToPrometheus:
                     type: boolean
@@ -1235,6 +1266,13 @@ spec:
                           Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  semanticVersion:
+                    description: SemanticVersion override the semantic version of
+                      CN if set, the semantic version of CN will be default to the
+                      image tag, if the semantic version is not set, nor the image
+                      tag is a valid semantic version, operator will treat the MO
+                      as unknown version and will not apply any version-specific reconciliations
+                    type: string
                   serviceArgs:
                     description: 'ServiceArgs define command line options for process,
                       used by logset/cnset/dnset service. NOTE: user should not define
@@ -1259,6 +1297,13 @@ spec:
                     type: array
                 type: object
               restoreFrom:
+                type: string
+              semanticVersion:
+                description: SemanticVersion override the semantic version of CN if
+                  set, the semantic version of CN will be default to the image tag,
+                  if the semantic version is not set, nor the image tag is a valid
+                  semantic version, operator will treat the MO as unknown version
+                  and will not apply any version-specific reconciliations
                 type: string
               tn:
                 description: TN is the default TN pod set of this Cluster
@@ -1296,7 +1341,9 @@ spec:
                     description: Config is the raw config for pods
                     type: string
                   dnsBasedIdentity:
-                    description: If enabled, use the Pod dns name as the Pod identity
+                    description: 'If enabled, use the Pod dns name as the Pod identity
+                      Deprecated: DNSBasedIdentity is barely for keeping backward
+                      compatibility'
                     type: boolean
                   exportToPrometheus:
                     type: boolean
@@ -1368,6 +1415,13 @@ spec:
                           Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  semanticVersion:
+                    description: SemanticVersion override the semantic version of
+                      CN if set, the semantic version of CN will be default to the
+                      image tag, if the semantic version is not set, nor the image
+                      tag is a valid semantic version, operator will treat the MO
+                      as unknown version and will not apply any version-specific reconciliations
+                    type: string
                   serviceArgs:
                     description: 'ServiceArgs define command line options for process,
                       used by logset/cnset/dnset service. NOTE: user should not define
@@ -1473,7 +1527,9 @@ spec:
                     description: Config is the raw config for pods
                     type: string
                   dnsBasedIdentity:
-                    description: If enabled, use the Pod dns name as the Pod identity
+                    description: 'If enabled, use the Pod dns name as the Pod identity
+                      Deprecated: DNSBasedIdentity is barely for keeping backward
+                      compatibility'
                     type: boolean
                   exportToPrometheus:
                     type: boolean
@@ -1660,11 +1716,14 @@ spec:
                         description: StoreDrainTimeout is the timeout for draining
                           a CN store
                         type: string
-                      waitPipeline:
-                        description: waitPipeline let the scaling wait for pipeline
-                          to be drained
-                        type: boolean
                     type: object
+                  semanticVersion:
+                    description: SemanticVersion override the semantic version of
+                      CN if set, the semantic version of CN will be default to the
+                      image tag, if the semantic version is not set, nor the image
+                      tag is a valid semantic version, operator will treat the MO
+                      as unknown version and will not apply any version-specific reconciliations
+                    type: string
                   serviceAnnotations:
                     additionalProperties:
                       type: string
@@ -1766,7 +1825,9 @@ spec:
                     description: Config is the raw config for pods
                     type: string
                   dnsBasedIdentity:
-                    description: If enabled, use the Pod dns name as the Pod identity
+                    description: 'If enabled, use the Pod dns name as the Pod identity
+                      Deprecated: DNSBasedIdentity is barely for keeping backward
+                      compatibility'
                     type: boolean
                   exportToPrometheus:
                     type: boolean
@@ -1842,6 +1903,13 @@ spec:
                           Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  semanticVersion:
+                    description: SemanticVersion override the semantic version of
+                      CN if set, the semantic version of CN will be default to the
+                      image tag, if the semantic version is not set, nor the image
+                      tag is a valid semantic version, operator will treat the MO
+                      as unknown version and will not apply any version-specific reconciliations
+                    type: string
                   serviceArgs:
                     description: 'ServiceArgs define command line options for process,
                       used by logset/cnset/dnset service. NOTE: user should not define

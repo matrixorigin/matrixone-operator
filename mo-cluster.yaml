@@ -1,0 +1,47 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: MatrixOneCluster
+metadata:
+  name: mo
+spec:
+  imageRepository: mocloud/matrixone
+  version: test
+  imagePullPolicy: IfNotPresent
+  semanticVersion: v1.1.2
+  logService:
+    resources:
+      requests:
+        cpu: 250m
+      limits:
+        cpu: 250m
+    replicas: 3
+    sharedStorage:
+      s3:
+        type: minio
+        path: matrixone
+        endpoint: http://minio.default:9000
+        secretRef:
+          name: minio
+    volume:
+      size: 10Gi
+  proxy:
+    resources:
+      requests:
+        cpu: 250m
+      limits:
+        cpu: 250m
+    replicas: 1
+  tn:
+    resources:
+      requests:
+        cpu: 250m
+      limits:
+        cpu: 250m
+    replicas: 1
+  cnGroups:
+  - name: tp
+    replicas: 2
+    resources:
+      requests:
+        cpu: 250m
+      limits:
+        cpu: 250m

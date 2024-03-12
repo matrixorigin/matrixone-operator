@@ -114,6 +114,7 @@ func syncReplicas(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
 }
 
 func syncPodMeta(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
+	common.SetSematicVersion(&cs.Spec.Template.ObjectMeta, &dn.Spec.PodSet)
 	dn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 }
 

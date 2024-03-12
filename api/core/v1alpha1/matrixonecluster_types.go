@@ -89,6 +89,14 @@ type MatrixOneClusterSpec struct {
 	// MetricReaderEnabled enables metric reader for operator and other apps to query
 	// metric from MO cluster
 	MetricReaderEnabled *bool `json:"metricReaderEnabled,omitempty"`
+
+	// SemanticVersion override the semantic version of CN if set,
+	// the semantic version of CN will be default to the image tag,
+	// if the semantic version is not set, nor the image tag is a valid semantic version,
+	// operator will treat the MO as unknown version and will not apply any version-specific
+	// reconciliations
+	// +optional
+	SemanticVersion *string `json:"semanticVersion,omitempty"`
 }
 
 func (m *MatrixOneCluster) GetMetricReaderEnabled() bool {

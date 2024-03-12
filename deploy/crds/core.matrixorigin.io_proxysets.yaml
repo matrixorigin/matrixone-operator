@@ -71,7 +71,8 @@ spec:
                 description: Config is the raw config for pods
                 type: string
               dnsBasedIdentity:
-                description: If enabled, use the Pod dns name as the Pod identity
+                description: 'If enabled, use the Pod dns name as the Pod identity
+                  Deprecated: DNSBasedIdentity is barely for keeping backward compatibility'
                 type: boolean
               exportToPrometheus:
                 type: boolean
@@ -147,6 +148,13 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
+              semanticVersion:
+                description: SemanticVersion override the semantic version of CN if
+                  set, the semantic version of CN will be default to the image tag,
+                  if the semantic version is not set, nor the image tag is a valid
+                  semantic version, operator will treat the MO as unknown version
+                  and will not apply any version-specific reconciliations
+                type: string
               serviceArgs:
                 description: 'ServiceArgs define command line options for process,
                   used by logset/cnset/dnset service. NOTE: user should not define

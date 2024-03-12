@@ -16,6 +16,7 @@ package common
 
 import (
 	"encoding/json"
+	"github.com/blang/semver/v4"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
@@ -35,6 +36,8 @@ const (
 	CNStoreReadiness corev1.PodConditionType = "matrixorigin.io/cn-store"
 
 	ReclaimedAt = "matrixorigin.io/reclaimed-at"
+
+	SemanticVersionAnno = "matrixorigin.io/semantic-version"
 )
 
 func AddReadinessGate(podSpec *corev1.PodSpec, ct corev1.PodConditionType) {
@@ -188,4 +191,28 @@ func SetStoreConnection(pod *corev1.Pod, s *StoreConnection) error {
 	}
 	pod.Annotations[v1alpha1.StoreConnectionAnno] = string(b)
 	return nil
+}
+
+// SetSematicVersion set pod semantic version to pod object meta
+func SetSematicVersion(meta *metav1.ObjectMeta, p *v1alpha1.PodSet) {
+	v, ok := p.GetSemVer()
+	if !ok {
+		return
+	}
+	if meta.Annotations == nil {
+		meta.Annotations = make(map[string]string)
+	}
+	meta.Annotations[SemanticVersionAnno] = v.String()
+}
+
+// GetSemanticVersion returns the semantic of the target MO pod,
+// if no version is parsed, a dummy version is returned
+func GetSemanticVersion(meta *metav1.ObjectMeta) semver.Version {
+	if anno, ok := meta.Annotations[SemanticVersionAnno]; ok {
+		v, err := semver.Parse(anno)
+		if err == nil {
+			return v
+		}
+	}
+	return v1alpha1.MinimalVersion
 }

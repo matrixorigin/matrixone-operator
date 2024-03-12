@@ -840,6 +840,7 @@ _Appears in:_
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
 | `restoreFrom` _string_ |  |
 | `metricReaderEnabled` _boolean_ | MetricReaderEnabled enables metric reader for operator and other apps to query metric from MO cluster |
+| `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set, the semantic version of CN will be default to the image tag, if the semantic version is not set, nor the image tag is a valid semantic version, operator will treat the MO as unknown version and will not apply any version-specific reconciliations |
 
 
 #### ObjectRef
@@ -924,11 +925,12 @@ _Appears in:_
 | `topologySpread` _string array_ | TopologyEvenSpread specifies what topology domains the Pods in set should be evenly spread in. This will be overridden by .overlay.TopologySpreadConstraints |
 | `nodeSelector` _object (keys:string, values:string)_ |  |
 | `config` _[TomlConfig](#tomlconfig)_ | Config is the raw config for pods |
-| `dnsBasedIdentity` _boolean_ | If enabled, use the Pod dns name as the Pod identity |
+| `dnsBasedIdentity` _boolean_ | If enabled, use the Pod dns name as the Pod identity Deprecated: DNSBasedIdentity is barely for keeping backward compatibility |
 | `clusterDomain` _string_ | ClusterDomain is the cluster-domain of current kubernetes cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ for details |
 | `serviceArgs` _string array_ | ServiceArgs define command line options for process, used by logset/cnset/dnset service. NOTE: user should not define "-cfg" argument in this field, which is defined default by controller |
 | `memoryLimitPercent` _integer_ | MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory * MemoryLimitPercent / 100 |
 | `exportToPrometheus` _boolean_ |  |
+| `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set, the semantic version of CN will be default to the image tag, if the semantic version is not set, nor the image tag is a valid semantic version, operator will treat the MO as unknown version and will not apply any version-specific reconciliations |
 
 
 #### PoolScaleStrategy
@@ -1176,7 +1178,6 @@ _Appears in:_
 | --- | --- |
 | `storeDrainEnabled` _boolean_ | StoreDrainEnabled is the flag to enable store draining |
 | `storeDrainTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | StoreDrainTimeout is the timeout for draining a CN store |
-| `waitPipeline` _boolean_ | waitPipeline let the scaling wait for pipeline to be drained |
 | `minDelaySeconds` _integer_ | minDelaySeconds is the minimum delay when drain CN store, usually be used to waiting for CN draining be propagated to the whole cluster |
 
 

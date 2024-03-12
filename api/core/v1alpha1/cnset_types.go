@@ -69,8 +69,8 @@ type CNSetSpec struct {
 	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
 
 	// [TP, AP], default to TP
-	// Deprecated: use labels instead
 	// +optional
+	// Deprecated: use labels instead
 	Role CNRole `json:"role,omitempty"`
 
 	// Labels are the CN labels for all the CN stores managed by this CNSet
@@ -113,8 +113,6 @@ type ScalingConfig struct {
 	StoreDrainEnabled *bool `json:"storeDrainEnabled,omitempty"`
 	// StoreDrainTimeout is the timeout for draining a CN store
 	StoreDrainTimeout *metav1.Duration `json:"storeDrainTimeout,omitempty"`
-	// waitPipeline let the scaling wait for pipeline to be drained
-	WaitPipeline *bool `json:"waitPipeline,omitempty"`
 	// minDelaySeconds is the minimum delay when drain CN store, usually
 	// be used to waiting for CN draining be propagated to the whole cluster
 	MinDelaySeconds *int32 `json:"minDelaySeconds,omitempty"`
@@ -139,13 +137,6 @@ func (s *ScalingConfig) GetMinDelayDuration() time.Duration {
 		return time.Duration(defaultMinDelaySeconds) * time.Second
 	}
 	return time.Duration(*s.MinDelaySeconds) * time.Second
-}
-
-func (s *ScalingConfig) ShouldWaitPipeline() bool {
-	if s.WaitPipeline == nil {
-		return false
-	}
-	return *s.WaitPipeline
 }
 
 type PythonUdfSidecar struct {
