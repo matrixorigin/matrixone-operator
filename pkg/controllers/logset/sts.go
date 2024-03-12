@@ -51,6 +51,7 @@ func syncReplicas(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
 
 // syncPodMeta controls the metadata of the underlying logset pods, update meta might not need to trigger rolling-update
 func syncPodMeta(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) {
+	common.SetSematicVersion(&sts.Spec.Template.ObjectMeta, &ls.Spec.PodSet)
 	ls.Spec.Overlay.OverlayPodMeta(&sts.Spec.Template.ObjectMeta)
 }
 

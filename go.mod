@@ -3,6 +3,7 @@ module github.com/matrixorigin/matrixone-operator
 go 1.21
 
 require (
+	github.com/blang/semver/v4 v4.0.0
 	github.com/cespare/xxhash v1.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-logr/logr v1.2.4
@@ -11,7 +12,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
 	github.com/matrixorigin/controller-runtime v0.0.0-20230831133336-b945a19d04f1
-	github.com/matrixorigin/matrixone v0.7.1-0.20231207065950-b324450130a6
+	github.com/matrixorigin/matrixone v1.1.2-0.20240311113111-5ec7e5b2c06b
 	github.com/matrixorigin/matrixone-operator/api v0.0.0-20220926063007-e629f86256d2
 	github.com/minio/minio-go/v7 v7.0.63
 	github.com/onsi/ginkgo/v2 v2.9.5
@@ -38,7 +39,7 @@ require (
 	github.com/VictoriaMetrics/metrics v1.18.1 // indirect
 	github.com/alibabacloud-go/debug v0.0.0-20190504072949-9472017b5c68 // indirect
 	github.com/alibabacloud-go/tea v1.1.8 // indirect
-	github.com/aliyun/alibaba-cloud-sdk-go v1.62.654 // indirect
+	github.com/aliyun/alibaba-cloud-sdk-go v1.62.656 // indirect
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.1+incompatible // indirect
 	github.com/aliyun/credentials-go v1.3.1 // indirect
 	github.com/andres-erbsen/clock v0.0.0-20160526145045-9e14626cd129 // indirect
@@ -64,14 +65,12 @@ require (
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.8.0 // indirect
-	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cockroachdb/errors v1.9.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/pebble v0.0.0-20220407171941-2120d145e292 // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
@@ -178,8 +177,6 @@ require (
 replace github.com/matrixorigin/matrixone-operator/api => ./api
 
 replace github.com/hashicorp/memberlist => github.com/matrixorigin/memberlist v0.5.1-0.20230322082342-95015c95ee76
-
-replace github.com/matrixorigin/matrixone => github.com/aylei/matrixone v0.3.1-0.20240229142937-4491a536e7ac
 
 replace (
 	github.com/fagongzi/goetty/v2 v2.0.3-0.20230628075727-26c9a2fd5fb8 => github.com/matrixorigin/goetty/v2 v2.0.0-20230628075727-26c9a2fd5fb8

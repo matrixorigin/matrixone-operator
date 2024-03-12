@@ -352,6 +352,9 @@ func setPodSetDefault(ps *v1alpha1.PodSet, mo *v1alpha1.MatrixOneCluster) {
 	if ps.TopologyEvenSpread == nil {
 		ps.TopologyEvenSpread = mo.Spec.TopologyEvenSpread
 	}
+	if ps.SemanticVersion == nil {
+		ps.SemanticVersion = mo.Spec.SemanticVersion
+	}
 }
 
 func setOverlay(o **v1alpha1.Overlay, mo *v1alpha1.MatrixOneCluster) {

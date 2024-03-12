@@ -74,6 +74,7 @@ type PodSet struct {
 	Config *TomlConfig `json:"config,omitempty"`
 
 	// If enabled, use the Pod dns name as the Pod identity
+	// Deprecated: DNSBasedIdentity is barely for keeping backward compatibility
 	DNSBasedIdentity *bool `json:"dnsBasedIdentity,omitempty"`
 
 	// ClusterDomain is the cluster-domain of current kubernetes cluster,
@@ -91,13 +92,14 @@ type PodSet struct {
 	MemoryLimitPercent *int `json:"memoryLimitPercent,omitempty"`
 
 	ExportToPrometheus *bool `json:"exportToPrometheus,omitempty"`
-}
 
-func (p *PodSet) GetExportToPrometheus() bool {
-	if p.ExportToPrometheus == nil {
-		return false
-	}
-	return *p.ExportToPrometheus
+	// SemanticVersion override the semantic version of CN if set,
+	// the semantic version of CN will be default to the image tag,
+	// if the semantic version is not set, nor the image tag is a valid semantic version,
+	// operator will treat the MO as unknown version and will not apply any version-specific
+	// reconciliations
+	// +optional
+	SemanticVersion *string `json:"semanticVersion,omitempty"`
 }
 
 // MainContainer is the description of the main container of a Pod

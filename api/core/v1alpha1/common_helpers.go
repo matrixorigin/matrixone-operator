@@ -19,10 +19,12 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"github.com/blang/semver/v4"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 	"time"
 )
 
@@ -57,13 +59,19 @@ func (o *Overlay) OverlayPodMeta(meta *metav1.ObjectMeta) {
 		return
 	}
 	if o.PodLabels != nil {
+		if meta.Labels == nil {
+			meta.Labels = map[string]string{}
+		}
 		// we are risking overwrite original labels here, this is desirable since overlay is
-		// for advanced use-case and we should allow fine-grained (through risky) control
+		// for advanced use-case, and we should allow fine-grained (though risky) control
 		for k, v := range o.PodLabels {
 			meta.Labels[k] = v
 		}
 	}
 	if o.PodAnnotations != nil {
+		if meta.Annotations == nil {
+			meta.Annotations = map[string]string{}
+		}
 		for k, v := range o.PodAnnotations {
 			meta.Annotations[k] = v
 		}
@@ -294,4 +302,28 @@ func ProxyKey(mo *MatrixOneCluster) metav1.ObjectMeta {
 		Name:      mo.Name,
 		Namespace: mo.Namespace,
 	}
+}
+
+func (p *PodSet) GetExportToPrometheus() bool {
+	if p.ExportToPrometheus == nil {
+		return false
+	}
+	return *p.ExportToPrometheus
+}
+
+func (p *PodSet) GetSemVer() (*semver.Version, bool) {
+	var s string
+	if p.SemanticVersion != nil {
+		s = *p.SemanticVersion
+	} else {
+		ss := strings.Split(p.Image, ":")
+		if len(ss) == 2 {
+			s = ss[1]
+		}
+	}
+	v, err := semver.ParseTolerant(s)
+	if err != nil {
+		return nil, false
+	}
+	return &v, true
 }

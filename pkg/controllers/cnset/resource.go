@@ -150,6 +150,7 @@ func syncPodMeta(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) error {
 	if cn.Spec.PodManagementPolicy != nil {
 		meta.Annotations[v1alpha1.PodManagementPolicyAnno] = *cn.Spec.PodManagementPolicy
 	}
+	common.SetSematicVersion(&cs.Spec.Template.ObjectMeta, &cn.Spec.PodSet)
 	cn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 	return nil
 }

@@ -67,12 +67,14 @@ func syncPodTemplate(t *SyncMOPodTask) {
 	p := t.PodSet
 	specRef.NodeSelector = p.NodeSelector
 	SyncTopology(p.TopologyEvenSpread, specRef, &metav1.LabelSelector{MatchLabels: t.TargetTemplate.Labels})
-	if t.MutatePod != nil {
-		t.MutatePod(t.TargetTemplate)
-	}
 	if t.StorageProvider != nil {
 		SetStorageProviderConfig(*t.StorageProvider, specRef)
 	}
+	SetSematicVersion(&t.TargetTemplate.ObjectMeta, t.PodSet)
+	if t.MutatePod != nil {
+		t.MutatePod(t.TargetTemplate)
+	}
+
 	p.Overlay.OverlayPodMeta(&t.TargetTemplate.ObjectMeta)
 	p.Overlay.OverlayPodSpec(specRef)
 }
@@ -91,8 +93,6 @@ func syncMainContainer(p *v1alpha1.PodSet, c *corev1.Container, mutateFn func(c 
 		c.Env = append(c.Env, *memLimitEnv)
 	}
 
-	// TODO: consider migration strategy
-	// c.Env = append(c.Env, corev1.EnvVar{Name: "HOSTNAME_UUID", Value: "y"})
 	c.VolumeMounts = []corev1.VolumeMount{
 		{
 			Name:      ConfigVolume,

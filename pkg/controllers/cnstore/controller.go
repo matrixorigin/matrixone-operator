@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/blang/semver/v4"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -311,6 +312,7 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 	uid := v1alpha1.GetCNPodUUID(pod)
+	moVersion := common.GetSemanticVersion(&pod.ObjectMeta)
 	var queryAddress string
 	if err := c.withHAKeeperClient(ctx, func(ctx context.Context, handler *hacli.Handler) error {
 		cn, ok := handler.StoreCache.GetCN(uid)
@@ -323,12 +325,12 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		ctx.Log.Info("error sync stats, cn not found in store-cache", "error", err.Error())
 		return nil
 	}
-	count, err := c.getSessionCount(queryAddress)
+	count, err := c.getSessionCount(queryAddress, moVersion)
 	if err != nil {
 		return errors.Wrap(err, "error get sessions")
 	}
 	var pipelineCount int
-	if c.cn.Spec.ScalingConfig.ShouldWaitPipeline() {
+	if v1alpha1.HasMOFeature(moVersion, v1alpha1.MOFeaturePipelineInfo) {
 		pipelineCount, err = c.getPipelineCount(queryAddress)
 		if err != nil {
 			return errors.Wrap(err, "error get pipeline count")
@@ -356,18 +358,24 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	return nil
 }
 
-func (c *Controller) getSessionCount(queryAddress string) (int, error) {
-	var accountSession int
+func (c *Controller) getSessionCount(queryAddress string, moVersion semver.Version) (int, error) {
+	var count int
 	resp, err := c.queryCli.ShowProcessList(context.Background(), queryAddress)
 	if err != nil {
 		return 0, errors.Wrap(err, "show processlist")
 	}
 	for _, sess := range resp.GetSessions() {
-		if sess.Account != "" && sess.Account != "sys" {
-			accountSession++
+		if v1alpha1.HasMOFeature(moVersion, v1alpha1.MOFeatureSessionSource) {
+			if sess.FromProxy {
+				count++
+			}
+		} else {
+			if sess.Account != "" && sess.Account != "sys" {
+				count++
+			}
 		}
 	}
-	return accountSession, nil
+	return count, nil
 }
 
 func (c *Controller) getPipelineCount(queryAddress string) (int, error) {

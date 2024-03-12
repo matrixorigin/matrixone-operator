@@ -1,0 +1,15 @@
+apiVersion: core.matrixorigin.io/v1alpha1
+kind: CNSet
+metadata:
+  name: mo
+  namespace: default
+spec:
+  # The image of the CNSet
+  image: matrixorigin/matrixone:1.1.1
+  # Replicas of CNs
+  replicas: 1
+deps:
+  logSet:
+    metadata:
+      name: mo
+      namespace: default
