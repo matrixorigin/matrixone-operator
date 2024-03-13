@@ -9,7 +9,7 @@ replicaCount: 1
 
 image:
   repository: matrixorigin/matrixone-operator
-  tag: "1.1.0-alpha.3"
+  tag: "1.1.0-alpha.4"
   pullPolicy: IfNotPresent
 
 backupRestore:
