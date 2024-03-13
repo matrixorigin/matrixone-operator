@@ -14,6 +14,22 @@ entries:
   matrixone-operator:
   - apiVersion: v2
     appVersion: 0.1.0
+    created: "2024-03-13T05:42:47.758679021Z"
+    dependencies:
+    - name: kruise
+      repository: https://openkruise.github.io/charts/
+      version: 1.4.0
+    description: Matrixone Kubernetes Operator
+    digest: e0ee7ecf8af58215a4a8de5ed1e4b455149dc11789a99ab910d86da269e33adc
+    icon: https://raw.githubusercontent.com/matrixorigin/artwork/main/docs/overview/logo.png
+    kubeVersion: '>=1.19.0-0'
+    name: matrixone-operator
+    type: application
+    urls:
+    - https://github.com/matrixorigin/matrixone-operator/releases/download/chart-1.1.0-alpha4/matrixone-operator-1.1.0-alpha4.tgz
+    version: 1.1.0-alpha4
+  - apiVersion: v2
+    appVersion: 0.1.0
     created: "2024-03-04T12:48:22.474022735Z"
     dependencies:
     - name: kruise
@@ -1244,4 +1260,4 @@ entries:
     urls:
     - https://github.com/matrixorigin/matrixone-operator/releases/download/0.7.0-alpha.1/matrixone-operator-0.7.0-alpha.1.tgz
     version: 0.7.0-alpha.1
-generated: "2024-03-12T11:34:48.22574692Z"
+generated: "2024-03-13T05:42:47.759015011Z"
