@@ -50,8 +50,10 @@ func TestCNSetActor_Observe(t *testing.T) {
 				},
 				Replicas: 1,
 			},
-			CacheVolume: &v1alpha1.Volume{
-				Size: resource.MustParse("10Gi"),
+			ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
+				CacheVolume: &v1alpha1.Volume{
+					Size: resource.MustParse("10Gi"),
+				},
 			},
 		},
 	}
@@ -240,8 +242,10 @@ func TestCNSetVolumeMount(t *testing.T) {
 						},
 						Replicas: 3,
 					},
-					CacheVolume: &v1alpha1.Volume{
-						Size: resource.MustParse("10Gi"),
+					ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
+						CacheVolume: &v1alpha1.Volume{
+							Size: resource.MustParse("10Gi"),
+						},
 					},
 				},
 			},

@@ -68,8 +68,10 @@ var _ = Describe("CNSet Webhook", func() {
 						Image: "test",
 					},
 				},
-				CacheVolume: &Volume{
-					Size: resource.MustParse("20Gi"),
+				ConfigThatChangeCNSpec: ConfigThatChangeCNSpec{
+					CacheVolume: &Volume{
+						Size: resource.MustParse("20Gi"),
+					},
 				},
 			},
 			Deps: CNSetDeps{

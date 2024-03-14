@@ -81,6 +81,16 @@ func (c *Controller) OnDeleted(ctx *recon.Context[*corev1.Pod]) error {
 	return nil
 }
 
+// OnPreparingUpdate perform actions that should be done on CN preparing stop
+func (c *withCNSet) OnPreparingUpdate(ctx *recon.Context[*corev1.Pod]) error {
+	// if update is paused, then the preparing must be triggered by a change
+	// that won't restart the application container, safely bypass
+	if c.cn.Spec.PauseUpdate {
+		return c.completeDraining(ctx)
+	}
+	return c.OnPreparingStop(ctx)
+}
+
 // OnPreparingStop drains CN connections
 func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
@@ -297,7 +307,9 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	}
 
 	lifecycleState := pod.Labels[pub.LifecycleStateKey]
-	if lifecycleState == string(pub.LifecycleStatePreparingUpdate) || lifecycleState == string(pub.LifecycleStatePreparingDelete) {
+	if lifecycleState == string(pub.LifecycleStatePreparingUpdate) {
+		return wc.OnPreparingUpdate(ctx)
+	} else if lifecycleState == string(pub.LifecycleStatePreparingDelete) {
 		return wc.OnPreparingStop(ctx)
 	}
 

@@ -116,8 +116,10 @@ func NewMoTpl(namespace, version, repo string) *v1alpha1.MatrixOneCluster {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 				},
-				CacheVolume: &v1alpha1.Volume{
-					Size: resource.MustParse("100Mi"),
+				ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
+					CacheVolume: &v1alpha1.Volume{
+						Size: resource.MustParse("100Mi"),
+					},
 				},
 			},
 			TN: &v1alpha1.DNSetSpec{

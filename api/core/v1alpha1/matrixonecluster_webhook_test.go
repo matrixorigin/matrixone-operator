@@ -226,8 +226,10 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 								},
 							},
 						},
-						CacheVolume: &Volume{
-							Size: resource.MustParse("10Gi"),
+						ConfigThatChangeCNSpec: ConfigThatChangeCNSpec{
+							CacheVolume: &Volume{
+								Size: resource.MustParse("10Gi"),
+							},
 						},
 					},
 				}},
