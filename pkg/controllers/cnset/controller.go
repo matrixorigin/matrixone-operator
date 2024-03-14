@@ -96,7 +96,16 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 	if !equality.Semantic.DeepEqual(origin, cs) {
 		if cn.Spec.PauseUpdate {
-			ctx.Log.Info("CNSet does not reach desired state, but update is paused")
+			ctx.Log.Info("CNSet does not reach desired state, but update is paused, only strategy and label/anno fields will be updated")
+			inplaceMutated := origin.DeepCopy()
+			inplaceMutated.Spec.ScaleStrategy = cs.Spec.ScaleStrategy
+			inplaceMutated.Spec.UpdateStrategy = cs.Spec.UpdateStrategy
+			inplaceMutated.Spec.Lifecycle = cs.Spec.Lifecycle
+			inplaceMutated.Spec.Template.ObjectMeta.Labels = cs.Spec.Template.ObjectMeta.Labels
+			inplaceMutated.Spec.Template.ObjectMeta.Annotations = cs.Spec.Template.ObjectMeta.Annotations
+			if !equality.Semantic.DeepEqual(inplaceMutated, origin) {
+				return c.with(inplaceMutated).Update, nil
+			}
 		} else {
 			return c.with(cs).Update, nil
 		}

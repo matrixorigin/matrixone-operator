@@ -43,7 +43,8 @@ const (
 )
 
 type CNSetSpec struct {
-	PodSet `json:",inline"`
+	PodSet                 `json:",inline"`
+	ConfigThatChangeCNSpec `json:",inline"`
 
 	// ServiceType is the service type of cn service
 	// +optional
@@ -60,14 +61,6 @@ type CNSetSpec struct {
 	// +optional
 	NodePort *int32 `json:"nodePort,omitempty"`
 
-	// CacheVolume is the desired local cache volume for CNSet,
-	// node storage will be used if not specified
-	// +optional
-	CacheVolume *Volume `json:"cacheVolume,omitempty"`
-
-	// SharedStorageCache is the configuration of the S3 sharedStorageCache
-	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
-
 	// [TP, AP], default to TP
 	// +optional
 	// Deprecated: use labels instead
@@ -79,14 +72,8 @@ type CNSetSpec struct {
 	// ScalingConfig declares the CN scaling behavior
 	ScalingConfig ScalingConfig `json:"scalingConfig,omitempty"`
 
-	// MetricsSecretRef is the secret reference for the operator to access CN metrics
-	MetricsSecretRef *ObjectRef `json:"metricsSecretRef,omitempty"`
-
 	// UpdateStrategy is the rolling-update strategy of CN
 	UpdateStrategy RollingUpdateStrategy `json:"updateStrategy,omitempty"`
-
-	// PythonUdfSidecar is the python udf server in CN
-	PythonUdfSidecar PythonUdfSidecar `json:"pythonUdfSidecar,omitempty"`
 
 	// PodManagementPolicy is the pod management policy of the Pod in this Set
 	PodManagementPolicy *string `json:"podManagementPolicy,omitempty"`
@@ -99,6 +86,20 @@ type CNSetSpec struct {
 
 	// ReusePVC means whether CNSet should reuse PVC
 	ReusePVC *bool `json:"reusePVC,omitempty"`
+}
+
+// ConfigThatChangeCNSpec is an auxiliary struct to hold the config that can change CN spec
+type ConfigThatChangeCNSpec struct {
+	// CacheVolume is the desired local cache volume for CNSet,
+	// node storage will be used if not specified
+	// +optional
+	CacheVolume *Volume `json:"cacheVolume,omitempty"`
+
+	// SharedStorageCache is the configuration of the S3 sharedStorageCache
+	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
+
+	// PythonUdfSidecar is the python udf server in CN
+	PythonUdfSidecar PythonUdfSidecar `json:"pythonUdfSidecar,omitempty"`
 }
 
 func (s *CNSetSpec) GetReusePVC() bool {

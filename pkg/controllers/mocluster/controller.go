@@ -196,12 +196,6 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 			}, func(e corev1.EnvVar) string {
 				return e.Name
 			})
-			if mo.Status.ClusterMetrics.Initialized {
-				tpl.Spec.MetricsSecretRef = &v1alpha1.ObjectRef{
-					Namespace: mo.Namespace,
-					Name:      mo.Status.ClusterMetrics.SecretRef.Name,
-				}
-			}
 			tpl.Spec.Image = common.CNSetImage(mo, &g.CNSetSpec)
 			return nil
 		})

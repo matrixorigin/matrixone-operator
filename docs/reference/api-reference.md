@@ -504,17 +504,14 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `PodSet` _[PodSet](#podset)_ |  |
+| `ConfigThatChangeCNSpec` _[ConfigThatChangeCNSpec](#configthatchangecnspec)_ |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service |
 | `serviceAnnotations` _object (keys:string, values:string)_ | ServiceAnnotations are the annotations for the cn service |
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
-| `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet, node storage will be used if not specified |
-| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |
 | `role` _[CNRole](#cnrole)_ | [TP, AP], default to TP Deprecated: use labels instead |
 | `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
 | `scalingConfig` _[ScalingConfig](#scalingconfig)_ | ScalingConfig declares the CN scaling behavior |
-| `metricsSecretRef` _[ObjectRef](#objectref)_ | MetricsSecretRef is the secret reference for the operator to access CN metrics |
 | `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy is the rolling-update strategy of CN |
-| `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the python udf server in CN |
 | `podManagementPolicy` _string_ | PodManagementPolicy is the pod management policy of the Pod in this Set |
 | `podsToDelete` _string array_ | PodsToDelete are the Pods to delete in the CNSet |
 | `pauseUpdate` _boolean_ | PauseUpdate means the CNSet should pause rolling-update |
@@ -575,6 +572,22 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#condition-v1-meta) array_ |  |
+
+
+#### ConfigThatChangeCNSpec
+
+
+
+ConfigThatChangeCNSpec is an auxiliary struct to hold the config that can change CN spec
+
+_Appears in:_
+- [CNSetSpec](#cnsetspec)
+
+| Field | Description |
+| --- | --- |
+| `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet, node storage will be used if not specified |
+| `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |
+| `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the python udf server in CN |
 
 
 #### DNSet
@@ -843,19 +856,6 @@ _Appears in:_
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set, the semantic version of CN will be default to the image tag, if the semantic version is not set, nor the image tag is a valid semantic version, operator will treat the MO as unknown version and will not apply any version-specific reconciliations |
 
 
-#### ObjectRef
-
-
-
-
-
-_Appears in:_
-- [CNSetSpec](#cnsetspec)
-
-| Field | Description |
-| --- | --- |
-| `namespace` _string_ |  |
-| `name` _string_ |  |
 
 
 #### Overlay
@@ -1051,7 +1051,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [CNSetSpec](#cnsetspec)
+- [ConfigThatChangeCNSpec](#configthatchangecnspec)
 
 | Field | Description |
 | --- | --- |
@@ -1188,7 +1188,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [CNSetSpec](#cnsetspec)
+- [ConfigThatChangeCNSpec](#configthatchangecnspec)
 - [DNSetSpec](#dnsetspec)
 
 | Field | Description |
@@ -1249,7 +1249,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [CNSetSpec](#cnsetspec)
+- [ConfigThatChangeCNSpec](#configthatchangecnspec)
 - [DNSetSpec](#dnsetspec)
 - [LogSetSpec](#logsetspec)
 

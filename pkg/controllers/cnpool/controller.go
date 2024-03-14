@@ -21,6 +21,7 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	"github.com/pkg/errors"
 	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
@@ -28,6 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,7 +50,10 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.CNPool]) (recon.Action[*v1a
 
 func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	p := ctx.Obj
-	desired := buildCNSet(p)
+	desired, err := buildCNSet(p)
+	if err != nil {
+		return errors.Wrap(err, "erros build CNSet")
+	}
 
 	ls := ownedLabels(p)
 	csList := &v1alpha1.CNSetList{}
@@ -110,6 +115,10 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	}
 	// ensure and scale desired CNSet to provide enough CN pods
 	err = recon.CreateOwnedOrUpdate(ctx, desired, func() error {
+		// apply update, since the CNSet revision hash is not changed, this must be an inplace-update
+		csSpec := p.Spec.Template.DeepCopy()
+		syncCNSetSpec(p, csSpec)
+		desired.Spec = *csSpec
 		ctx.Log.Info("scale cnset", "cnset", desired.Name, "replicas", desiredReplicas)
 		// sync terminating pods to delete
 		desired.Spec.PodsToDelete = podNames(terminatingPods)
@@ -249,34 +258,14 @@ func listCNSetPods(cli recon.KubeClient, cnSet *v1alpha1.CNSet) ([]corev1.Pod, e
 	return podList.Items, nil
 }
 
-func buildCNSet(p *v1alpha1.CNPool) *v1alpha1.CNSet {
+func buildCNSet(p *v1alpha1.CNPool) (*v1alpha1.CNSet, error) {
 	csSpec := p.Spec.Template.DeepCopy()
-
-	// override fields that managed by Pool, we expect the webhook will reject these fields if
-	// they are set by user, so that this process would not silently change users' expectation.
-	csSpec.PodManagementPolicy = pointer.String(v1alpha1.PodManagementPolicyPooling)
-	// pause update, cn pool don't rolling-update a single set, instead, we roll-out new sets if spec changes
-	csSpec.PauseUpdate = true
-	csSpec.ScalingConfig.StoreDrainEnabled = pointer.Bool(true)
-	csSpec.Labels = nil
-	csSpec.PodSet.Replicas = 0
-	csSpec.ServiceType = ""
-	csSpec.ServiceAnnotations = nil
-	csSpec.NodePort = nil
-	if csSpec.Overlay == nil {
-		csSpec.Overlay = &v1alpha1.Overlay{}
-	}
-	if csSpec.Overlay.PodLabels == nil {
-		csSpec.Overlay.PodLabels = map[string]string{}
-	}
-	for k, v := range p.Spec.PodLabels {
-		csSpec.Overlay.PodLabels[k] = v
-	}
-	csSpec.Overlay.PodLabels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseUnknown
-	csSpec.Overlay.PodLabels[v1alpha1.PoolNameLabel] = p.Name
-
+	syncCNSetSpec(p, csSpec)
 	// generate the controller revision hash
-	hash := common.HashControllerRevision(csSpec)
+	hash, err := generateRevisionHash(csSpec)
+	if err != nil {
+		return nil, errors.Wrap(err, "error generating hash")
+	}
 	name := fmt.Sprintf("%s-%s", p.Name, hash)
 
 	labels := ownedLabels(p)
@@ -290,7 +279,45 @@ func buildCNSet(p *v1alpha1.CNPool) *v1alpha1.CNSet {
 		Spec: *csSpec,
 		Deps: p.Spec.Deps,
 	}
-	return cs
+	return cs, nil
+}
+
+func syncCNSetSpec(p *v1alpha1.CNPool, csSpec *v1alpha1.CNSetSpec) {
+	// override fields that managed by Pool, we expect the webhook will reject these fields if
+	// they are set by user, so that this process would not silently change users' expectation.
+	csSpec.PodManagementPolicy = pointer.String(v1alpha1.PodManagementPolicyPooling)
+	// pause update, cn pool don't rolling-update a single set, instead, we roll-out new sets if spec changes
+	csSpec.PauseUpdate = true
+	csSpec.ScalingConfig.StoreDrainEnabled = pointer.Bool(true)
+	csSpec.Labels = nil
+	csSpec.PodSet.Replicas = 0
+	csSpec.ServiceType = ""
+	csSpec.ServiceAnnotations = nil
+	csSpec.NodePort = nil
+	// don't create surge pod when in-place mutate the underlying CNSet (e.g. mutate annotations)
+	csSpec.UpdateStrategy.MaxSurge = utils.PtrTo(intstr.FromInt(0))
+	csSpec.UpdateStrategy.MaxUnavailable = utils.PtrTo(intstr.FromInt(1))
+	if csSpec.Overlay == nil {
+		csSpec.Overlay = &v1alpha1.Overlay{}
+	}
+	if csSpec.Overlay.PodLabels == nil {
+		csSpec.Overlay.PodLabels = map[string]string{}
+	}
+	for k, v := range p.Spec.PodLabels {
+		csSpec.Overlay.PodLabels[k] = v
+	}
+	csSpec.Overlay.PodLabels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseUnknown
+	csSpec.Overlay.PodLabels[v1alpha1.PoolNameLabel] = p.Name
+}
+
+func generateRevisionHash(cn *v1alpha1.CNSetSpec) (string, error) {
+	tpl := &v1alpha1.CNSetSpec{}
+	tpl.PodSet = *cn.PodSet.DeepCopy()
+	tpl.ConfigThatChangeCNSpec = *cn.ConfigThatChangeCNSpec.DeepCopy()
+	// special case: PodMeta can be in-place updated without restarting container
+	tpl.PodSet.Overlay.PodLabels = nil
+	tpl.PodSet.Overlay.PodAnnotations = nil
+	return common.HashControllerRevision(tpl)
 }
 
 func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNPool]) (bool, error) {

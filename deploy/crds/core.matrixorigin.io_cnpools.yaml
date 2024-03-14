@@ -153,17 +153,6 @@ spec:
                       env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
                       * MemoryLimitPercent / 100
                     type: integer
-                  metricsSecretRef:
-                    description: MetricsSecretRef is the secret reference for the
-                      operator to access CN metrics
-                    properties:
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                    required:
-                    - name
-                    type: object
                   nodePort:
                     description: NodePort specifies the node port to use when ServiceType
                       is NodePort or LoadBalancer, reconciling will fail if the node

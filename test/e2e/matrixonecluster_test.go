@@ -75,8 +75,10 @@ var _ = Describe("MatrixOneCluster test", func() {
 						ScalingConfig: v1alpha1.ScalingConfig{
 							StoreDrainEnabled: pointer.Bool(true),
 						},
-						CacheVolume: &v1alpha1.Volume{
-							Size: resource.MustParse("100Mi"),
+						ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
+							CacheVolume: &v1alpha1.Volume{
+								Size: resource.MustParse("100Mi"),
+							},
 						},
 					},
 				}},

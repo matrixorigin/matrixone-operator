@@ -16,35 +16,30 @@ package common
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"hash"
 	"hash/fnv"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/rand"
 )
 
-var prettyPrintConfigForHash = &spew.ConfigState{
-	Indent:                  " ",
-	SortKeys:                true,
-	DisableMethods:          true,
-	SpewKeys:                true,
-	DisablePointerAddresses: true,
-	DisableCapacities:       true,
-}
-
-func HashControllerRevision(obj any) string {
+func HashControllerRevision(obj any) (string, error) {
 	hf := fnv.New32()
 	if obj != nil {
-		DeepHashObject(hf, obj)
+		err := deepHashObject(hf, obj)
+		if err != nil {
+			return "", err
+		}
 	}
-	return rand.SafeEncodeString(fmt.Sprint(hf.Sum32()))
+	return rand.SafeEncodeString(fmt.Sprint(hf.Sum32())), nil
 }
 
-func DeepHashObject(hasher hash.Hash, objectToWrite interface{}) {
+func deepHashObject(hasher hash.Hash, objectToWrite interface{}) error {
 	hasher.Reset()
-	fmt.Fprintf(hasher, "%v", ForHash(objectToWrite))
-}
-
-// ForHash keeps the original Spew.Sprintf format to ensure the same checksum
-func ForHash(a interface{}) string {
-	return prettyPrintConfigForHash.Sprintf("%#v", a)
+	// using json with omitempty tag to avoid hash change caused by newly added (but unset) fields
+	s, err := json.Marshal(objectToWrite)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprint(hasher, s)
+	return err
 }

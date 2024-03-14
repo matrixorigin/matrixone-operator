@@ -103,8 +103,10 @@ var _ = Describe("CNSet test", func() {
 						Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
 					},
 				},
-				CacheVolume: &v1alpha1.Volume{
-					Size: resource.MustParse("100Mi"),
+				ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
+					CacheVolume: &v1alpha1.Volume{
+						Size: resource.MustParse("100Mi"),
+					},
 				},
 			},
 			Deps: v1alpha1.CNSetDeps{
