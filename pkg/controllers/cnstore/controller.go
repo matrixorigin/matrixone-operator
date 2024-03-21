@@ -471,8 +471,8 @@ func (annotationChangedExcludeStats) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil || e.ObjectNew == nil {
 		return false
 	}
-	oldAnnos := e.ObjectOld.GetAnnotations()
-	newAnnos := e.ObjectNew.GetAnnotations()
+	oldAnnos := copyAnnotation(e.ObjectOld.GetAnnotations())
+	newAnnos := copyAnnotation(e.ObjectNew.GetAnnotations())
 	for k, v := range newAnnos {
 		// exclude stats
 		if k == common.DeletionCostAnno || k == v1alpha1.StoreConnectionAnno {
@@ -485,6 +485,14 @@ func (annotationChangedExcludeStats) Update(e event.UpdateEvent) bool {
 		}
 	}
 	return false
+}
+
+func copyAnnotation(a map[string]string) map[string]string {
+	newMap := make(map[string]string)
+	for k, v := range a {
+		newMap[k] = v
+	}
+	return newMap
 }
 
 // deletePredicate reconciles the object when the deletionTimestamp field is changed
