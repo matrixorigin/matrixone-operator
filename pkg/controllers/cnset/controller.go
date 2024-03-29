@@ -19,6 +19,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
+	"k8s.io/utils/pointer"
 	"time"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -199,6 +200,12 @@ func (c *Actor) cleanup(ctx *recon.Context[*v1alpha1.CNSet]) error {
 func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 	cn := ctx.Obj
 
+	if cn.Spec.GetTerminationPolicy() == v1alpha1.CNSetTerminationPolicyDrain {
+		if done, err := waitAllCNDrained(ctx); err != nil || !done {
+			return false, err
+		}
+	}
+
 	objs := []client.Object{&kruisev1alpha1.CloneSet{ObjectMeta: metav1.ObjectMeta{
 		Name: setName(cn),
 	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
@@ -224,6 +231,33 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+	}
+	return true, nil
+}
+
+func waitAllCNDrained(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
+	cn := ctx.Obj
+	// scale CNSet to zero and then delete the CNSet to ensure gracefulness
+	cs := &kruisev1alpha1.CloneSet{ObjectMeta: metav1.ObjectMeta{
+		Namespace: cn.Namespace,
+		Name:      cn.Name,
+	}}
+	if err := ctx.Get(client.ObjectKeyFromObject(cs), cs); err != nil {
+		if apierrors.IsNotFound(err) {
+			// cloneset had been deleted, skip
+			return true, nil
+		}
+		return false, errors.Wrap(err, "error get cloneset")
+	}
+	if err := ctx.Patch(cs, func() error {
+		cs.Spec.Replicas = pointer.Int32(0)
+		return nil
+	}); err != nil {
+		return false, errors.Wrap(err, "error scale cloneset to 0")
+	}
+	if cs.Status.Replicas > 0 {
+		ctx.Log.V(4).Info("waiting for CNSet to be scaled to 0", "replicas", cs.Status.Replicas)
+		return false, nil
 	}
 	return true, nil
 }

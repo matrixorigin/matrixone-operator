@@ -842,6 +842,11 @@ func (in *CNSetSpec) DeepCopyInto(out *CNSetSpec) {
 	}
 	in.ScalingConfig.DeepCopyInto(&out.ScalingConfig)
 	in.UpdateStrategy.DeepCopyInto(&out.UpdateStrategy)
+	if in.TerminationPolicy != nil {
+		in, out := &in.TerminationPolicy, &out.TerminationPolicy
+		*out = new(CNSetTerminationPolicy)
+		**out = **in
+	}
 	if in.PodManagementPolicy != nil {
 		in, out := &in.PodManagementPolicy, &out.PodManagementPolicy
 		*out = new(string)

@@ -346,6 +346,8 @@ spec:
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                 type: object
+              terminationPolicy:
+                type: string
               topologySpread:
                 description: TopologyEvenSpread specifies what topology domains the
                   Pods in set should be evenly spread in. This will be overridden
