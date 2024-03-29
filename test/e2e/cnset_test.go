@@ -215,10 +215,11 @@ var _ = Describe("CNSet test", func() {
 
 		By("Teardown cnset")
 		// test PolicyDrain
-		Expect(controllerutil.CreateOrPatch(ctx, kubeCli, c, func() error {
+		_, err := controllerutil.CreateOrPatch(ctx, kubeCli, c, func() error {
 			c.Spec.TerminationPolicy = utils.PtrTo(v1alpha1.CNSetTerminationPolicyDrain)
 			return nil
-		})).To(Succeed())
+		})
+		Expect(err).To(Succeed())
 		Expect(kubeCli.Delete(ctx, nodePort)).To(Succeed())
 		Expect(kubeCli.Delete(ctx, c)).To(Succeed())
 		Expect(kubeCli.Delete(ctx, d)).To(Succeed())
