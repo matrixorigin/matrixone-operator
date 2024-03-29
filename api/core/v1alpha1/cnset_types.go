@@ -42,6 +42,13 @@ const (
 	ContainerPythonUdfDefaultImage string = "composer000/mo-python-udf-server:latest" // TODO change it
 )
 
+type CNSetTerminationPolicy string
+
+const (
+	CNSetTerminationPolicyDelete CNSetTerminationPolicy = "Delete"
+	CNSetTerminationPolicyDrain  CNSetTerminationPolicy = "Drain"
+)
+
 type CNSetSpec struct {
 	PodSet                 `json:",inline"`
 	ConfigThatChangeCNSpec `json:",inline"`
@@ -75,6 +82,8 @@ type CNSetSpec struct {
 	// UpdateStrategy is the rolling-update strategy of CN
 	UpdateStrategy RollingUpdateStrategy `json:"updateStrategy,omitempty"`
 
+	TerminationPolicy *CNSetTerminationPolicy `json:"terminationPolicy,omitempty"`
+
 	// PodManagementPolicy is the pod management policy of the Pod in this Set
 	PodManagementPolicy *string `json:"podManagementPolicy,omitempty"`
 
@@ -107,6 +116,13 @@ func (s *CNSetSpec) GetReusePVC() bool {
 		return false
 	}
 	return *s.ReusePVC
+}
+
+func (s *CNSetSpec) GetTerminationPolicy() CNSetTerminationPolicy {
+	if s.TerminationPolicy == nil {
+		return CNSetTerminationPolicyDelete
+	}
+	return *s.TerminationPolicy
 }
 
 type ScalingConfig struct {

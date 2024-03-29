@@ -90,7 +90,7 @@ func ResolveLogSet(cli recon.KubeClient, cs *v1alpha1.CNSet) (*v1alpha1.LogSet, 
 	return ls, nil
 }
 
-// ResolveCNSet resoles the CNSet of an CN Pod
+// ResolveCNSet resolves the CNSet of an CN Pod
 func ResolveCNSet(cli recon.KubeClient, pod *corev1.Pod) (*v1alpha1.CNSet, error) {
 	owner, err := ResolveOwner(cli, pod)
 	if err != nil {

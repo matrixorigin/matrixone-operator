@@ -16,6 +16,8 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"time"
 
@@ -212,6 +214,11 @@ var _ = Describe("CNSet test", func() {
 		Expect(nodePortSvc.Spec.Ports[0].NodePort).To(Equal(testPort))
 
 		By("Teardown cnset")
+		// test PolicyDrain
+		Expect(controllerutil.CreateOrPatch(ctx, kubeCli, c, func() error {
+			c.Spec.TerminationPolicy = utils.PtrTo(v1alpha1.CNSetTerminationPolicyDrain)
+			return nil
+		})).To(Succeed())
 		Expect(kubeCli.Delete(ctx, nodePort)).To(Succeed())
 		Expect(kubeCli.Delete(ctx, c)).To(Succeed())
 		Expect(kubeCli.Delete(ctx, d)).To(Succeed())

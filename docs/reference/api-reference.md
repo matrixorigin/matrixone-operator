@@ -512,10 +512,22 @@ _Appears in:_
 | `cnLabels` _[CNLabel](#cnlabel) array_ | Labels are the CN labels for all the CN stores managed by this CNSet |
 | `scalingConfig` _[ScalingConfig](#scalingconfig)_ | ScalingConfig declares the CN scaling behavior |
 | `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy is the rolling-update strategy of CN |
+| `terminationPolicy` _[CNSetTerminationPolicy](#cnsetterminationpolicy)_ |  |
 | `podManagementPolicy` _string_ | PodManagementPolicy is the pod management policy of the Pod in this Set |
 | `podsToDelete` _string array_ | PodsToDelete are the Pods to delete in the CNSet |
 | `pauseUpdate` _boolean_ | PauseUpdate means the CNSet should pause rolling-update |
 | `reusePVC` _boolean_ | ReusePVC means whether CNSet should reuse PVC |
+
+
+#### CNSetTerminationPolicy
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [CNSetSpec](#cnsetspec)
+
 
 
 

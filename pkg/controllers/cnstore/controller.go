@@ -72,6 +72,29 @@ var _ recon.Actor[*corev1.Pod] = &Controller{}
 // OnDeleted delete CNStore and cleanup finalizer on Pod deletion
 func (c *Controller) OnDeleted(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
+	uid := v1alpha1.GetCNPodUUID(pod)
+	cnSet, err := common.ResolveCNSet(ctx, pod)
+	if err == nil {
+		wc := &withCNSet{
+			Controller: c,
+			cn:         cnSet,
+		}
+		// clean up CN store if any, note that OnDeleted() and the termination of Pod containers
+		// are simultaneous, so the cleanup below is merely a best-effort attempt in extraordinary case, e.g.
+		// the Pod is deleted forcefully by a human operator. Normal cleanup must be done before we enter OnDeleted()
+		// to avoid zombie CN in HAKeeper.
+		ctx.Log.Info("call HAKeeper to remove CN store", "uuid", uid)
+		err = wc.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
+			return h.Client.DeleteCNStore(timeout, logpb.DeleteCNStore{
+				StoreID: uid,
+			})
+		})
+		if err != nil {
+			return errors.Wrap(err, "error remove CN store")
+		}
+	} else {
+		ctx.Log.Info("error resolve CNSet of the deleted CN, skip", "error", err.Error())
+	}
 	if err := ctx.Patch(pod, func() error {
 		controllerutil.RemoveFinalizer(pod, common.CNDrainingFinalizer)
 		return nil
