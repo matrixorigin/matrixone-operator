@@ -63,7 +63,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		if time.Since(parsed) < c.cn.Spec.ScalingConfig.GetMinDelayDuration() {
 			return recon.ErrReSync("wait min delay duration", retryInterval)
 		}
-		storeConnection, err := common.GetStoreConnection(pod)
+		storeConnection, err := common.GetStoreScore(pod)
 		if err != nil {
 			return errors.Wrap(err, "error get store connection count")
 		}

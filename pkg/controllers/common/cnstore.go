@@ -145,26 +145,26 @@ func ToStoreLabels(labels []v1alpha1.CNLabel) map[string]metadata.LabelList {
 	return lm
 }
 
-type StoreConnection struct {
+type StoreScore struct {
 	SessionCount  int `json:"sessionCount"`
 	PipelineCount int `json:"pipelineCount"`
 }
 
-func (s *StoreConnection) GenDeletionCost() int {
+func (s *StoreScore) GenDeletionCost() int {
 	return s.SessionCount
 }
 
-func (s *StoreConnection) IsSafeToReclaim() bool {
+func (s *StoreScore) IsSafeToReclaim() bool {
 	return s.SessionCount == 0 && s.PipelineCount == 0
 }
 
-// GetStoreConnection get the store connection count from Pod anno
-func GetStoreConnection(pod *corev1.Pod) (*StoreConnection, error) {
-	connectionStr, ok := pod.Annotations[v1alpha1.StoreConnectionAnno]
+// GetStoreScore get the store connection count from Pod anno
+func GetStoreScore(pod *corev1.Pod) (*StoreScore, error) {
+	connectionStr, ok := pod.Annotations[v1alpha1.StoreScoreAnno]
 	if !ok {
 		return nil, errors.Errorf("cannot find connection count for CN pod %s/%s, connection annotation is empty", pod.Namespace, pod.Name)
 	}
-	s := &StoreConnection{}
+	s := &StoreScore{}
 	if len(connectionStr) == 0 {
 		return s, nil
 	}
@@ -180,8 +180,8 @@ func GetStoreConnection(pod *corev1.Pod) (*StoreConnection, error) {
 	return s, nil
 }
 
-// SetStoreConnection set the store connection info to Pod anno
-func SetStoreConnection(pod *corev1.Pod, s *StoreConnection) error {
+// SetStoreScore set the store connection info to Pod anno
+func SetStoreScore(pod *corev1.Pod, s *StoreScore) error {
 	b, err := json.Marshal(s)
 	if err != nil {
 		return errors.Wrap(err, "error marshal connection info")
@@ -189,7 +189,7 @@ func SetStoreConnection(pod *corev1.Pod, s *StoreConnection) error {
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
 	}
-	pod.Annotations[v1alpha1.StoreConnectionAnno] = string(b)
+	pod.Annotations[v1alpha1.StoreScoreAnno] = string(b)
 	return nil
 }
 
