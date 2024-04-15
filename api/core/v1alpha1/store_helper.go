@@ -21,6 +21,9 @@ const (
 	// StoreConnectionAnno expose the connection count of the store
 	StoreConnectionAnno = "matrixorigin.io/connections"
 
+	// StoreScoreAnno expose the score of the store
+	StoreScoreAnno = "matrixorigin.io/score"
+
 	// StoreCordonAnno cordons a CN store
 	StoreCordonAnno = "matrixorigin.io/store-cordon"
 )

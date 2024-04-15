@@ -172,7 +172,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		return recon.ErrReSync("wait for min delay", retryInterval)
 	}
 
-	storeConnection, err := common.GetStoreConnection(pod)
+	storeConnection, err := common.GetStoreScore(pod)
 	if err != nil {
 		return errors.Wrap(err, "error get store connection count")
 	}
@@ -372,12 +372,12 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		}
 	}
 
-	sc := &common.StoreConnection{
+	sc := &common.StoreScore{
 		SessionCount:  count,
 		PipelineCount: pipelineCount,
 	}
 	err = ctx.Patch(pod, func() error {
-		if err := common.SetStoreConnection(pod, sc); err != nil {
+		if err := common.SetStoreScore(pod, sc); err != nil {
 			return err
 		}
 		pod.Annotations[common.DeletionCostAnno] = strconv.Itoa(sc.GenDeletionCost())
@@ -385,6 +385,9 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 			pod.Labels = map[string]string{}
 		}
 		pod.Labels[common.CNUUIDLabelKey] = uid
+		// NB: store-connections anno is no longer used in mo-operator, but must be kept for external compatibility
+		// ref: https://github.com/matrixorigin/MO-Cloud/issues/3007
+		pod.Annotations[v1alpha1.StoreConnectionAnno] = strconv.Itoa(sc.PipelineCount + sc.SessionCount)
 		return nil
 	})
 	if err != nil {
@@ -498,7 +501,7 @@ func (annotationChangedExcludeStats) Update(e event.UpdateEvent) bool {
 	newAnnos := e.ObjectNew.GetAnnotations()
 	for k, v := range newAnnos {
 		// exclude stats
-		if k == common.DeletionCostAnno || k == v1alpha1.StoreConnectionAnno {
+		if k == common.DeletionCostAnno || k == v1alpha1.StoreConnectionAnno || k == v1alpha1.StoreScoreAnno {
 			continue
 		}
 		// only consider newly added annotations or annotation value change, deletion of annotation key
