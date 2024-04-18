@@ -167,8 +167,9 @@ github.com/ghemawat/stream v0.0.0-20171120220530-696b145b53b9/go.mod h1:106OIgoo
 github.com/gin-contrib/sse v0.0.0-20190301062529-5545eab6dad3/go.mod h1:VJ0WA2NBN22VlZ2dKZQPAPnyWw5XTlK1KymzLKsr59s=
 github.com/gin-gonic/gin v1.4.0/go.mod h1:OW2EZn3DO8Ln9oIKOvM++LBO+5UPHJJDH72/q/3rZdM=
 github.com/go-check/check v0.0.0-20180628173108-788fd7840127/go.mod h1:9ES+weclKsC9YodN5RgxqK/VD9HM9JsCSh7rNhMZE98=
-github.com/go-errors/errors v1.0.1 h1:LUHzmkK3GUKUrL/1gfBUxAHzcev3apQlezX/+O7ma6w=
 github.com/go-errors/errors v1.0.1/go.mod h1:f4zRHt4oKfwPJE5k8C9vpYG+aDHdBFUsgrm6/TyX73Q=
+github.com/go-errors/errors v1.5.1 h1:ZwEMSLRCapFLflTpT7NKaAc7ukJ8ZPEjzlxt8rPN8bk=
+github.com/go-errors/errors v1.5.1/go.mod h1:sIVyrIiJhuEF+Pj9Ebtd6P/rEYROXFi3BopGUQ5a5Og=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-logr/logr v1.2.0/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
@@ -352,8 +353,8 @@ github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0/go.mod h1:zJYVVT2
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
-github.com/matrixorigin/controller-runtime v0.0.0-20230831133336-b945a19d04f1 h1:z8UkkBJiuyeCR3zOXhkG3q9hLWn6N9kVPo7OGmNBt6E=
-github.com/matrixorigin/controller-runtime v0.0.0-20230831133336-b945a19d04f1/go.mod h1:IIoGs+JDhphlLsUDFc8yRjKZ2cHBORadUddhXDNeMts=
+github.com/matrixorigin/controller-runtime v0.0.0-20240415083924-d45ea4253d3a h1:pb650Mjl/q6PMGVh9MJnonM57kF5macIrbu1VP1Aoyo=
+github.com/matrixorigin/controller-runtime v0.0.0-20240415083924-d45ea4253d3a/go.mod h1:ArS22ljGZeL3PjQU4Z7lqKeHc4tkE1Xg2f6zwNCwKOs=
 github.com/matrixorigin/dragonboat/v4 v4.0.0-20230426084722-d189534f8004 h1:HwxzjxWB6oYwdA4gBXDgjjZiwpGKzBUfpGNzDbuJMwo=
 github.com/matrixorigin/dragonboat/v4 v4.0.0-20230426084722-d189534f8004/go.mod h1:bR6ZGoUwApH4/P4+AezNGT0xehljg+j+Z/Q2Fz+Y4a0=
 github.com/matrixorigin/goetty/v2 v2.0.0-20230628075727-26c9a2fd5fb8 h1:t4S3ZJzdIAbbE5LMnSzSIfUMbBB3rzuqE9ubjl62qR8=
