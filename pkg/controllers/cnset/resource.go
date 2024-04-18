@@ -18,11 +18,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"text/template"
+
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"golang.org/x/exp/slices"
-	"strconv"
-	"text/template"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -125,10 +126,15 @@ func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
 			svc.Spec.Ports[portIndex].NodePort = *cn.Spec.NodePort
 		}
 	}
-	svc.Annotations = cn.Spec.ServiceAnnotations
+
 	if svc.Annotations == nil {
 		svc.Annotations = map[string]string{}
 	}
+	// add CNSet.CNSetSpec.ServiceAnnotations to service.Annotations
+	for key, value := range cn.Spec.ServiceAnnotations {
+		svc.Annotations[key] = value
+	}
+
 	if cn.Spec.GetExportToPrometheus() {
 		svc.Annotations[common.PrometheusScrapeAnno] = "true"
 		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)

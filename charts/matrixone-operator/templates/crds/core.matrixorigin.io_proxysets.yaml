@@ -155,6 +155,12 @@ spec:
                   semantic version, operator will treat the MO as unknown version
                   and will not apply any version-specific reconciliations
                 type: string
+              serviceAnnotations:
+                additionalProperties:
+                  type: string
+                description: ServiceAnnotations are the annotations for the proxy
+                  service
+                type: object
               serviceArgs:
                 description: 'ServiceArgs define command line options for process,
                   used by logset/cnset/dnset service. NOTE: user should not define
