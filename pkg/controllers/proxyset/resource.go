@@ -128,12 +128,14 @@ func syncSvc(proxy *v1alpha1.ProxySet, svc *corev1.Service) {
 			svc.Spec.Ports[portIndex].NodePort = *proxy.Spec.NodePort
 		}
 	}
-	// add ProxySetSpec.ServiceAnnotations to service.Annotations
-	svc.Annotations = proxy.Spec.ServiceAnnotations
+
 	if svc.Annotations == nil {
 		svc.Annotations = map[string]string{}
 	}
-
+	// add ProxySet.ProxySetSpec.ServiceAnnotations to service.Annotations
+	for key, value := range proxy.Spec.ServiceAnnotations {
+		svc.Annotations[key] = value
+	}
 	if proxy.Spec.GetExportToPrometheus() {
 		svc.Annotations[common.PrometheusScrapeAnno] = "true"
 		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
