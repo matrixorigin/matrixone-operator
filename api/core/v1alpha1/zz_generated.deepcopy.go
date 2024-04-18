@@ -2051,6 +2051,13 @@ func (in *ProxySetList) DeepCopyObject() runtime.Object {
 func (in *ProxySetSpec) DeepCopyInto(out *ProxySetSpec) {
 	*out = *in
 	in.PodSet.DeepCopyInto(&out.PodSet)
+	if in.ServiceAnnotations != nil {
+		in, out := &in.ServiceAnnotations, &out.ServiceAnnotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.NodePort != nil {
 		in, out := &in.NodePort, &out.NodePort
 		*out = new(int32)
