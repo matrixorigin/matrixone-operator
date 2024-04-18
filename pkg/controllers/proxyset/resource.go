@@ -17,6 +17,9 @@ package proxyset
 import (
 	"bytes"
 	"fmt"
+	"strconv"
+	"text/template"
+
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -26,8 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strconv"
-	"text/template"
 )
 
 const (
@@ -127,6 +128,12 @@ func syncSvc(proxy *v1alpha1.ProxySet, svc *corev1.Service) {
 			svc.Spec.Ports[portIndex].NodePort = *proxy.Spec.NodePort
 		}
 	}
+	// add ProxySetSpec.ServiceAnnotations to service.Annotations
+	svc.Annotations = proxy.Spec.ServiceAnnotations
+	if svc.Annotations == nil {
+		svc.Annotations = map[string]string{}
+	}
+
 	if proxy.Spec.GetExportToPrometheus() {
 		svc.Annotations[common.PrometheusScrapeAnno] = "true"
 		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
