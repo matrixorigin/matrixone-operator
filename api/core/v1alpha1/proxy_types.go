@@ -29,6 +29,10 @@ type ProxySetSpec struct {
 	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
 	ServiceType corev1.ServiceType `json:"serviceType,omitempty"`
 
+	// ServiceAnnotations are the annotations for the proxy service
+	// +optional
+	ServiceAnnotations map[string]string `json:"serviceAnnotations,omitempty"`
+
 	// NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer,
 	// reconciling will fail if the node port is not available.
 	// +optional
