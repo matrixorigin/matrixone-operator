@@ -10,7 +10,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
-	github.com/matrixorigin/controller-runtime v0.0.0-20230831133336-b945a19d04f1
+	github.com/matrixorigin/controller-runtime v0.0.0-20240415083924-d45ea4253d3a
 	github.com/matrixorigin/matrixone v1.1.2-0.20240311113111-5ec7e5b2c06b
 	github.com/matrixorigin/matrixone-operator/api v0.0.0-20220926063007-e629f86256d2
 	github.com/minio/minio-go/v7 v7.0.63
@@ -79,6 +79,7 @@ require (
 	github.com/fagongzi/util v0.0.0-20210923134909-bccc37b5040d // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/getsentry/sentry-go v0.12.0 // indirect
+	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
