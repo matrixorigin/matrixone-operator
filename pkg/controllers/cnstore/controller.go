@@ -17,17 +17,18 @@ package cnstore
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/blang/semver/v4"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
+	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
 	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
 	logpb "github.com/matrixorigin/matrixone/pkg/pb/logservice"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
 	"github.com/openkruise/kruise-api/apps/pub"
-	"github.com/pkg/errors"
+	gerrors "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
@@ -53,7 +54,7 @@ const retryInterval = 5 * time.Second
 const resyncInterval = 30 * time.Second
 
 type Controller struct {
-	clientMgr *hacli.HAKeeperClientManager
+	clientMgr *mocli.MORPCClientManager
 	queryCli  *querycli.Client
 }
 
@@ -63,7 +64,7 @@ type withCNSet struct {
 	cn *v1alpha1.CNSet
 }
 
-func NewController(mgr *hacli.HAKeeperClientManager, qc *querycli.Client) *Controller {
+func NewController(mgr *mocli.MORPCClientManager, qc *querycli.Client) *Controller {
 	return &Controller{clientMgr: mgr, queryCli: qc}
 }
 
@@ -84,13 +85,13 @@ func (c *Controller) OnDeleted(ctx *recon.Context[*corev1.Pod]) error {
 		// the Pod is deleted forcefully by a human operator. Normal cleanup must be done before we enter OnDeleted()
 		// to avoid zombie CN in HAKeeper.
 		ctx.Log.Info("call HAKeeper to remove CN store", "uuid", uid)
-		err = wc.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
+		err = wc.withMOClientSet(ctx, func(timeout context.Context, h *mocli.ClientSet) error {
 			return h.Client.DeleteCNStore(timeout, logpb.DeleteCNStore{
 				StoreID: uid,
 			})
 		})
 		if err != nil {
-			return errors.Wrap(err, "error remove CN store")
+			return gerrors.Wrap(err, "error remove CN store")
 		}
 	} else {
 		ctx.Log.Info("error resolve CNSet of the deleted CN, skip", "error", err.Error())
@@ -111,6 +112,14 @@ func (c *withCNSet) OnPreparingUpdate(ctx *recon.Context[*corev1.Pod]) error {
 	if c.cn.Spec.PauseUpdate {
 		return c.completeDraining(ctx)
 	}
+	// if pod image is not going to be updated, skip draining
+	// NB: change envFrom(labels/annotations) will restart container in-place, but we cannot
+	// distinguish such case now, CN will be restarted without draining if we introduce envFrom
+	// mutation in other modules. E2Es are needed to guard such issue.
+	if !common.NeedUpdateImage(ctx.Obj) {
+		ctx.Log.Info("skip draining CN store, no image update", "CN", client.ObjectKeyFromObject(ctx.Obj))
+		return c.completeDraining(ctx)
+	}
 	return c.OnPreparingStop(ctx)
 }
 
@@ -123,7 +132,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	}
 
 	if err := c.patchCNReadiness(ctx, corev1.ConditionFalse, messageCNPrepareStop); err != nil {
-		return errors.Wrap(err, "patch pod readiness")
+		return gerrors.Wrap(err, "patch pod readiness")
 	}
 	// store draining disabled, cleanup finalizers and skip
 	sc := c.cn.Spec.ScalingConfig
@@ -137,7 +146,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	if ok {
 		parsed, err := time.Parse(time.RFC3339, startTimeStr)
 		if err != nil {
-			return errors.Wrapf(err, "error parsing start time %s", startTimeStr)
+			return gerrors.Wrapf(err, "error parsing start time %s", startTimeStr)
 		}
 		startTime = parsed
 	} else {
@@ -146,7 +155,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 			pod.Annotations[v1alpha1.StoreDrainingStartAnno] = startTime.Format(time.RFC3339)
 			return nil
 		}); err != nil {
-			return errors.Wrap(err, "error patching store draining start time")
+			return gerrors.Wrap(err, "error patching store draining start time")
 		}
 	}
 	// check whether timeout is reached
@@ -155,18 +164,43 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		return c.completeDraining(ctx)
 	}
 	ctx.Log.Info("call HAKeeper to drain CN store", "uuid", uid)
-	err := c.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
-		return h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
+
+	lockMigrated := true
+	err := c.withMOClientSet(ctx, func(timeout context.Context, h *mocli.ClientSet) error {
+		var multierr error
+		if err := h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
 			UUID:  uid,
 			State: metadata.WorkState_Draining,
-		})
+		}); err != nil {
+			multierr = errors.Join(multierr, err)
+		}
+		if v1alpha1.HasMOFeature(common.GetSemanticVersion(&pod.ObjectMeta), v1alpha1.MOFeatureLockMigration) {
+			ok, err := h.LockServiceClient.CanRestartCN(timeout, uid)
+			if err != nil {
+				multierr = errors.Join(multierr, err)
+				return multierr
+			}
+			if !ok {
+				// cannot restart CN now, trigger lock migration
+				ctx.Log.Info("cannot restart CN now, trigger lock migration", "cn", uid, "pod", pod.Name)
+				lockMigrated = false
+				ok, err := h.LockServiceClient.SetRestartCN(timeout, uid)
+				if err != nil {
+					multierr = errors.Join(multierr, err)
+				}
+				if !ok {
+					multierr = errors.Join(multierr, errors.New("error set restart CN"))
+				}
+			}
+		}
+		return multierr
 	})
 	if err != nil {
 		// optimize: if the CN does not exist in HAKeeper, shortcut to complete draining
 		if strings.Contains(err.Error(), "does not exist") {
 			return c.completeDraining(ctx)
 		}
-		return errors.Wrap(err, "error set CN state draining")
+		return gerrors.Wrap(err, "error set CN state draining")
 	}
 	if time.Since(startTime) < sc.GetMinDelayDuration() {
 		return recon.ErrReSync("wait for min delay", retryInterval)
@@ -174,9 +208,9 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 
 	storeConnection, err := common.GetStoreScore(pod)
 	if err != nil {
-		return errors.Wrap(err, "error get store connection count")
+		return gerrors.Wrap(err, "error get store connection count")
 	}
-	if storeConnection.IsSafeToReclaim() {
+	if storeConnection.IsSafeToReclaim() && lockMigrated {
 		return c.completeDraining(ctx)
 	}
 	return recon.ErrReSync("wait for CN store draining", retryInterval)
@@ -188,7 +222,7 @@ func (c *withCNSet) completeDraining(ctx *recon.Context[*corev1.Pod]) error {
 		delete(ctx.Obj.Annotations, v1alpha1.StoreDrainingStartAnno)
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "error removing CN draining finalizer")
+		return gerrors.Wrap(err, "error removing CN draining finalizer")
 	}
 	return nil
 }
@@ -202,7 +236,7 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		controllerutil.AddFinalizer(ctx.Obj, common.CNDrainingFinalizer)
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "ensure finalizers for CNStore Pod")
+		return gerrors.Wrap(err, "ensure finalizers for CNStore Pod")
 	}
 	// remove draining start time in case we regret formal deletion decision
 	if pod.Annotations == nil {
@@ -212,7 +246,7 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		delete(pod.Annotations, v1alpha1.StoreDrainingStartAnno)
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "removing CN draining start time")
+		return gerrors.Wrap(err, "removing CN draining start time")
 	}
 
 	// policy based reconciliation
@@ -232,13 +266,13 @@ func (c *withCNSet) defaultCNNormalReconcile(ctx *recon.Context[*corev1.Pod]) er
 	if ok {
 		err := json.Unmarshal([]byte(labelStr), &cnLabels)
 		if err != nil {
-			return errors.Wrap(err, "unmarshal CNLabels")
+			return gerrors.Wrap(err, "unmarshal CNLabels")
 		}
 	}
 
 	var err error
 	if c.cn.Spec.ScalingConfig.GetStoreDrainEnabled() {
-		err = c.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
+		err = c.withMOClientSet(ctx, func(timeout context.Context, h *mocli.ClientSet) error {
 			return h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
 				UUID:   uid,
 				State:  metadata.WorkState_Working,
@@ -246,7 +280,7 @@ func (c *withCNSet) defaultCNNormalReconcile(ctx *recon.Context[*corev1.Pod]) er
 			})
 		})
 	} else {
-		err = c.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
+		err = c.withMOClientSet(ctx, func(timeout context.Context, h *mocli.ClientSet) error {
 			return h.Client.UpdateCNLabel(timeout, logpb.CNStoreLabel{
 				UUID:   uid,
 				Labels: common.ToStoreLabels(cnLabels),
@@ -278,7 +312,7 @@ func (c *withCNSet) patchCNReadiness(ctx *recon.Context[*corev1.Pod], newC corev
 		c.setCNState(pod, v1alpha1.CNStoreStateUp)
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "patch pod readiness")
+		return gerrors.Wrap(err, "patch pod readiness")
 	}
 	return nil
 }
@@ -287,14 +321,14 @@ func (c *withCNSet) OnCordon(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 	uid := v1alpha1.GetCNPodUUID(pod)
 	ctx.Log.Info("call HAKeeper to cordon CN store", "uuid", uid)
-	err := c.withHAKeeperClient(ctx, func(timeout context.Context, h *hacli.Handler) error {
+	err := c.withMOClientSet(ctx, func(timeout context.Context, h *mocli.ClientSet) error {
 		return h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
 			UUID:  uid,
 			State: metadata.WorkState_Draining,
 		})
 	})
 	if err != nil {
-		return errors.Wrap(err, "error cordon cn store")
+		return gerrors.Wrap(err, "error cordon cn store")
 	}
 	// set pod unready to unregister the pod from internal service
 	return c.patchCNReadiness(ctx, corev1.ConditionFalse, messageCNCordon)
@@ -311,7 +345,7 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	// 2. resolve CNSet
 	cnSet, err := common.ResolveCNSet(ctx, pod)
 	if err != nil {
-		return errors.Wrap(err, "error resolve CNSet")
+		return gerrors.Wrap(err, "error resolve CNSet")
 	}
 	wc := &withCNSet{
 		Controller: c,
@@ -337,7 +371,7 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	}
 
 	if err := wc.OnNormal(ctx); err != nil {
-		return errors.Wrap(err, "error set pod normal")
+		return gerrors.Wrap(err, "error set pod normal")
 	}
 	// trigger next reconciliation later to refresh the stats
 	// TODO(aylei): better stats handling
@@ -349,10 +383,10 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	uid := v1alpha1.GetCNPodUUID(pod)
 	moVersion := common.GetSemanticVersion(&pod.ObjectMeta)
 	var queryAddress string
-	if err := c.withHAKeeperClient(ctx, func(ctx context.Context, handler *hacli.Handler) error {
+	if err := c.withMOClientSet(ctx, func(ctx context.Context, handler *mocli.ClientSet) error {
 		cn, ok := handler.StoreCache.GetCN(uid)
 		if !ok {
-			return errors.Errorf("CN with uuid %s not found", uid)
+			return gerrors.Errorf("CN with uuid %s not found", uid)
 		}
 		queryAddress = cn.QueryAddress
 		return nil
@@ -362,13 +396,13 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	}
 	count, err := c.getSessionCount(queryAddress, moVersion)
 	if err != nil {
-		return errors.Wrap(err, "error get sessions")
+		return gerrors.Wrap(err, "error get sessions")
 	}
 	var pipelineCount int
 	if v1alpha1.HasMOFeature(moVersion, v1alpha1.MOFeaturePipelineInfo) {
 		pipelineCount, err = c.getPipelineCount(queryAddress)
 		if err != nil {
-			return errors.Wrap(err, "error get pipeline count")
+			return gerrors.Wrap(err, "error get pipeline count")
 		}
 	}
 
@@ -391,7 +425,7 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		return nil
 	})
 	if err != nil {
-		return errors.Wrap(err, "error patch stats to pod anno")
+		return gerrors.Wrap(err, "error patch stats to pod anno")
 	}
 	return nil
 }
@@ -400,7 +434,7 @@ func (c *Controller) getSessionCount(queryAddress string, moVersion semver.Versi
 	var count int
 	resp, err := c.queryCli.ShowProcessList(context.Background(), queryAddress)
 	if err != nil {
-		return 0, errors.Wrap(err, "show processlist")
+		return 0, gerrors.Wrap(err, "show processlist")
 	}
 	for _, sess := range resp.GetSessions() {
 		if v1alpha1.HasMOFeature(moVersion, v1alpha1.MOFeatureSessionSource) {
@@ -419,25 +453,25 @@ func (c *Controller) getSessionCount(queryAddress string, moVersion semver.Versi
 func (c *Controller) getPipelineCount(queryAddress string) (int, error) {
 	resp, err := c.queryCli.GetPipelineInfo(context.Background(), queryAddress)
 	if err != nil {
-		return 0, errors.Wrap(err, "get pipeline info")
+		return 0, gerrors.Wrap(err, "get pipeline info")
 	}
 	return int(resp.GetCount()), nil
 }
 
-func (c *withCNSet) withHAKeeperClient(ctx *recon.Context[*corev1.Pod], fn func(context.Context, *hacli.Handler) error) error {
+func (c *withCNSet) withMOClientSet(ctx *recon.Context[*corev1.Pod], fn func(context.Context, *mocli.ClientSet) error) error {
 	pod := ctx.Obj
 	ls, err := common.ResolveLogSet(ctx, c.cn)
 	if err != nil {
-		return errors.Wrap(err, "error resolve logset")
+		return gerrors.Wrap(err, "error resolve logset")
 	}
 	if !recon.IsReady(ls) {
 		return recon.ErrReSync(fmt.Sprintf("logset is not ready for Pod %s, cannot update CN labels", pod.Name), retryInterval)
 	}
 	handler, err := c.clientMgr.GetClient(ls)
 	if err != nil {
-		return errors.Wrap(err, "get HAKeeper client")
+		return gerrors.Wrap(err, "get HAKeeper client")
 	}
-	timeout, cancel := context.WithTimeout(context.Background(), hacli.HAKeeperTimeout)
+	timeout, cancel := context.WithTimeout(context.Background(), mocli.DefaultRPCTimeout)
 	defer cancel()
 	if err := fn(timeout, handler); err != nil {
 		return err

@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hacli
+package mocli
 
 import (
 	"context"
-	"github.com/go-logr/logr"
+	"github.com/go-logr/zapr"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone/pkg/logservice"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,73 +30,72 @@ import (
 )
 
 const (
-	HAKeeperTimeout = 2 * time.Second
+	DefaultRPCTimeout = 2 * time.Second
 
 	RefreshInterval = 15 * time.Second
 )
 
-type HAKeeperClientManager struct {
-	logger  logr.Logger
+type MORPCClientManager struct {
+	logger  *zap.Logger
 	done    chan struct{}
 	kubeCli client.Client
 
 	sync.Mutex
-	logSetToClients map[types.UID]proxyClient
+	logSetToHandler map[types.UID]handler
 }
 
-type Handler struct {
+type handler struct {
+	lsRef     types.NamespacedName
+	clientSet *ClientSet
+}
+
+type ClientSet struct {
 	Client     logservice.ProxyHAKeeperClient
 	StoreCache *StoreCache
+
+	LockServiceClient *LockServiceClient
 }
 
-func (h *Handler) Close() error {
+func (h *ClientSet) Close() error {
 	h.StoreCache.Close()
+	h.LockServiceClient.Close()
 	return h.Client.Close()
 }
 
-type proxyClient struct {
-	lsRef   types.NamespacedName
-	handler *Handler
-}
-
-func NewManager(kubeCli client.Client, logger logr.Logger) *HAKeeperClientManager {
-	mgr := &HAKeeperClientManager{
+func NewManager(kubeCli client.Client, logger *zap.Logger) *MORPCClientManager {
+	mgr := &MORPCClientManager{
 		logger:          logger,
 		done:            make(chan struct{}),
 		kubeCli:         kubeCli,
-		logSetToClients: map[types.UID]proxyClient{},
+		logSetToHandler: map[types.UID]handler{},
 	}
 	go mgr.gc()
 	return mgr
 }
 
-func (m *HAKeeperClientManager) GetClient(ls *v1alpha1.LogSet) (*Handler, error) {
+func (m *MORPCClientManager) GetClient(ls *v1alpha1.LogSet) (*ClientSet, error) {
 	// FIXME: this is would be bottleneck if we concurrently reconcile a large amount of
 	// matrixone clusters, we can concurrently initialize the HAKeeper clients here if necessary.
 	m.Lock()
 	defer m.Unlock()
-	if _, ok := m.logSetToClients[ls.UID]; !ok {
-		cli, err := m.newHAKeeperClient(ls)
+	if _, ok := m.logSetToHandler[ls.UID]; !ok {
+		cs, err := m.newClientSet(ls)
 		if err != nil {
-			return nil, errors.Wrap(err, "error new HAKeeperClient")
+			return nil, errors.Wrap(err, "error new clientSet")
 		}
-		mc := NewCNCache(cli, RefreshInterval, m.logger.WithName(ls.Name+"-store-cache"))
-		m.logSetToClients[ls.UID] = proxyClient{
-			handler: &Handler{
-				Client:     cli,
-				StoreCache: mc,
-			},
-			lsRef: client.ObjectKeyFromObject(ls),
+		m.logSetToHandler[ls.UID] = handler{
+			clientSet: cs,
+			lsRef:     client.ObjectKeyFromObject(ls),
 		}
 	}
-	return m.logSetToClients[ls.UID].handler, nil
+	return m.logSetToHandler[ls.UID].clientSet, nil
 }
 
-func (m *HAKeeperClientManager) Close() {
+func (m *MORPCClientManager) Close() {
 	close(m.done)
 }
 
-func (m *HAKeeperClientManager) gc() {
+func (m *MORPCClientManager) gc() {
 	for {
 		select {
 		case <-time.Tick(30 * time.Second):
@@ -106,46 +106,62 @@ func (m *HAKeeperClientManager) gc() {
 	}
 }
 
-func (m *HAKeeperClientManager) doGC() {
+func (m *MORPCClientManager) doGC() {
 	m.Lock()
 	defer m.Unlock()
-	for uid, v := range m.logSetToClients {
+	for uid, v := range m.logSetToHandler {
 		closeFn := func() {
-			err := v.handler.Close()
+			err := v.clientSet.Close()
 			if err != nil {
-				m.logger.Error(err, "error closing HAKeeper client", "logset", v.lsRef, "uid", uid)
+				m.logger.Error("error closing HAKeeper client", zap.Error(err), zap.Any("logset", v.lsRef), zap.Any("uid", uid))
 			}
 		}
 		ls := &v1alpha1.LogSet{}
 		err := m.kubeCli.Get(context.TODO(), v.lsRef, ls)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				m.logger.Info("logset deleted, clean handler", "logset", v.lsRef)
-				delete(m.logSetToClients, uid)
+				m.logger.Info("logset deleted, clean clientet", zap.Any("logset", v.lsRef))
+				delete(m.logSetToHandler, uid)
 				closeFn()
 				continue
 			}
-			m.logger.Error(err, "error gc HAKeeper client", "logset", v.lsRef, "uid", uid)
+			m.logger.Error("error gc HAKeeper client", zap.Error(err), zap.Any("logset", v.lsRef), zap.Any("uid", uid))
 			continue
 		}
 		// logset has been re-created, clean stale cache
 		if ls.UID != uid && recon.IsReady(ls) {
-			m.logger.Info("logset recreated, clean legeacy handler", "logset", v.lsRef, "old UID", uid, "new UID", ls.UID)
-			delete(m.logSetToClients, uid)
+			m.logger.Info("logset recreated, clean legeacy clientet", zap.Any("logset", v.lsRef), zap.Any("old UID", uid), zap.Any("new UID", ls.UID))
+			delete(m.logSetToHandler, uid)
 			closeFn()
 		}
 	}
 }
 
-func (m *HAKeeperClientManager) newHAKeeperClient(ls *v1alpha1.LogSet) (logservice.ProxyHAKeeperClient, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), HAKeeperTimeout)
+func (m *MORPCClientManager) newClientSet(ls *v1alpha1.LogSet) (*ClientSet, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultRPCTimeout)
 	defer cancel()
 	if ls.Status.Discovery.String() == "" {
 		return nil, errors.Errorf("logset discovery address not ready, logset: %s/%s", ls.Namespace, ls.Name)
 	}
+
 	cli, err := logservice.NewProxyHAKeeperClient(ctx, logservice.HAKeeperClientConfig{DiscoveryAddress: ls.Status.Discovery.String()})
 	if err != nil {
 		return nil, errors.Wrap(err, "build HAKeeper client")
 	}
-	return cli, nil
+
+	mc := NewCNCache(cli, RefreshInterval, zapr.NewLogger(m.logger.Named(ls.Name+"-store-cache")))
+	tn, ok := mc.GetTN()
+	if !ok {
+		return nil, errors.Errorf("TN service not found, logset: %s/%s", ls.Namespace, ls.Name)
+	}
+	lcc, err := NewLockServiceClient(tn.LockServiceAddress, m.logger.Named("lockservice-cli"))
+	if err != nil {
+		return nil, errors.Wrap(err, "build lockservice Client")
+	}
+	handler := &ClientSet{
+		Client:            cli,
+		LockServiceClient: lcc,
+		StoreCache:        mc,
+	}
+	return handler, nil
 }

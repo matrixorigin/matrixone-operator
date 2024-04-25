@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hacli
+package mocli
 
 import (
 	"context"
@@ -31,6 +31,7 @@ type StoreCache struct {
 	mu              struct {
 		sync.RWMutex
 		cnServices map[string]metadata.CNService
+		tnService  *metadata.TNService
 	}
 	done chan struct{}
 }
@@ -56,6 +57,15 @@ func (c *StoreCache) GetCN(uuid string) (metadata.CNService, bool) {
 	defer c.mu.Unlock()
 	cn, ok := c.mu.cnServices[uuid]
 	return cn, ok
+}
+
+func (c *StoreCache) GetTN() (*metadata.TNService, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.mu.tnService == nil {
+		return nil, false
+	}
+	return c.mu.tnService, true
 }
 
 func (c *StoreCache) refresh() {
@@ -91,6 +101,10 @@ func (c *StoreCache) doRefresh() {
 		v := newCNService(cn)
 		c.mu.cnServices[cn.UUID] = v
 	}
+	// TODO(aylei): handler multiple TNStore
+	if len(details.TNStores) > 0 {
+		c.mu.tnService = newTNService(details.TNStores[0])
+	}
 }
 
 func newCNService(cn logpb.CNStore) metadata.CNService {
@@ -102,5 +116,12 @@ func newCNService(cn logpb.CNStore) metadata.CNService {
 		WorkState:              cn.WorkState,
 		Labels:                 cn.Labels,
 		QueryAddress:           cn.QueryAddress,
+	}
+}
+
+func newTNService(tn logpb.TNStore) *metadata.TNService {
+	return &metadata.TNService{
+		ServiceID:          tn.UUID,
+		LockServiceAddress: tn.LockServiceAddress,
 	}
 }

@@ -20,7 +20,7 @@ import (
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
+	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +37,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 	uid := v1alpha1.GetCNPodUUID(pod)
 
 	var ready bool
-	if err := c.withHAKeeperClient(ctx, func(ctx context.Context, h *hacli.Handler) error {
+	if err := c.withMOClientSet(ctx, func(ctx context.Context, h *mocli.ClientSet) error {
 		_, ready = h.StoreCache.GetCN(uid)
 		return nil
 	}); err != nil {

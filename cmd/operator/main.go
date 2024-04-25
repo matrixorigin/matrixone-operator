@@ -22,6 +22,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnclaim"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnclaimset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnpool"
+	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
 	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,7 +33,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnstore"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/proxyset"
-	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
 	"github.com/matrixorigin/matrixone/pkg/logutil"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisepolicy "github.com/openkruise/kruise-api/policy/v1alpha1"
@@ -213,9 +213,9 @@ func main() {
 		setupLog.Info(fmt.Sprintf("s3 reclaim feature not enabled, skip setup bucketclaim actor"))
 	}
 
-	qc, err := querycli.New(zapLogger)
+	qc, err := querycli.New(zapLogger.Named("querycli"))
 	exitIf(err, "unable to create query client")
-	haCliMgr := hacli.NewManager(mgr.GetClient(), mgr.GetLogger())
+	haCliMgr := mocli.NewManager(mgr.GetClient(), zapLogger.Named("mocli-manager"))
 	if features.DefaultFeatureGate.Enabled(features.CNLabel) {
 		cnLabelController := cnstore.NewController(haCliMgr, qc)
 		err = cnLabelController.Reconcile(mgr)

@@ -20,7 +20,7 @@ import (
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/matrixorigin/matrixone-operator/pkg/hacli"
+	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
 	logpb "github.com/matrixorigin/matrixone/pkg/pb/logservice"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
 	"github.com/pkg/errors"
@@ -44,10 +44,10 @@ const (
 
 // Actor reconciles CN Claim
 type Actor struct {
-	clientMgr *hacli.HAKeeperClientManager
+	clientMgr *mocli.MORPCClientManager
 }
 
-func NewActor(mgr *hacli.HAKeeperClientManager) *Actor {
+func NewActor(mgr *mocli.MORPCClientManager) *Actor {
 	return &Actor{clientMgr: mgr}
 }
 
@@ -287,7 +287,7 @@ func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Po
 	if err != nil {
 		return nil, errors.Wrap(err, "error get HAKeeper client")
 	}
-	timeout, cancel := context.WithTimeout(ctx, hacli.HAKeeperTimeout)
+	timeout, cancel := context.WithTimeout(ctx, mocli.DefaultRPCTimeout)
 	defer cancel()
 	uid := v1alpha1.GetCNPodUUID(pod)
 	req.UUID = uid

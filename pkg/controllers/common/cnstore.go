@@ -216,3 +216,17 @@ func GetSemanticVersion(meta *metav1.ObjectMeta) semver.Version {
 	}
 	return v1alpha1.MinimalVersion
 }
+
+// NeedUpdateImage checks if the pod needs to update image
+func NeedUpdateImage(pod *corev1.Pod) bool {
+	current := map[string]string{}
+	for _, c := range pod.Status.ContainerStatuses {
+		current[c.Name] = c.Image
+	}
+	for _, c := range pod.Spec.Containers {
+		if current[c.Name] != "" && c.Image != current[c.Name] {
+			return true
+		}
+	}
+	return false
+}
