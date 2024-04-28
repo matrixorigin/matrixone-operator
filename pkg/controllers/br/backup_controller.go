@@ -170,7 +170,9 @@ func (c *BackupActor) syncJob(ctx *recon.Context[*v1alpha1.BackupJob]) error {
 		bj.Status.Phase = v1alpha1.JobPhasePending
 	}
 	var moSecret string
-	backupCmd := &BackupCommand{}
+	backupCmd := &BackupCommand{
+		ExtraArgs: bj.Spec.ExtraArgs,
+	}
 	if bj.Spec.Source.CNSetRef != nil {
 		// backup from an CNSet source
 		if bj.Spec.Source.SecretRef == nil {
@@ -216,7 +218,11 @@ func (c *BackupActor) syncJob(ctx *recon.Context[*v1alpha1.BackupJob]) error {
 	if optionalS3Secret != nil {
 		backupCmd.S3.ReadEnvSecret = true
 	}
-	job := buildJob(bj, c.backupImage, backupCmd.String(), func(c *corev1.Container) {
+	binaryImage := c.backupImage
+	if bj.Spec.BinaryImage != "" {
+		binaryImage = bj.Spec.BinaryImage
+	}
+	job := buildJob(bj, binaryImage, backupCmd.String(), func(c *corev1.Container) {
 		c.Env = []corev1.EnvVar{{
 			Name: MOUserEnvKey,
 			ValueFrom: &corev1.EnvVarSource{

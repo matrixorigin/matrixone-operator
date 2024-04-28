@@ -32,9 +32,10 @@ const (
 )
 
 type BackupCommand struct {
-	Host string
-	Port int
-	S3   S3
+	Host      string
+	Port      int
+	S3        S3
+	ExtraArgs []string
 }
 
 type S3 struct {
@@ -65,6 +66,9 @@ func (b *BackupCommand) String() string {
 		sb.WriteString(" --access_key_id=$AWS_ACCESS_KEY_ID")
 		sb.WriteString(" --secret_access_key=$AWS_SECRET_ACCESS_KEY")
 	}
+	for _, ea := range b.ExtraArgs {
+		sb.WriteString(ea)
+	}
 	sb.WriteString(fmt.Sprintf(" && echo %s && cat /mo_br.meta", MetaDelimiter))
 	return sb.String()
 }
@@ -75,6 +79,7 @@ type RestoreCommand struct {
 	RawMeta  string
 
 	ReadSourceEnvSecret bool
+	ExtraArgs           []string
 }
 
 func (c *RestoreCommand) String() string {
@@ -96,6 +101,9 @@ func (c *RestoreCommand) String() string {
 	if c.Target.ReadEnvSecret {
 		sb.WriteString(fmt.Sprintf(" --restore_access_key_id=$%s", RestoreAccessEnvKey))
 		sb.WriteString(fmt.Sprintf(" --restore_secret_access_key=$%s", RestoreSecretEnvKey))
+	}
+	for _, ea := range c.ExtraArgs {
+		sb.WriteString(ea)
 	}
 	if c.Target.Type == string(v1alpha1.S3ProviderTypeMinIO) {
 		sb.WriteString(" --restore_is_minio")

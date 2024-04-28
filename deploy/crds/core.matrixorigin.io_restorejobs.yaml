@@ -123,6 +123,8 @@ spec:
                 description: backupName specifies the backup to restore, must be set
                   UNLESS externalSource is set
                 type: string
+              binaryImage:
+                type: string
               externalSource:
                 description: optional, restore from an external source, mutual exclusive
                   with backupName
@@ -198,6 +200,12 @@ spec:
                     - path
                     type: object
                 type: object
+              extraArgs:
+                description: ExtraArgs is additional mo_br arguments other than operator
+                  auto generated arguments in RestoreCommand
+                items:
+                  type: string
+                type: array
               target:
                 description: target specifies the restore location
                 properties:

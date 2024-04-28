@@ -100,6 +100,8 @@ _Appears in:_
 | `ttl` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | ttl defines the time to live of the backup job after completed or failed |
 | `source` _[BackupSource](#backupsource)_ | source the backup source |
 | `target` _[SharedStorageProvider](#sharedstorageprovider)_ |  |
+| `binaryImage` _string_ |  |
+| `extraArgs` _string array_ | ExtraArgs is additional mo_br arguments other than operator auto generated arguments in BackupCommand |
 | `overlay` _[Overlay](#overlay)_ |  |
 
 
@@ -1126,6 +1128,8 @@ _Appears in:_
 | `backupName` _string_ | backupName specifies the backup to restore, must be set UNLESS externalSource is set |
 | `externalSource` _[SharedStorageProvider](#sharedstorageprovider)_ | optional, restore from an external source, mutual exclusive with backupName |
 | `target` _[SharedStorageProvider](#sharedstorageprovider)_ | target specifies the restore location |
+| `binaryImage` _string_ |  |
+| `extraArgs` _string array_ | ExtraArgs is additional mo_br arguments other than operator auto generated arguments in RestoreCommand |
 
 
 

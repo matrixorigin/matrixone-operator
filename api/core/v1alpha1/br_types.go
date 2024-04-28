@@ -46,6 +46,12 @@ type BackupJobSpec struct {
 
 	Target SharedStorageProvider `json:"target"`
 
+	BinaryImage string `json:"binaryImage,omitempty"`
+
+	// ExtraArgs is additional mo_br arguments other than operator auto
+	// generated arguments in BackupCommand
+	ExtraArgs []string `json:"extraArgs,omitempty"`
+
 	Overlay *Overlay `json:"overlay,omitempty"`
 }
 
@@ -153,6 +159,12 @@ type RestoreJobSpec struct {
 
 	// target specifies the restore location
 	Target SharedStorageProvider `json:"target"`
+
+	BinaryImage string `json:"binaryImage,omitempty"`
+
+	// ExtraArgs is additional mo_br arguments other than operator auto
+	// generated arguments in RestoreCommand
+	ExtraArgs []string `json:"extraArgs,omitempty"`
 }
 
 type RestoreJobStatus struct {

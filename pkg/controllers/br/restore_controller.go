@@ -116,7 +116,9 @@ func (c *RestoreActor) syncJob(ctx *recon.Context[*v1alpha1.RestoreJob]) error {
 	if rj.Status.Phase == "" {
 		rj.Status.Phase = v1alpha1.JobPhasePending
 	}
-	restoreCmd := &RestoreCommand{}
+	restoreCmd := &RestoreCommand{
+		ExtraArgs: rj.Spec.ExtraArgs,
+	}
 	backup := &v1alpha1.Backup{}
 	if err := ctx.Get(types.NamespacedName{Name: rj.Spec.BackupName}, backup); err != nil {
 		return errors.Wrap(err, "error get backup")
@@ -133,7 +135,11 @@ func (c *RestoreActor) syncJob(ctx *recon.Context[*v1alpha1.RestoreJob]) error {
 	}
 	optionalTargetSecret := rj.Spec.Target.S3.SecretRef
 	restoreCmd.Target.ReadEnvSecret = optionalTargetSecret != nil
-	job := buildJob(rj, c.restoreImage, restoreCmd.String(), func(c *corev1.Container) {
+	binaryImage := c.restoreImage
+	if rj.Spec.BinaryImage != "" {
+		binaryImage = rj.Spec.BinaryImage
+	}
+	job := buildJob(rj, binaryImage, restoreCmd.String(), func(c *corev1.Container) {
 		c.Env = []corev1.EnvVar{{
 			Name:  RawMetaEnv,
 			Value: backup.Meta.Raw,
