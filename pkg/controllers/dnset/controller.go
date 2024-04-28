@@ -20,12 +20,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
-	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
@@ -63,7 +63,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 	svc := &corev1.Service{}
 	err, foundSvc := util.IsFound(ctx.Get(client.ObjectKey{Namespace: dn.Namespace, Name: headlessSvcName(dn)}, svc))
 	if err != nil {
-		return nil, errors.Wrap(err, "get dn service")
+		return nil, errors.WrapPrefix(err, "get dn service", 0)
 	}
 
 	sts := &kruise.StatefulSet{}
@@ -72,7 +72,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		Name:      stsName(dn),
 	}, sts))
 	if err != nil {
-		return nil, errors.Wrap(err, "get dn service statefulset")
+		return nil, errors.WrapPrefix(err, "get dn service statefulset", 0)
 	}
 
 	if !foundSts || !foundSvc {
@@ -82,13 +82,13 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && dn.Deps.LogSet != nil {
 		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
 		if err != nil {
-			return nil, errors.Wrap(err, "add bucket finalizer")
+			return nil, errors.WrapPrefix(err, "add bucket finalizer", 0)
 		}
 	}
 	podList := &corev1.PodList{}
 	err = ctx.List(podList, client.InNamespace(dn.Namespace), client.MatchingLabels(common.SubResourceLabels(dn)))
 	if err != nil {
-		return nil, errors.Wrap(err, "list dn pods")
+		return nil, errors.WrapPrefix(err, "list dn pods", 0)
 	}
 	common.CollectStoreStatus(&dn.Status.FailoverStatus, podList.Items)
 
@@ -109,7 +109,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		if len(dn.Status.AvailableStores) > 0 {
 			err = v1alpha1.SyncBucketEverRunningAnn(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta)
 			if err != nil {
-				return nil, errors.Wrap(err, "set bucket ever running ann")
+				return nil, errors.WrapPrefix(err, "set bucket ever running ann", 0)
 			}
 		}
 	}
@@ -125,7 +125,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 	}
 
 	if err = ctx.Update(sts, client.DryRunAll); err != nil {
-		return nil, errors.Wrap(err, "dry run update dnset statefulset")
+		return nil, errors.WrapPrefix(err, "dry run update dnset statefulset", 0)
 	}
 
 	if !equality.Semantic.DeepEqual(origin, sts) {
@@ -133,7 +133,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 	}
 
 	if err := d.syncMetricService(ctx); err != nil {
-		return nil, errors.Wrap(err, "sync metric service")
+		return nil, errors.WrapPrefix(err, "sync metric service", 0)
 	}
 
 	if recon.IsReady(&dn.Status.ConditionalStatus) {
@@ -204,7 +204,7 @@ func (d *Actor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 		return multierr.Append(errs, util.Ignore(apierrors.IsAlreadyExists, err))
 	}, nil)
 	if err != nil {
-		return errors.Wrap(err, "create dn service")
+		return errors.WrapPrefix(err, "create dn service", 0)
 	}
 
 	return nil

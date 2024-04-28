@@ -16,12 +16,12 @@ package cnstore
 
 import (
 	"context"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
@@ -41,7 +41,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		_, ready = h.StoreCache.GetCN(uid)
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "error call hakeeper")
+		return errors.WrapPrefix(err, "error call hakeeper", 0)
 	}
 
 	switch pod.Labels[v1alpha1.CNPodPhaseLabel] {
@@ -54,7 +54,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		}
 		parsed, err := time.Parse(time.RFC3339, timeStr)
 		if err != nil {
-			return errors.Wrapf(err, "error parsing start time %s", timeStr)
+			return errors.Wrap(err, 0)
 		}
 		if time.Since(parsed) > recycleTimeout {
 			ctx.Log.Info("drain pool pod timeout, delete it to avoid workload intervention")
@@ -65,7 +65,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		}
 		storeConnection, err := common.GetStoreScore(pod)
 		if err != nil {
-			return errors.Wrap(err, "error get store connection count")
+			return errors.WrapPrefix(err, "error get store connection count", 0)
 		}
 		if storeConnection.IsSafeToReclaim() {
 			if _, ok := pod.Annotations[v1alpha1.DeleteOnReclaimAnno]; ok {
@@ -88,7 +88,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 				return nil
 			})
 			if err != nil {
-				return errors.Wrap(err, "error patch CN phase idle")
+				return errors.WrapPrefix(err, "error patch CN phase idle", 0)
 			}
 			return c.patchCNReadiness(ctx, corev1.ConditionTrue, messageCNStoreReady)
 		}
@@ -107,7 +107,7 @@ func (c *withCNSet) patchPhase(ctx *recon.Context[*corev1.Pod], phase string) er
 		return nil
 	})
 	if err != nil {
-		return errors.Wrap(err, "error patch CN phase idle")
+		return errors.WrapPrefix(err, "error patch CN phase idle", 0)
 	}
 	return nil
 }

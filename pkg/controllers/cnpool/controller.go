@@ -17,12 +17,12 @@ package cnpool
 import (
 	"context"
 	"fmt"
+	"github.com/go-errors/errors"
 	"github.com/go-logr/logr"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/utils"
-	"github.com/pkg/errors"
 	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -52,13 +52,13 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	p := ctx.Obj
 	desired, err := buildCNSet(p)
 	if err != nil {
-		return errors.Wrap(err, "erros build CNSet")
+		return errors.WrapPrefix(err, "erros build CNSet", 0)
 	}
 
 	ls := ownedLabels(p)
 	csList := &v1alpha1.CNSetList{}
 	if err := ctx.List(csList, client.InNamespace(p.Namespace), client.MatchingLabels(ls)); err != nil {
-		return errors.Wrap(err, "error list current sets")
+		return errors.WrapPrefix(err, "error list current sets", 0)
 	}
 
 	var totalPods int32
@@ -72,7 +72,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 		}
 		legacyReplicas, err := r.syncLegacySet(ctx, &cs)
 		if err != nil {
-			return errors.Wrapf(err, "error sync legacy CNSet %s", cs.Name)
+			return errors.Wrap(err, 0)
 		}
 		totalPods += legacyReplicas
 	}
@@ -83,7 +83,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	if current != nil {
 		pods, err := listCNSetPods(ctx, current)
 		if err != nil {
-			return errors.Wrapf(err, "error list CN pods for %s", current.Name)
+			return errors.Wrap(err, 0)
 		}
 		for i := range pods {
 			if podInUse(&pods[i]) {
@@ -99,7 +99,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 
 	claims, err := listNominatedClaims(ctx, p)
 	if err != nil {
-		return errors.Wrapf(err, "error list nominated claims for pool %s", p.Name)
+		return errors.Wrap(err, 0)
 	}
 	var pendingClaims int32
 	for _, claim := range claims {
@@ -162,7 +162,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 		return nil
 	})
 	if err != nil {
-		return errors.Wrapf(err, "error sync desired CNSet %s/%s", desired.Namespace, desired.Name)
+		return errors.Wrap(err, 0)
 	}
 	return nil
 }
@@ -172,7 +172,7 @@ func (r *Actor) syncLegacySet(ctx *recon.Context[*v1alpha1.CNPool], cnSet *v1alp
 	var replicas int32
 	pods, err := listCNSetPods(ctx, cnSet)
 	if err != nil {
-		return replicas, errors.Wrapf(err, "error list CNSet Pods for %s", cnSet.Name)
+		return replicas, errors.Wrap(err, 0)
 	}
 	var toDelete []string
 	for i := range pods {
@@ -195,12 +195,12 @@ func (r *Actor) syncLegacySet(ctx *recon.Context[*v1alpha1.CNPool], cnSet *v1alp
 		cnSet.Spec.PodsToDelete = toDelete
 		return nil
 	}); err != nil {
-		return replicas, errors.Wrapf(err, "error patch CNSet replicas, CNSet %s", cnSet.Name)
+		return replicas, errors.Wrap(err, 0)
 	}
 	// legacy CNSet is scaled to zero the scaling has been done, GC it
 	if cnSet.Spec.Replicas == 0 && cnSet.Status.Replicas == 0 {
 		if err := ctx.Delete(cnSet); err != nil {
-			return replicas, errors.Wrapf(err, "error GC legacy CNSet %s", cnSet.Name)
+			return replicas, errors.Wrap(err, 0)
 		}
 	}
 	return replicas, nil
@@ -224,7 +224,7 @@ func (r *Actor) reclaimLegacyCNClaim(ctx *recon.Context[*v1alpha1.CNPool], pod *
 		if apierrors.IsNotFound(err) {
 			return errors.Errorf("CNClaim %s/%s not found while pod is bound", pod.Namespace, claimName)
 		}
-		return errors.Wrap(err, "error get claim")
+		return errors.WrapPrefix(err, "error get claim", 0)
 	}
 	return ctx.PatchStatus(claim, func() error {
 		claim.Status.Phase = v1alpha1.CNClaimPhaseOutdated
@@ -238,7 +238,7 @@ func listNominatedClaims(cli recon.KubeClient, pool *v1alpha1.CNPool) ([]v1alpha
 	if err := cli.List(claimList, client.InNamespace(pool.Namespace), client.MatchingLabels(map[string]string{
 		v1alpha1.PoolNameLabel: pool.Name,
 	})); err != nil {
-		return nil, errors.Wrapf(err, "error list claims for pool %s", pool.Name)
+		return nil, errors.Wrap(err, 0)
 	}
 	return claimList.Items, nil
 }
@@ -249,11 +249,11 @@ func listCNSetPods(cli recon.KubeClient, cnSet *v1alpha1.CNSet) ([]corev1.Pod, e
 	}
 	ls, err := metav1.ParseToLabelSelector(cnSet.Status.LabelSelector)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error parsing label selector of CNSet, name: %s, selector: %s", cnSet.Name, cnSet.Status.LabelSelector)
+		return nil, errors.Wrap(err, 0)
 	}
 	podList := &corev1.PodList{}
 	if err := cli.List(podList, client.InNamespace(cnSet.Namespace), client.MatchingLabels(ls.MatchLabels)); err != nil {
-		return nil, errors.Wrapf(err, "error list pods of CNSet %s", cnSet.Name)
+		return nil, errors.Wrap(err, 0)
 	}
 	return podList.Items, nil
 }
@@ -264,7 +264,7 @@ func buildCNSet(p *v1alpha1.CNPool) (*v1alpha1.CNSet, error) {
 	// generate the controller revision hash
 	hash, err := generateRevisionHash(csSpec)
 	if err != nil {
-		return nil, errors.Wrap(err, "error generating hash")
+		return nil, errors.WrapPrefix(err, "error generating hash", 0)
 	}
 	name := fmt.Sprintf("%s-%s", p.Name, hash)
 
@@ -327,14 +327,14 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNPool]) (bool, error) {
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
-		return false, errors.Wrapf(err, "error delete CNSets owned by Pool %s", ctx.Obj.Name)
+		return false, errors.Wrap(err, 0)
 	}
 	csList := &v1alpha1.CNSetList{}
 	if err := ctx.List(csList, client.InNamespace(ctx.Obj.Namespace), client.MatchingLabels(ls)); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
-		return false, errors.Wrapf(err, "error check CNSets owned by Pool %s", ctx.Obj.Name)
+		return false, errors.Wrap(err, 0)
 	}
 	return len(csList.Items) < 1, nil
 }

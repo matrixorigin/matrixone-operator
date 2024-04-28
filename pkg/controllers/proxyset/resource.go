@@ -20,11 +20,11 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
-	"github.com/pkg/errors"
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +71,7 @@ func buildCloneSet(proxy *v1alpha1.ProxySet) *kruisev1alpha1.CloneSet {
 func syncCloneSet(ctx *recon.Context[*v1alpha1.ProxySet], proxy *v1alpha1.ProxySet, cs *kruisev1alpha1.CloneSet) error {
 	cm, err := buildProxyConfigMap(proxy, ctx.Dep.Deps.LogSet)
 	if err != nil {
-		return errors.Wrap(err, "build configmap")
+		return errors.WrapPrefix(err, "build configmap", 0)
 	}
 	cs.Spec.Replicas = &proxy.Spec.Replicas
 	return common.SyncMOPod(&common.SyncMOPodTask{

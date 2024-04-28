@@ -95,7 +95,7 @@ func main() {
 	flag.StringVar(&caFile, "ca-file", "caBundle", "the filename of caBundle")
 	flag.BoolVar(&failover, "failover", true, "enable failover feature-gate")
 	opts := &zap.Options{
-		Development: true,
+		Development: false,
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)

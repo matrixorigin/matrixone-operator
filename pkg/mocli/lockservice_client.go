@@ -16,10 +16,9 @@ package mocli
 
 import (
 	"context"
+	"github.com/go-errors/errors"
 	"github.com/matrixorigin/matrixone/pkg/common/morpc"
 	"github.com/matrixorigin/matrixone/pkg/pb/lock"
-	pb "github.com/matrixorigin/matrixone/pkg/pb/query"
-	gerrors "github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -31,13 +30,14 @@ type LockServiceClient struct {
 func NewLockServiceClient(tnAddr string, logger *zap.Logger) (*LockServiceClient, error) {
 	cfg := morpc.Config{}
 	cfg.Adjust()
+	logger.Info("new lockservice client", zap.String("TN addr", tnAddr))
 	cfg.BackendOptions = append(cfg.BackendOptions,
 		morpc.WithBackendReadTimeout(DefaultRPCTimeout))
 	client, err := cfg.NewClient("lock-client", logger, func() morpc.Message {
-		return &pb.Response{}
+		return &lock.Response{}
 	})
 	if err != nil {
-		return nil, gerrors.Wrap(err, "error create lock service client")
+		return nil, errors.WrapPrefix(err, "error create lock service client", 0)
 	}
 	return &LockServiceClient{client: client, tnAddr: tnAddr}, nil
 }
@@ -48,7 +48,7 @@ func (l *LockServiceClient) SetRestartCN(ctx context.Context, uuid string) (bool
 		Method:            lock.Method_SetRestartService},
 	)
 	if err != nil {
-		return false, gerrors.Wrap(err, "error set restart service request")
+		return false, errors.WrapPrefix(err, "error set restart service request", 0)
 	}
 	return resp.SetRestartService.OK, nil
 }
@@ -59,9 +59,20 @@ func (l *LockServiceClient) CanRestartCN(ctx context.Context, uuid string) (bool
 		Method:            lock.Method_CanRestartService},
 	)
 	if err != nil {
-		return false, gerrors.Wrap(err, "error check can restart service")
+		return false, errors.WrapPrefix(err, "error check can restart service", 0)
 	}
 	return resp.CanRestartService.OK, nil
+}
+
+func (l *LockServiceClient) RemainTxnCount(ctx context.Context, uuid string) (int, error) {
+	resp, err := l.sendToTN(ctx, &lock.Request{
+		RemainTxnInService: lock.RemainTxnInServiceRequest{ServiceID: uuid},
+		Method:             lock.Method_RemainTxnInService},
+	)
+	if err != nil {
+		return 0, err
+	}
+	return int(resp.RemainTxnInService.RemainTxn), nil
 }
 
 func (l *LockServiceClient) sendToTN(ctx context.Context, request *lock.Request) (*lock.Response, error) {
@@ -73,16 +84,16 @@ func (l *LockServiceClient) sendToTN(ctx context.Context, request *lock.Request)
 	}
 	f, err := l.client.Send(ctx, l.tnAddr, request)
 	if err != nil {
-		return nil, gerrors.Wrap(err, "error send lock rpc to TN")
+		return nil, errors.WrapPrefix(err, "error send lock rpc to TN", 0)
 	}
 	defer f.Close()
 	v, err := f.Get()
 	if err != nil {
-		return nil, gerrors.Wrap(err, "error get TN lock rpc response")
+		return nil, errors.WrapPrefix(err, "error get TN lock rpc response", 0)
 	}
 	resp := v.(*lock.Response)
 	if err := resp.UnwrapError(); err != nil {
-		return nil, gerrors.Wrap(err, "TN lock rpc respond err")
+		return nil, errors.WrapPrefix(err, "TN lock rpc respond err", 0)
 	}
 	return resp, nil
 }

@@ -16,11 +16,11 @@ package cnclaimset
 
 import (
 	"context"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/pkg/errors"
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -79,13 +79,13 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 	s := ctx.Obj
 	oc, err := listOwnedClaims(ctx, ctx.Client, s)
 	if err != nil {
-		return errors.Wrap(err, "error filter claims")
+		return errors.WrapPrefix(err, "error filter claims", 0)
 	}
 	if int32(len(oc.owned)) != s.Status.Replicas {
 		// check whether the cache is in sync
 		realC, err := listOwnedClaims(ctx, r.ClientNoCache, s)
 		if err != nil {
-			return errors.Wrap(err, "error list claims directly")
+			return errors.WrapPrefix(err, "error list claims directly", 0)
 		}
 		if len(oc.owned) != len(realC.owned) || len(oc.lost) != len(realC.lost) {
 			// simply requeue to wait cache sync, since we heavily rely on cache in the following reconciliation
@@ -98,11 +98,11 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaimSet]) error {
 		}
 	}
 	if err := r.scale(ctx, oc); err != nil {
-		return errors.Wrap(err, "error scale cnclaimset")
+		return errors.WrapPrefix(err, "error scale cnclaimset", 0)
 	}
 	// clean lost claims
 	if err := cleanClaims(ctx, oc.lost); err != nil {
-		return errors.Wrap(err, "clean filter out claims")
+		return errors.WrapPrefix(err, "clean filter out claims", 0)
 	}
 	// collect status
 	var claimStatuses []v1alpha1.CNClaimStatus
@@ -173,7 +173,7 @@ func (r *Actor) scaleOut(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClai
 		claim := makeClaim(ctx.Obj, id)
 		err := ctx.CreateOwned(claim)
 		if err != nil {
-			return errors.Wrap(err, "error create new Claim")
+			return errors.WrapPrefix(err, "error create new Claim", 0)
 		}
 		oc.owned = append(oc.owned, *claim)
 	}
@@ -218,7 +218,7 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaim
 		c := oc.owned[i]
 		pod, err := getClaimedPod(ctx, &c)
 		if err != nil {
-			return errors.Wrap(err, "error get claimed Pod")
+			return errors.WrapPrefix(err, "error get claimed Pod", 0)
 		}
 		cps = append(cps, ClaimAndPod{
 			Claim: &c,
@@ -237,7 +237,7 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaim
 		c := cps[i].Claim
 		if err := ctx.Delete(c); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return errors.Wrapf(err, "error scale-in Claim %s", c.Name)
+				return errors.Wrap(err, 0)
 			}
 		}
 	}
@@ -255,14 +255,14 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaimSet]) (bool, error)
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
-		return false, errors.Wrap(err, "error list claims")
+		return false, errors.WrapPrefix(err, "error list claims", 0)
 	}
 	if len(oc.owned) == 0 && len(oc.lost) == 0 {
 		return true, nil
 	}
 	for _, c := range append(oc.owned, oc.lost...) {
 		if err := ctx.Delete(&c); err != nil && !apierrors.IsNotFound(err) {
-			return false, errors.Wrapf(err, "error delete Claim %s", c.Name)
+			return false, errors.Wrap(err, 0)
 		}
 	}
 	return false, nil
@@ -278,7 +278,7 @@ func getClaimedPod(cli recon.KubeClient, c *v1alpha1.CNClaim) (*corev1.Pod, erro
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, errors.Wrap(err, "error get claimed Pod")
+		return nil, errors.WrapPrefix(err, "error get claimed Pod", 0)
 	}
 	return pod, nil
 }
@@ -378,7 +378,7 @@ func cleanClaims(ctx recon.KubeClient, cs []v1alpha1.CNClaim) error {
 		}
 		if err := ctx.Delete(&cs[i]); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return errors.Wrap(err, "error delete lost Claim")
+				return errors.WrapPrefix(err, "error delete lost Claim", 0)
 			}
 		}
 	}

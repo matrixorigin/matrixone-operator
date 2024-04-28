@@ -15,11 +15,11 @@
 package webui
 
 import (
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -57,7 +57,7 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 	svc := &corev1.Service{}
 	err, foundSvc := util.IsFound(ctx.Get(client.ObjectKey{Namespace: wi.Namespace, Name: webUIName(wi)}, svc))
 	if err != nil {
-		return nil, errors.Wrap(err, "get webui service")
+		return nil, errors.WrapPrefix(err, "get webui service", 0)
 	}
 
 	dp := &appsv1.Deployment{}
@@ -66,7 +66,7 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 		Name:      webUIName(wi),
 	}, dp))
 	if err != nil {
-		return nil, errors.Wrap(err, "get webui deployment")
+		return nil, errors.WrapPrefix(err, "get webui deployment", 0)
 	}
 
 	if !foundDp || !foundSvc {
@@ -91,7 +91,7 @@ func (w *Actor) Observe(ctx *recon.Context[*v1alpha1.WebUI]) (recon.Action[*v1al
 	podList := &corev1.PodList{}
 	err = ctx.List(podList, client.InNamespace(wi.Namespace), client.MatchingLabels(common.SubResourceLabels(wi)))
 	if err != nil {
-		return nil, errors.Wrap(err, "list webui pods")
+		return nil, errors.WrapPrefix(err, "list webui pods", 0)
 	}
 
 	common.CollectStoreStatus(&wi.Status.FailoverStatus, podList.Items)
@@ -173,7 +173,7 @@ func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
 		return multierr.Append(errs, util.Ignore(apierrors.IsAlreadyExists, err))
 	}, nil)
 	if err != nil {
-		return errors.Wrap(err, "create webui service")
+		return errors.WrapPrefix(err, "create webui service", 0)
 	}
 
 	return nil

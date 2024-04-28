@@ -16,11 +16,11 @@ package querycli
 
 import (
 	"context"
+	"github.com/go-errors/errors"
 	"github.com/matrixorigin/matrixone-operator/pkg/metric"
 	"github.com/matrixorigin/matrixone/pkg/common/morpc"
 	pb "github.com/matrixorigin/matrixone/pkg/pb/query"
 	"github.com/matrixorigin/matrixone/pkg/txn/rpc"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"time"
 )
@@ -53,7 +53,7 @@ func (c *Client) ShowProcessList(ctx context.Context, address string) (*pb.ShowP
 		},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "error send request")
+		return nil, errors.WrapPrefix(err, "error send request", 0)
 	}
 	return resp.ShowProcessListResponse, nil
 }
@@ -64,7 +64,7 @@ func (c *Client) GetPipelineInfo(ctx context.Context, address string) (*pb.GetPi
 		GetPipelineInfoRequest: &pb.GetPipelineInfoRequest{},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "error send request")
+		return nil, errors.WrapPrefix(err, "error send request", 0)
 	}
 	return resp.GetPipelineInfoResponse, nil
 }
@@ -88,11 +88,11 @@ func (c *Client) SendReq(ctx context.Context, address string, req *pb.Request) (
 	}
 	f, err := c.c.Send(queryCtx, address, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "error send request")
+		return nil, errors.WrapPrefix(err, "error send request", 0)
 	}
 	msg, err := f.Get()
 	if err != nil {
-		return nil, errors.Wrap(err, "error get msg")
+		return nil, errors.WrapPrefix(err, "error get msg", 0)
 	}
 	resp, ok := msg.(*pb.Response)
 	if !ok {

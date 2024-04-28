@@ -16,12 +16,12 @@ package br
 
 import (
 	"fmt"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/cmd"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -63,7 +63,7 @@ func (c *RestoreActor) waitJob(ctx *recon.Context[*v1alpha1.RestoreJob]) error {
 		if apierrors.IsNotFound(err) {
 			return c.failRestore(ctx, "job is cleaned externally")
 		}
-		return errors.Wrap(err, "error get backup job")
+		return errors.WrapPrefix(err, "error get backup job", 0)
 	}
 	if job.Status.Failed > 0 {
 		return c.failRestore(ctx, "backup job is failed")
@@ -71,7 +71,7 @@ func (c *RestoreActor) waitJob(ctx *recon.Context[*v1alpha1.RestoreJob]) error {
 	svc := buildSvc(rj)
 	status, err := cmd.GetCmdStatus(fmt.Sprintf("%s.%s", svc.Name, svc.Namespace), defaultCMDRestPort)
 	if err != nil {
-		return errors.Wrap(err, "error get restore status")
+		return errors.WrapPrefix(err, "error get restore status", 0)
 	}
 	if !status.Completed {
 		return recon.ErrReSync("wait restore complete", pollInterval)
@@ -100,7 +100,7 @@ func (c *RestoreActor) successRestore(ctx *recon.Context[*v1alpha1.RestoreJob]) 
 		&batchv1.Job{ObjectMeta: common.ObjMetaTemplate(rj, rj.Name)},
 		client.PropagationPolicy(metav1.DeletePropagationBackground),
 	)); err != nil {
-		return errors.Wrap(err, "error finalize restore job")
+		return errors.WrapPrefix(err, "error finalize restore job", 0)
 	}
 	rj.Status.Phase = v1alpha1.JobPhaseCompleted
 	meta.SetStatusCondition(&rj.Status.Conditions, metav1.Condition{
@@ -119,7 +119,7 @@ func (c *RestoreActor) syncJob(ctx *recon.Context[*v1alpha1.RestoreJob]) error {
 	restoreCmd := &RestoreCommand{}
 	backup := &v1alpha1.Backup{}
 	if err := ctx.Get(types.NamespacedName{Name: rj.Spec.BackupName}, backup); err != nil {
-		return errors.Wrap(err, "error get backup")
+		return errors.WrapPrefix(err, "error get backup", 0)
 	}
 	restoreCmd.BackupID = backup.Meta.ID
 	optionalSourceSecret := backup.Meta.Location.S3.SecretRef
@@ -165,10 +165,10 @@ func (c *RestoreActor) syncJob(ctx *recon.Context[*v1alpha1.RestoreJob]) error {
 	})
 	svc := buildSvc(rj)
 	if err := util.Ignore(apierrors.IsAlreadyExists, ctx.CreateOwned(job)); err != nil {
-		return errors.Wrap(err, "error ensure job")
+		return errors.WrapPrefix(err, "error ensure job", 0)
 	}
 	if err := util.Ignore(apierrors.IsAlreadyExists, ctx.CreateOwned(svc)); err != nil {
-		return errors.Wrap(err, "error ensure service")
+		return errors.WrapPrefix(err, "error ensure service", 0)
 	}
 	rj.Status.Phase = v1alpha1.JobPhaseRunning
 	return ctx.UpdateStatus(rj)
@@ -184,7 +184,7 @@ func (c *RestoreActor) Finalize(ctx *recon.Context[*v1alpha1.RestoreJob]) (bool,
 	if apierrors.IsNotFound(err) {
 		return true, nil
 	}
-	return false, errors.Wrap(err, "error delete job")
+	return false, errors.WrapPrefix(err, "error delete job", 0)
 }
 
 func (c *RestoreActor) Reconcile(mgr manager.Manager) error {

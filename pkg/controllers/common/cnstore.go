@@ -17,10 +17,10 @@ package common
 import (
 	"encoding/json"
 	"github.com/blang/semver/v4"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -85,7 +85,7 @@ func ResolveLogSet(cli recon.KubeClient, cs *v1alpha1.CNSet) (*v1alpha1.LogSet, 
 	ls := &v1alpha1.LogSet{}
 	// refresh logset status
 	if err := cli.Get(client.ObjectKeyFromObject(cs.Deps.LogSet), ls); err != nil {
-		return nil, errors.Wrap(err, "error get logset")
+		return nil, errors.WrapPrefix(err, "error get logset", 0)
 	}
 	return ls, nil
 }
@@ -94,11 +94,11 @@ func ResolveLogSet(cli recon.KubeClient, cs *v1alpha1.CNSet) (*v1alpha1.LogSet, 
 func ResolveCNSet(cli recon.KubeClient, pod *corev1.Pod) (*v1alpha1.CNSet, error) {
 	owner, err := ResolveOwner(cli, pod)
 	if err != nil {
-		return nil, errors.Wrap(err, "error resolve CNSet")
+		return nil, errors.WrapPrefix(err, "error resolve CNSet", 0)
 	}
 	cnSet, ok := owner.(*v1alpha1.CNSet)
 	if !ok {
-		return nil, errors.Wrap(err, "pod is not a CN Pod")
+		return nil, errors.WrapPrefix(err, "pod is not a CN Pod", 0)
 	}
 	return cnSet, nil
 }
@@ -129,7 +129,7 @@ func ResolveOwner(cli recon.KubeClient, pod *corev1.Pod) (client.Object, error) 
 	}
 
 	if err := cli.Get(types.NamespacedName{Namespace: pod.Namespace, Name: instanceName}, o); err != nil {
-		return nil, errors.Wrap(err, "error get owner set")
+		return nil, errors.WrapPrefix(err, "error get owner set", 0)
 	}
 	return o, nil
 }
@@ -172,7 +172,7 @@ func GetStoreScore(pod *corev1.Pod) (*StoreScore, error) {
 		// fallback to old format
 		count, atoiErr := strconv.Atoi(connectionStr)
 		if atoiErr != nil {
-			return nil, errors.Wrap(err, "error parsing connection anno")
+			return nil, errors.WrapPrefix(err, "error parsing connection anno", 0)
 		}
 		s.SessionCount = count
 		return s, nil
@@ -184,7 +184,7 @@ func GetStoreScore(pod *corev1.Pod) (*StoreScore, error) {
 func SetStoreScore(pod *corev1.Pod, s *StoreScore) error {
 	b, err := json.Marshal(s)
 	if err != nil {
-		return errors.Wrap(err, "error marshal connection info")
+		return errors.WrapPrefix(err, "error marshal connection info", 0)
 	}
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}

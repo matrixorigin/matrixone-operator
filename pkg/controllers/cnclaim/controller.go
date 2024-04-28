@@ -17,13 +17,13 @@ package cnclaim
 import (
 	"cmp"
 	"context"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
 	logpb "github.com/matrixorigin/matrixone/pkg/pb/logservice"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,13 +69,13 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 		v1alpha1.PodClaimedByLabel: c.Name,
 	})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return errors.Wrap(err, "error get potential orphan CNs")
+		return errors.WrapPrefix(err, "error get potential orphan CNs", 0)
 	}
 
 	// claim CN
 	claimedPod, err := r.claimCN(ctx, orphanCNs)
 	if err != nil {
-		return errors.Wrap(err, "error claim idle CN")
+		return errors.WrapPrefix(err, "error claim idle CN", 0)
 	}
 
 	// no pod available, bound to a certain Pool (maybe we can loosen this constrain)
@@ -83,7 +83,7 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 		ctx.Log.Info("no idle CN available, try to find a matching pool")
 		poolList := &v1alpha1.CNPoolList{}
 		if err := ctx.List(poolList, client.InNamespace(c.Namespace)); err != nil {
-			return errors.Wrap(err, "error get list CN pools")
+			return errors.WrapPrefix(err, "error get list CN pools", 0)
 		}
 		// TODO: multiple matching support (prioritize)
 		var pool *v1alpha1.CNPool
@@ -95,12 +95,12 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 			}
 		}
 		if pool == nil {
-			return errors.Wrapf(err, "no matching pool for claim %s/%s", c.Namespace, c.Name)
+			return errors.Wrap(err, 0)
 		}
 		c.Spec.PoolName = pool.Name
 		c.Labels[v1alpha1.PoolNameLabel] = c.Spec.PoolName
 		if err := ctx.Update(c); err != nil {
-			return errors.Wrap(err, "error bind claim to pool")
+			return errors.WrapPrefix(err, "error bind claim to pool", 0)
 		}
 	}
 	// re-bound later
@@ -112,7 +112,7 @@ func (r *Actor) claimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1.
 	c := ctx.Obj
 	claimed, err := r.doClaimCN(ctx, orphans)
 	if err != nil {
-		return nil, errors.Wrap(err, "error claim CN")
+		return nil, errors.WrapPrefix(err, "error claim CN", 0)
 	}
 	// claim failed, wait
 	if claimed == nil {
@@ -124,10 +124,10 @@ func (r *Actor) claimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1.
 		Labels: common.ToStoreLabels(c.Spec.CNLabels),
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "error patch Store state of claimed CN %s/%s", claimed.Namespace, claimed.Name)
+		return nil, errors.Wrap(err, 0)
 	}
 	if err := r.bindPod(ctx, claimed, store); err != nil {
-		return nil, errors.Wrap(err, "error bind pod")
+		return nil, errors.WrapPrefix(err, "error bind pod", 0)
 	}
 	return claimed, nil
 }
@@ -151,7 +151,7 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 	}
 	idleCNs, err := common.ListPods(ctx, client.InNamespace(c.Namespace), client.MatchingLabelsSelector{Selector: podSelector})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return nil, errors.Wrap(err, "error list idle Pods")
+		return nil, errors.WrapPrefix(err, "error list idle Pods", 0)
 	}
 
 	sortCNByPriority(c, idleCNs)
@@ -190,7 +190,7 @@ func (r *Actor) bindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, 
 	}
 	c.Labels[v1alpha1.PoolNameLabel] = c.Spec.PoolName
 	if err := ctx.Update(c); err != nil {
-		return errors.Wrap(err, "error bound pod to claim")
+		return errors.WrapPrefix(err, "error bound pod to claim", 0)
 	}
 
 	c.Status.Phase = v1alpha1.CNPodPhaseBound
@@ -198,7 +198,7 @@ func (r *Actor) bindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, 
 	c.Status.BoundTime = &metav1.Time{Time: time.Now()}
 	// if we failed to update status here, observe would help fulfill the status later
 	if err := ctx.UpdateStatus(c); err != nil {
-		return errors.Wrap(err, "error update claim status")
+		return errors.WrapPrefix(err, "error update claim status", 0)
 	}
 	return nil
 }
@@ -240,7 +240,7 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 		v1alpha1.PodClaimedByLabel: c.Name,
 	})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return false, errors.Wrap(err, "error get owned CNs")
+		return false, errors.WrapPrefix(err, "error get owned CNs", 0)
 	}
 	if len(ownedCNs) == 0 {
 		return true, nil
@@ -256,7 +256,7 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 			},
 		})
 		if err != nil {
-			return false, errors.Wrapf(err, "error drain CN %s/%s", cn.Namespace, cn.Name)
+			return false, errors.Wrap(err, 0)
 		}
 		// set the CN Pod to draining phase and let the draining process handle recycling
 		if err := ctx.Patch(&cn, func() error {
@@ -268,7 +268,7 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 			cn.Annotations[common.ReclaimedAt] = time.Now().Format(time.RFC3339)
 			return nil
 		}); err != nil {
-			return false, errors.Wrapf(err, "error reclaim CN %s/%s", cn.Namespace, cn.Name)
+			return false, errors.Wrap(err, 0)
 		}
 	}
 	return false, nil
@@ -277,15 +277,15 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, req logpb.CNStateLabel) (*metadata.CNService, error) {
 	cs, err := common.ResolveCNSet(ctx, pod)
 	if err != nil {
-		return nil, errors.Wrap(err, "error resolve CNSet")
+		return nil, errors.WrapPrefix(err, "error resolve CNSet", 0)
 	}
 	ls, err := common.ResolveLogSet(ctx, cs)
 	if err != nil {
-		return nil, errors.Wrap(err, "error resolve LogSet")
+		return nil, errors.WrapPrefix(err, "error resolve LogSet", 0)
 	}
 	hc, err := r.clientMgr.GetClient(ls)
 	if err != nil {
-		return nil, errors.Wrap(err, "error get HAKeeper client")
+		return nil, errors.WrapPrefix(err, "error get HAKeeper client", 0)
 	}
 	timeout, cancel := context.WithTimeout(ctx, mocli.DefaultRPCTimeout)
 	defer cancel()
@@ -293,7 +293,7 @@ func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Po
 	req.UUID = uid
 	err = hc.Client.PatchCNStore(timeout, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "error patch CNStore")
+		return nil, errors.WrapPrefix(err, "error patch CNStore", 0)
 	}
 	cn, ok := hc.StoreCache.GetCN(uid)
 	if !ok {

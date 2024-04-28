@@ -16,8 +16,8 @@ package webhook
 
 import (
 	"context"
+	"github.com/go-errors/errors"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	v1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	ctrl "sigs.k8s.io/controller-runtime"

@@ -353,10 +353,8 @@ github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0/go.mod h1:zJYVVT2
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
-github.com/matrixorigin/controller-runtime v0.0.0-20240415083924-d45ea4253d3a h1:pb650Mjl/q6PMGVh9MJnonM57kF5macIrbu1VP1Aoyo=
-github.com/matrixorigin/controller-runtime v0.0.0-20240415083924-d45ea4253d3a/go.mod h1:ArS22ljGZeL3PjQU4Z7lqKeHc4tkE1Xg2f6zwNCwKOs=
-github.com/matrixorigin/controller-runtime v0.0.0-20240425083304-e8f71bf6babf h1:/JH9ZCUBNzz+xCZPb6SqSVkNT+5MfW44dMpho2l+g5U=
-github.com/matrixorigin/controller-runtime v0.0.0-20240425083304-e8f71bf6babf/go.mod h1:ArS22ljGZeL3PjQU4Z7lqKeHc4tkE1Xg2f6zwNCwKOs=
+github.com/matrixorigin/controller-runtime v0.0.0-20240425181138-e490eca6d82d h1:uMJtVsmayRpGJ/LRNYu+xfVr5sGolo9UbP05Rv6d98M=
+github.com/matrixorigin/controller-runtime v0.0.0-20240425181138-e490eca6d82d/go.mod h1:ArS22ljGZeL3PjQU4Z7lqKeHc4tkE1Xg2f6zwNCwKOs=
 github.com/matrixorigin/dragonboat/v4 v4.0.0-20230426084722-d189534f8004 h1:HwxzjxWB6oYwdA4gBXDgjjZiwpGKzBUfpGNzDbuJMwo=
 github.com/matrixorigin/dragonboat/v4 v4.0.0-20230426084722-d189534f8004/go.mod h1:bR6ZGoUwApH4/P4+AezNGT0xehljg+j+Z/Q2Fz+Y4a0=
 github.com/matrixorigin/goetty/v2 v2.0.0-20230628075727-26c9a2fd5fb8 h1:t4S3ZJzdIAbbE5LMnSzSIfUMbBB3rzuqE9ubjl62qR8=

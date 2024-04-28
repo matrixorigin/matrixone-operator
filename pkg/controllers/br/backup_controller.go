@@ -16,12 +16,12 @@ package br
 
 import (
 	"fmt"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/cmd"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -71,7 +71,7 @@ func (c *BackupActor) waitJob(ctx *recon.Context[*v1alpha1.BackupJob]) error {
 	}
 	backupList := &v1alpha1.BackupList{}
 	if err := ctx.List(backupList, client.MatchingLabels(preLabels)); err != nil {
-		return errors.Wrap(err, "error list owned backups")
+		return errors.WrapPrefix(err, "error list owned backups", 0)
 	}
 	if len(backupList.Items) > 0 {
 		return c.completeBackup(ctx, &backupList.Items[0])
@@ -82,7 +82,7 @@ func (c *BackupActor) waitJob(ctx *recon.Context[*v1alpha1.BackupJob]) error {
 		if apierrors.IsNotFound(err) {
 			return c.failBackup(ctx, "job is cleaned externally")
 		}
-		return errors.Wrap(err, "error get backup job")
+		return errors.WrapPrefix(err, "error get backup job", 0)
 	}
 	if job.Status.Failed > 0 {
 		return c.failBackup(ctx, "backup job is failed")
@@ -91,7 +91,7 @@ func (c *BackupActor) waitJob(ctx *recon.Context[*v1alpha1.BackupJob]) error {
 	svc := buildSvc(bj)
 	status, err := cmd.GetCmdStatus(fmt.Sprintf("%s.%s", svc.Name, svc.Namespace), defaultCMDRestPort)
 	if err != nil {
-		return errors.Wrap(err, "error get backup status")
+		return errors.WrapPrefix(err, "error get backup status", 0)
 	}
 	if !status.Completed {
 		meta.SetStatusCondition(&bj.Status.Conditions, metav1.Condition{
@@ -126,7 +126,7 @@ func (c *BackupActor) waitJob(ctx *recon.Context[*v1alpha1.BackupJob]) error {
 			},
 		}
 		if err := util.Ignore(apierrors.IsAlreadyExists, ctx.Create(backup)); err != nil {
-			return errors.Wrap(err, "error ensure backup")
+			return errors.WrapPrefix(err, "error ensure backup", 0)
 		}
 		return c.completeBackup(ctx, backup)
 	}
@@ -152,7 +152,7 @@ func (c *BackupActor) completeBackup(ctx *recon.Context[*v1alpha1.BackupJob], ba
 	//	&batchv1.Job{ObjectMeta: common.ObjMetaTemplate(bj, bj.Name)},
 	//	client.PropagationPolicy(metav1.DeletePropagationBackground),
 	//)); err != nil {
-	//	return errors.Wrap(err, "error finalize backup job")
+	//	return errors.WrapPrefix(err, "error finalize backup job", 0)
 	//}
 	bj.Status.Backup = backup.Name
 	bj.Status.Phase = v1alpha1.JobPhaseCompleted
@@ -179,7 +179,7 @@ func (c *BackupActor) syncJob(ctx *recon.Context[*v1alpha1.BackupJob]) error {
 		moSecret = *bj.Spec.Source.SecretRef
 		cn := &v1alpha1.CNSet{}
 		if err := ctx.Get(types.NamespacedName{Namespace: bj.Namespace, Name: *bj.Spec.Source.CNSetRef}, cn); err != nil {
-			return errors.Wrap(err, "error get cnset")
+			return errors.WrapPrefix(err, "error get cnset", 0)
 		}
 		if cn.Status.Host == "" {
 			return errors.New("cnset host is not set")
@@ -193,7 +193,7 @@ func (c *BackupActor) syncJob(ctx *recon.Context[*v1alpha1.BackupJob]) error {
 		}
 		mo := &v1alpha1.MatrixOneCluster{}
 		if err := ctx.Get(types.NamespacedName{Namespace: bj.Namespace, Name: *bj.Spec.Source.ClusterRef}, mo); err != nil {
-			return errors.Wrap(err, "error get MO")
+			return errors.WrapPrefix(err, "error get MO", 0)
 		}
 		if mo.Status.Host == "" {
 			return errors.New("MO host is not set")
@@ -247,10 +247,10 @@ func (c *BackupActor) syncJob(ctx *recon.Context[*v1alpha1.BackupJob]) error {
 	})
 	svc := buildSvc(bj)
 	if err := util.Ignore(apierrors.IsAlreadyExists, ctx.CreateOwned(job)); err != nil {
-		return errors.Wrap(err, "error ensure job")
+		return errors.WrapPrefix(err, "error ensure job", 0)
 	}
 	if err := util.Ignore(apierrors.IsAlreadyExists, ctx.CreateOwned(svc)); err != nil {
-		return errors.Wrap(err, "error ensure service")
+		return errors.WrapPrefix(err, "error ensure service", 0)
 	}
 	// mark as running
 	bj.Status.Phase = v1alpha1.JobPhaseRunning
@@ -272,7 +272,7 @@ func (c *BackupActor) Finalize(ctx *recon.Context[*v1alpha1.BackupJob]) (bool, e
 	if apierrors.IsNotFound(err) {
 		return true, nil
 	}
-	return false, errors.Wrap(err, "error delete job")
+	return false, errors.WrapPrefix(err, "error delete job", 0)
 }
 
 func (c *BackupActor) Reconcile(mgr manager.Manager) error {

@@ -16,11 +16,11 @@ package proxyset
 
 import (
 	"fmt"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +44,7 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.ProxySet]) (recon.Action[*v
 		return syncCloneSet(ctx, p, cloneset)
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "sync cloneset")
+		return nil, errors.WrapPrefix(err, "sync cloneset", 0)
 	}
 	svc := buildSvc(p)
 	err = recon.CreateOwnedOrUpdate(ctx, svc, func() error {
@@ -52,7 +52,7 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.ProxySet]) (recon.Action[*v
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "sync service")
+		return nil, errors.WrapPrefix(err, "sync service", 0)
 	}
 	if cloneset.Status.ReadyReplicas >= p.Spec.Replicas {
 		p.Status.SetCondition(metav1.Condition{

@@ -16,11 +16,11 @@ package mocli
 
 import (
 	"context"
+	"github.com/go-errors/errors"
 	"github.com/go-logr/zapr"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone/pkg/logservice"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	DefaultRPCTimeout = 2 * time.Second
+	DefaultRPCTimeout = 10 * time.Second
 
 	RefreshInterval = 15 * time.Second
 )
@@ -81,7 +81,7 @@ func (m *MORPCClientManager) GetClient(ls *v1alpha1.LogSet) (*ClientSet, error) 
 	if _, ok := m.logSetToHandler[ls.UID]; !ok {
 		cs, err := m.newClientSet(ls)
 		if err != nil {
-			return nil, errors.Wrap(err, "error new clientSet")
+			return nil, errors.WrapPrefix(err, "error new clientSet", 0)
 		}
 		m.logSetToHandler[ls.UID] = handler{
 			clientSet: cs,
@@ -146,7 +146,7 @@ func (m *MORPCClientManager) newClientSet(ls *v1alpha1.LogSet) (*ClientSet, erro
 
 	cli, err := logservice.NewProxyHAKeeperClient(ctx, logservice.HAKeeperClientConfig{DiscoveryAddress: ls.Status.Discovery.String()})
 	if err != nil {
-		return nil, errors.Wrap(err, "build HAKeeper client")
+		return nil, errors.WrapPrefix(err, "build HAKeeper client", 0)
 	}
 
 	mc := NewCNCache(cli, RefreshInterval, zapr.NewLogger(m.logger.Named(ls.Name+"-store-cache")))
@@ -156,7 +156,7 @@ func (m *MORPCClientManager) newClientSet(ls *v1alpha1.LogSet) (*ClientSet, erro
 	}
 	lcc, err := NewLockServiceClient(tn.LockServiceAddress, m.logger.Named("lockservice-cli"))
 	if err != nil {
-		return nil, errors.Wrap(err, "build lockservice Client")
+		return nil, errors.WrapPrefix(err, "build lockservice Client", 0)
 	}
 	handler := &ClientSet{
 		Client:            cli,
