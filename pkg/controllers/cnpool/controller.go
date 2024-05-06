@@ -81,19 +81,19 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	var idlePods []*corev1.Pod
 	var terminatingPods []*corev1.Pod
 	if current != nil {
-		pods, err := listCNSetPods(ctx, current)
+		err := iterateCNSetLivePods(ctx, current, func(p *corev1.Pod) error {
+			if podInUse(p) {
+				inUse++
+			} else if p.Labels[v1alpha1.CNPodPhaseLabel] == v1alpha1.CNPodPhaseTerminating {
+				ctx.Log.Info("find pod still in terminating state", "pod", p.Name)
+				terminatingPods = append(terminatingPods, p)
+			} else {
+				idlePods = append(idlePods, p)
+			}
+			return nil
+		})
 		if err != nil {
 			return errors.Wrapf(err, "error list CN pods for %s", current.Name)
-		}
-		for i := range pods {
-			if podInUse(&pods[i]) {
-				inUse++
-			} else if pods[i].Labels[v1alpha1.CNPodPhaseLabel] == v1alpha1.CNPodPhaseTerminating {
-				ctx.Log.Info("find pod still in terminating state", "pod", pods[i].Name)
-				terminatingPods = append(terminatingPods, &pods[i])
-			} else {
-				idlePods = append(idlePods, &pods[i])
-			}
 		}
 	}
 
@@ -170,24 +170,23 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 // TODO(aylei): rethink here, operator should try it best to reuse cache
 func (r *Actor) syncLegacySet(ctx *recon.Context[*v1alpha1.CNPool], cnSet *v1alpha1.CNSet) (int32, error) {
 	var replicas int32
-	pods, err := listCNSetPods(ctx, cnSet)
-	if err != nil {
-		return replicas, errors.Wrapf(err, "error list CNSet Pods for %s", cnSet.Name)
-	}
 	var toDelete []string
-	for i := range pods {
-		pod := pods[i]
+	err := iterateCNSetLivePods(ctx, cnSet, func(p *corev1.Pod) error {
 		// TODO(aylei): reclaim timeout logic
-		if podInUse(&pod) {
+		if podInUse(p) {
 			// keep in-use CN but try reclaim the cnclaim
-			if err := r.reclaimLegacyCNClaim(ctx, &pod); err != nil {
-				return replicas, err
+			if err := r.reclaimLegacyCNClaim(ctx, p); err != nil {
+				return err
 			}
 			replicas++
 		} else {
 			// recalim other CN
-			toDelete = append(toDelete, pods[i].Name)
+			toDelete = append(toDelete, p.Name)
 		}
+		return nil
+	})
+	if err != nil {
+		return replicas, errors.Wrapf(err, "error list CNSet Pods for %s", cnSet.Name)
 	}
 	// clean unused CNSet
 	if err := recon.CreateOwnedOrUpdate(ctx, cnSet, func() error {
@@ -243,19 +242,30 @@ func listNominatedClaims(cli recon.KubeClient, pool *v1alpha1.CNPool) ([]v1alpha
 	return claimList.Items, nil
 }
 
-func listCNSetPods(cli recon.KubeClient, cnSet *v1alpha1.CNSet) ([]corev1.Pod, error) {
+// iterateCNSetLivePods iterates all live Pods of the given CNSet, Pods that have been deleted will be skipped
+func iterateCNSetLivePods(cli recon.KubeClient, cnSet *v1alpha1.CNSet, fn func(p *corev1.Pod) error) error {
 	if cnSet.Status.LabelSelector == "" {
-		return nil, nil
+		return nil
 	}
 	ls, err := metav1.ParseToLabelSelector(cnSet.Status.LabelSelector)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error parsing label selector of CNSet, name: %s, selector: %s", cnSet.Name, cnSet.Status.LabelSelector)
+		return errors.Wrapf(err, "error parsing label selector of CNSet, name: %s, selector: %s", cnSet.Name, cnSet.Status.LabelSelector)
 	}
 	podList := &corev1.PodList{}
 	if err := cli.List(podList, client.InNamespace(cnSet.Namespace), client.MatchingLabels(ls.MatchLabels)); err != nil {
-		return nil, errors.Wrapf(err, "error list pods of CNSet %s", cnSet.Name)
+		return errors.Wrapf(err, "error list pods of CNSet %s", cnSet.Name)
 	}
-	return podList.Items, nil
+	for i := range podList.Items {
+		p := &podList.Items[i]
+		if p.DeletionTimestamp != nil {
+			// Pod deleted, skip
+			continue
+		}
+		if err := fn(p); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func buildCNSet(p *v1alpha1.CNPool) (*v1alpha1.CNSet, error) {
