@@ -19,13 +19,13 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/mosql"
 	"github.com/matrixorigin/matrixone-operator/pkg/utils"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,7 +65,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		backup := &v1alpha1.Backup{}
 		err := ctx.Get(types.NamespacedName{Name: *mo.Spec.RestoreFrom}, backup)
 		if err != nil {
-			return nil, errors.Wrap(err, "error get backup")
+			return nil, errors.WrapPrefix(err, "error get backup", 0)
 		}
 		restore := &v1alpha1.RestoreJob{
 			ObjectMeta: metav1.ObjectMeta{
@@ -80,7 +80,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 		if err := recon.CreateOwnedOrUpdate(ctx, restore, func() error {
 			return nil
 		}); err != nil {
-			return nil, errors.Wrap(err, "error ensure restore job")
+			return nil, errors.WrapPrefix(err, "error ensure restore job", 0)
 		}
 		switch restore.Status.Phase {
 		case v1alpha1.JobPhaseFailed:
@@ -107,7 +107,7 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (recon.Action[*v1alpha1.MatrixOneCluster], error) {
 	mo := ctx.Obj
 	if err := r.InitRootCredential(ctx); err != nil {
-		return nil, errors.Wrap(err, "init cluster credential")
+		return nil, errors.WrapPrefix(err, "init cluster credential", 0)
 	}
 
 	// sync specs
@@ -129,7 +129,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "sync LogSet")
+		return nil, errors.WrapPrefix(err, "sync LogSet", 0)
 	}
 	_, err = utils.CreateOwnedOrUpdate(ctx, dn, func() error {
 		dn.Spec = *mo.GetTN()
@@ -139,7 +139,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "sync DNSet")
+		return nil, errors.WrapPrefix(err, "sync DNSet", 0)
 	}
 
 	cnGroups := append([]v1alpha1.CNGroup{}, mo.Spec.CNGroups...)
@@ -200,7 +200,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 			return nil
 		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "sync CNSet %s", g.Name)
+			return nil, errors.Wrap(err, 0)
 		}
 	}
 
@@ -209,7 +209,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 	csList := &v1alpha1.CNSetList{}
 	cnSelector := map[string]string{common.MatrixoneClusterLabelKey: mo.Name}
 	if err := ctx.List(csList, client.InNamespace(mo.Namespace), client.MatchingLabels(cnSelector)); err != nil {
-		return nil, errors.Wrap(err, "error list current CNSets of the cluster")
+		return nil, errors.WrapPrefix(err, "error list current CNSets of the cluster", 0)
 	}
 	var firstCN *v1alpha1.CNSet
 	for i := range csList.Items {
@@ -217,7 +217,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 		if !desiredCNSets[cnSet.Name] {
 			ctx.Log.V(4).Info("delete CNSet as it is no longer needed", "name", cnSet.Name)
 			if err := ctx.Delete(&cnSet); err != nil {
-				return nil, errors.Wrap(err, "error delete cnset")
+				return nil, errors.WrapPrefix(err, "error delete cnset", 0)
 			}
 			continue
 		}
@@ -250,7 +250,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 			webui.Spec = *mo.Spec.WebUI
 			return nil
 		}); err != nil {
-			return nil, errors.Wrap(err, "sync webUI")
+			return nil, errors.WrapPrefix(err, "sync webUI", 0)
 		}
 		mo.Status.Webui = &webui.Status
 	}
@@ -269,7 +269,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 			proxy.Spec.Image = mo.ProxySetImage()
 			return nil
 		}); err != nil {
-			return nil, errors.Wrap(err, "sync proxy")
+			return nil, errors.WrapPrefix(err, "sync proxy", 0)
 		}
 
 		mo.Status.Proxy = &proxy.Status
@@ -288,7 +288,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 	if mo.GetMetricReaderEnabled() {
 		if !mo.Status.ClusterMetrics.Initialized && firstCN != nil {
 			if err := r.initializeMetricUser(ctx, firstCN.Status.Host); err != nil {
-				return nil, errors.Wrap(err, "initialize metric user")
+				return nil, errors.WrapPrefix(err, "initialize metric user", 0)
 			}
 		}
 	}
@@ -316,24 +316,24 @@ func (r *MatrixOneClusterActor) initializeMetricUser(ctx *recon.Context[*v1alpha
 	mo := ctx.Obj
 	metricSec, err := r.InitMetricCredential(ctx)
 	if err != nil {
-		return errors.Wrap(err, "init metric credential")
+		return errors.WrapPrefix(err, "init metric credential", 0)
 	}
 	sqlcli := mosql.NewClient(fmt.Sprintf("%s:%d", host, 6001), ctx.Client, types.NamespacedName{Namespace: mo.Namespace, Name: mo.Status.CredentialRef.Name})
 	if _, err := sqlcli.Query(context.TODO(), fmt.Sprintf("CREATE USER IF NOT EXISTS `%s` identified by '%s'", metricSec.Data[usernameKey], metricSec.Data[passwordKey])); err != nil {
-		return errors.Wrap(err, "create operator user")
+		return errors.WrapPrefix(err, "create operator user", 0)
 	}
 	role := metricSec.Data[roleKey]
 	if _, err := sqlcli.Query(context.TODO(), fmt.Sprintf("CREATE ROLE IF NOT EXISTS `%s`", role)); err != nil {
-		return errors.Wrap(err, "create metric role")
+		return errors.WrapPrefix(err, "create metric role", 0)
 	}
 	if _, err := sqlcli.Query(context.TODO(), fmt.Sprintf("GRANT connect ON ACCOUNT * TO `%s`", role)); err != nil {
-		return errors.Wrap(err, "grant permission")
+		return errors.WrapPrefix(err, "grant permission", 0)
 	}
 	if _, err := sqlcli.Query(context.TODO(), fmt.Sprintf("GRANT select ON TABLE system_metrics.* TO %s", role)); err != nil {
-		return errors.Wrap(err, "grant permission")
+		return errors.WrapPrefix(err, "grant permission", 0)
 	}
 	if _, err := sqlcli.Query(context.TODO(), fmt.Sprintf("GRANT `%s` TO `%s`", role, metricSec.Data[usernameKey])); err != nil {
-		return errors.Wrap(err, "grant permission")
+		return errors.WrapPrefix(err, "grant permission", 0)
 	}
 	mo.Status.ClusterMetrics.Initialized = true
 	return ctx.UpdateStatus(mo)
@@ -395,7 +395,7 @@ func (r *MatrixOneClusterActor) InitMetricCredential(ctx *recon.Context[*v1alpha
 	metricSec := &corev1.Secret{}
 	if ctx.Obj.Status.ClusterMetrics.SecretRef != nil {
 		if err := ctx.Get(types.NamespacedName{Namespace: ctx.Obj.Namespace, Name: ctx.Obj.Status.ClusterMetrics.SecretRef.Name}, metricSec); err != nil {
-			return nil, errors.Wrap(err, "error get metrics secret")
+			return nil, errors.WrapPrefix(err, "error get metrics secret", 0)
 		}
 		return metricSec, nil
 	}

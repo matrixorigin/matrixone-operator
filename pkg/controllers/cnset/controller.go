@@ -22,12 +22,12 @@ import (
 	"k8s.io/utils/pointer"
 	"time"
 
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
-	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
@@ -66,7 +66,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	cs := &kruisev1alpha1.CloneSet{}
 	err, foundCs := util.IsFound(ctx.Get(client.ObjectKey{Namespace: cn.Namespace, Name: setName(cn)}, cs))
 	if err != nil {
-		return nil, errors.Wrap(err, "get cn clonset")
+		return nil, errors.WrapPrefix(err, "get cn clonset", 0)
 	}
 	if !foundCs {
 		return c.Create, nil
@@ -75,7 +75,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
 		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, bucketFinalizer(cn))
 		if err != nil {
-			return nil, errors.Wrap(err, "add bucket finalizer")
+			return nil, errors.WrapPrefix(err, "add bucket finalizer", 0)
 		}
 	}
 
@@ -84,7 +84,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		syncService(cn, svc)
 		return nil
 	}); err != nil {
-		return nil, errors.Wrap(err, "sync service")
+		return nil, errors.WrapPrefix(err, "sync service", 0)
 	}
 
 	// diff desired cloneset and determine whether should an update be invoked
@@ -93,7 +93,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, err
 	}
 	if err = ctx.Update(cs, client.DryRunAll); err != nil {
-		return nil, errors.Wrap(err, "dry run update cnset")
+		return nil, errors.WrapPrefix(err, "dry run update cnset", 0)
 	}
 	if !equality.Semantic.DeepEqual(origin, cs) {
 		if cn.Spec.PauseUpdate {
@@ -117,7 +117,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	err = ctx.List(podList, client.InNamespace(cn.Namespace),
 		client.MatchingLabels(common.SubResourceLabels(cn)))
 	if err != nil {
-		return nil, errors.Wrap(err, "list cn pods")
+		return nil, errors.WrapPrefix(err, "list cn pods", 0)
 	}
 	livePods := map[string]bool{}
 	for _, pod := range podList.Items {
@@ -153,7 +153,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		if cs.Status.ReadyReplicas > 0 {
 			err = v1alpha1.SyncBucketEverRunningAnn(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta)
 			if err != nil {
-				return nil, errors.Wrap(err, "set bucket ever running ann")
+				return nil, errors.WrapPrefix(err, "set bucket ever running ann", 0)
 			}
 		}
 	}
@@ -189,10 +189,10 @@ func (c *Actor) cleanup(ctx *recon.Context[*v1alpha1.CNSet]) error {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		return errors.Wrap(err, "error check legacy CN statefulset")
+		return errors.WrapPrefix(err, "error check legacy CN statefulset", 0)
 	}
 	if err := ctx.Delete(sts); err != nil {
-		return errors.Wrap(err, "error delete legacy CN statefulset")
+		return errors.WrapPrefix(err, "error delete legacy CN statefulset", 0)
 	}
 	return recon.ErrReSync("wait legacy CNSet deleted")
 }
@@ -247,13 +247,13 @@ func waitAllCNDrained(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 			// cloneset had been deleted, skip
 			return true, nil
 		}
-		return false, errors.Wrap(err, "error get cloneset")
+		return false, errors.WrapPrefix(err, "error get cloneset", 0)
 	}
 	if err := ctx.Patch(cs, func() error {
 		cs.Spec.Replicas = pointer.Int32(0)
 		return nil
 	}); err != nil {
-		return false, errors.Wrap(err, "error scale cloneset to 0")
+		return false, errors.WrapPrefix(err, "error scale cloneset to 0", 0)
 	}
 	if cs.Status.Replicas > 0 {
 		ctx.Log.V(4).Info("waiting for CNSet to be scaled to 0", "replicas", cs.Status.Replicas)
@@ -271,7 +271,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	svc := buildSvc(cn)
 	scaleSet(cn, cnSet)
 	if err := syncCloneSet(ctx, cnSet); err != nil {
-		return errors.Wrap(err, "sync clone set")
+		return errors.WrapPrefix(err, "sync clone set", 0)
 	}
 	syncPersistentVolumeClaim(ctx.Obj, cnSet)
 
@@ -285,7 +285,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 		return multierr.Append(errs, util.Ignore(apierrors.IsAlreadyExists, err))
 	}, nil)
 	if err != nil {
-		return errors.Wrap(err, "create cn service")
+		return errors.WrapPrefix(err, "create cn service", 0)
 	}
 
 	return nil
@@ -333,7 +333,7 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	}
 
 	if err := syncPodMeta(ctx.Obj, cs); err != nil {
-		return errors.Wrap(err, "sync pod meta")
+		return errors.WrapPrefix(err, "sync pod meta", 0)
 	}
 	if ctx.Dep != nil {
 		syncPodSpec(ctx.Obj, cs, ctx.Dep.Deps.LogSet.Spec.SharedStorage)

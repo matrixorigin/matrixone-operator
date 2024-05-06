@@ -17,7 +17,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
+	"github.com/go-errors/errors"
 	"io"
 	"net/http"
 )
@@ -25,19 +25,19 @@ import (
 func GetCmdStatus(host string, port int) (*Status, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%d/status", host, port))
 	if err != nil {
-		return nil, errors.Wrap(err, "error polling backup status")
+		return nil, errors.WrapPrefix(err, "error polling backup status", 0)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.Errorf("error polling backup status, status code %d", resp.StatusCode)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "error polling backup status")
+		return nil, errors.WrapPrefix(err, "error polling backup status", 0)
 	}
 	status := &Status{}
 	err = json.Unmarshal(body, status)
 	if err != nil {
-		return nil, errors.Wrap(err, "error polling backup status")
+		return nil, errors.WrapPrefix(err, "error polling backup status", 0)
 	}
 	return status, nil
 }
@@ -45,7 +45,7 @@ func GetCmdStatus(host string, port int) (*Status, error) {
 func Stop(host string, port int) error {
 	_, err := http.Post(fmt.Sprintf("http://%s:%d/shutdown", host, port), "", nil)
 	if err != nil {
-		return errors.Wrap(err, "error stopping command")
+		return errors.WrapPrefix(err, "error stopping command", 0)
 	}
 	return nil
 }

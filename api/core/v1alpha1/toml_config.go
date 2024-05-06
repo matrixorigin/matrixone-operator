@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-errors/errors"
 	"github.com/mohae/deepcopy"
 	"github.com/pelletier/go-toml"
-	"github.com/pkg/errors"
 )
 
 // TomlConfig is an auxiliary struct that serialize a nested struct to raw string

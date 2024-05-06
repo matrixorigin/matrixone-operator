@@ -15,8 +15,8 @@
 package common
 
 import (
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -36,7 +36,7 @@ func ListPods(cli recon.KubeClient, opts ...client.ListOption) ([]corev1.Pod, er
 func MustAsSelector(ps *metav1.LabelSelector) labels.Selector {
 	ls, err := metav1.LabelSelectorAsSelector(ps)
 	if err != nil {
-		panic(errors.Wrap(err, "impossible path: LabelSelectorAsSelector failed"))
+		panic(errors.WrapPrefix(err, "impossible path: LabelSelectorAsSelector failed", 0))
 	}
 	return ls
 }
@@ -44,7 +44,7 @@ func MustAsSelector(ps *metav1.LabelSelector) labels.Selector {
 func MustNewRequirement(key string, op selection.Operator, vals []string, _ ...field.PathOption) labels.Requirement {
 	r, err := labels.NewRequirement(key, op, vals)
 	if err != nil {
-		panic(errors.Wrap(err, "impossible path: new requirement failed"))
+		panic(errors.WrapPrefix(err, "impossible path: new requirement failed", 0))
 	}
 	return *r
 }

@@ -16,11 +16,11 @@ package common
 
 import (
 	"fmt"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/openkruise/kruise-api/apps/pub"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +43,7 @@ type SyncMOPodTask struct {
 func SyncMOPod(t *SyncMOPodTask) error {
 	syncPodTemplate(t)
 	if err := SyncConfigMap(t.KubeCli, &t.TargetTemplate.Spec, t.ConfigMap); err != nil {
-		return errors.Wrap(err, "sync configmap")
+		return errors.WrapPrefix(err, "sync configmap", 0)
 	}
 	return nil
 }

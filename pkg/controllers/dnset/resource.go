@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/go-errors/errors"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
-	"github.com/pkg/errors"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"

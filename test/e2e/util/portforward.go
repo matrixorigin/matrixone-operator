@@ -15,7 +15,7 @@ package util
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
+	"github.com/go-errors/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -62,7 +62,7 @@ func PortForward(config *rest.Config, ns, podName string, localPort, remotePort 
 		SubResource("portforward").URL()
 	transport, upgrader, err := spdy.RoundTripperFor(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not create round tripper")
+		return nil, errors.WrapPrefix(err, "Could not create round tripper", 0)
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", url)
 

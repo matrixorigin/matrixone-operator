@@ -15,10 +15,10 @@ package logset
 
 import (
 	"fmt"
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -79,7 +79,7 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 	previousDecision, hasBootstrapped := ctx.Obj.GetAnnotations()[bootstrapAnnoKey]
 	if hasBootstrapped {
 		if err := json.Unmarshal([]byte(previousDecision), &replicas); err != nil {
-			return nil, errors.Wrap(err, "error deserialize boostrap replicas")
+			return nil, errors.WrapPrefix(err, "error deserialize boostrap replicas", 0)
 		}
 		return replicas, nil
 	}
@@ -99,7 +99,7 @@ func bootstrap(ctx *recon.Context[*v1alpha1.LogSet]) ([]bootstrapReplica, error)
 	}
 	serialized, err := json.Marshal(replicas)
 	if err != nil {
-		return nil, errors.Wrap(err, "error serialize bootstrap replicas")
+		return nil, errors.WrapPrefix(err, "error serialize bootstrap replicas", 0)
 	}
 	if ctx.Obj.Annotations == nil {
 		ctx.Obj.Annotations = map[string]string{}

@@ -24,12 +24,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
-	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
@@ -68,12 +68,12 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 	discoverySvc := &corev1.Service{}
 	err, foundDiscovery := util.IsFound(ctx.Get(client.ObjectKey{Namespace: ls.Namespace, Name: discoverySvcName(ls)}, discoverySvc))
 	if err != nil {
-		return nil, errors.Wrap(err, "get HAKeeper discovery service")
+		return nil, errors.WrapPrefix(err, "get HAKeeper discovery service", 0)
 	}
 	sts := &kruisev1.StatefulSet{}
 	err, foundSts := util.IsFound(ctx.Get(client.ObjectKey{Namespace: ls.Namespace, Name: stsName(ls)}, sts))
 	if err != nil {
-		return nil, errors.Wrap(err, "get logservice statefulset")
+		return nil, errors.WrapPrefix(err, "get logservice statefulset", 0)
 	}
 	if !foundDiscovery || !foundSts {
 		return r.Create, nil
@@ -84,7 +84,7 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 	err = ctx.List(podList, client.InNamespace(ls.Namespace),
 		client.MatchingLabels(common.SubResourceLabels(ls)))
 	if err != nil {
-		return nil, errors.Wrap(err, "list logservice pods")
+		return nil, errors.WrapPrefix(err, "list logservice pods", 0)
 	}
 
 	common.CollectStoreStatus(&ls.Status.FailoverStatus, podList.Items)
@@ -118,22 +118,22 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 
 	// let apiserver fill default field values for us by dry-run, otherwise following 'Semantic.DeepEqual' may always be false
 	if err = ctx.Update(sts, client.DryRunAll); err != nil {
-		return nil, errors.Wrap(err, "dry run update logset statefulset")
+		return nil, errors.WrapPrefix(err, "dry run update logset statefulset", 0)
 	}
 	if !equality.Semantic.DeepEqual(origin, sts) {
 		return r.with(sts).Update, nil
 	}
 
 	if err = r.syncBucketClaim(ctx, sts); err != nil {
-		return nil, errors.Wrap(err, "sync bucket claim")
+		return nil, errors.WrapPrefix(err, "sync bucket claim", 0)
 	}
 	if len(ls.Status.AvailableStores) > 0 {
 		if err = r.syncBucketEverRunningAnn(ctx); err != nil {
-			return nil, errors.Wrap(err, "sync bucket ever running annotation")
+			return nil, errors.WrapPrefix(err, "sync bucket ever running annotation", 0)
 		}
 	}
 	if err = r.syncMetricService(ctx); err != nil {
-		return nil, errors.Wrap(err, "sync metric service")
+		return nil, errors.WrapPrefix(err, "sync metric service", 0)
 	}
 
 	if recon.IsReady(&ls.Status.ConditionalStatus) && len(ls.Status.FailedStores) == 0 {
@@ -186,7 +186,7 @@ func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 		return multierr.Append(errs, util.Ignore(apierrors.IsAlreadyExists, err))
 	}, nil)
 	if err != nil {
-		return errors.Wrap(err, "create")
+		return errors.WrapPrefix(err, "create", 0)
 	}
 	return nil
 }
@@ -243,13 +243,13 @@ func (r *WithResources) Repair(ctx *recon.Context[*v1alpha1.LogSet]) error {
 			return nil
 		})
 		if err != nil {
-			return errors.Wrap(err, "cannot orphan the victim pod")
+			return errors.WrapPrefix(err, "cannot orphan the victim pod", 0)
 		}
 	}
 	// repair one at a time
 	ordinal, err := util.PodOrdinal(candidate.PodName)
 	if err != nil {
-		return errors.Wrapf(err, "error parse ordinal from pod name %s", toRepair[0].PodName)
+		return errors.Wrap(err, 0)
 	}
 	r.sts.Spec.ReserveOrdinals = util.Upsert(r.sts.Spec.ReserveOrdinals, ordinal)
 	if err := ctx.Update(r.sts); err != nil {

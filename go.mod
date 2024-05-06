@@ -5,19 +5,19 @@ go 1.21
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cespare/xxhash v1.1.0
+	github.com/go-errors/errors v1.5.1
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.4
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
-	github.com/matrixorigin/controller-runtime v0.0.0-20240415083924-d45ea4253d3a
-	github.com/matrixorigin/matrixone v1.1.2-0.20240311113111-5ec7e5b2c06b
+	github.com/matrixorigin/controller-runtime v0.0.0-20240425181138-e490eca6d82d
+	github.com/matrixorigin/matrixone v1.1.4-0.20240424181307-7756f703b83c
 	github.com/matrixorigin/matrixone-operator/api v0.0.0-20220926063007-e629f86256d2
 	github.com/minio/minio-go/v7 v7.0.63
 	github.com/onsi/ginkgo/v2 v2.9.5
 	github.com/onsi/gomega v1.27.7
 	github.com/openkruise/kruise-api v1.4.0
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.4
@@ -79,7 +79,6 @@ require (
 	github.com/fagongzi/util v0.0.0-20210923134909-bccc37b5040d // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/getsentry/sentry-go v0.12.0 // indirect
-	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
@@ -129,6 +128,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/petermattis/goid v0.0.0-20230518223814-80aa455d8761 // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/plar/go-adaptive-radix-tree v1.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
