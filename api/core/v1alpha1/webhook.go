@@ -42,6 +42,9 @@ func RegisterWebhooks(mgr ctrl.Manager) error {
 	if err := (&WebUI{}).setupWebhookWithManager(mgr); err != nil {
 		return err
 	}
+	if err := (&ProxySet{}).setupWebhookWithManager(mgr); err != nil {
+		return err
+	}
 	return nil
 }
 

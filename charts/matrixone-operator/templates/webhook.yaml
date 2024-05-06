@@ -94,6 +94,28 @@ webhooks:
     resources:
     - matrixoneclusters
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: '{{ .Release.Namespace }}'
+      path: /mutate-core-matrixorigin-io-v1alpha1-proxyset
+  failurePolicy: Fail
+  name: mproxyset.kb.io
+  rules:
+  - apiGroups:
+    - core.matrixorigin.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - proxysets
+  sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -190,4 +212,26 @@ webhooks:
     - UPDATE
     resources:
     - matrixoneclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: '{{ .Release.Namespace }}'
+      path: /validate-core-matrixorigin-io-v1alpha1-proxyset
+  failurePolicy: Fail
+  name: vproxyset.kb.io
+  rules:
+  - apiGroups:
+    - core.matrixorigin.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - proxysets
   sideEffects: None
