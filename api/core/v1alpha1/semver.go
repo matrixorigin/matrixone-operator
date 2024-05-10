@@ -51,8 +51,9 @@ func versionPrecedes(baseVersion semver.Version, current semver.Version) bool {
 		// different major version has no preceding relationship
 		return false
 	}
-	if baseVersion.Patch == 0 {
-		return current.GTE(baseVersion)
+	// e.g: 1.2.0, then 1.2.1 and 1.3.1 must be the following versions
+	if baseVersion.Patch == 0 && current.Minor >= baseVersion.Minor {
+		return true
 	}
 	return baseVersion.Minor == current.Minor && current.Patch >= baseVersion.Patch
 }
