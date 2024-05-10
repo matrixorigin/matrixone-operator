@@ -28,7 +28,7 @@ var (
 	featureVersions = map[MOFeature][]semver.Version{
 		MOFeaturePipelineInfo:  {semver.MustParse("1.1.2"), semver.MustParse("1.2.0")},
 		MOFeatureSessionSource: {semver.MustParse("1.1.2"), semver.MustParse("1.2.0")},
-		MOFeatureLockMigration: {semver.MustParse("1.1.4"), semver.MustParse("1.2.0")},
+		MOFeatureLockMigration: {semver.MustParse("1.2.0")},
 	}
 
 	MinimalVersion = semver.Version{Major: 0, Minor: 0, Patch: 0}
