@@ -149,6 +149,8 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 	if c.Spec.PoolName != "" {
 		podSelector = podSelector.Add(common.MustEqual(v1alpha1.PoolNameLabel, c.Spec.PoolName))
 	}
+	// filter out outdated CN Pod
+	podSelector = podSelector.Add(common.MustNotHave(v1alpha1.PodOutdatedLabel))
 	idleCNs, err := common.ListPods(ctx, client.InNamespace(c.Namespace), client.MatchingLabelsSelector{Selector: podSelector})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, errors.WrapPrefix(err, "error list idle Pods", 0)
@@ -262,6 +264,11 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 		if err := ctx.Patch(&cn, func() error {
 			cn.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseDraining
 			delete(cn.Labels, v1alpha1.PodClaimedByLabel)
+			if v, ok := cn.Labels[v1alpha1.PodOwnerNameLabel]; ok {
+				// remove owner label, record last-owner label
+				delete(cn.Labels, v1alpha1.PodOwnerNameLabel)
+				cn.Labels[v1alpha1.PodLastOwnerLabel] = v
+			}
 			if cn.Annotations == nil {
 				cn.Annotations = map[string]string{}
 			}
@@ -367,7 +374,7 @@ func priorityFunc(c *v1alpha1.CNClaim) func(a, b corev1.Pod) int {
 }
 
 func previouslyOwned(c *v1alpha1.CNClaim, p corev1.Pod) int {
-	if c.Spec.OwnerName != nil && p.Labels[v1alpha1.PodOwnerNameLabel] == *c.Spec.OwnerName {
+	if c.Spec.OwnerName != nil && p.Labels[v1alpha1.PodLastOwnerLabel] == *c.Spec.OwnerName {
 		return 0
 	}
 	return 1

@@ -32,6 +32,12 @@ const (
 	ClaimSetNameLabel = "matrixorigin.io/claimset"
 
 	DeleteOnReclaimAnno = "matrixorigin.io/delete-on-reclaim"
+
+	// PodLastOwnerLabel records the last owner of the pod
+	PodLastOwnerLabel = "matrixorigin.io/last-owner"
+
+	// PodOutdatedLabel denotes the pod is outdated and should not be bound
+	PodOutdatedLabel = "matrixorigin.io/outdated"
 )
 
 type CNClaimSpec struct {
