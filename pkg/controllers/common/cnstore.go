@@ -16,6 +16,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/blang/semver/v4"
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -98,7 +99,7 @@ func ResolveCNSet(cli recon.KubeClient, pod *corev1.Pod) (*v1alpha1.CNSet, error
 	}
 	cnSet, ok := owner.(*v1alpha1.CNSet)
 	if !ok {
-		return nil, errors.WrapPrefix(err, "pod is not a CN Pod", 0)
+		return nil, fmt.Errorf("pod is not a CN Pod")
 	}
 	return cnSet, nil
 }
