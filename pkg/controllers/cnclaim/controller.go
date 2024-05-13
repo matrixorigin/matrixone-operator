@@ -40,6 +40,8 @@ import (
 
 const (
 	waitCacheTimeout = 10 * time.Second
+
+	requeueAfter = 5 * time.Second
 )
 
 // Actor reconciles CN Claim
@@ -95,7 +97,7 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 			}
 		}
 		if pool == nil {
-			return errors.Wrap(err, 0)
+			return recon.ErrReSync("cannot find matching pool, requeue", requeueAfter)
 		}
 		c.Spec.PoolName = pool.Name
 		c.Labels[v1alpha1.PoolNameLabel] = c.Spec.PoolName
@@ -105,7 +107,7 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 	}
 	// re-bound later
 	// TODO: configurable
-	return recon.ErrReSync("wait pod to bound", 5*time.Second)
+	return recon.ErrReSync("wait pod to bound", requeueAfter)
 }
 
 func (r *Actor) claimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1.Pod) (*corev1.Pod, error) {
