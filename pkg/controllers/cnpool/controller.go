@@ -159,7 +159,10 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 			// scale-out, if we have terminating pods left, replace them
 			desired.Spec.Replicas = desiredReplicas
 		}
-		// GC the pods that have already been deleted from podsToDelete
+		// remove outdated label if any
+		if desired.Spec.Overlay.PodLabels != nil {
+			delete(desired.Spec.Overlay.PodLabels, v1alpha1.PodOutdatedLabel)
+		}
 		return nil
 	})
 	if err != nil {
@@ -193,6 +196,13 @@ func (r *Actor) syncLegacySet(ctx *recon.Context[*v1alpha1.CNPool], cnSet *v1alp
 	if err := recon.CreateOwnedOrUpdate(ctx, cnSet, func() error {
 		cnSet.Spec.Replicas = replicas
 		cnSet.Spec.PodsToDelete = toDelete
+		if cnSet.Spec.Overlay == nil {
+			cnSet.Spec.Overlay = &v1alpha1.Overlay{}
+		}
+		if cnSet.Spec.Overlay.PodLabels == nil {
+			cnSet.Spec.Overlay.PodLabels = map[string]string{}
+		}
+		cnSet.Spec.Overlay.PodLabels[v1alpha1.PodOutdatedLabel] = "y"
 		return nil
 	}); err != nil {
 		return replicas, errors.Wrap(err, 0)

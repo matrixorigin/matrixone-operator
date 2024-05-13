@@ -52,3 +52,7 @@ func MustNewRequirement(key string, op selection.Operator, vals []string, _ ...f
 func MustEqual(key string, value string) labels.Requirement {
 	return MustNewRequirement(key, selection.Equals, []string{value})
 }
+
+func MustNotHave(key string) labels.Requirement {
+	return MustNewRequirement(key, selection.DoesNotExist, []string{})
+}
