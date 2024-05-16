@@ -136,7 +136,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return nil, errors.WrapPrefix(err, "sync metric service", 0)
 	}
 
-	if recon.IsReady(&dn.Status.ConditionalStatus) && sts.Status.UpdatedReplicas >= dn.Spec.Replicas {
+	if recon.IsReady(&dn.Status.ConditionalStatus) && sts.Status.UpdatedReadyReplicas >= dn.Spec.Replicas {
 		return nil, nil
 	}
 

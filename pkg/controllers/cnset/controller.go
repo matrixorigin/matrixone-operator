@@ -159,7 +159,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	if recon.IsReady(&cn.Status.ConditionalStatus) {
 		cn.Status.Host = fmt.Sprintf("%s.%s", svc.Name, svc.Namespace)
 		cn.Status.Port = CNSQLPort
-		if cs.Status.UpdatedReplicas >= cn.Spec.Replicas {
+		if cs.Status.UpdatedReadyReplicas >= cn.Spec.Replicas {
 			// CN ready and updated, reconciliation complete
 			return nil, nil
 		}
