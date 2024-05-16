@@ -45,7 +45,7 @@ const (
 )
 
 var _ = Describe("MatrixOneCluster test", func() {
-	FIt("Should reconcile the cluster properly", func() {
+	It("Should reconcile the cluster properly", func() {
 		By("Create cluster")
 		s3TypeMinio := v1alpha1.S3ProviderTypeMinIO
 		minioSecret := &corev1.Secret{
@@ -128,7 +128,6 @@ var _ = Describe("MatrixOneCluster test", func() {
 		}
 
 		Expect(kubeCli.Create(ctx, mo)).To(Succeed())
-		time.Sleep(24 * time.Hour)
 
 		Eventually(func() error {
 			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo); err != nil {
