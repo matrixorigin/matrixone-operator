@@ -136,11 +136,16 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		return nil, errors.WrapPrefix(err, "sync metric service", 0)
 	}
 
-	if recon.IsReady(&ls.Status.ConditionalStatus) && len(ls.Status.FailedStores) == 0 {
+	observed := &kruisev1.StatefulSet{}
+	err = ctx.Get(client.ObjectKey{Namespace: ls.Namespace, Name: stsName(ls)}, sts)
+	if err != nil {
+		return nil, errors.Wrap(err, 0)
+	}
+	if recon.IsReady(&ls.Status.ConditionalStatus) && len(ls.Status.FailedStores) == 0 && observed.Status.UpdatedReplicas >= ls.Spec.Replicas {
 		ctx.Log.Info("logset synced")
 		return nil, nil
 	}
-	return nil, recon.ErrReSync("logset is not ready or has unready members", reSyncAfter)
+	return nil, recon.ErrReSync("logset is not synced or has unready members", reSyncAfter)
 }
 
 func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {

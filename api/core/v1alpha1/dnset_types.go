@@ -63,7 +63,7 @@ func (d *DNSet) GetDependencies() []recon.Dependency {
 		deps = append(deps, &recon.ObjectDependency[*LogSet]{
 			ObjectRef: d.Deps.LogSet,
 			ReadyFunc: func(l *LogSet) bool {
-				return recon.IsReady(&l.Status) && recon.IsSynced(&l.Status)
+				return recon.IsReady(&l.Status) && recon.IsSyncedWithLatestGeneration(&l.Status, l.Generation)
 			},
 		})
 	}

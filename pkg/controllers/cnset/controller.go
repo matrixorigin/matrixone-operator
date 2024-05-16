@@ -27,7 +27,6 @@ import (
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
@@ -143,11 +142,6 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	} else {
 		setNotReady(cn)
 	}
-	if cs.Status.UpdatedReplicas >= cn.Spec.Replicas {
-		setSynced(cn)
-	} else {
-		setNotSynced(cn)
-	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
 		if cs.Status.ReadyReplicas > 0 {
@@ -165,10 +159,13 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	if recon.IsReady(&cn.Status.ConditionalStatus) {
 		cn.Status.Host = fmt.Sprintf("%s.%s", svc.Name, svc.Namespace)
 		cn.Status.Port = CNSQLPort
-		return nil, c.cleanup(ctx)
+		if cs.Status.UpdatedReplicas >= cn.Spec.Replicas {
+			// CN ready and updated, reconciliation complete
+			return nil, nil
+		}
 	}
 
-	return nil, recon.ErrReSync("cnset is not ready", reSyncAfter)
+	return nil, recon.ErrReSync("cnset is not ready or synced", reSyncAfter)
 }
 
 func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
@@ -180,21 +177,6 @@ func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
 
 func (c *WithResources) Update(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return ctx.Update(c.cs)
-}
-
-func (c *Actor) cleanup(ctx *recon.Context[*v1alpha1.CNSet]) error {
-	sts := &kruise.StatefulSet{}
-	err := ctx.Get(client.ObjectKey{Namespace: ctx.Obj.Namespace, Name: setName(ctx.Obj)}, sts)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return errors.WrapPrefix(err, "error check legacy CN statefulset", 0)
-	}
-	if err := ctx.Delete(sts); err != nil {
-		return errors.WrapPrefix(err, "error delete legacy CN statefulset", 0)
-	}
-	return recon.ErrReSync("wait legacy CNSet deleted")
 }
 
 func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
@@ -364,23 +346,6 @@ func setNotReady(cn *v1alpha1.CNSet) {
 		Type:    recon.ConditionTypeReady,
 		Status:  metav1.ConditionFalse,
 		Reason:  common.ReasonNoEnoughReadyStores,
-		Message: "cn stores not ready",
-	})
-}
-
-func setSynced(cn *v1alpha1.CNSet) {
-	cn.Status.SetCondition(metav1.Condition{
-		Type:    recon.ConditionTypeSynced,
-		Status:  metav1.ConditionTrue,
-		Message: "cn synced",
-	})
-}
-
-func setNotSynced(cn *v1alpha1.CNSet) {
-	cn.Status.SetCondition(metav1.Condition{
-		Type:    recon.ConditionTypeSynced,
-		Status:  metav1.ConditionFalse,
-		Reason:  common.ReasonNoEnoughUpdatedStores,
 		Message: "cn stores not ready",
 	})
 }

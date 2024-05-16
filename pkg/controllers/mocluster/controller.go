@@ -422,7 +422,10 @@ func (r *MatrixOneClusterActor) InitMetricCredential(ctx *recon.Context[*v1alpha
 }
 
 func readyCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
-	c := metav1.Condition{Type: recon.ConditionTypeReady}
+	c := metav1.Condition{
+		Type:               recon.ConditionTypeReady,
+		ObservedGeneration: mo.Generation,
+	}
 	switch {
 	case !recon.IsReady(mo.Status.LogService):
 		c.Status = metav1.ConditionFalse
