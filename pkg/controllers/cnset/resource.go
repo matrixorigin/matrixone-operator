@@ -135,7 +135,7 @@ func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
 		svc.Annotations[key] = value
 	}
 
-	if cn.Spec.GetExportToPrometheus() {
+	if cn.Spec.PromDiscoveredByService() {
 		svc.Annotations[common.PrometheusScrapeAnno] = "true"
 		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
 	} else {
@@ -156,7 +156,7 @@ func syncPodMeta(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) error {
 	if cn.Spec.PodManagementPolicy != nil {
 		meta.Annotations[v1alpha1.PodManagementPolicyAnno] = *cn.Spec.PodManagementPolicy
 	}
-	common.SetSematicVersion(&cs.Spec.Template.ObjectMeta, &cn.Spec.PodSet)
+	common.SyncPodMeta(meta, &cn.Spec.PodSet)
 	cn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
 	return nil
 }

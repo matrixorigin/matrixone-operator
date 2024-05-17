@@ -17,7 +17,6 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/blang/semver/v4"
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -192,30 +191,6 @@ func SetStoreScore(pod *corev1.Pod, s *StoreScore) error {
 	}
 	pod.Annotations[v1alpha1.StoreScoreAnno] = string(b)
 	return nil
-}
-
-// SetSematicVersion set pod semantic version to pod object meta
-func SetSematicVersion(meta *metav1.ObjectMeta, p *v1alpha1.PodSet) {
-	v, ok := p.GetSemVer()
-	if !ok {
-		return
-	}
-	if meta.Annotations == nil {
-		meta.Annotations = make(map[string]string)
-	}
-	meta.Annotations[SemanticVersionAnno] = v.String()
-}
-
-// GetSemanticVersion returns the semantic of the target MO pod,
-// if no version is parsed, a dummy version is returned
-func GetSemanticVersion(meta *metav1.ObjectMeta) semver.Version {
-	if anno, ok := meta.Annotations[SemanticVersionAnno]; ok {
-		v, err := semver.Parse(anno)
-		if err == nil {
-			return v
-		}
-	}
-	return v1alpha1.MinimalVersion
 }
 
 // NeedUpdateImage checks if the pod needs to update image
