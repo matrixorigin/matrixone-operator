@@ -242,7 +242,7 @@ func (s *CNSet) GetDependencies() []recon.Dependency {
 		deps = append(deps, &recon.ObjectDependency[*LogSet]{
 			ObjectRef: s.Deps.LogSet,
 			ReadyFunc: func(l *LogSet) bool {
-				return recon.IsReady(&l.Status) && recon.IsSynced(&l.Status)
+				return recon.IsReady(&l.Status) && recon.IsSyncedWithLatestGeneration(&l.Status, l.Generation)
 			},
 		})
 	}
@@ -250,7 +250,7 @@ func (s *CNSet) GetDependencies() []recon.Dependency {
 		deps = append(deps, &recon.ObjectDependency[*DNSet]{
 			ObjectRef: s.Deps.DNSet,
 			ReadyFunc: func(d *DNSet) bool {
-				return recon.IsReady(&d.Status) && recon.IsSynced(&d.Status)
+				return recon.IsReady(&d.Status) && recon.IsSyncedWithLatestGeneration(&d.Status, d.Generation)
 			},
 		})
 	}
