@@ -311,6 +311,21 @@ func (p *PodSet) GetExportToPrometheus() bool {
 	return *p.ExportToPrometheus
 }
 
+func (p *PodSet) GetPromDiscoveryScheme() PromDiscoveryScheme {
+	if p.PromDiscoveryScheme == nil {
+		return PromDiscoverySchemeService
+	}
+	return *p.PromDiscoveryScheme
+}
+
+func (p *PodSet) PromDiscoveredByService() bool {
+	return p.GetPromDiscoveryScheme() == PromDiscoverySchemeService && p.GetExportToPrometheus()
+}
+
+func (p *PodSet) PromDiscoveredByPod() bool {
+	return p.GetPromDiscoveryScheme() == PromDiscoverySchemePod && p.GetExportToPrometheus()
+}
+
 func (p *PodSet) GetSemVer() (*semver.Version, bool) {
 	var s string
 	if p.SemanticVersion != nil {

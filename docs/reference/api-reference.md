@@ -941,7 +941,8 @@ _Appears in:_
 | `clusterDomain` _string_ | ClusterDomain is the cluster-domain of current kubernetes cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ for details |
 | `serviceArgs` _string array_ | ServiceArgs define command line options for process, used by logset/cnset/dnset service. NOTE: user should not define "-cfg" argument in this field, which is defined default by controller |
 | `memoryLimitPercent` _integer_ | MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory * MemoryLimitPercent / 100 |
-| `exportToPrometheus` _boolean_ |  |
+| `exportToPrometheus` _boolean_ | ExportToPrometheus enables the pod to be discovered scraped by Prometheus |
+| `promDiscoveryScheme` _[PromDiscoveryScheme](#promdiscoveryscheme)_ | PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options: - Pod: the pod will be discovered via will-known labels on the Pod - Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods default to Service |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set, the semantic version of CN will be default to the image tag, if the semantic version is not set, nor the image tag is a valid semantic version, operator will treat the MO as unknown version and will not apply any version-specific reconciliations |
 
 
@@ -987,6 +988,17 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `reclaimTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ |  |
+
+
+#### PromDiscoveryScheme
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [PodSet](#podset)
+
 
 
 #### ProxySet

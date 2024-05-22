@@ -44,6 +44,13 @@ const (
 	DefaultGODebug = "madvdontneed=1,gctrace=2"
 )
 
+type PromDiscoveryScheme string
+
+const (
+	PromDiscoverySchemePod     PromDiscoveryScheme = "Pod"
+	PromDiscoverySchemeService PromDiscoveryScheme = "Service"
+)
+
 type ConditionalStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -91,7 +98,14 @@ type PodSet struct {
 	// +optional
 	MemoryLimitPercent *int `json:"memoryLimitPercent,omitempty"`
 
+	// ExportToPrometheus enables the pod to be discovered scraped by Prometheus
 	ExportToPrometheus *bool `json:"exportToPrometheus,omitempty"`
+
+	// PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options:
+	// - Pod: the pod will be discovered via will-known labels on the Pod
+	// - Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods
+	// default to Service
+	PromDiscoveryScheme *PromDiscoveryScheme `json:"promDiscoveryScheme,omitempty"`
 
 	// SemanticVersion override the semantic version of CN if set,
 	// the semantic version of CN will be default to the image tag,

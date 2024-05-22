@@ -144,6 +144,8 @@ spec:
                       compatibility'
                     type: boolean
                   exportToPrometheus:
+                    description: ExportToPrometheus enables the pod to be discovered
+                      scraped by Prometheus
                     type: boolean
                   image:
                     description: Image is the docker image of the main container
@@ -177,6 +179,13 @@ spec:
                     items:
                       type: string
                     type: array
+                  promDiscoveryScheme:
+                    description: 'PromDiscoveryScheme indicates how the Pod will be
+                      discovered by prometheus, options: - Pod: the pod will be discovered
+                      via will-known labels on the Pod - Service: the pod will be
+                      discovered via will-known annotations in the service which expose
+                      endpoints to the pods default to Service'
+                    type: string
                   pythonUdfSidecar:
                     description: PythonUdfSidecar is the python udf server in CN
                     properties:

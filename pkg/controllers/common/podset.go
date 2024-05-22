@@ -16,6 +16,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/blang/semver/v4"
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
@@ -37,6 +38,37 @@ type SyncMOPodTask struct {
 	// optional
 	MutateContainer func(c *corev1.Container)
 	MutatePod       func(p *corev1.PodTemplateSpec)
+}
+
+// SyncPodMeta sync PodSet to pod object meta
+func SyncPodMeta(meta *metav1.ObjectMeta, p *v1alpha1.PodSet) {
+	v, ok := p.GetSemVer()
+	if !ok {
+		return
+	}
+	if meta.Annotations == nil {
+		meta.Annotations = make(map[string]string)
+	}
+	meta.Annotations[SemanticVersionAnno] = v.String()
+	if p.PromDiscoveredByPod() {
+		meta.Annotations[PrometheusScrapeAnno] = "true"
+		meta.Annotations[PrometheusPortAnno] = strconv.Itoa(MetricsPort)
+	} else {
+		delete(meta.Annotations, PrometheusScrapeAnno)
+		delete(meta.Annotations, PrometheusPortAnno)
+	}
+}
+
+// GetSemanticVersion returns the semantic of the target MO pod,
+// if no version is parsed, a dummy version is returned
+func GetSemanticVersion(meta *metav1.ObjectMeta) semver.Version {
+	if anno, ok := meta.Annotations[SemanticVersionAnno]; ok {
+		v, err := semver.Parse(anno)
+		if err == nil {
+			return v
+		}
+	}
+	return v1alpha1.MinimalVersion
 }
 
 // SyncMOPod execute the given SyncMOPodTask which keeps the pod spec update to date
@@ -70,7 +102,7 @@ func syncPodTemplate(t *SyncMOPodTask) {
 	if t.StorageProvider != nil {
 		SetStorageProviderConfig(*t.StorageProvider, specRef)
 	}
-	SetSematicVersion(&t.TargetTemplate.ObjectMeta, t.PodSet)
+	SyncPodMeta(&t.TargetTemplate.ObjectMeta, t.PodSet)
 	if t.MutatePod != nil {
 		t.MutatePod(t.TargetTemplate)
 	}

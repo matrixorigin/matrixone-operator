@@ -136,7 +136,7 @@ func syncSvc(proxy *v1alpha1.ProxySet, svc *corev1.Service) {
 	for key, value := range proxy.Spec.ServiceAnnotations {
 		svc.Annotations[key] = value
 	}
-	if proxy.Spec.GetExportToPrometheus() {
+	if proxy.Spec.PromDiscoveredByService() {
 		svc.Annotations[common.PrometheusScrapeAnno] = "true"
 		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
 	} else {

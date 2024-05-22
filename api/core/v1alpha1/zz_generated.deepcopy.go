@@ -1897,6 +1897,11 @@ func (in *PodSet) DeepCopyInto(out *PodSet) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.PromDiscoveryScheme != nil {
+		in, out := &in.PromDiscoveryScheme, &out.PromDiscoveryScheme
+		*out = new(PromDiscoveryScheme)
+		**out = **in
+	}
 	if in.SemanticVersion != nil {
 		in, out := &in.SemanticVersion, &out.SemanticVersion
 		*out = new(string)

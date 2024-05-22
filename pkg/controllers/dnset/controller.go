@@ -238,7 +238,7 @@ func (d *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.DNSet]) error {
 			Name: "metric",
 			Port: int32(common.MetricsPort),
 		}}
-		if dn.Spec.GetExportToPrometheus() {
+		if dn.Spec.PromDiscoveredByService() {
 			svc.Annotations = map[string]string{
 				common.PrometheusScrapeAnno: "true",
 				common.PrometheusPortAnno:   strconv.Itoa(common.MetricsPort),
