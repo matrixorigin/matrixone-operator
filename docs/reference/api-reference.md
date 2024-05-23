@@ -1065,6 +1065,7 @@ _Appears in:_
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of proxy service |
 | `serviceAnnotations` _object (keys:string, values:string)_ | ServiceAnnotations are the annotations for the proxy service |
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer, reconciling will fail if the node port is not available. |
+| `minReadySeconds` _integer_ |  |
 
 
 
