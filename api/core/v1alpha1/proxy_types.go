@@ -37,6 +37,8 @@ type ProxySetSpec struct {
 	// reconciling will fail if the node port is not available.
 	// +optional
 	NodePort *int32 `json:"nodePort,omitempty"`
+
+	MinReadySeconds int32 `json:"minReadySeconds,omitempty"`
 }
 
 type ProxySetStatus struct {
