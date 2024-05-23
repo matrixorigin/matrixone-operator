@@ -74,6 +74,7 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.ProxySet], proxy *v1alpha1.ProxyS
 		return errors.WrapPrefix(err, "build configmap", 0)
 	}
 	cs.Spec.Replicas = &proxy.Spec.Replicas
+	cs.Spec.MinReadySeconds = proxy.Spec.MinReadySeconds
 	return common.SyncMOPod(&common.SyncMOPodTask{
 		PodSet:          &proxy.Spec.PodSet,
 		TargetTemplate:  &cs.Spec.Template,
