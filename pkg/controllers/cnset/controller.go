@@ -255,7 +255,6 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	if err := syncCloneSet(ctx, cnSet); err != nil {
 		return errors.WrapPrefix(err, "sync clone set", 0)
 	}
-	syncPersistentVolumeClaim(ctx.Obj, cnSet)
 
 	// create all resources
 	err := lo.Reduce[client.Object, error]([]client.Object{
@@ -320,7 +319,9 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	if ctx.Dep != nil {
 		syncPodSpec(ctx.Obj, cs, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	}
-	// TODO(aylei): CNSet should support update cacheVolume
+	// support update cacheVolume, NOTE: pvc only updated when pod rolling updated
+	// ref: https://openkruise.io/zh/docs/next/user-manuals/cloneset/#%E6%94%AF%E6%8C%81-pvc-%E6%A8%A1%E6%9D%BF
+	syncPersistentVolumeClaim(cn, cs)
 
 	cm, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
 	if err != nil {
