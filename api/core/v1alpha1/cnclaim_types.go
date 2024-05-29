@@ -51,7 +51,7 @@ type CNClaimSpec struct {
 
 	// +optional
 	// AdditionalPodLabels specifies the addition labels added to Pod after the Pod is claimed by this claim
-	AdditionalPodLabels map[string]string `json:"podLabels,omitempty"`
+	AdditionalPodLabels map[string]string `json:"additionalPodLabels,omitempty"`
 
 	// +optional
 	// PodName is usually populated by controller and would be part of the claim spec
