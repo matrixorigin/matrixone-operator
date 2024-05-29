@@ -71,7 +71,7 @@ function kind::ensure-kind() {
     echo "########## KUBECONFIG Path ##########"
     echo "$KUBECONFIG"
     echo "#####################################"
-    kind create cluster --name "${CLUSTER}" --config kind.yaml
+    kind create cluster --name "${CLUSTER}"
     kubectl apply -f test/kind-rbac.yml
     make build
     kind load docker-image --name "${CLUSTER}" ${REPO}:${TAG}
