@@ -50,6 +50,10 @@ type CNClaimSpec struct {
 	OwnerName *string `json:"ownerName,omitempty"`
 
 	// +optional
+	// AdditionalPodLabels specifies the addition labels added to Pod after the Pod is claimed by this claim
+	AdditionalPodLabels map[string]string `json:"podLabels,omitempty"`
+
+	// +optional
 	// PodName is usually populated by controller and would be part of the claim spec
 	// that must be persisted once bound
 	PodName string `json:"podName,omitempty"`

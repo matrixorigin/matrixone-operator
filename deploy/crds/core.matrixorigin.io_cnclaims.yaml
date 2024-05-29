@@ -59,6 +59,12 @@ spec:
                 type: array
               ownerName:
                 type: string
+              podLabels:
+                additionalProperties:
+                  type: string
+                description: AdditionalPodLabels specifies the addition labels added
+                  to Pod after the Pod is claimed by this claim
+                type: object
               podName:
                 description: PodName is usually populated by controller and would
                   be part of the claim spec that must be persisted once bound
