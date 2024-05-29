@@ -306,6 +306,7 @@ _Appears in:_
 | `selector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#labelselector-v1-meta)_ |  |
 | `cnLabels` _[CNLabel](#cnlabel) array_ |  |
 | `ownerName` _string_ |  |
+| `additionalPodLabels` _object (keys:string, values:string)_ | AdditionalPodLabels specifies the addition labels added to Pod after the Pod is claimed by this claim |
 | `podName` _string_ | PodName is usually populated by controller and would be part of the claim spec that must be persisted once bound |
 | `poolName` _string_ | PoolName is usually populated by controller that which pool the claim is nominated |
 

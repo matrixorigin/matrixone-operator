@@ -161,6 +161,11 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 	sortCNByPriority(c, idleCNs)
 	for i := range idleCNs {
 		pod := &idleCNs[i]
+		if c.Spec.AdditionalPodLabels != nil {
+			for k, v := range c.Spec.AdditionalPodLabels {
+				pod.Labels[k] = v
+			}
+		}
 		pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseBound
 		pod.Labels[v1alpha1.PodClaimedByLabel] = c.Name
 		// pod belongs to a ClaimSet
@@ -270,6 +275,11 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 				// remove owner label, record last-owner label
 				delete(cn.Labels, v1alpha1.PodOwnerNameLabel)
 				cn.Labels[v1alpha1.PodLastOwnerLabel] = v
+			}
+			if c.Spec.AdditionalPodLabels != nil {
+				for k := range c.Spec.AdditionalPodLabels {
+					delete(cn.Labels, k)
+				}
 			}
 			if cn.Annotations == nil {
 				cn.Annotations = map[string]string{}
