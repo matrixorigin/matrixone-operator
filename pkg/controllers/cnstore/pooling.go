@@ -27,11 +27,6 @@ import (
 	"time"
 )
 
-const (
-	// TODO(aylei): configurable
-	recycleTimeout = 5 * time.Minute
-)
-
 func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 	uid := v1alpha1.GetCNPodUUID(pod)
@@ -56,7 +51,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		if err != nil {
 			return errors.Wrap(err, 0)
 		}
-		if time.Since(parsed) > recycleTimeout {
+		if time.Since(parsed) > c.cn.Spec.ScalingConfig.GetStoreDrainTimeout() {
 			ctx.Log.Info("drain pool pod timeout, delete it to avoid workload intervention")
 			return util.Ignore(apierrors.IsNotFound, ctx.Delete(pod))
 		}
