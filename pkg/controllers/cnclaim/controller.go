@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -265,7 +266,10 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 			},
 		})
 		if err != nil {
-			return false, errors.Wrap(err, 0)
+			// #3177: skip if CN is not found
+			if !strings.Contains(err.Error(), "does not exist") {
+				return false, errors.Wrap(err, 0)
+			}
 		}
 		// set the CN Pod to draining phase and let the draining process handle recycling
 		if err := ctx.Patch(&cn, func() error {
@@ -312,7 +316,7 @@ func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Po
 	req.UUID = uid
 	err = hc.Client.PatchCNStore(timeout, req)
 	if err != nil {
-		return nil, errors.WrapPrefix(err, "error patch CNStore", 0)
+		return nil, err
 	}
 	cn, ok := hc.StoreCache.GetCN(uid)
 	if !ok {
