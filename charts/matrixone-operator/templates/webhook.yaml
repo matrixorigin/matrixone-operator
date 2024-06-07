@@ -2,7 +2,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   creationTimestamp: null
-  name: matrixone-operator-mutating-webhook
+  name: matrixone-operator-mutating-webhook-{{ .Release.Name }}
   annotations:
     matrixorigin.io/ca-injection: 'y'
 webhooks:
