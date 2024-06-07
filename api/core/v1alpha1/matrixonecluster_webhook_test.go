@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -311,5 +312,52 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 			},
 		}}
 		Expect(k8sClient.Create(context.TODO(), dupCNGroup)).NotTo(Succeed())
+	})
+
+	It("should reject MatrixOneCluster with invalid name", func() {
+		cluster := &MatrixOneCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mo-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: MatrixOneClusterSpec{
+				LogService: LogSetSpec{
+					PodSet: PodSet{
+						Replicas: 3,
+					},
+					Volume: Volume{
+						Size: resource.MustParse("10Gi"),
+					},
+					SharedStorage: SharedStorageProvider{
+						S3: &S3Provider{
+							Path: "test/data",
+						},
+					},
+				},
+				TN: &DNSetSpec{
+					PodSet: PodSet{
+						Replicas: 1,
+					},
+				},
+				Version: "test",
+				TP: &CNSetSpec{
+					PodSet: PodSet{
+						Replicas: 3,
+					},
+				},
+			},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), cluster.DeepCopy())).To(Succeed())
+
+		By("reject name start with number")
+		dpCluster1 := cluster.DeepCopy()
+		dpCluster1.Name = "1" + dpCluster1.Name
+		Expect(k8sClient.Create(context.TODO(), dpCluster1.DeepCopy())).NotTo(Succeed())
+
+		By("reject name longer than " + fmt.Sprintf("%d", MatrixOneClusterNameMaxLength))
+		dpCluster2 := cluster.DeepCopy()
+		dpCluster2.Name = "mo-" + randomString(MatrixOneClusterNameMaxLength-2)
+		Expect(k8sClient.Create(context.TODO(), dpCluster2.DeepCopy())).NotTo(Succeed())
 	})
 })

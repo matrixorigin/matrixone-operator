@@ -15,7 +15,6 @@
 package dnset
 
 import (
-	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"strconv"
 	"time"
@@ -80,7 +79,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && dn.Deps.LogSet != nil {
-		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
+		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, v1alpha1.BucketDNFinalizer)
 		if err != nil {
 			return nil, errors.WrapPrefix(err, "add bucket finalizer", 0)
 		}
@@ -167,7 +166,7 @@ func (d *Actor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error) {
 		}
 	}
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && dn.Deps.LogSet != nil {
-		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, bucketFinalizer(dn))
+		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, v1alpha1.BucketDNFinalizer)
 		if err != nil {
 			return false, err
 		}
@@ -248,10 +247,6 @@ func (d *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.DNSet]) error {
 		}
 		return nil
 	})
-}
-
-func bucketFinalizer(dn *v1alpha1.DNSet) string {
-	return fmt.Sprintf("%s-%s-%s", v1alpha1.BucketDNFinalizerPrefix, dn.Namespace, dn.Name)
 }
 
 func (d *Actor) Reconcile(mgr manager.Manager) error {

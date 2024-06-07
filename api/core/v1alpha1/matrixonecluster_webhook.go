@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -22,6 +23,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+const (
+	// MatrixOneClusterNameMaxLength is the maximum length of a MatrixOneCluster name
+	MatrixOneClusterNameMaxLength = 46
 )
 
 // log is for logging in this package.
@@ -64,6 +70,13 @@ var _ webhook.Validator = &MatrixOneCluster{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *MatrixOneCluster) ValidateCreate() (admission.Warnings, error) {
 	var errs field.ErrorList
+	if len(r.Name) > MatrixOneClusterNameMaxLength {
+		errs = append(errs, field.Invalid(field.NewPath("metadata").Child("name"), r.Name, fmt.Sprintf("must be no more than %d characters", MatrixOneClusterNameMaxLength)))
+	}
+	dns1035ErrorList := validation.IsDNS1035Label(r.Name)
+	for _, errMsg := range dns1035ErrorList {
+		errs = append(errs, field.Invalid(field.NewPath("metadata").Child("name"), r.Name, errMsg))
+	}
 	if r.Spec.DN == nil && r.Spec.TN == nil {
 		errs = append(errs, field.Invalid(field.NewPath("spec").Child("tn"), "", ".spec.tn must be set"))
 	}
