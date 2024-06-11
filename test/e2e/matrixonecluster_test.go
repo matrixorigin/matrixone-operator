@@ -285,4 +285,143 @@ var _ = Describe("MatrixOneCluster test", func() {
 			return nil
 		}, teardownClusterTimeout, pollInterval).Should(Succeed(), "cluster should be teardown")
 	})
+
+	It("Should create all sub-resources properly with maximum cluster name length", func() {
+		By("Create cluster with maximum name length")
+		minioSecret := e2eutil.MinioSecret(env.Namespace)
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
+		Expect(kubeCli.Create(context.TODO(), minioSecret)).To(Succeed())
+		maxLengthName := strings.Repeat("a", v1alpha1.MatrixOneClusterNameMaxLength)
+		mo := &v1alpha1.MatrixOneCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: env.Namespace,
+				Name:      maxLengthName,
+			},
+			Spec: v1alpha1.MatrixOneClusterSpec{
+				CNGroups: []v1alpha1.CNGroup{{
+					Name: "tp",
+					CNSetSpec: v1alpha1.CNSetSpec{
+						PodSet: v1alpha1.PodSet{
+							Replicas:           2,
+							ExportToPrometheus: pointer.Bool(true),
+						},
+						ScalingConfig: v1alpha1.ScalingConfig{
+							StoreDrainEnabled: pointer.Bool(true),
+						},
+						ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
+							CacheVolume: &v1alpha1.Volume{
+								Size: resource.MustParse("100Mi"),
+							},
+						},
+					},
+				}},
+				TN: &v1alpha1.DNSetSpec{
+					PodSet: v1alpha1.PodSet{
+						// test multiple DN replicas
+						Replicas:           1,
+						ExportToPrometheus: pointer.Bool(true),
+						Config: v1alpha1.NewTomlConfig(map[string]interface{}{
+							"tn": map[string]interface{}{
+								"port-base": 41010,
+							},
+						}),
+					},
+					CacheVolume: &v1alpha1.Volume{
+						Size: resource.MustParse("100Mi"),
+					},
+				},
+				LogService: v1alpha1.LogSetSpec{
+					PodSet: v1alpha1.PodSet{
+						Replicas:           1,
+						ExportToPrometheus: pointer.Bool(true),
+					},
+					Volume: v1alpha1.Volume{
+						Size: resource.MustParse("100Mi"),
+					},
+					SharedStorage: minioProvider,
+					InitialConfig: v1alpha1.InitialConfig{},
+				},
+				Proxy: &v1alpha1.ProxySetSpec{
+					PodSet: v1alpha1.PodSet{
+						Replicas: 1,
+					},
+				},
+				Version:         moVersion,
+				ImageRepository: moImageRepo,
+			},
+		}
+
+		Expect(kubeCli.Create(ctx, mo)).To(Succeed())
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo); err != nil {
+				logger.Errorw("error get mo cluster status", "cluster", mo.Name, "error", err)
+				return err
+			}
+			if !recon.IsReady(mo) {
+				logger.Infow("wait mo cluster ready", "cluster", mo.Name)
+				return errWait
+			}
+			if !recon.IsSynced(mo) {
+				logger.Infow("wait mo cluster synced", "cluster", mo.Name)
+				return errWait
+			}
+			return nil
+		}, createClusterTimeout, pollInterval).Should(Succeed())
+
+		Eventually(func() error {
+			podList := &corev1.PodList{}
+			if err := kubeCli.List(ctx, podList); err != nil {
+				logger.Errorw("error list pods", "cluster", mo.Name, "error", err)
+				return err
+			}
+			var logN, dnN, cnN, proxyN int32
+			for _, pod := range podList.Items {
+				if !util.IsPodReady(&pod) {
+					continue
+				}
+				switch pod.Labels[common.ComponentLabelKey] {
+				case "LogSet":
+					logN++
+				case "DNSet":
+					dnN++
+				case "CNSet":
+					cnN++
+				case "ProxySet":
+					proxyN++
+				}
+			}
+			if logN >= mo.Spec.LogService.Replicas && dnN >= mo.GetTN().Replicas && cnN >= mo.Spec.CNGroups[0].Replicas && proxyN >= mo.Spec.Proxy.Replicas {
+				return nil
+			}
+			logger.Infow("wait enough pods running", "log pods count", logN, "cn pods count", cnN, "dn pods count", dnN)
+			return errWait
+		}, createClusterTimeout, pollInterval).Should(Succeed())
+
+		By("Teardown cluster")
+		Expect(kubeCli.Delete(ctx, mo)).To(Succeed())
+		Eventually(func() error {
+			err := kubeCli.Get(ctx, client.ObjectKeyFromObject(mo), mo)
+			if err == nil {
+				logger.Infow("wait mo cluster teardown", "cluster", mo.Name)
+				return errWait
+			}
+			if !apierrors.IsNotFound(err) {
+				logger.Errorw("unexpected error when get mo cluster", "cluster", mo.Name, "error", err)
+				return err
+			}
+			pvcList := &corev1.PersistentVolumeClaimList{}
+			err = kubeCli.List(ctx, pvcList, client.InNamespace(mo.Namespace))
+			if err != nil {
+				logger.Errorw("error list PVCs", "error", err)
+				return errWait
+			}
+			for _, pvc := range pvcList.Items {
+				if strings.HasPrefix(pvc.Name, fmt.Sprintf("data-%s", mo.Name)) {
+					logger.Infow("pvc is not yet cleaned", "name", pvc.Name)
+					return errWait
+				}
+			}
+			return nil
+		}, teardownClusterTimeout, pollInterval).Should(Succeed(), "cluster should be teardown")
+	})
 })

@@ -72,7 +72,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
-		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, bucketFinalizer(cn))
+		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, v1alpha1.BucketCNFinalizer)
 		if err != nil {
 			return nil, errors.WrapPrefix(err, "add bucket finalizer", 0)
 		}
@@ -209,7 +209,7 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 		}
 	}
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
-		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, bucketFinalizer(cn))
+		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, v1alpha1.BucketCNFinalizer)
 		if err != nil {
 			return false, err
 		}
@@ -328,10 +328,6 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 		return err
 	}
 	return common.SyncConfigMap(ctx, &cs.Spec.Template.Spec, cm)
-}
-
-func bucketFinalizer(cn *v1alpha1.CNSet) string {
-	return fmt.Sprintf("%s-%s-%s", v1alpha1.BucketCNFinalizerPrefix, cn.Namespace, cn.Name)
 }
 
 func setReady(cn *v1alpha1.CNSet) {
