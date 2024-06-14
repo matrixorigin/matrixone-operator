@@ -53,7 +53,7 @@ jobs:
         with:
           registry: registry.cn-hangzhou.aliyuncs.com
           username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          password: ${{ secrets.ACR_TOKEN }}
 
       - name: Build
         uses: docker/build-push-action@v2
