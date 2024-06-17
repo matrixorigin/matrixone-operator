@@ -117,16 +117,18 @@ func (c *withCNSet) OnPreparingUpdate(ctx *recon.Context[*corev1.Pod]) error {
 	// if update is paused, then the preparing must be triggered by a change
 	// that won't restart the application container, safely bypass
 	if c.cn.Spec.PauseUpdate {
+		ctx.Log.Info("skip draining CN store, no restart required", "CN", client.ObjectKeyFromObject(ctx.Obj))
 		return c.completeDraining(ctx)
 	}
+	// TODO: should diff with cloneset spec
 	// if pod image is not going to be updated, skip draining
 	// NB: change envFrom(labels/annotations) will restart container in-place, but we cannot
 	// distinguish such case now, CN will be restarted without draining if we introduce envFrom
 	// mutation in other modules. E2Es are needed to guard such issue.
-	if !common.NeedUpdateImage(ctx.Obj) {
-		ctx.Log.Info("skip draining CN store, no image update", "CN", client.ObjectKeyFromObject(ctx.Obj))
-		return c.completeDraining(ctx)
-	}
+	//if !common.NeedUpdateImage(ctx.Obj) {
+	//	ctx.Log.Info("skip draining CN store, no image update", "CN", client.ObjectKeyFromObject(ctx.Obj))
+	//	return c.completeDraining(ctx)
+	//}
 	return c.OnPreparingStop(ctx)
 }
 
