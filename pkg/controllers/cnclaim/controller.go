@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"slices"
 	"strings"
@@ -42,7 +43,9 @@ import (
 const (
 	waitCacheTimeout = 10 * time.Second
 
-	requeueAfter = 5 * time.Second
+	retryBindInterval = 5 * time.Second
+
+	retryPatchInterval = 15 * time.Second
 )
 
 // Actor reconciles CN Claim
@@ -98,7 +101,7 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 			}
 		}
 		if pool == nil {
-			return recon.ErrReSync("cannot find matching pool, requeue", requeueAfter)
+			return recon.ErrReSync("cannot find matching pool, requeue", retryBindInterval)
 		}
 		c.Spec.PoolName = pool.Name
 		c.Labels[v1alpha1.PoolNameLabel] = c.Spec.PoolName
@@ -108,7 +111,7 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 	}
 	// re-bound later
 	// TODO: configurable
-	return recon.ErrReSync("wait pod to bound", requeueAfter)
+	return recon.ErrReSync("wait pod to bound", retryBindInterval)
 }
 
 func (r *Actor) claimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1.Pod) (*corev1.Pod, error) {
@@ -240,6 +243,14 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 		c.Status.Phase = v1alpha1.CNClaimPhaseLost
 		return nil
 	}
+	_, err = r.patchStore(ctx, pod, logpb.CNStateLabel{
+		State:  metadata.WorkState_Working,
+		Labels: common.ToStoreLabels(c.Spec.CNLabels),
+	})
+	if err != nil {
+		ctx.Log.Info("error keep bound CN working", "error", err)
+		return recon.ErrReSync("error keep bound CN working", retryPatchInterval)
+	}
 	return nil
 }
 
@@ -329,24 +340,29 @@ func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Po
 }
 
 func (r *Actor) Start(mgr manager.Manager) error {
-	return recon.Setup[*v1alpha1.CNClaim](&v1alpha1.CNClaim{}, "cn-claim-manager", mgr, r, recon.WithBuildFn(func(b *builder.Builder) {
-		b.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
-			pod, ok := object.(*corev1.Pod)
-			if !ok {
-				return nil
-			}
-			claimName, ok := pod.Labels[v1alpha1.PodClaimedByLabel]
-			if !ok {
-				return nil
-			}
-			return []reconcile.Request{{
-				NamespacedName: types.NamespacedName{
-					Namespace: pod.Namespace,
-					Name:      claimName,
-				},
-			}}
-		}))
-	}))
+	return recon.Setup[*v1alpha1.CNClaim](&v1alpha1.CNClaim{}, "cn-claim-manager", mgr, r,
+		recon.WithPredicate(predicate.ResourceVersionChangedPredicate{}),
+		recon.WithBuildFn(watchPodChange),
+	)
+}
+
+func watchPodChange(b *builder.Builder) {
+	b.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+		pod, ok := object.(*corev1.Pod)
+		if !ok {
+			return nil
+		}
+		claimName, ok := pod.Labels[v1alpha1.PodClaimedByLabel]
+		if !ok {
+			return nil
+		}
+		return []reconcile.Request{{
+			NamespacedName: types.NamespacedName{
+				Namespace: pod.Namespace,
+				Name:      claimName,
+			},
+		}}
+	}), builder.WithPredicates(common.PodStatusChangedPredicate{}))
 }
 
 func toStoreStatus(cn *metadata.CNService) v1alpha1.CNStoreStatus {
