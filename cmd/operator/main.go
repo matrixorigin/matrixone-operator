@@ -98,7 +98,7 @@ func main() {
 	opts := &zap.Options{
 		Development: false,
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
-		// add caller to log ling
+		// add caller to log line
 		ZapOpts: []zaporigin.Option{zaporigin.AddCaller()},
 	}
 	opts.BindFlags(flag.CommandLine)
