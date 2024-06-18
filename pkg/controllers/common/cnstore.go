@@ -195,12 +195,18 @@ func SetStoreScore(pod *corev1.Pod, s *StoreScore) error {
 
 // NeedUpdateImage checks if the pod needs to update image
 func NeedUpdateImage(pod *corev1.Pod) bool {
+	if pod == nil {
+		return false
+	}
 	current := map[string]string{}
 	for _, c := range pod.Status.ContainerStatuses {
 		current[c.Name] = c.Image
 	}
 	for _, c := range pod.Spec.Containers {
-		if current[c.Name] != "" && c.Image != current[c.Name] {
+		if current[c.Name] == "" {
+			return true
+		}
+		if c.Image != current[c.Name] {
 			return true
 		}
 	}
