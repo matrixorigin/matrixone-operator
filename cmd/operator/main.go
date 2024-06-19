@@ -46,6 +46,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/webui"
 	mowebhook "github.com/matrixorigin/matrixone-operator/pkg/webhook"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
+	zaporigin "go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	controllermetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -98,6 +99,8 @@ func main() {
 	opts := &zap.Options{
 		Development: false,
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
+		// add caller to log line
+		ZapOpts: []zaporigin.Option{zaporigin.AddCaller()},
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()

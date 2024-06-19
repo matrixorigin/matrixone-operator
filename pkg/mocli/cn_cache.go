@@ -84,7 +84,7 @@ func (c *StoreCache) Close() {
 }
 
 func (c *StoreCache) doRefresh() {
-	c.logger.Info("refresh from HAKeeper")
+	c.logger.V(4).Info("refresh from HAKeeper")
 	ctx, cancel := context.WithTimeout(context.Background(), c.refreshInterval)
 	defer cancel()
 	details, err := c.client.GetClusterDetails(ctx)
