@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 const (
@@ -29,6 +30,10 @@ type FailedPodStrategy string
 const (
 	FailedPodStrategyOrphan FailedPodStrategy = "Orphan"
 	FailedPodStrategyDelete FailedPodStrategy = "Delete"
+)
+
+const (
+	defaultStoreFailureTimeout = 10 * time.Minute
 )
 
 type LogSetSpec struct {

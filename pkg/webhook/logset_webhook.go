@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package webhook
 
 import (
+	"context"
 	"fmt"
 	"time"
 
-	"github.com/matrixorigin/matrixone-operator/api/features"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,6 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/api/features"
 )
 
 const (
@@ -39,27 +42,35 @@ const (
 	defaultStoreFailureTimeout = 10 * time.Minute
 )
 
-var (
-	kClient client.Client
-)
+type logSetWebhook struct{}
 
-func (r *LogSet) setupWebhookWithManager(mgr ctrl.Manager) error {
-	kClient = mgr.GetClient()
+func (logSetWebhook) setupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(&v1alpha1.LogSet{}).
+		WithDefaulter(&logSetDefaulter{}).
+		WithValidator(&logSetValidator{
+			kClient: mgr.GetClient(),
+		}).
 		Complete()
 }
 
 // +kubebuilder:webhook:path=/mutate-core-matrixorigin-io-v1alpha1-logset,mutating=true,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=logsets,verbs=create;update,versions=v1alpha1,name=mlogset.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Defaulter = &LogSet{}
+// logSetDefaulter implements webhook.Defaulter so a webhook will be registered for v1alpha1.LogSet
+type logSetDefaulter struct{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *LogSet) Default() {
-	r.Spec.Default()
+var _ webhook.CustomDefaulter = &logSetDefaulter{}
+
+func (l *logSetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+	logSet, ok := obj.(*v1alpha1.LogSet)
+	if !ok {
+		return unexpectedKindError("LogSet", obj)
+	}
+	l.DefaultSpec(&logSet.Spec)
+	return nil
 }
 
-func (r *LogSetSpec) Default() {
+func (l *logSetDefaulter) DefaultSpec(spec *v1alpha1.LogSetSpec) {
 	//if r.InitialConfig.HAKeeperReplicas == nil {
 	//	if r.Replicas >= minHAReplicas {
 	//		r.InitialConfig.HAKeeperReplicas = pointer.Int(minHAReplicas)
@@ -67,41 +78,41 @@ func (r *LogSetSpec) Default() {
 	//		r.InitialConfig.HAKeeperReplicas = pointer.Int(singleReplica)
 	//	}
 	//}
-	if r.InitialConfig.LogShardReplicas == nil {
-		if r.Replicas >= minHAReplicas {
-			r.InitialConfig.LogShardReplicas = pointer.Int(minHAReplicas)
+	if spec.InitialConfig.LogShardReplicas == nil {
+		if spec.Replicas >= minHAReplicas {
+			spec.InitialConfig.LogShardReplicas = pointer.Int(minHAReplicas)
 		} else {
-			r.InitialConfig.LogShardReplicas = pointer.Int(singleReplica)
+			spec.InitialConfig.LogShardReplicas = pointer.Int(singleReplica)
 		}
 	}
-	if r.InitialConfig.LogShards == nil {
-		r.InitialConfig.LogShards = pointer.Int(defaultShardNum)
+	if spec.InitialConfig.LogShards == nil {
+		spec.InitialConfig.LogShards = pointer.Int(defaultShardNum)
 	}
-	if r.InitialConfig.DNShards == nil {
-		r.InitialConfig.DNShards = pointer.Int(defaultShardNum)
+	if spec.InitialConfig.DNShards == nil {
+		spec.InitialConfig.DNShards = pointer.Int(defaultShardNum)
 	}
-	if r.StoreFailureTimeout == nil {
-		r.StoreFailureTimeout = &metav1.Duration{Duration: defaultStoreFailureTimeout}
+	if spec.StoreFailureTimeout == nil {
+		spec.StoreFailureTimeout = &metav1.Duration{Duration: defaultStoreFailureTimeout}
 	}
-	r.setDefaultRetentionPolicy()
-	setDefaultServiceArgs(r)
-	setPodSetDefaults(&r.PodSet)
+	l.setDefaultRetentionPolicy(spec)
+	setDefaultServiceArgs(spec)
+	setPodSetDefaults(&spec.PodSet)
 }
 
 // setDefaultRetentionPolicy always set PVCRetentionPolicy, and always set S3RetentionPolicy only if S3 is not nil
 // setDefaultRetentionPolicy does not change origin policy and only set default value when policy is nil
-func (r *LogSetSpec) setDefaultRetentionPolicy() {
-	defaultDeletePolicy := PVCRetentionPolicyDelete
+func (l *logSetDefaulter) setDefaultRetentionPolicy(spec *v1alpha1.LogSetSpec) {
+	defaultDeletePolicy := v1alpha1.PVCRetentionPolicyDelete
 
-	if r.SharedStorage.S3 == nil {
-		if r.PVCRetentionPolicy == nil {
-			r.PVCRetentionPolicy = &defaultDeletePolicy
+	if spec.SharedStorage.S3 == nil {
+		if spec.PVCRetentionPolicy == nil {
+			spec.PVCRetentionPolicy = &defaultDeletePolicy
 		}
 		return
 	}
 
-	pvcPolicy := r.PVCRetentionPolicy
-	s3Policy := r.SharedStorage.S3.S3RetentionPolicy
+	pvcPolicy := spec.PVCRetentionPolicy
+	s3Policy := spec.SharedStorage.S3.S3RetentionPolicy
 
 	switch {
 	// if both set, does not set any values
@@ -109,80 +120,89 @@ func (r *LogSetSpec) setDefaultRetentionPolicy() {
 		return
 	// if both not set, set to delete
 	case pvcPolicy == nil && s3Policy == nil:
-		r.PVCRetentionPolicy = &defaultDeletePolicy
-		r.SharedStorage.S3.S3RetentionPolicy = &defaultDeletePolicy
+		spec.PVCRetentionPolicy = &defaultDeletePolicy
+		spec.SharedStorage.S3.S3RetentionPolicy = &defaultDeletePolicy
 	// if only set pvcPolicy, set it to s3Policy
 	case pvcPolicy != nil && s3Policy == nil:
-		r.SharedStorage.S3.S3RetentionPolicy = pvcPolicy
+		spec.SharedStorage.S3.S3RetentionPolicy = pvcPolicy
 	// if only set s3Policy, set it to pvcPolicy
 	case pvcPolicy == nil && s3Policy != nil:
-		r.PVCRetentionPolicy = s3Policy
+		spec.PVCRetentionPolicy = s3Policy
 	}
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-logset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=logsets,verbs=create;update,versions=v1alpha1,name=vlogset.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Validator = &LogSet{}
-
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *LogSet) ValidateCreate() (admission.Warnings, error) {
-	errs := r.Spec.ValidateCreate(r.ObjectMeta)
-	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
-	return nil, invalidOrNil(errs, r)
+// logSetValidator implements webhook.Validator so a webhook will be registered for the v1alpha1.LogSet
+type logSetValidator struct {
+	kClient client.Client
 }
 
-func (r *LogSet) ValidateUpdate(o runtime.Object) (admission.Warnings, error) {
-	old := o.(*LogSet)
-	errs := r.Spec.ValidateUpdate(&old.Spec, r.ObjectMeta)
-	return nil, invalidOrNil(errs, r)
+var _ webhook.CustomValidator = &logSetValidator{}
+
+func (l *logSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+	logSet, ok := obj.(*v1alpha1.LogSet)
+	if !ok {
+		return nil, unexpectedKindError("LogSet", obj)
+	}
+	errs := l.ValidateSpecCreate(logSet.ObjectMeta, &logSet.Spec)
+	errs = append(errs, validateMainContainer(&logSet.Spec.MainContainer, field.NewPath("spec"))...)
+	return nil, invalidOrNil(errs, logSet)
 }
 
-func (r *LogSet) ValidateDelete() (admission.Warnings, error) {
+func (l *logSetValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+	old := oldObj.(*v1alpha1.LogSet)
+	logSet := newObj.(*v1alpha1.LogSet)
+	errs := l.ValidateSpecUpdate(&old.Spec, &logSet.Spec, logSet.ObjectMeta)
+	return nil, invalidOrNil(errs, logSet)
+}
+
+func (l *logSetValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (r *LogSetSpec) validateMutateCommon() field.ErrorList {
+func (l *logSetValidator) ValidateSpecCreate(meta metav1.ObjectMeta, spec *v1alpha1.LogSetSpec) field.ErrorList {
 	var errs field.ErrorList
-	errs = append(errs, validateVolume(&r.Volume, field.NewPath("spec").Child("volume"))...)
-	errs = append(errs, r.validateInitialConfig()...)
-	errs = append(errs, r.validateSharedStorage()...)
-	errs = append(errs, validateGoMemLimitPercent(r.MemoryLimitPercent, field.NewPath("spec").Child("memoryLimitPercent"))...)
+	errs = append(errs, l.validateMutateCommon(spec)...)
+	errs = append(errs, l.validateIfBucketInUse(meta, spec)...)
+	errs = append(errs, l.validateIfBucketDeleting(spec)...)
 	return errs
 }
 
-func (r *LogSetSpec) ValidateCreate(meta metav1.ObjectMeta) field.ErrorList {
-	var errs field.ErrorList
-	errs = append(errs, r.validateMutateCommon()...)
-	errs = append(errs, r.validateIfBucketInUse(meta)...)
-	errs = append(errs, r.validateIfBucketDeleting()...)
-	return errs
-}
-
-func (r *LogSetSpec) ValidateUpdate(old *LogSetSpec, meta metav1.ObjectMeta) field.ErrorList {
-	if err := r.validateMutateCommon(); err != nil {
+func (l *logSetValidator) ValidateSpecUpdate(oldSpec, spec *v1alpha1.LogSetSpec, meta metav1.ObjectMeta) field.ErrorList {
+	if err := l.validateMutateCommon(spec); err != nil {
 		return err
 	}
 	var errs field.ErrorList
-	if !equality.Semantic.DeepEqual(old.InitialConfig, r.InitialConfig) {
+	if !equality.Semantic.DeepEqual(oldSpec.InitialConfig, spec.InitialConfig) {
 		errs = append(errs, field.Invalid(field.NewPath("spec").Child("initialConfig"), nil, "initialConfig is immutable"))
 	}
-	errs = append(errs, r.validateIfBucketInUse(meta)...)
+	errs = append(errs, l.validateIfBucketInUse(meta, spec)...)
 	return errs
 }
 
-func (r *LogSetSpec) validateSharedStorage() field.ErrorList {
+func (l *logSetValidator) validateMutateCommon(spec *v1alpha1.LogSetSpec) field.ErrorList {
+	var errs field.ErrorList
+	errs = append(errs, validateVolume(&spec.Volume, field.NewPath("spec").Child("volume"))...)
+	errs = append(errs, l.validateInitialConfig(spec)...)
+	errs = append(errs, l.validateSharedStorage(spec)...)
+	errs = append(errs, validateGoMemLimitPercent(spec.MemoryLimitPercent, field.NewPath("spec").Child("memoryLimitPercent"))...)
+	return errs
+}
+
+func (l *logSetValidator) validateSharedStorage(spec *v1alpha1.LogSetSpec) field.ErrorList {
 	var errs field.ErrorList
 	parent := field.NewPath("spec").Child("sharedStorage")
 	count := 0
-	if r.SharedStorage.S3 != nil {
+	if spec.SharedStorage.S3 != nil {
 		count += 1
-		if r.SharedStorage.S3.Path == "" {
+		if spec.SharedStorage.S3.Path == "" {
 			errs = append(errs, field.Invalid(parent, nil, "path must be set for S3 storage"))
 		}
 	}
-	if r.SharedStorage.FileSystem != nil {
+	if spec.SharedStorage.FileSystem != nil {
 		count += 1
-		if r.SharedStorage.FileSystem.Path == "" {
+		if spec.SharedStorage.FileSystem.Path == "" {
 			errs = append(errs, field.Invalid(parent, nil, "path must be set for file-system storage"))
 		}
 	}
@@ -195,7 +215,7 @@ func (r *LogSetSpec) validateSharedStorage() field.ErrorList {
 	return errs
 }
 
-func (r *LogSetSpec) validateInitialConfig() field.ErrorList {
+func (l *logSetValidator) validateInitialConfig(spec *v1alpha1.LogSetSpec) field.ErrorList {
 	var errs field.ErrorList
 	parent := field.NewPath("spec").Child("initialConfig")
 
@@ -205,32 +225,32 @@ func (r *LogSetSpec) validateInitialConfig() field.ErrorList {
 	//	errs = append(errs, field.Invalid(parent.Child("haKeeperReplicas"), hrs, "haKeeperReplicas must not larger then logservice replicas"))
 	//}
 
-	if lrs := r.InitialConfig.LogShardReplicas; lrs == nil {
+	if lrs := spec.InitialConfig.LogShardReplicas; lrs == nil {
 		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must be set"))
-	} else if *lrs > int(r.Replicas) {
+	} else if *lrs > int(spec.Replicas) {
 		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must not larger then logservice replicas"))
 	}
 
-	if lss := r.InitialConfig.LogShards; lss == nil {
+	if lss := spec.InitialConfig.LogShards; lss == nil {
 		errs = append(errs, field.Invalid(parent.Child("logShards"), lss, "logShards must be set"))
 	}
 
-	if dss := r.InitialConfig.DNShards; dss == nil {
+	if dss := spec.InitialConfig.DNShards; dss == nil {
 		errs = append(errs, field.Invalid(parent.Child("dnShards"), dss, "dnShards must be set"))
 	}
 	return errs
 }
 
-func (r *LogSetSpec) validateIfBucketDeleting() field.ErrorList {
+func (l *logSetValidator) validateIfBucketDeleting(spec *v1alpha1.LogSetSpec) field.ErrorList {
 	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
 		return nil
 	}
-	if r.SharedStorage.S3 == nil {
+	if spec.SharedStorage.S3 == nil {
 		return nil
 	}
 	var errs field.ErrorList
 	path := field.NewPath("spec").Child("sharedStorage").Child("s3")
-	bucket, err := ClaimedBucket(kClient, r.SharedStorage.S3)
+	bucket, err := v1alpha1.ClaimedBucket(l.kClient, spec.SharedStorage.S3)
 	if err != nil {
 		errs = append(errs, field.Invalid(path, nil, err.Error()))
 		return errs
@@ -246,16 +266,16 @@ func (r *LogSetSpec) validateIfBucketDeleting() field.ErrorList {
 	return nil
 }
 
-func (r *LogSetSpec) validateIfBucketInUse(meta metav1.ObjectMeta) field.ErrorList {
+func (l *logSetValidator) validateIfBucketInUse(meta metav1.ObjectMeta, spec *v1alpha1.LogSetSpec) field.ErrorList {
 	if !features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
 		return nil
 	}
-	if r.SharedStorage.S3 == nil {
+	if spec.SharedStorage.S3 == nil {
 		return nil
 	}
 	var errs field.ErrorList
 	path := field.NewPath("spec").Child("sharedStorage").Child("s3")
-	bucket, err := ClaimedBucket(kClient, r.SharedStorage.S3)
+	bucket, err := v1alpha1.ClaimedBucket(l.kClient, spec.SharedStorage.S3)
 	if err != nil {
 		errs = append(errs, field.Invalid(path, nil, err.Error()))
 		return errs
@@ -263,8 +283,8 @@ func (r *LogSetSpec) validateIfBucketInUse(meta metav1.ObjectMeta) field.ErrorLi
 	if bucket == nil {
 		return nil
 	}
-	if bucket.Status.State == StatusInUse &&
-		bucket.Status.BindTo != BucketBindToMark(meta) {
+	if bucket.Status.State == v1alpha1.StatusInUse &&
+		bucket.Status.BindTo != v1alpha1.BucketBindToMark(meta) {
 		msg := fmt.Sprintf("claimed bucket %v already bind to %v", client.ObjectKeyFromObject(bucket), bucket.Status.BindTo)
 		errs = append(errs, field.Invalid(path, nil, msg))
 		return errs

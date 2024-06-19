@@ -12,49 +12,66 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package webhook
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
 
-func (r *WebUI) setupWebhookWithManager(mgr ctrl.Manager) error {
+type webUIWebhook struct{}
+
+func (webUIWebhook) setupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(&v1alpha1.WebUI{}).
+		WithDefaulter(&webUIDefaulter{}).
+		WithValidator(&webUIValidator{}).
 		Complete()
 }
 
 // +kubebuilder:webhook:path=/mutate-core-matrixorigin-io-v1alpha1-webui,mutating=true,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=webuis,verbs=create;update,versions=v1alpha1,name=mwebui.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Defaulter = &WebUI{}
+// webUIDefaulter implements webhook.Defaulter so a webhook will be registered for the v1alpha1.WebUI
+type webUIDefaulter struct{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *WebUI) Default() {
+var _ webhook.CustomDefaulter = &webUIDefaulter{}
+
+func (w *webUIDefaulter) Default(_ context.Context, obj runtime.Object) error {
+	return nil
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-webui,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=webuis,verbs=create;update,versions=v1alpha1,name=vwebui.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Validator = &WebUI{}
+// webUIValidator implements webhook.Validator so a webhook will be registered for the v1alpha1.WebUI
+type webUIValidator struct{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *WebUI) ValidateCreate() (admission.Warnings, error) {
+var _ webhook.CustomValidator = &webUIValidator{}
+
+func (w *webUIValidator) ValidateCreate(_ context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+	webui, ok := obj.(*v1alpha1.WebUI)
+	if !ok {
+		return nil, unexpectedKindError("WebUI", obj)
+	}
 	var errs field.ErrorList
-	errs = append(errs, validateMainContainer(&r.Spec.MainContainer, field.NewPath("spec"))...)
-	return nil, invalidOrNil(errs, r)
+	errs = append(errs, validateMainContainer(&webui.Spec.MainContainer, field.NewPath("spec"))...)
+	return nil, invalidOrNil(errs, webui)
 }
 
-func (r *WebUI) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	warnings, err := r.ValidateCreate()
+func (w *webUIValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+	warnings, err = w.ValidateCreate(ctx, newObj)
 	if err != nil {
 		return warnings, err
 	}
-	return nil, nil
+	return warnings, nil
 }
 
-func (r *WebUI) ValidateDelete() (admission.Warnings, error) {
+func (w *webUIValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }

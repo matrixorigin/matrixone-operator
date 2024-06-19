@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package webhook
 
 import (
 	"context"
@@ -23,6 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
 
 var _ = Describe("MatrixOneCluster Webhook", func() {
@@ -32,30 +34,30 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		// DO NOT mutate the following spec.
 		// This spec is valid in mo-operator v0.6.0 and should always be accepted by
 		// the webhook for backward compatibility.
-		v06 := &MatrixOneCluster{
+		v06 := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mo-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: MatrixOneClusterSpec{
-				LogService: LogSetSpec{
-					PodSet: PodSet{
+			Spec: v1alpha1.MatrixOneClusterSpec{
+				LogService: v1alpha1.LogSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 3,
 					},
-					Volume: Volume{
+					Volume: v1alpha1.Volume{
 						Size: resource.MustParse("10Gi"),
 					},
-					SharedStorage: SharedStorageProvider{
-						S3: &S3Provider{Path: "test/data"},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{Path: "test/data"},
 					},
 				},
-				TN: &DNSetSpec{
-					PodSet: PodSet{
+				TN: &v1alpha1.DNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 2,
 					},
 				},
-				TP: &CNSetSpec{
-					PodSet: PodSet{
+				TP: &v1alpha1.CNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 2,
 					},
 				},
@@ -63,7 +65,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 			},
 		}
 		Expect(k8sClient.Create(context.TODO(), v06.DeepCopy())).To(Succeed())
-		Expect(k8sClient.Create(context.TODO(), func() *MatrixOneCluster {
+		Expect(k8sClient.Create(context.TODO(), func() *v1alpha1.MatrixOneCluster {
 			singleReplica := v06.DeepCopy()
 			singleReplica.Spec.LogService.Replicas = 1
 			singleReplica.Spec.TN.Replicas = 1
@@ -74,30 +76,30 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 	})
 
 	It("should reject invalid MatrixOneCluster", func() {
-		tpl := &MatrixOneCluster{
+		tpl := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mo-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: MatrixOneClusterSpec{
-				LogService: LogSetSpec{
-					PodSet: PodSet{
+			Spec: v1alpha1.MatrixOneClusterSpec{
+				LogService: v1alpha1.LogSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 3,
 					},
-					Volume: Volume{
+					Volume: v1alpha1.Volume{
 						Size: resource.MustParse("10Gi"),
 					},
-					SharedStorage: SharedStorageProvider{
-						S3: &S3Provider{Path: "test/data"},
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{Path: "test/data"},
 					},
 				},
-				TN: &DNSetSpec{
-					PodSet: PodSet{
+				TN: &v1alpha1.DNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 2,
 					},
 				},
-				TP: &CNSetSpec{
-					PodSet: PodSet{
+				TP: &v1alpha1.CNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 2,
 					},
 				},
@@ -123,32 +125,33 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 	})
 
 	It("should validate and mutate MatrixOneCluster", func() {
-		cluster := &MatrixOneCluster{
+		cluster := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "mo-" + randomString(5),
+				Name: "mo-test-mutate-cc",
+				//Name:      "mo-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: MatrixOneClusterSpec{
-				LogService: LogSetSpec{
-					PodSet: PodSet{
+			Spec: v1alpha1.MatrixOneClusterSpec{
+				LogService: v1alpha1.LogSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 3,
 					},
-					Volume: Volume{
+					Volume: v1alpha1.Volume{
 						Size: resource.MustParse("10Gi"),
 					},
-					SharedStorage: SharedStorageProvider{
-						S3: &S3Provider{
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
 							Path: "test/data",
 						},
 					},
 				},
-				TN: &DNSetSpec{
-					PodSet: PodSet{
+				TN: &v1alpha1.DNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 2,
 					},
 				},
-				TP: &CNSetSpec{
-					PodSet: PodSet{
+				TP: &v1alpha1.CNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 2,
 					},
 				},
@@ -164,8 +167,8 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 
 		By("accept valid update")
 		cluster.Spec.LogService.Replicas = 5
-		cluster.Spec.AP = &CNSetSpec{
-			PodSet: PodSet{
+		cluster.Spec.AP = &v1alpha1.CNSetSpec{
+			PodSet: v1alpha1.PodSet{
 				Replicas: 2,
 			},
 		}
@@ -174,7 +177,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		By("reject invalid update")
 		invalidReplica := cluster.DeepCopy()
 		invalidReplica.Spec.LogService.Replicas = 2
-		Expect(k8sClient.Update(context.TODO(), invalidReplica)).ToNot(Succeed(), "logservice replicas cannot be lower than HAKeeperReplicas")
+		Expect(k8sClient.Update(context.TODO(), invalidReplica)).NotTo(Succeed(), "logservice replicas cannot be lower than HAKeeperReplicas")
 
 		mutateInitialConfig := cluster.DeepCopy()
 		mutateInitialConfig.Spec.LogService.InitialConfig.LogShardReplicas = pointer.Int(*mutateInitialConfig.Spec.LogService.InitialConfig.LogShardReplicas - 1)
@@ -182,44 +185,44 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 	})
 
 	It("should validate and set defaults for CNGroups", func() {
-		cluster := &MatrixOneCluster{
+		cluster := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mo-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: MatrixOneClusterSpec{
-				LogService: LogSetSpec{
-					PodSet: PodSet{
+			Spec: v1alpha1.MatrixOneClusterSpec{
+				LogService: v1alpha1.LogSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 3,
 					},
-					Volume: Volume{
+					Volume: v1alpha1.Volume{
 						Size: resource.MustParse("10Gi"),
 					},
-					SharedStorage: SharedStorageProvider{
-						S3: &S3Provider{
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
 							Path: "test/data",
 						},
 					},
 				},
-				TN: &DNSetSpec{
-					PodSet: PodSet{
+				TN: &v1alpha1.DNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 2,
 					},
 				},
 				Version: "test",
-				CNGroups: []CNGroup{{
+				CNGroups: []v1alpha1.CNGroup{{
 					Name: "test",
-					CNSetSpec: CNSetSpec{
-						PodSet: PodSet{
+					CNSetSpec: v1alpha1.CNSetSpec{
+						PodSet: v1alpha1.PodSet{
 							Replicas: 3,
 						},
 					},
 				}, {
 					Name: "cache",
-					CNSetSpec: CNSetSpec{
-						PodSet: PodSet{
+					CNSetSpec: v1alpha1.CNSetSpec{
+						PodSet: v1alpha1.PodSet{
 							Replicas: 3,
-							MainContainer: MainContainer{
+							MainContainer: v1alpha1.MainContainer{
 								Resources: corev1.ResourceRequirements{
 									Requests: map[corev1.ResourceName]resource.Quantity{
 										corev1.ResourceMemory: resource.MustParse("10Gi"),
@@ -227,8 +230,8 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 								},
 							},
 						},
-						ConfigThatChangeCNSpec: ConfigThatChangeCNSpec{
-							CacheVolume: &Volume{
+						ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
+							CacheVolume: &v1alpha1.Volume{
 								Size: resource.MustParse("10Gi"),
 							},
 						},
@@ -252,43 +255,43 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 	})
 
 	It("should reject duplicate CNGroups", func() {
-		cluster := &MatrixOneCluster{
+		cluster := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mo-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: MatrixOneClusterSpec{
-				LogService: LogSetSpec{
-					PodSet: PodSet{
+			Spec: v1alpha1.MatrixOneClusterSpec{
+				LogService: v1alpha1.LogSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 3,
 					},
-					Volume: Volume{
+					Volume: v1alpha1.Volume{
 						Size: resource.MustParse("10Gi"),
 					},
-					SharedStorage: SharedStorageProvider{
-						S3: &S3Provider{
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
 							Path: "test/data",
 						},
 					},
 				},
-				TN: &DNSetSpec{
-					PodSet: PodSet{
+				TN: &v1alpha1.DNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 1,
 					},
 				},
 				Version: "test",
-				TP: &CNSetSpec{
-					PodSet: PodSet{
+				TP: &v1alpha1.CNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 3,
 					},
 				},
 			},
 		}
 		dupTP := cluster.DeepCopy()
-		dupTP.Spec.CNGroups = []CNGroup{{
+		dupTP.Spec.CNGroups = []v1alpha1.CNGroup{{
 			Name: "tp",
-			CNSetSpec: CNSetSpec{
-				PodSet: PodSet{
+			CNSetSpec: v1alpha1.CNSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
 				},
 			},
@@ -296,17 +299,17 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 		Expect(k8sClient.Create(context.TODO(), dupTP)).NotTo(Succeed())
 
 		dupCNGroup := cluster.DeepCopy()
-		dupCNGroup.Spec.CNGroups = []CNGroup{{
+		dupCNGroup.Spec.CNGroups = []v1alpha1.CNGroup{{
 			Name: "a",
-			CNSetSpec: CNSetSpec{
-				PodSet: PodSet{
+			CNSetSpec: v1alpha1.CNSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
 				},
 			},
 		}, {
 			Name: "a",
-			CNSetSpec: CNSetSpec{
-				PodSet: PodSet{
+			CNSetSpec: v1alpha1.CNSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
 				},
 			},
@@ -315,33 +318,33 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 	})
 
 	It("should reject MatrixOneCluster with invalid name", func() {
-		cluster := &MatrixOneCluster{
+		cluster := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mo-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: MatrixOneClusterSpec{
-				LogService: LogSetSpec{
-					PodSet: PodSet{
+			Spec: v1alpha1.MatrixOneClusterSpec{
+				LogService: v1alpha1.LogSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 3,
 					},
-					Volume: Volume{
+					Volume: v1alpha1.Volume{
 						Size: resource.MustParse("10Gi"),
 					},
-					SharedStorage: SharedStorageProvider{
-						S3: &S3Provider{
+					SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
 							Path: "test/data",
 						},
 					},
 				},
-				TN: &DNSetSpec{
-					PodSet: PodSet{
+				TN: &v1alpha1.DNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 1,
 					},
 				},
 				Version: "test",
-				TP: &CNSetSpec{
-					PodSet: PodSet{
+				TP: &v1alpha1.CNSetSpec{
+					PodSet: v1alpha1.PodSet{
 						Replicas: 3,
 					},
 				},

@@ -7,6 +7,7 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 MO_VERSION ?= "nightly-d98832bb"
 MO_IMAGE_REPO ?= "matrixorigin/matrixone"
 BRANCH ?= main
+ENVTEST_K8S_VERSION = 1.24.1
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -86,12 +87,23 @@ go-lint: golangci-lint
 check-license: license-eye
 	$(LICENSE_EYE) -v info -c .licenserc.yml header check
 
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
 # TODO: include E2E
 test: api-test unit
 
 # Run unit tests
 unit: generate fmt vet manifests
-	CGO_ENABLED=0 go test ./pkg/... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" CGO_ENABLED=0 go test ./pkg/... -coverprofile cover.out
 
 api-test:
 	cd api && make test

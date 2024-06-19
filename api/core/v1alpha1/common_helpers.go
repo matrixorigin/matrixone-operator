@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 	"time"
 )
@@ -239,7 +240,7 @@ func setDefaultServiceArgs(object interface{}) {
 			obj.ServiceArgs = ServiceDefaultArgs.Proxy
 		}
 	default:
-		moLog.Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetSpec, *DNSetSpec, *CNSetSpec")
+		logf.Log.WithName("mo-cluster").Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetSpec, *DNSetSpec, *CNSetSpec")
 		return
 	}
 }

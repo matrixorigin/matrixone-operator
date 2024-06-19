@@ -12,41 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package webhook
 
 import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
-
-var webhookLog = logf.Log.WithName("mo-webhook")
-
-func RegisterWebhooks(mgr ctrl.Manager) error {
-	if err := (&MatrixOneCluster{}).setupWebhookWithManager(mgr); err != nil {
-		return err
-	}
-	if err := (&LogSet{}).setupWebhookWithManager(mgr); err != nil {
-		return err
-	}
-	if err := (&DNSet{}).setupWebhookWithManager(mgr); err != nil {
-		return err
-	}
-	if err := (&CNSet{}).setupWebhookWithManager(mgr); err != nil {
-		return err
-	}
-	if err := (&WebUI{}).setupWebhookWithManager(mgr); err != nil {
-		return err
-	}
-	if err := (&ProxySet{}).setupWebhookWithManager(mgr); err != nil {
-		return err
-	}
-	return nil
-}
 
 func invalidOrNil(allErrs field.ErrorList, r client.Object) error {
 	if len(allErrs) == 0 {
@@ -55,7 +30,7 @@ func invalidOrNil(allErrs field.ErrorList, r client.Object) error {
 	return apierrors.NewInvalid(r.GetObjectKind().GroupVersionKind().GroupKind(), r.GetName(), allErrs)
 }
 
-func validateLogSetRef(ref *LogSetRef, parent *field.Path) field.ErrorList {
+func validateLogSetRef(ref *v1alpha1.LogSetRef, parent *field.Path) field.ErrorList {
 	var errs field.ErrorList
 	if ref.LogSet == nil && ref.ExternalLogSet == nil {
 		errs = append(errs, field.Invalid(parent, nil, "one of deps.logSet or deps.externalLogSet must be set"))
@@ -63,7 +38,7 @@ func validateLogSetRef(ref *LogSetRef, parent *field.Path) field.ErrorList {
 	return errs
 }
 
-func validateMainContainer(c *MainContainer, parent *field.Path) field.ErrorList {
+func validateMainContainer(c *v1alpha1.MainContainer, parent *field.Path) field.ErrorList {
 	var errs field.ErrorList
 	if c.Image == "" {
 		errs = append(errs, field.Invalid(parent.Child("image"), c.Image, "image must be set"))
@@ -77,7 +52,7 @@ func validateContainerResource(r *corev1.ResourceRequirements, parent *field.Pat
 	return nil
 }
 
-func validateVolume(v *Volume, parent *field.Path) field.ErrorList {
+func validateVolume(v *v1alpha1.Volume, parent *field.Path) field.ErrorList {
 	var errs field.ErrorList
 	if v.Size.IsZero() {
 		errs = append(errs, field.Invalid(parent.Child("size"), v.Size, "size must not be zero"))
@@ -94,10 +69,4 @@ func validateGoMemLimitPercent(memPercent *int, path *field.Path) field.ErrorLis
 		errs = append(errs, field.Invalid(path, memPercent, "memoryLimitPercent value must be in interval (0, 100]"))
 	}
 	return errs
-}
-
-func defaultDiskCacheSize(total *resource.Quantity) *resource.Quantity {
-	// shrink the total size since a small amount of space will be used for filesystem and metadata
-	shrunk := total.Value() * 9 / 10
-	return resource.NewQuantity(shrunk, total.Format)
 }
