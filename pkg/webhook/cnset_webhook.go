@@ -54,7 +54,7 @@ type cnSetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &cnSetDefaulter{}
 
-func (c *cnSetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (c *cnSetDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	cnSet, ok := obj.(*v1alpha1.CNSet)
 	if !ok {
 		return unexpectedKindError("CNSet", obj)
@@ -125,7 +125,7 @@ func (c *cnSetValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.O
 	return warnings, nil
 }
 
-func (c *cnSetValidator) ValidateDelete(_ context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (c *cnSetValidator) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 

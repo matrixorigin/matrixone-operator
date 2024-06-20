@@ -61,7 +61,7 @@ type logSetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &logSetDefaulter{}
 
-func (l *logSetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (l *logSetDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	logSet, ok := obj.(*v1alpha1.LogSet)
 	if !ok {
 		return unexpectedKindError("LogSet", obj)
@@ -157,7 +157,7 @@ func (l *logSetValidator) ValidateUpdate(_ context.Context, oldObj, newObj runti
 	return nil, invalidOrNil(errs, logSet)
 }
 
-func (l *logSetValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (l *logSetValidator) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 

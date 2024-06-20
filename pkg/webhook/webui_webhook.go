@@ -43,7 +43,7 @@ type webUIDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &webUIDefaulter{}
 
-func (w *webUIDefaulter) Default(_ context.Context, obj runtime.Object) error {
+func (w *webUIDefaulter) Default(_ context.Context, _ runtime.Object) error {
 	return nil
 }
 
@@ -64,7 +64,7 @@ func (w *webUIValidator) ValidateCreate(_ context.Context, obj runtime.Object) (
 	return nil, invalidOrNil(errs, webui)
 }
 
-func (w *webUIValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (w *webUIValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (warnings admission.Warnings, err error) {
 	warnings, err = w.ValidateCreate(ctx, newObj)
 	if err != nil {
 		return warnings, err
@@ -72,6 +72,6 @@ func (w *webUIValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runt
 	return warnings, nil
 }
 
-func (w *webUIValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (w *webUIValidator) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }

@@ -68,7 +68,7 @@ type matrixOneClusterDefaulter struct {
 
 var _ webhook.CustomDefaulter = &matrixOneClusterDefaulter{}
 
-func (m *matrixOneClusterDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (m *matrixOneClusterDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	moc, ok := obj.(*v1alpha1.MatrixOneCluster)
 	if !ok {
 		return unexpectedKindError("MatrixOneCluster", obj)
@@ -103,7 +103,7 @@ type matrixOneClusterValidator struct {
 
 var _ webhook.CustomValidator = &matrixOneClusterValidator{}
 
-func (m *matrixOneClusterValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (m *matrixOneClusterValidator) ValidateCreate(_ context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
 	moc, ok := obj.(*v1alpha1.MatrixOneCluster)
 	if !ok {
 		return nil, unexpectedKindError("MatrixOneCluster", obj)
@@ -128,7 +128,7 @@ func (m *matrixOneClusterValidator) ValidateCreate(ctx context.Context, obj runt
 	return nil, invalidOrNil(errs, moc)
 }
 
-func (m *matrixOneClusterValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (m *matrixOneClusterValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
 	var errs field.ErrorList
 	moc := newObj.(*v1alpha1.MatrixOneCluster)
 	errs = append(errs, m.validateMutateCommon(moc)...)
@@ -138,7 +138,7 @@ func (m *matrixOneClusterValidator) ValidateUpdate(ctx context.Context, oldObj, 
 	return nil, invalidOrNil(errs, moc)
 }
 
-func (m *matrixOneClusterValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (m *matrixOneClusterValidator) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 

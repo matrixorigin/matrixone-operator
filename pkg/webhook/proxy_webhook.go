@@ -42,7 +42,7 @@ type proxySetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &proxySetDefaulter{}
 
-func (p *proxySetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (p *proxySetDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	proxySet, ok := obj.(*v1alpha1.ProxySet)
 	if !ok {
 		return unexpectedKindError("ProxySet", obj)
@@ -62,14 +62,14 @@ type proxySetValidator struct{}
 
 var _ webhook.CustomValidator = &proxySetValidator{}
 
-func (p proxySetValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (p proxySetValidator) ValidateCreate(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (p proxySetValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (p proxySetValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (p proxySetValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (p proxySetValidator) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }

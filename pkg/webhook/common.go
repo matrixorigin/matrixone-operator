@@ -46,7 +46,7 @@ func validateMainContainer(c *v1alpha1.MainContainer, parent *field.Path) field.
 	return errs
 }
 
-func validateContainerResource(r *corev1.ResourceRequirements, parent *field.Path) field.ErrorList {
+func validateContainerResource(_ *corev1.ResourceRequirements, _ *field.Path) field.ErrorList {
 	// TODO: use kubernetes/api/validation.ValidatePodSpec to perform through Validation after we migrate
 	// webhooks out of api package
 	return nil

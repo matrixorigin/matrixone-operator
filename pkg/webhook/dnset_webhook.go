@@ -74,7 +74,7 @@ type dnSetValidator struct{}
 
 var _ webhook.CustomValidator = &dnSetValidator{}
 
-func (d *dnSetValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (d *dnSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
 	dnSet, ok := obj.(*v1alpha1.DNSet)
 	if !ok {
 		return nil, unexpectedKindError("DNSet", obj)
@@ -87,7 +87,7 @@ func (d *dnSetValidator) ValidateCreate(ctx context.Context, obj runtime.Object)
 	return nil, invalidOrNil(errs, dnSet)
 }
 
-func (d *dnSetValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (d *dnSetValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (warnings admission.Warnings, err error) {
 	warnings, err = d.ValidateCreate(ctx, newObj)
 	if err != nil {
 		return warnings, err
@@ -95,7 +95,7 @@ func (d *dnSetValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runt
 	return warnings, nil
 }
 
-func (d *dnSetValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (d *dnSetValidator) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
