@@ -127,8 +127,7 @@ var _ = Describe("MatrixOneCluster Webhook", func() {
 	It("should validate and mutate MatrixOneCluster", func() {
 		cluster := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mo-test-mutate-cc",
-				//Name:      "mo-" + randomString(5),
+				Name:      "mo-" + randomString(5),
 				Namespace: "default",
 			},
 			Spec: v1alpha1.MatrixOneClusterSpec{

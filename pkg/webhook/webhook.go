@@ -19,6 +19,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+var (
+	// ServiceDefaultArgs is a cache variable for default args, should be read only in this package
+	ServiceDefaultArgs *DefaultArgs
+)
+
 var webhookLog = logf.Log.WithName("mo-webhook")
 
 func RegisterWebhooks(mgr ctrl.Manager) error {

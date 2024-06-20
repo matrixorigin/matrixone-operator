@@ -24,18 +24,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 	"time"
 )
 
 const (
 	reasonEmpty = "empty"
-)
-
-var (
-	// ServiceDefaultArgs is a cache variable for default args, should be read only in this package
-	ServiceDefaultArgs *DefaultArgs
 )
 
 func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
@@ -214,54 +208,6 @@ type DefaultArgs struct {
 	DN         []string `json:"dn,omitempty"`
 	CN         []string `json:"cn,omitempty"`
 	Proxy      []string `json:"proxy,omitempty"`
-}
-
-// setDefaultServiceArgs set default args for service, we only set default args when there is service args config in service spec
-func setDefaultServiceArgs(object interface{}) {
-	if ServiceDefaultArgs == nil {
-		return
-	}
-	switch obj := object.(type) {
-	case *LogSetSpec:
-		// set default arguments only when user does not set any arguments
-		if len(obj.ServiceArgs) == 0 {
-			obj.ServiceArgs = ServiceDefaultArgs.LogService
-		}
-	case *DNSetSpec:
-		if len(obj.ServiceArgs) == 0 {
-			obj.ServiceArgs = ServiceDefaultArgs.DN
-		}
-	case *CNSetSpec:
-		if len(obj.ServiceArgs) == 0 {
-			obj.ServiceArgs = ServiceDefaultArgs.CN
-		}
-	case *ProxySetSpec:
-		if len(obj.ServiceArgs) == 0 {
-			obj.ServiceArgs = ServiceDefaultArgs.Proxy
-		}
-	default:
-		logf.Log.WithName("mo-cluster").Error(fmt.Errorf("unknown type:%T", object), "expected types: *LogSetSpec, *DNSetSpec, *CNSetSpec")
-		return
-	}
-}
-
-// setPodSetDefaults set default values in pod set
-func setPodSetDefaults(s *PodSet) {
-	if s.Overlay == nil {
-		s.Overlay = &Overlay{}
-	}
-	s.Overlay.Env = appendIfNotExist(s.Overlay.Env, corev1.EnvVar{Name: EnvGoDebug, Value: DefaultGODebug}, func(v corev1.EnvVar) string {
-		return v.Name
-	})
-}
-
-func appendIfNotExist[K comparable, V any](list []V, elem V, keyFunc func(V) K) []V {
-	for _, o := range list {
-		if keyFunc(o) == keyFunc(elem) {
-			return list
-		}
-	}
-	return append(list, elem)
 }
 
 func GetCNPodUUID(pod *corev1.Pod) string {

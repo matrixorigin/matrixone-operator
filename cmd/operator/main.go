@@ -147,7 +147,7 @@ func main() {
 	controllermetrics.Registry.MustRegister(collector)
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		v1alpha1.ServiceDefaultArgs = operatorCfg.DefaultArgs
+		mowebhook.ServiceDefaultArgs = operatorCfg.DefaultArgs
 		err := mowebhook.RegisterWebhooks(mgr)
 		exitIf(err, "unable to set up webhook")
 

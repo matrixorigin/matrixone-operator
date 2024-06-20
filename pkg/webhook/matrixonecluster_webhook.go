@@ -47,7 +47,13 @@ func (matrixOneClusterWebhook) setupWebhookWithManager(mgr ctrl.Manager) error {
 			dn:         &dnSetDefaulter{},
 			logService: &logSetDefaulter{},
 		}).
-		WithValidator(&matrixOneClusterValidator{}).
+		WithValidator(&matrixOneClusterValidator{
+			cn: &cnSetValidator{},
+			dn: &dnSetValidator{},
+			logService: &logSetValidator{
+				kClient: mgr.GetClient(),
+			},
+		}).
 		Complete()
 }
 

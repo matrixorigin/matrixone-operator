@@ -87,7 +87,7 @@ go-lint: golangci-lint
 check-license: license-eye
 	$(LICENSE_EYE) -v info -c .licenserc.yml header check
 
-LOCALBIN ?= $(shell pwd)/bin
+LOCALBIN ?= $(shell pwd)/api/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
@@ -102,7 +102,7 @@ $(ENVTEST): $(LOCALBIN)
 test: api-test unit
 
 # Run unit tests
-unit: generate fmt vet manifests
+unit: generate fmt vet manifests envtest
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" CGO_ENABLED=0 go test ./pkg/... -coverprofile cover.out
 
 api-test:

@@ -25,18 +25,8 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
 
-var (
-	// ServiceDefaultArgs is a cache variable for default args, should be read only in this package
-	ServiceDefaultArgs *DefaultArgs
-)
-
-// DefaultArgs contain default service args for logservice/dn/tp, these default args set in matrixone-operator-cm configmap
-type DefaultArgs struct {
-	LogService []string `json:"logService,omitempty"`
-	DN         []string `json:"dn,omitempty"`
-	CN         []string `json:"cn,omitempty"`
-	Proxy      []string `json:"proxy,omitempty"`
-}
+// DefaultArgs alias to v1alpha1.DefaultArgs
+type DefaultArgs = v1alpha1.DefaultArgs
 
 // setDefaultServiceArgs set default args for service, we only set default args when there is service args config in service spec
 func setDefaultServiceArgs(object interface{}) {
