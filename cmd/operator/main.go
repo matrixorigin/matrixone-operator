@@ -112,8 +112,6 @@ func main() {
 	err := common.LoadOperatorConfig(operatorCfgDir, &operatorCfg)
 	exitIf(err, "failed to load operator configmap")
 
-	setupLog.Info("change code to verify cache")
-
 	err = features.DefaultMutableFeatureGate.SetFromMap(operatorCfg.FeatureGates)
 	exitIf(err, "failed to set feature gate")
 
