@@ -435,22 +435,42 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		ctx.Log.Info("error sync stats, cn not found in store-cache", "error", err.Error())
 		return nil
 	}
+	startedTime := common.GetCNStartedTime(pod)
+	if startedTime == nil {
+		return errors.New("CN not started")
+	}
+
+	sc := &common.StoreScore{}
+	previous, err := common.GetStoreScore(pod)
+	if err == nil {
+		sc = previous
+	}
+	if sc.StartedTime == nil || !sc.StartedTime.Equal(*startedTime) {
+		// clean previously recorded score and update startTime if CN is restarted
+		sc.Restarted(startedTime)
+	}
+
 	count, err := c.getSessionCount(queryAddress, moVersion)
 	if err != nil {
-		return errors.WrapPrefix(err, "error get sessions", 0)
+		ctx.Log.Info("error get session count", "error", err.Error())
+	} else {
+		// update session count
+		sc.SessionCount = count
 	}
 	var pipelineCount int
 	if v1alpha1.HasMOFeature(moVersion, v1alpha1.MOFeaturePipelineInfo) {
 		pipelineCount, err = c.getPipelineCount(queryAddress)
 		if err != nil {
-			return errors.WrapPrefix(err, "error get pipeline count", 0)
+			ctx.Log.Info("error get pipeline count", "error", err.Error())
+		} else {
+			// update pipeline count
+			sc.PipelineCount = pipelineCount
 		}
+	} else {
+		// clear pipeline count if feature is disabled
+		sc.PipelineCount = 0
 	}
 
-	sc := &common.StoreScore{
-		SessionCount:  count,
-		PipelineCount: pipelineCount,
-	}
 	err = ctx.Patch(pod, func() error {
 		if err := common.SetStoreScore(pod, sc); err != nil {
 			return err
