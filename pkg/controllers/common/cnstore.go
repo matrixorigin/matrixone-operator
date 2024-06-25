@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
+	"time"
 )
 
 const (
@@ -148,6 +149,8 @@ func ToStoreLabels(labels []v1alpha1.CNLabel) map[string]metadata.LabelList {
 type StoreScore struct {
 	SessionCount  int `json:"sessionCount"`
 	PipelineCount int `json:"pipelineCount"`
+
+	StartedTime *time.Time `json:"startedTime,omitempty"`
 }
 
 func (s *StoreScore) GenDeletionCost() int {
@@ -156,6 +159,12 @@ func (s *StoreScore) GenDeletionCost() int {
 
 func (s *StoreScore) IsSafeToReclaim() bool {
 	return s.SessionCount == 0 && s.PipelineCount == 0
+}
+
+func (s *StoreScore) Restarted(startedTime *time.Time) {
+	s.SessionCount = 0
+	s.PipelineCount = 0
+	s.StartedTime = startedTime
 }
 
 // GetStoreScore get the store connection count from Pod anno
@@ -211,4 +220,16 @@ func NeedUpdateImage(pod *corev1.Pod) bool {
 		}
 	}
 	return false
+}
+
+// GetCNStartedTime get the CNStarted Time
+func GetCNStartedTime(pod *corev1.Pod) *time.Time {
+	for _, c := range pod.Status.ContainerStatuses {
+		if c.Name == v1alpha1.ContainerMain {
+			if c.State.Running != nil {
+				return &c.State.Running.StartedAt.Time
+			}
+		}
+	}
+	return nil
 }
