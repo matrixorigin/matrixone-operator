@@ -421,6 +421,21 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 
 func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
+
+	startedTime := common.GetCNStartedTime(pod)
+	if startedTime == nil {
+		return errors.New("CN not started")
+	}
+	sc := &common.StoreScore{}
+	previous, err := common.GetStoreScore(pod)
+	if err == nil {
+		sc = previous
+	}
+	if sc.StartedTime == nil || !sc.StartedTime.Equal(*startedTime) {
+		// clean previously recorded score and update startTime if CN is restarted
+		sc.Restarted(startedTime)
+	}
+
 	uid := v1alpha1.GetCNPodUUID(pod)
 	moVersion := common.GetSemanticVersion(&pod.ObjectMeta)
 	var queryAddress string
@@ -432,22 +447,8 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		queryAddress = cn.QueryAddress
 		return nil
 	}); err != nil {
-		ctx.Log.Info("error sync stats, cn not found in store-cache", "error", err.Error())
-		return nil
-	}
-	startedTime := common.GetCNStartedTime(pod)
-	if startedTime == nil {
-		return errors.New("CN not started")
-	}
-
-	sc := &common.StoreScore{}
-	previous, err := common.GetStoreScore(pod)
-	if err == nil {
-		sc = previous
-	}
-	if sc.StartedTime == nil || !sc.StartedTime.Equal(*startedTime) {
-		// clean previously recorded score and update startTime if CN is restarted
-		sc.Restarted(startedTime)
+		ctx.Log.Info("error refresh stats, cn not found in store-cache", "error", err.Error())
+		return c.patchStoreStats(ctx, sc)
 	}
 
 	count, err := c.getSessionCount(queryAddress, moVersion)
@@ -471,7 +472,12 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		sc.PipelineCount = 0
 	}
 
-	err = ctx.Patch(pod, func() error {
+	return c.patchStoreStats(ctx, sc)
+}
+
+func (c *Controller) patchStoreStats(ctx *recon.Context[*corev1.Pod], sc *common.StoreScore) error {
+	pod := ctx.Obj
+	err := ctx.Patch(pod, func() error {
 		if err := common.SetStoreScore(pod, sc); err != nil {
 			return err
 		}
@@ -479,9 +485,9 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		if pod.Labels == nil {
 			pod.Labels = map[string]string{}
 		}
-		pod.Labels[common.CNUUIDLabelKey] = uid
+		pod.Labels[common.CNUUIDLabelKey] = v1alpha1.GetCNPodUUID(pod)
 		// NB: store-connections anno is no longer used in mo-operator, but must be kept for external compatibility
-		// ref: https://github.com/matrixorigin/MO-Cloud/issues/3007
+		// ref:
 		pod.Annotations[v1alpha1.StoreConnectionAnno] = strconv.Itoa(sc.PipelineCount + sc.SessionCount)
 		return nil
 	})
