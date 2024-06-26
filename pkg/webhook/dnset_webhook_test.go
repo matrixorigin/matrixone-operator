@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package webhook
 
 import (
 	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
 
 var _ = Describe("DNSet Webhook", func() {
@@ -28,22 +31,22 @@ var _ = Describe("DNSet Webhook", func() {
 		// DO NOT mutate the following spec.
 		// This spec is valid in mo-operator v0.6.0 and should always be accepted by
 		// the webhook for backward compatibility.
-		v06 := &DNSet{
+		v06 := &v1alpha1.DNSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dn-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: DNSetSpec{
-				PodSet: PodSet{
+			Spec: v1alpha1.DNSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
-					MainContainer: MainContainer{
+					MainContainer: v1alpha1.MainContainer{
 						Image: "test",
 					},
 				},
 			},
-			Deps: DNSetDeps{
-				LogSetRef: LogSetRef{
-					LogSet: &LogSet{
+			Deps: v1alpha1.DNSetDeps{
+				LogSetRef: v1alpha1.LogSetRef{
+					LogSet: &v1alpha1.LogSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test",
 							Namespace: "default",
@@ -56,25 +59,25 @@ var _ = Describe("DNSet Webhook", func() {
 	})
 
 	It("should set default cache size", func() {
-		dn := &DNSet{
+		dn := &v1alpha1.DNSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dn-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: DNSetSpec{
-				PodSet: PodSet{
+			Spec: v1alpha1.DNSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
-					MainContainer: MainContainer{
+					MainContainer: v1alpha1.MainContainer{
 						Image: "test",
 					},
 				},
-				CacheVolume: &Volume{
+				CacheVolume: &v1alpha1.Volume{
 					Size: resource.MustParse("20Gi"),
 				},
 			},
-			Deps: DNSetDeps{
-				LogSetRef: LogSetRef{
-					ExternalLogSet: &ExternalLogSet{},
+			Deps: v1alpha1.DNSetDeps{
+				LogSetRef: v1alpha1.LogSetRef{
+					ExternalLogSet: &v1alpha1.ExternalLogSet{},
 				},
 			},
 		}
@@ -84,18 +87,18 @@ var _ = Describe("DNSet Webhook", func() {
 	})
 
 	It("should reject duplicate [tn] and [dn] config", func() {
-		dn := &DNSet{
+		dn := &v1alpha1.DNSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dn-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: DNSetSpec{
-				PodSet: PodSet{
+			Spec: v1alpha1.DNSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
-					MainContainer: MainContainer{
+					MainContainer: v1alpha1.MainContainer{
 						Image: "test",
 					},
-					Config: NewTomlConfig(map[string]interface{}{
+					Config: v1alpha1.NewTomlConfig(map[string]interface{}{
 						"tn": map[string]interface{}{
 							"port-base": 1000,
 						},
@@ -105,9 +108,9 @@ var _ = Describe("DNSet Webhook", func() {
 					}),
 				},
 			},
-			Deps: DNSetDeps{
-				LogSetRef: LogSetRef{
-					ExternalLogSet: &ExternalLogSet{},
+			Deps: v1alpha1.DNSetDeps{
+				LogSetRef: v1alpha1.LogSetRef{
+					ExternalLogSet: &v1alpha1.ExternalLogSet{},
 				},
 			},
 		}

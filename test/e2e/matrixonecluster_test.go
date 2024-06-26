@@ -20,6 +20,7 @@ import (
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	mowebhook "github.com/matrixorigin/matrixone-operator/pkg/webhook"
 	"github.com/matrixorigin/matrixone-operator/test/e2e/sql"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 	. "github.com/onsi/ginkgo/v2"
@@ -291,7 +292,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
 		Expect(kubeCli.Create(context.TODO(), minioSecret)).To(Succeed())
-		maxLengthName := strings.Repeat("a", v1alpha1.MatrixOneClusterNameMaxLength)
+		maxLengthName := strings.Repeat("a", mowebhook.MatrixOneClusterNameMaxLength)
 		mo := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: env.Namespace,

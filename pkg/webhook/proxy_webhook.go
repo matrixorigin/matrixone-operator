@@ -12,47 +12,64 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package webhook
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
 
-func (r *ProxySet) setupWebhookWithManager(mgr ctrl.Manager) error {
+type proxySetWebhook struct{}
+
+func (proxySetWebhook) setupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(&v1alpha1.ProxySet{}).
+		WithDefaulter(&proxySetDefaulter{}).
+		WithValidator(&proxySetValidator{}).
 		Complete()
 }
 
 // +kubebuilder:webhook:path=/mutate-core-matrixorigin-io-v1alpha1-proxyset,mutating=true,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=proxysets,verbs=create;update,versions=v1alpha1,name=mproxyset.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Defaulter = &ProxySet{}
+// proxySetDefaulter implements webhook.CustomDefaulter so a webhook will be registered for v1alpha1.ProxySet
+type proxySetDefaulter struct{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *ProxySet) Default() {
-	r.Spec.Default()
+var _ webhook.CustomDefaulter = &proxySetDefaulter{}
+
+func (p *proxySetDefaulter) Default(_ context.Context, obj runtime.Object) error {
+	proxySet, ok := obj.(*v1alpha1.ProxySet)
+	if !ok {
+		return unexpectedKindError("ProxySet", obj)
+	}
+	p.DefaultSpec(&proxySet.Spec)
+	return nil
 }
 
-func (r *ProxySetSpec) Default() {
-	setDefaultServiceArgs(r)
+func (p *proxySetDefaulter) DefaultSpec(spec *v1alpha1.ProxySetSpec) {
+	setDefaultServiceArgs(spec)
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-proxyset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=proxysets,verbs=create;update,versions=v1alpha1,name=vproxyset.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Validator = &ProxySet{}
+// proxySetValidator implements webhook.Validator so a webhook will be registered for v1alpha1.ProxySet
+type proxySetValidator struct{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *ProxySet) ValidateCreate() (admission.Warnings, error) {
+var _ webhook.CustomValidator = &proxySetValidator{}
+
+func (p proxySetValidator) ValidateCreate(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (r *ProxySet) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+func (p proxySetValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (r *ProxySet) ValidateDelete() (admission.Warnings, error) {
+func (p proxySetValidator) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }

@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package webhook
 
 import (
 	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
 
 var _ = Describe("CNSet Webhook", func() {
@@ -28,22 +31,22 @@ var _ = Describe("CNSet Webhook", func() {
 		// DO NOT mutate the following spec.
 		// This spec is valid in mo-operator v0.6.0 and should always be accepted by
 		// the webhook for backward compatibility.
-		v06 := &CNSet{
+		v06 := &v1alpha1.CNSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cn-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: CNSetSpec{
-				PodSet: PodSet{
+			Spec: v1alpha1.CNSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
-					MainContainer: MainContainer{
+					MainContainer: v1alpha1.MainContainer{
 						Image: "test",
 					},
 				},
 			},
-			Deps: CNSetDeps{
-				LogSetRef: LogSetRef{
-					LogSet: &LogSet{
+			Deps: v1alpha1.CNSetDeps{
+				LogSetRef: v1alpha1.LogSetRef{
+					LogSet: &v1alpha1.LogSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test",
 							Namespace: "default",
@@ -56,27 +59,27 @@ var _ = Describe("CNSet Webhook", func() {
 	})
 
 	It("should set default cache size", func() {
-		cn := &CNSet{
+		cn := &v1alpha1.CNSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cn-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: CNSetSpec{
-				PodSet: PodSet{
+			Spec: v1alpha1.CNSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
-					MainContainer: MainContainer{
+					MainContainer: v1alpha1.MainContainer{
 						Image: "test",
 					},
 				},
-				ConfigThatChangeCNSpec: ConfigThatChangeCNSpec{
-					CacheVolume: &Volume{
+				ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
+					CacheVolume: &v1alpha1.Volume{
 						Size: resource.MustParse("20Gi"),
 					},
 				},
 			},
-			Deps: CNSetDeps{
-				LogSetRef: LogSetRef{
-					ExternalLogSet: &ExternalLogSet{},
+			Deps: v1alpha1.CNSetDeps{
+				LogSetRef: v1alpha1.LogSetRef{
+					ExternalLogSet: &v1alpha1.ExternalLogSet{},
 				},
 			},
 		}
@@ -86,45 +89,45 @@ var _ = Describe("CNSet Webhook", func() {
 	})
 
 	It("should reject empty CN label key or values", func() {
-		cnTpl := &CNSet{
+		cnTpl := &v1alpha1.CNSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cn-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: CNSetSpec{
-				PodSet: PodSet{
+			Spec: v1alpha1.CNSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
-					MainContainer: MainContainer{
+					MainContainer: v1alpha1.MainContainer{
 						Image: "test",
 					},
 				},
 			},
-			Deps: CNSetDeps{
-				LogSetRef: LogSetRef{
-					ExternalLogSet: &ExternalLogSet{},
+			Deps: v1alpha1.CNSetDeps{
+				LogSetRef: v1alpha1.LogSetRef{
+					ExternalLogSet: &v1alpha1.ExternalLogSet{},
 				},
 			},
 		}
 		emptyLabelKey := cnTpl.DeepCopy()
-		emptyLabelKey.Spec.Labels = []CNLabel{{
+		emptyLabelKey.Spec.Labels = []v1alpha1.CNLabel{{
 			Key:    "",
 			Values: []string{"test"},
 		}}
 		Expect(k8sClient.Create(context.TODO(), emptyLabelKey)).NotTo(Succeed())
 		emptyLabelValueList := cnTpl.DeepCopy()
-		emptyLabelValueList.Spec.Labels = []CNLabel{{
+		emptyLabelValueList.Spec.Labels = []v1alpha1.CNLabel{{
 			Key:    "test",
 			Values: []string{},
 		}}
 		Expect(k8sClient.Create(context.TODO(), emptyLabelValueList)).NotTo(Succeed())
 		emptyLabelValueItem := cnTpl.DeepCopy()
-		emptyLabelValueItem.Spec.Labels = []CNLabel{{
+		emptyLabelValueItem.Spec.Labels = []v1alpha1.CNLabel{{
 			Key:    "test",
 			Values: []string{""},
 		}}
 		Expect(k8sClient.Create(context.TODO(), emptyLabelValueItem)).NotTo(Succeed())
 		validLabel := cnTpl.DeepCopy()
-		emptyLabelValueItem.Spec.Labels = []CNLabel{{
+		emptyLabelValueItem.Spec.Labels = []v1alpha1.CNLabel{{
 			Key:    "test",
 			Values: []string{"test"},
 		}}

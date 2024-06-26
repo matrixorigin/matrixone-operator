@@ -44,6 +44,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/mocluster"
 	hookctrl "github.com/matrixorigin/matrixone-operator/pkg/controllers/webhook"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/webui"
+	mowebhook "github.com/matrixorigin/matrixone-operator/pkg/webhook"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	zaporigin "go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -146,8 +147,8 @@ func main() {
 	controllermetrics.Registry.MustRegister(collector)
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		v1alpha1.ServiceDefaultArgs = operatorCfg.DefaultArgs
-		err := v1alpha1.RegisterWebhooks(mgr)
+		mowebhook.ServiceDefaultArgs = operatorCfg.DefaultArgs
+		err := mowebhook.RegisterWebhooks(mgr)
 		exitIf(err, "unable to set up webhook")
 
 		caBundle, err := os.ReadFile(fmt.Sprintf("%s/%s", webhookCertDir, caFile))
