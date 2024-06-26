@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package webhook
 
 import (
 	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
 
 var _ = Describe("LogSet Webhook", func() {
@@ -28,23 +31,23 @@ var _ = Describe("LogSet Webhook", func() {
 		// DO NOT mutate the following spec.
 		// This spec is valid in mo-operator v0.6.0 and should always be accepted by
 		// the webhook for backward compatibility.
-		v06 := &LogSet{
+		v06 := &v1alpha1.LogSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ls-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: LogSetSpec{
-				PodSet: PodSet{
+			Spec: v1alpha1.LogSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
-					MainContainer: MainContainer{
+					MainContainer: v1alpha1.MainContainer{
 						Image: "test",
 					},
 				},
-				Volume: Volume{
+				Volume: v1alpha1.Volume{
 					Size: resource.MustParse("10Gi"),
 				},
-				SharedStorage: SharedStorageProvider{
-					S3: &S3Provider{Path: "test/data"},
+				SharedStorage: v1alpha1.SharedStorageProvider{
+					S3: &v1alpha1.S3Provider{Path: "test/data"},
 				},
 			},
 		}
@@ -52,29 +55,29 @@ var _ = Describe("LogSet Webhook", func() {
 	})
 
 	It("should set defaults", func() {
-		tpl := &LogSet{
+		tpl := &v1alpha1.LogSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ls-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: LogSetSpec{
-				PodSet: PodSet{
+			Spec: v1alpha1.LogSetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
-					MainContainer: MainContainer{
+					MainContainer: v1alpha1.MainContainer{
 						Image: "test",
 					},
 				},
-				Volume: Volume{
+				Volume: v1alpha1.Volume{
 					Size: resource.MustParse("10Gi"),
 				},
-				SharedStorage: SharedStorageProvider{
-					S3: &S3Provider{Path: "test/data"},
+				SharedStorage: v1alpha1.SharedStorageProvider{
+					S3: &v1alpha1.S3Provider{Path: "test/data"},
 				},
 			},
 		}
 		testDefaultPVCRetainPolicy := tpl.DeepCopy()
 		Expect(k8sClient.Create(context.TODO(), testDefaultPVCRetainPolicy)).To(Succeed())
 		Expect(testDefaultPVCRetainPolicy.Spec.PVCRetentionPolicy).NotTo(BeNil())
-		Expect(*testDefaultPVCRetainPolicy.Spec.PVCRetentionPolicy).To(Equal(PVCRetentionPolicyDelete))
+		Expect(*testDefaultPVCRetainPolicy.Spec.PVCRetentionPolicy).To(Equal(v1alpha1.PVCRetentionPolicyDelete))
 	})
 })

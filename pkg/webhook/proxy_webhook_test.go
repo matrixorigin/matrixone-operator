@@ -12,35 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package webhook
 
 import (
 	"context"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
 
 var _ = Describe("ProxySet Webhook", func() {
 
 	It("should hook proxyset", func() {
-		ps := &ProxySet{
+		ps := &v1alpha1.ProxySet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "proxy-" + randomString(5),
 				Namespace: "default",
 			},
-			Spec: ProxySetSpec{
-				PodSet: PodSet{
+			Spec: v1alpha1.ProxySetSpec{
+				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
-					MainContainer: MainContainer{
+					MainContainer: v1alpha1.MainContainer{
 						Image: "test",
 					},
 				},
 			},
-			Deps: ProxySetDeps{
-				LogSetRef: LogSetRef{
-					ExternalLogSet: &ExternalLogSet{},
+			Deps: v1alpha1.ProxySetDeps{
+				LogSetRef: v1alpha1.LogSetRef{
+					ExternalLogSet: &v1alpha1.ExternalLogSet{},
 				},
 			},
 		}
