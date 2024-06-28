@@ -94,11 +94,13 @@ func validatePodSet(podSet *v1alpha1.PodSet, path *field.Path) field.ErrorList {
 			errs = append(errs, field.Invalid(path.Child("semanticVersion"), *podSet.SemanticVersion, err.Error()))
 		}
 	}
+
 	if podSet.ExportToPrometheus != nil && *podSet.ExportToPrometheus {
+		promDiscoveryScheme := path.Child("promDiscoveryScheme")
 		if podSet.PromDiscoveryScheme == nil {
-			errs = append(errs, field.Invalid(path.Child("promDiscoveryScheme"), "", "ExportToPrometheus is enabled but PromDiscoveryScheme is not provided"))
+			errs = append(errs, field.Invalid(promDiscoveryScheme, "", "ExportToPrometheus is enabled but PromDiscoveryScheme is not provided"))
 		} else if *podSet.PromDiscoveryScheme != v1alpha1.PromDiscoverySchemePod && *podSet.PromDiscoveryScheme != v1alpha1.PromDiscoverySchemeService {
-			errs = append(errs, field.Invalid(path.Child("promDiscoveryScheme"), *podSet.PromDiscoveryScheme,
+			errs = append(errs, field.Invalid(promDiscoveryScheme, *podSet.PromDiscoveryScheme,
 				fmt.Sprintf("invalid PromDiscoveryScheme, must be %s or %s", v1alpha1.PromDiscoverySchemePod, v1alpha1.PromDiscoverySchemeService)))
 		}
 	}
