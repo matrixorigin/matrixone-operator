@@ -16,13 +16,12 @@ package webhook
 
 import (
 	"fmt"
-
 	"github.com/go-errors/errors"
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"k8s.io/utils/pointer"
 )
 
 // DefaultArgs alias to v1alpha1.DefaultArgs
@@ -65,6 +64,12 @@ func setPodSetDefaults(s *v1alpha1.PodSet) {
 	s.Overlay.Env = appendIfNotExist(s.Overlay.Env, corev1.EnvVar{Name: v1alpha1.EnvGoDebug, Value: v1alpha1.DefaultGODebug}, func(v corev1.EnvVar) string {
 		return v.Name
 	})
+
+	if s.ExportToPrometheus != nil && *s.ExportToPrometheus {
+		if s.PromDiscoveryScheme == nil {
+			s.PromDiscoveryScheme = (*v1alpha1.PromDiscoveryScheme)(pointer.String(string(v1alpha1.PromDiscoverySchemeService)))
+		}
+	}
 }
 
 func appendIfNotExist[K comparable, V any](list []V, elem V, keyFunc func(V) K) []V {

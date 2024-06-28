@@ -146,7 +146,7 @@ func (l *logSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) 
 		return nil, unexpectedKindError("LogSet", obj)
 	}
 	errs := l.ValidateSpecCreate(logSet.ObjectMeta, &logSet.Spec)
-	errs = append(errs, validateMainContainer(&logSet.Spec.MainContainer, field.NewPath("spec"))...)
+	errs = append(errs, validatePodSet(&logSet.Spec.PodSet, field.NewPath("spec"))...)
 	return nil, invalidOrNil(errs, logSet)
 }
 

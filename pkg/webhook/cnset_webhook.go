@@ -113,7 +113,7 @@ func (c *cnSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) (
 	var errs field.ErrorList
 	errs = append(errs, validateLogSetRef(&cnSet.Deps.LogSetRef, field.NewPath("deps"))...)
 	errs = append(errs, c.ValidateSpecCreate(&cnSet.Spec)...)
-	errs = append(errs, validateMainContainer(&cnSet.Spec.MainContainer, field.NewPath("spec"))...)
+	errs = append(errs, validatePodSet(&cnSet.Spec.PodSet, field.NewPath("spec"))...)
 	return nil, invalidOrNil(errs, cnSet)
 }
 
