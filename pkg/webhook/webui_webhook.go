@@ -60,7 +60,7 @@ func (w *webUIValidator) ValidateCreate(_ context.Context, obj runtime.Object) (
 		return nil, unexpectedKindError("WebUI", obj)
 	}
 	var errs field.ErrorList
-	errs = append(errs, validateMainContainer(&webui.Spec.MainContainer, field.NewPath("spec"))...)
+	errs = append(errs, validatePodSet(&webui.Spec.PodSet, field.NewPath("spec"))...)
 	return nil, invalidOrNil(errs, webui)
 }
 
