@@ -15,6 +15,7 @@
 package convertor
 
 import (
+	apiscorev1 "k8s.io/kubernetes/pkg/apis/core/v1"
 	"reflect"
 	"testing"
 
@@ -22,7 +23,7 @@ import (
 	"k8s.io/kubernetes/pkg/apis/core"
 )
 
-func TestConvertTolerations(t *testing.T) {
+func TestConvertSlice(t *testing.T) {
 	tolerations := []corev1.Toleration{
 		{
 			Key:      "key1",
@@ -65,7 +66,7 @@ func TestConvertTolerations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ConvertTolerations(tt.tolerations)
+			got, err := ConvertSlice(tt.tolerations, apiscorev1.Convert_v1_Toleration_To_core_Toleration)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConvertTolerations() error = %v, wantErr %v", err, tt.wantErr)
 				return

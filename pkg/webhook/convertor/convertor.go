@@ -15,36 +15,32 @@
 package convertor
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/kubernetes/pkg/apis/core"
-	apiscorev1 "k8s.io/kubernetes/pkg/apis/core/v1"
 )
 
-func ConvertResourceRequirements(rr *corev1.ResourceRequirements) (*core.ResourceRequirements, error) {
-	out := &core.ResourceRequirements{}
-	err := apiscorev1.Convert_v1_ResourceRequirements_To_core_ResourceRequirements(rr, out, nil)
+type Convertable interface{}
+
+type ConvertFn func(*Convertable, *Convertable, conversion.Scope) error
+
+func Convert[inT, outT Convertable](in *inT, convertFn func(*inT, *outT, conversion.Scope) error) (*outT, error) {
+	out := new(outT)
+	err := convertFn(in, out, nil)
 	return out, err
 }
 
-func ConvertPodTemplate(pt *corev1.PodTemplate) (*core.PodTemplate, error) {
-	out := &core.PodTemplate{}
-	err := apiscorev1.Convert_v1_PodTemplate_To_core_PodTemplate(pt, out, nil)
-	return out, err
-}
-
-func ConvertTolerations(tolerations []corev1.Toleration) ([]core.Toleration, error) {
-	outSlice := make([]core.Toleration, 0, len(tolerations))
+func ConvertSlice[inT, outT Convertable](inSlice []inT, convertFn func(*inT, *outT, conversion.Scope) error) ([]outT, error) {
+	outSlice := make([]outT, 0, len(inSlice))
 	var errs []error
-	for _, toleration := range tolerations {
-		in, out := toleration, core.Toleration{}
-		err := apiscorev1.Convert_v1_Toleration_To_core_Toleration(&in, &out, nil)
+
+	for _, item := range inSlice {
+		in, out := item, new(outT)
+		err := convertFn(&in, out, nil)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		outSlice = append(outSlice, out)
+		outSlice = append(outSlice, *out)
 	}
-
 	return outSlice, errors.NewAggregate(errs)
 }

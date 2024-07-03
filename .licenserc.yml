@@ -29,4 +29,5 @@ header:
     - '**/*.xml'
     - 'playground/*'
     - ".dockerignore"
+    - 'pkg/webhook/corevalidation/validation.go'
   comment: on-failure
