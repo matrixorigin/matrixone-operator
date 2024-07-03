@@ -104,16 +104,16 @@ func validatePodSet(podSet *v1alpha1.PodSet, path *field.Path) field.ErrorList {
 	}
 
 	if podSet.ExportToPrometheus != nil && *podSet.ExportToPrometheus {
-		promDiscoveryScheme := path.Child("promDiscoveryScheme")
+		promDiscoverySchemePath := path.Child("promDiscoveryScheme")
 		if podSet.PromDiscoveryScheme == nil {
-			errs = append(errs, field.Invalid(promDiscoveryScheme, "", "ExportToPrometheus is enabled but PromDiscoveryScheme is not provided"))
+			errs = append(errs, field.Invalid(promDiscoverySchemePath, "", "ExportToPrometheus is enabled but PromDiscoveryScheme is not provided"))
 		} else if *podSet.PromDiscoveryScheme != v1alpha1.PromDiscoverySchemePod && *podSet.PromDiscoveryScheme != v1alpha1.PromDiscoverySchemeService {
-			errs = append(errs, field.Invalid(promDiscoveryScheme, *podSet.PromDiscoveryScheme,
+			errs = append(errs, field.Invalid(promDiscoverySchemePath, *podSet.PromDiscoveryScheme,
 				fmt.Sprintf("invalid PromDiscoveryScheme, must be %s or %s", v1alpha1.PromDiscoverySchemePod, v1alpha1.PromDiscoverySchemeService)))
 		}
 	}
 
-	errs = append(errs, validateMainContainer(&podSet.MainContainer, path.Child("mainContainer"))...)
+	errs = append(errs, validateMainContainer(&podSet.MainContainer, path)...)
 	errs = append(errs, metav1validation.ValidateLabels(podSet.NodeSelector, path.Child("nodeSelector"))...)
 
 	return errs
