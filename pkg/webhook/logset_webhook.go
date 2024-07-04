@@ -177,6 +177,9 @@ func (l *logSetValidator) ValidateSpecUpdate(oldSpec, spec *v1alpha1.LogSetSpec,
 	if !equality.Semantic.DeepEqual(oldSpec.InitialConfig, spec.InitialConfig) {
 		errs = append(errs, field.Invalid(field.NewPath("spec").Child("initialConfig"), nil, "initialConfig is immutable"))
 	}
+	if !equality.Semantic.DeepEqual(oldSpec.SharedStorage.S3, spec.SharedStorage.S3) {
+		errs = append(errs, field.Invalid(field.NewPath("spec").Child("sharedStorage").Child("s3"), nil, "sharedStorage.s3 is immutable"))
+	}
 	errs = append(errs, l.validateIfBucketInUse(meta, spec)...)
 	return errs
 }
