@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/test/e2e/e2eminio"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
@@ -105,7 +106,7 @@ var _ = Describe("Matrix BucketClaim test", func() {
 	It("Should bucket been deleted use delete retain policy", func() {
 		By("create logset cluster with minio provider")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
-		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
+		Expect(util.Ignore(apierrors.IsAlreadyExists, kubeCli.Create(ctx, minioSecret))).To(Succeed())
 
 		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
 		policyDelete := v1alpha1.PVCRetentionPolicyDelete

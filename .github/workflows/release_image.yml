@@ -25,6 +25,7 @@ jobs:
           images: |
             matrixorigin/matrixone-operator
             registry.cn-hangzhou.aliyuncs.com/mocloud/matrixone-operator
+            registry.cn-shanghai.aliyuncs.com/matrixorigin/matrixone-operator
           tags: |
             type=ref,event=branch
             type=sha

@@ -82,7 +82,7 @@ func (d *dnSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) (
 	var errs field.ErrorList
 	errs = append(errs, validateLogSetRef(&dnSet.Deps.LogSetRef, field.NewPath("deps"))...)
 	errs = append(errs, d.ValidateSpecCreate(&dnSet.Spec)...)
-	errs = append(errs, validateMainContainer(&dnSet.Spec.MainContainer, field.NewPath("spec"))...)
+	errs = append(errs, validatePodSet(&dnSet.Spec.PodSet, field.NewPath("spec"))...)
 	errs = append(errs, d.validateConfig(dnSet.Spec.Config, field.NewPath("spec").Child("config"))...)
 	return nil, invalidOrNil(errs, dnSet)
 }
