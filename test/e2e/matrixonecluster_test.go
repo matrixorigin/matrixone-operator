@@ -291,7 +291,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 		By("Create cluster with maximum name length")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
-		Expect(kubeCli.Create(context.TODO(), minioSecret)).To(Succeed())
+		Expect(util.Ignore(apierrors.IsAlreadyExists, kubeCli.Create(context.TODO(), minioSecret))).To(Succeed())
 		maxLengthName := strings.Repeat("a", mowebhook.MatrixOneClusterNameMaxLength)
 		mo := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
