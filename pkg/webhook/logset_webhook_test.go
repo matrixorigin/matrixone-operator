@@ -80,4 +80,36 @@ var _ = Describe("LogSet Webhook", func() {
 		Expect(testDefaultPVCRetainPolicy.Spec.PVCRetentionPolicy).NotTo(BeNil())
 		Expect(*testDefaultPVCRetainPolicy.Spec.PVCRetentionPolicy).To(Equal(v1alpha1.PVCRetentionPolicyDelete))
 	})
+
+	It("should reject sharedStorage.s3 updating", func() {
+		ls := &v1alpha1.LogSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ls-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: v1alpha1.LogSetSpec{
+				PodSet: v1alpha1.PodSet{
+					Replicas: 3,
+					MainContainer: v1alpha1.MainContainer{
+						Image: "test",
+					},
+				},
+				Volume: v1alpha1.Volume{
+					Size: resource.MustParse("10Gi"),
+				},
+				SharedStorage: v1alpha1.SharedStorageProvider{
+					S3: &v1alpha1.S3Provider{
+						Path: "test/data-old",
+					},
+				},
+			},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), ls)).To(Succeed())
+
+		By("reject sharedStorage.s3 updating")
+		modified := ls.DeepCopy()
+		modified.Spec.SharedStorage.S3.Path = "test/data-new"
+		Expect(k8sClient.Update(context.TODO(), modified)).NotTo(Succeed())
+	})
 })
