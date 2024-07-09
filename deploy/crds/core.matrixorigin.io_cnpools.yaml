@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: cnpools.core.matrixorigin.io
 spec:
   group: core.matrixorigin.io
@@ -25,14 +24,19 @@ spec:
         description: CNPool maintains a pool of CN Pods
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -46,8 +50,10 @@ spec:
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                   externalLogSet:
-                    description: 'An external LogSet the CNSet should connected to,
-                      mutual exclusive with LogSet TODO: rethink the schema of ExternalLogSet'
+                    description: |-
+                      An external LogSet the CNSet should connected to,
+                      mutual exclusive with LogSet
+                      TODO: rethink the schema of ExternalLogSet
                     properties:
                       haKeeperEndpoint:
                         description: HAKeeperEndpoint of the ExternalLogSet
@@ -92,8 +98,9 @@ spec:
                 description: Template is the CNSet template of the Pool
                 properties:
                   cacheVolume:
-                    description: CacheVolume is the desired local cache volume for
-                      CNSet, node storage will be used if not specified
+                    description: |-
+                      CacheVolume is the desired local cache volume for CNSet,
+                      node storage will be used if not specified
                     properties:
                       memoryCacheSize:
                         anyOf:
@@ -110,15 +117,15 @@ spec:
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       storageClassName:
-                        description: StorageClassName reference to the storageclass
-                          of the desired volume, the default storageclass of the cluster
-                          would be used if no specified.
+                        description: |-
+                          StorageClassName reference to the storageclass of the desired volume,
+                          the default storageclass of the cluster would be used if no specified.
                         type: string
                     type: object
                   clusterDomain:
-                    description: ClusterDomain is the cluster-domain of current kubernetes
-                      cluster, refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
-                      for details
+                    description: |-
+                      ClusterDomain is the cluster-domain of current kubernetes cluster,
+                      refer https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/ for details
                     type: string
                   cnLabels:
                     description: Labels are the CN labels for all the CN stores managed
@@ -139,9 +146,9 @@ spec:
                     description: Config is the raw config for pods
                     type: string
                   dnsBasedIdentity:
-                    description: 'If enabled, use the Pod dns name as the Pod identity
-                      Deprecated: DNSBasedIdentity is barely for keeping backward
-                      compatibility'
+                    description: |-
+                      If enabled, use the Pod dns name as the Pod identity
+                      Deprecated: DNSBasedIdentity is barely for keeping backward compatibility
                     type: boolean
                   exportToPrometheus:
                     description: ExportToPrometheus enables the pod to be discovered
@@ -151,14 +158,14 @@ spec:
                     description: Image is the docker image of the main container
                     type: string
                   memoryLimitPercent:
-                    description: MemoryLimitPercent is percent used to set GOMEMLIMIT
-                      env, its value must be in interval (0, 100]. GOMEMLIMIT = limits.memory
-                      * MemoryLimitPercent / 100
+                    description: |-
+                      MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
+                      GOMEMLIMIT = limits.memory * MemoryLimitPercent / 100
                     type: integer
                   nodePort:
-                    description: NodePort specifies the node port to use when ServiceType
-                      is NodePort or LoadBalancer, reconciling will fail if the node
-                      port is not available.
+                    description: |-
+                      NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer,
+                      reconciling will fail if the node port is not available.
                     format: int32
                     type: integer
                   nodeSelector:
@@ -180,11 +187,11 @@ spec:
                       type: string
                     type: array
                   promDiscoveryScheme:
-                    description: 'PromDiscoveryScheme indicates how the Pod will be
-                      discovered by prometheus, options: - Pod: the pod will be discovered
-                      via will-known labels on the Pod - Service: the pod will be
-                      discovered via will-known annotations in the service which expose
-                      endpoints to the pods default to Service'
+                    description: |-
+                      PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options:
+                      - Pod: the pod will be discovered via will-known labels on the Pod
+                      - Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods
+                      default to Service
                     type: string
                   pythonUdfSidecar:
                     description: PythonUdfSidecar is the python udf server in CN
@@ -203,18 +210,23 @@ spec:
                           python udf server
                         properties:
                           claims:
-                            description: "Claims lists the names of resources, defined
-                              in spec.resourceClaims, that are used by this container.
-                              \n This is an alpha field and requires enabling the
-                              DynamicResourceAllocation feature gate. \n This field
-                              is immutable. It can only be set for containers."
+                            description: |-
+                              Claims lists the names of resources, defined in spec.resourceClaims,
+                              that are used by this container.
+
+
+                              This is an alpha field and requires enabling the
+                              DynamicResourceAllocation feature gate.
+
+
+                              This field is immutable. It can only be set for containers.
                             items:
                               description: ResourceClaim references one entry in PodSpec.ResourceClaims.
                               properties:
                                 name:
-                                  description: Name must match the name of one entry
-                                    in pod.spec.resourceClaims of the Pod where this
-                                    field is used. It makes that resource available
+                                  description: |-
+                                    Name must match the name of one entry in pod.spec.resourceClaims of
+                                    the Pod where this field is used. It makes that resource available
                                     inside a container.
                                   type: string
                               required:
@@ -231,8 +243,9 @@ spec:
                               - type: string
                               pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                               x-kubernetes-int-or-string: true
-                            description: 'Limits describes the maximum amount of compute
-                              resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            description: |-
+                              Limits describes the maximum amount of compute resources allowed.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                             type: object
                           requests:
                             additionalProperties:
@@ -241,11 +254,11 @@ spec:
                               - type: string
                               pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                               x-kubernetes-int-or-string: true
-                            description: 'Requests describes the minimum amount of
-                              compute resources required. If Requests is omitted for
-                              a container, it defaults to Limits if that is explicitly
-                              specified, otherwise to an implementation-defined value.
-                              Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            description: |-
+                              Requests describes the minimum amount of compute resources required.
+                              If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                              otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                             type: object
                         type: object
                     type: object
@@ -258,19 +271,24 @@ spec:
                       conainer
                     properties:
                       claims:
-                        description: "Claims lists the names of resources, defined
-                          in spec.resourceClaims, that are used by this container.
-                          \n This is an alpha field and requires enabling the DynamicResourceAllocation
-                          feature gate. \n This field is immutable. It can only be
-                          set for containers."
+                        description: |-
+                          Claims lists the names of resources, defined in spec.resourceClaims,
+                          that are used by this container.
+
+
+                          This is an alpha field and requires enabling the
+                          DynamicResourceAllocation feature gate.
+
+
+                          This field is immutable. It can only be set for containers.
                         items:
                           description: ResourceClaim references one entry in PodSpec.ResourceClaims.
                           properties:
                             name:
-                              description: Name must match the name of one entry in
-                                pod.spec.resourceClaims of the Pod where this field
-                                is used. It makes that resource available inside a
-                                container.
+                              description: |-
+                                Name must match the name of one entry in pod.spec.resourceClaims of
+                                the Pod where this field is used. It makes that resource available
+                                inside a container.
                               type: string
                           required:
                           - name
@@ -286,8 +304,9 @@ spec:
                           - type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
-                        description: 'Limits describes the maximum amount of compute
-                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        description: |-
+                          Limits describes the maximum amount of compute resources allowed.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
                       requests:
                         additionalProperties:
@@ -296,26 +315,28 @@ spec:
                           - type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
-                        description: 'Requests describes the minimum amount of compute
-                          resources required. If Requests is omitted for a container,
-                          it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. Requests cannot exceed
-                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        description: |-
+                          Requests describes the minimum amount of compute resources required.
+                          If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
                     type: object
                   reusePVC:
                     description: ReusePVC means whether CNSet should reuse PVC
                     type: boolean
                   role:
-                    description: '[TP, AP], default to TP Deprecated: use labels instead'
+                    description: |-
+                      [TP, AP], default to TP
+                      Deprecated: use labels instead
                     type: string
                   scalingConfig:
                     description: ScalingConfig declares the CN scaling behavior
                     properties:
                       minDelaySeconds:
-                        description: minDelaySeconds is the minimum delay when drain
-                          CN store, usually be used to waiting for CN draining be
-                          propagated to the whole cluster
+                        description: |-
+                          minDelaySeconds is the minimum delay when drain CN store, usually
+                          be used to waiting for CN draining be propagated to the whole cluster
                         format: int32
                         type: integer
                       storeDrainEnabled:
@@ -328,11 +349,12 @@ spec:
                         type: string
                     type: object
                   semanticVersion:
-                    description: SemanticVersion override the semantic version of
-                      CN if set, the semantic version of CN will be default to the
-                      image tag, if the semantic version is not set, nor the image
-                      tag is a valid semantic version, operator will treat the MO
-                      as unknown version and will not apply any version-specific reconciliations
+                    description: |-
+                      SemanticVersion override the semantic version of CN if set,
+                      the semantic version of CN will be default to the image tag,
+                      if the semantic version is not set, nor the image tag is a valid semantic version,
+                      operator will treat the MO as unknown version and will not apply any version-specific
+                      reconciliations
                     type: string
                   serviceAnnotations:
                     additionalProperties:
@@ -341,9 +363,9 @@ spec:
                       service
                     type: object
                   serviceArgs:
-                    description: 'ServiceArgs define command line options for process,
-                      used by logset/cnset/dnset service. NOTE: user should not define
-                      "-cfg" argument in this field, which is defined default by controller'
+                    description: |-
+                      ServiceArgs define command line options for process, used by logset/cnset/dnset service.
+                      NOTE: user should not define "-cfg" argument in this field, which is defined default by controller
                     items:
                       type: string
                     type: array
@@ -363,38 +385,35 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: 'DiskCacheSize specifies how much disk space
-                          can be used to cache the object in shared storage, the default
-                          size would be 90% of the cacheVolume size to reserve some
-                          space to the filesystem metadata and avoid disk space exhaustion
-                          DiskCache would be disabled if CacheVolume is not set for
-                          DN/CN, and if DiskCacheSize is set while the CacheVolume
-                          is not set for DN/CN, an error would be raised to indicate
-                          the misconfiguration. NOTE: Unless there is a specific reason
-                          not to set this field, it is usually more reasonable to
-                          let the operator set the available disk cache size according
-                          to the actual size of the cacheVolume.'
+                        description: |-
+                          DiskCacheSize specifies how much disk space can be used to cache the object in shared storage,
+                          the default size would be 90% of the cacheVolume size to reserve some space to the filesystem metadata
+                          and avoid disk space exhaustion
+                          DiskCache would be disabled if CacheVolume is not set for DN/CN, and if DiskCacheSize is set while the CacheVolume
+                          is not set for DN/CN, an error would be raised to indicate the misconfiguration.
+                          NOTE: Unless there is a specific reason not to set this field, it is usually more reasonable to let the operator
+                          set the available disk cache size according to the actual size of the cacheVolume.
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       memoryCacheSize:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: MemoryCacheSize specifies how much memory would
-                          be used to cache the object in shared storage, the default
-                          size would be 50% of the container memory request MemoryCache
-                          cannot be completely disabled due to MO limitation currently,
-                          you can set MemoryCacheSize to 1B to achieve an effect similar
-                          to disabling
+                        description: |-
+                          MemoryCacheSize specifies how much memory would be used to cache the object in shared storage,
+                          the default size would be 50% of the container memory request
+                          MemoryCache cannot be completely disabled due to MO limitation currently, you can set MemoryCacheSize
+                          to 1B to achieve an effect similar to disabling
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                     type: object
                   terminationPolicy:
                     type: string
                   topologySpread:
-                    description: TopologyEvenSpread specifies what topology domains
-                      the Pods in set should be evenly spread in. This will be overridden
-                      by .overlay.TopologySpreadConstraints
+                    description: |-
+                      TopologyEvenSpread specifies what topology domains the Pods in set should be
+                      evenly spread in.
+                      This will be overridden by .overlay.TopologySpreadConstraints
                     items:
                       type: string
                     type: array
@@ -406,17 +425,17 @@ spec:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: MaxSurge is an optional field that specifies
-                          the maximum number of Pods that can be created over the
-                          desired number of Pods.
+                        description: |-
+                          MaxSurge is an optional field that specifies the maximum number of Pods that
+                          can be created over the desired number of Pods.
                         x-kubernetes-int-or-string: true
                       maxUnavailable:
                         anyOf:
                         - type: integer
                         - type: string
-                        description: MaxUnavailable an optional field that specifies
-                          the maximum number of Pods that can be unavailable during
-                          the update process.
+                        description: |-
+                          MaxUnavailable an optional field that specifies the maximum number of Pods that
+                          can be unavailable during the update process.
                         x-kubernetes-int-or-string: true
                     type: object
                 type: object
