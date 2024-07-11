@@ -17,6 +17,7 @@ package cnset
 import (
 	"fmt"
 	"github.com/matrixorigin/matrixone-operator/api/features"
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"k8s.io/utils/pointer"
@@ -72,7 +73,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
-		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, v1alpha1.BucketCNFinalizer)
+		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, utils.MakeHashFinalizer(v1alpha1.BucketCNFinalizerPrefix, cn))
 		if err != nil {
 			return nil, errors.WrapPrefix(err, "add bucket finalizer", 0)
 		}
@@ -209,7 +210,7 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 		}
 	}
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
-		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, v1alpha1.BucketCNFinalizer)
+		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, utils.MakeHashFinalizer(v1alpha1.BucketCNFinalizerPrefix, cn))
 		if err != nil {
 			return false, err
 		}

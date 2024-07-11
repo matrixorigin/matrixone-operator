@@ -35,10 +35,10 @@ const (
 
 	// BucketDataFinalizer blocks BucketClaim reclaim until data in bucket has been recycled
 	BucketDataFinalizer = "matrixorigin.io/bucket-data-finalizer"
-	// BucketCNFinalizer is finalizer of cn set
-	BucketCNFinalizer = "matrixorigin.io/CN"
-	// BucketDNFinalizer is finalizer of dn set
-	BucketDNFinalizer = "matrixorigin.io/DN"
+	// BucketCNFinalizerPrefix is finalizer of cn set
+	BucketCNFinalizerPrefix = "matrixorigin.io/CN"
+	// BucketDNFinalizerPrefix is finalizer of dn set
+	BucketDNFinalizerPrefix = "matrixorigin.io/DN"
 )
 
 // ClaimedBucket return claimed bucket according to S3Provider configuration, caller must ensure that provider is not nil
