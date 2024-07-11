@@ -157,6 +157,9 @@ var _ = Describe("MatrixOneCluster test", func() {
 				if !util.IsPodReady(&pod) {
 					continue
 				}
+				if !strings.HasPrefix(pod.Name, mo.Name) {
+					continue
+				}
 				switch pod.Labels[common.ComponentLabelKey] {
 				case "LogSet":
 					logN++
@@ -378,6 +381,9 @@ var _ = Describe("MatrixOneCluster test", func() {
 			var logN, dnN, cnN, proxyN int32
 			for _, pod := range podList.Items {
 				if !util.IsPodReady(&pod) {
+					continue
+				}
+				if !strings.HasPrefix(pod.Name, mo.Name) {
 					continue
 				}
 				switch pod.Labels[common.ComponentLabelKey] {
