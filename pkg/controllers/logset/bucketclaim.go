@@ -110,8 +110,8 @@ func (r *Actor) finalizeBucket(ctx *recon.Context[*v1alpha1.LogSet]) (success bo
 		return false, fmt.Errorf("claimed bucket %v already bind to %s", client.ObjectKeyFromObject(claimedBucket), claimedBucket.Status.BindTo)
 	}
 
-	if v1alpha1.ContainFinalizerPrefix(claimedBucket.Finalizers, v1alpha1.BucketDNFinalizer) ||
-		v1alpha1.ContainFinalizerPrefix(claimedBucket.Finalizers, v1alpha1.BucketCNFinalizer) {
+	if v1alpha1.ContainFinalizerPrefix(claimedBucket.Finalizers, v1alpha1.BucketDNFinalizerPrefix) ||
+		v1alpha1.ContainFinalizerPrefix(claimedBucket.Finalizers, v1alpha1.BucketCNFinalizerPrefix) {
 		return false, nil
 	}
 

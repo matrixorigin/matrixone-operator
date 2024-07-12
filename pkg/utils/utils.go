@@ -16,6 +16,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/cespare/xxhash"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -83,4 +84,9 @@ func mutate(f func() error, key client.ObjectKey, obj client.Object) error {
 
 func PtrTo[T any](v T) *T {
 	return &v
+}
+
+func MakeHashFinalizer(prefix string, obj client.Object) string {
+	sum := xxhash.Sum64([]byte(fmt.Sprintf("%s:%s", obj.GetNamespace(), obj.GetName())))
+	return fmt.Sprintf("%s-%s", prefix, fmt.Sprintf("%x", sum)[0:7])
 }

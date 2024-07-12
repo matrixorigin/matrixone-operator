@@ -16,6 +16,7 @@ package dnset
 
 import (
 	"github.com/matrixorigin/matrixone-operator/api/features"
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	"strconv"
 	"time"
 
@@ -79,7 +80,7 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && dn.Deps.LogSet != nil {
-		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, v1alpha1.BucketDNFinalizer)
+		err = v1alpha1.AddBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, utils.MakeHashFinalizer(v1alpha1.BucketDNFinalizerPrefix, dn))
 		if err != nil {
 			return nil, errors.WrapPrefix(err, "add bucket finalizer", 0)
 		}
@@ -166,7 +167,7 @@ func (d *Actor) Finalize(ctx *recon.Context[*v1alpha1.DNSet]) (bool, error) {
 		}
 	}
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && dn.Deps.LogSet != nil {
-		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, v1alpha1.BucketDNFinalizer)
+		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, dn.Deps.LogSet.ObjectMeta, utils.MakeHashFinalizer(v1alpha1.BucketDNFinalizerPrefix, dn))
 		if err != nil {
 			return false, err
 		}
