@@ -16,6 +16,7 @@ package cnstore
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
@@ -51,10 +52,24 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		if err != nil {
 			return errors.Wrap(err, 0)
 		}
+
 		if time.Since(parsed) > c.cn.Spec.ScalingConfig.GetStoreDrainTimeout() {
+			lockMigrated := true
+			err = c.withMOClientSet(ctx, func(timeout context.Context, h *mocli.ClientSet) error {
+				ok, mErr := c.handleLockMigration(ctx, uid, timeout, h)
+				lockMigrated = ok
+				return mErr
+			})
+			if err != nil {
+				return errors.WrapPrefix(err, "error handle lock migration", 0)
+			}
+			if !lockMigrated {
+				return recon.ErrReSync(fmt.Sprintf("CN %s/%s should be deleted due to draining pool pod timeout, but failed to handle lock migration", pod.Namespace, pod.Name), 0)
+			}
 			ctx.Log.Info("drain pool pod timeout, delete it to avoid workload intervention")
 			return util.Ignore(apierrors.IsNotFound, ctx.Delete(pod))
 		}
+
 		if time.Since(parsed) < c.cn.Spec.ScalingConfig.GetMinDelayDuration() {
 			return recon.ErrReSync("wait min delay duration", retryInterval)
 		}
