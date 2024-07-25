@@ -41,6 +41,11 @@ const (
 )
 
 type CNClaimSpec struct {
+	ClaimPodRef `json:",inline"`
+
+	// sourcePod is the pod that previously owned by this claim and is now being migrated
+	SourcePod *ClaimPodRef `json:"sourcePod,omitempty"`
+
 	Selector *metav1.LabelSelector `json:"selector"`
 
 	// +optional
@@ -54,13 +59,19 @@ type CNClaimSpec struct {
 	AdditionalPodLabels map[string]string `json:"additionalPodLabels,omitempty"`
 
 	// +optional
+	// PoolName is usually populated by controller that which pool the claim is nominated
+	PoolName string `json:"poolName,omitempty"`
+}
+
+type ClaimPodRef struct {
+	// +optional
 	// PodName is usually populated by controller and would be part of the claim spec
 	// that must be persisted once bound
 	PodName string `json:"podName,omitempty"`
 
 	// +optional
-	// PoolName is usually populated by controller that which pool the claim is nominated
-	PoolName string `json:"poolName,omitempty"`
+	// NodeName is usually populated by controller and would be part of the claim spec
+	NodeName string `json:"nodeName,omitempty"`
 }
 
 type CNClaimStatus struct {
