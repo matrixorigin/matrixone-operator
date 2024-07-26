@@ -148,12 +148,12 @@ func (c *BackupActor) failBackup(ctx *recon.Context[*v1alpha1.BackupJob], messag
 
 func (c *BackupActor) completeBackup(ctx *recon.Context[*v1alpha1.BackupJob], backup *v1alpha1.Backup) error {
 	bj := ctx.Obj
-	//if err := util.Ignore(apierrors.IsNotFound, ctx.Delete(
-	//	&batchv1.Job{ObjectMeta: common.ObjMetaTemplate(bj, bj.Name)},
-	//	client.PropagationPolicy(metav1.DeletePropagationBackground),
-	//)); err != nil {
-	//	return errors.WrapPrefix(err, "error finalize backup job", 0)
-	//}
+	if err := util.Ignore(apierrors.IsNotFound, ctx.Delete(
+		&batchv1.Job{ObjectMeta: common.ObjMetaTemplate(bj, bj.Name)},
+		client.PropagationPolicy(metav1.DeletePropagationBackground),
+	)); err != nil {
+		return errors.WrapPrefix(err, "error finalize backup job", 0)
+	}
 	bj.Status.Backup = backup.Name
 	bj.Status.Phase = v1alpha1.JobPhaseCompleted
 	meta.SetStatusCondition(&bj.Status.Conditions, metav1.Condition{
