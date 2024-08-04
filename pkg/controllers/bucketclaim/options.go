@@ -17,9 +17,6 @@ func WithImagePullSecrets(secrets []corev1.LocalObjectReference) Option {
 		if actor.imagePullSecrets == nil {
 			actor.imagePullSecrets = make([]corev1.LocalObjectReference, 0, len(secrets))
 		}
-		for _, secret := range secrets {
-			actor.imagePullSecrets = append(actor.imagePullSecrets, *(secret.DeepCopy()))
-		}
-		actor.imagePullSecrets = secrets
+		actor.imagePullSecrets = append(actor.imagePullSecrets, secrets...)
 	}
 }
