@@ -22,7 +22,9 @@ type Option func(actor *Actor)
 
 func WithImage(image string) Option {
 	return func(actor *Actor) {
-		actor.image = image
+		if image != "" {
+			actor.image = image
+		}
 	}
 }
 
