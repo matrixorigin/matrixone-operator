@@ -86,10 +86,10 @@ defaultArgs:
     values:
     - -debug-http=:6060
 
-bucketCleanJob:
-  image: aws/aws-cli:latest
-  imagePullSecrets:
-    - name: tcr-token
+#bucketCleanJob:
+#  image: aws/aws-cli:latest
+#  imagePullSecrets:
+#    - name: docker-token
 
 featureGates:
   s3Reclaim: true
