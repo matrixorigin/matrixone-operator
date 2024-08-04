@@ -16,6 +16,8 @@ package bucketclaim
 
 import (
 	"fmt"
+	"sync"
+
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -26,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sync"
 )
 
 var _ recon.Actor[*v1alpha1.BucketClaim] = &Actor{}
@@ -35,6 +36,21 @@ type Actor struct {
 	mutex  sync.Mutex
 	tasks  chan task
 	client client.Client
+
+	// image related config
+	image            string
+	imagePullSecrets []corev1.LocalObjectReference
+}
+
+func New(options ...Option) *Actor {
+	a := &Actor{
+		image:            defaultImage,
+		imagePullSecrets: make([]corev1.LocalObjectReference, 0, 3),
+	}
+	for _, opt := range options {
+		opt(a)
+	}
+	return a
 }
 
 type task struct {

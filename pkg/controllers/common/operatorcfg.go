@@ -15,22 +15,30 @@
 package common
 
 import (
-	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // OperatorConfig includes configurations for this operator process
 type OperatorConfig struct {
-	DefaultArgs  *v1alpha1.DefaultArgs `json:"defaultArgs,omitempty" yaml:"defaultArgs,omitempty"`
-	FeatureGates map[string]bool       `json:"featureGates,omitempty" yaml:"featureGates,omitempty"`
-	BRConfig     BrConfig              `json:"brConfig,omitempty" yaml:"brConfig,omitempty"`
+	DefaultArgs    *v1alpha1.DefaultArgs `json:"defaultArgs,omitempty" yaml:"defaultArgs,omitempty"`
+	FeatureGates   map[string]bool       `json:"featureGates,omitempty" yaml:"featureGates,omitempty"`
+	BRConfig       BrConfig              `json:"brConfig,omitempty" yaml:"brConfig,omitempty"`
+	BucketCleanJob BucketCleanJob        `json:"bucketCleanJob,omitempty" yaml:"bucketCleanJob,omitempty"`
 }
 
 type BrConfig struct {
 	Image string `json:"image,omitempty" yaml:"image,omitempty"`
+}
+
+type BucketCleanJob struct {
+	Image            string                        `json:"image,omitempty" yaml:"image,omitempty"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty" yaml:"imagePullSecrets,omitempty"`
 }
 
 // LoadOperatorConfig read all operator configurations from configmap mount path, and load it into OperatorConfig struct
