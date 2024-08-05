@@ -38,14 +38,12 @@ type Actor struct {
 	client client.Client
 
 	// image related config
-	image            string
-	imagePullSecrets []corev1.LocalObjectReference
+	image string
 }
 
 func New(options ...Option) *Actor {
 	a := &Actor{
-		image:            defaultImage,
-		imagePullSecrets: make([]corev1.LocalObjectReference, 0, 3),
+		image: defaultImage,
 	}
 	for _, opt := range options {
 		opt(a)

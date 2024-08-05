@@ -125,7 +125,6 @@ func (bca *Actor) NewJobTpl(bucket *v1alpha1.BucketClaim, cm *corev1.ConfigMap) 
 	mainContainer.Command = []string{"/bin/sh", filepath.Join(cmMountPath, entrypoint)}
 	mainContainer.Args = []string{}
 	podTpl.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
-	podTpl.Spec.ImagePullSecrets = bca.imagePullSecrets
 
 	// remove all labels inherit from logset pod
 	podTpl.Labels = nil

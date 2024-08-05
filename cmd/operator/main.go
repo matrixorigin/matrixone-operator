@@ -213,7 +213,6 @@ func main() {
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
 		bucketActor := bucketclaim.New(
 			bucketclaim.WithImage(operatorCfg.BucketCleanJob.Image),
-			bucketclaim.WithImagePullSecrets(operatorCfg.BucketCleanJob.ImagePullSecrets),
 		)
 		err = bucketActor.Reconcile(mgr)
 		exitIf(err, "unable to set up bucketclaim cluster controller")

@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -37,8 +36,7 @@ type BrConfig struct {
 }
 
 type BucketCleanJob struct {
-	Image            string                        `json:"image,omitempty" yaml:"image,omitempty"`
-	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty" yaml:"imagePullSecrets,omitempty"`
+	Image string `json:"image,omitempty" yaml:"image,omitempty"`
 }
 
 // LoadOperatorConfig read all operator configurations from configmap mount path, and load it into OperatorConfig struct

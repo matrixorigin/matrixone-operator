@@ -12,12 +12,8 @@ data:
     {{- toYaml .values | nindent 4 }}
     {{- end }}
   {{- with .Values.bucketCleanJob  }}
-  bucketCleanJob:
-    image: {{  .image | default "amazon/aws-cli" | quote }}
-    {{- with .imagePullSecrets }}
-    imagePullSecrets:
-    {{- toYaml . | nindent 6 }}
-    {{- end }}
+  bucketCleanJob: |
+    image: {{  .image | default "amazon/aws-cli:latest" | quote }}
   {{- end }}
 
   featureGates: |
