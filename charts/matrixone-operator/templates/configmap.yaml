@@ -11,6 +11,10 @@ data:
     {{.name | nindent 4 }}:
     {{- toYaml .values | nindent 4 }}
     {{- end }}
+  {{- with .Values.bucketCleanJob  }}
+  bucketCleanJob: |
+    image: {{  .image | default "amazon/aws-cli:latest" | quote }}
+  {{- end }}
 
   featureGates: |
     {{- range $key, $value := .Values.featureGates }}

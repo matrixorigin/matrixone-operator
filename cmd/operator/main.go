@@ -17,6 +17,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/go-logr/zapr"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/br"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnclaim"
@@ -24,7 +26,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnpool"
 	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
 	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
@@ -61,7 +62,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	//+kubebuilder:scaffold:imports
+	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -210,7 +211,9 @@ func main() {
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
-		bucketActor := bucketclaim.Actor{}
+		bucketActor := bucketclaim.New(
+			bucketclaim.WithImage(operatorCfg.BucketCleanJob.Image),
+		)
 		err = bucketActor.Reconcile(mgr)
 		exitIf(err, "unable to set up bucketclaim cluster controller")
 	} else {

@@ -86,6 +86,11 @@ defaultArgs:
     values:
     - -debug-http=:6060
 
+# Currently only public repository are accepted
+# If you are in China, you can use our public repository: ccr.ccs.tencentyun.com/mo-infra/aws-cli:latest
+#bucketCleanJob:
+#  image: amazon/aws-cli:latest
+
 featureGates:
   s3Reclaim: true
   proxySupport: true
