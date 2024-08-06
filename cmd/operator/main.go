@@ -17,6 +17,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"k8s.io/kubernetes/pkg/capabilities"
 	"os"
 
 	"github.com/go-logr/zapr"
@@ -158,6 +159,17 @@ func main() {
 		exitIf(err, "unable to setup mutating webhook controller")
 		err = hookctrl.Setup(hookctrl.TypeValidating, mgr, caBundle)
 		exitIf(err, "unable to setup validating webhook controller")
+	}
+
+	if os.Getenv("ALLOW_PRIVILEGED") == "true" {
+		capabilities.Initialize(capabilities.Capabilities{
+			AllowPrivileged: true,
+			PrivilegedSources: capabilities.PrivilegedSources{
+				HostNetworkSources: []string{},
+				HostPIDSources:     []string{},
+				HostIPCSources:     []string{},
+			},
+		})
 	}
 
 	logSetActor := &logset.Actor{FailoverEnabled: failover}
