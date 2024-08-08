@@ -16,13 +16,13 @@ package cnstore
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
@@ -52,24 +52,11 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		if err != nil {
 			return errors.Wrap(err, 0)
 		}
-
 		if time.Since(parsed) > c.cn.Spec.ScalingConfig.GetStoreDrainTimeout() {
-			lockMigrated := true
-			err = c.withMOClientSet(ctx, func(timeout context.Context, h *mocli.ClientSet) error {
-				ok, mErr := c.handleLockMigration(ctx, uid, timeout, h)
-				lockMigrated = ok
-				return mErr
-			})
-			if err != nil {
-				return errors.WrapPrefix(err, "error handle lock migration", 0)
-			}
-			if !lockMigrated {
-				return recon.ErrReSync(fmt.Sprintf("CN %s/%s should be deleted due to draining pool pod timeout, but failed to handle lock migration", pod.Namespace, pod.Name), 0)
-			}
 			ctx.Log.Info("drain pool pod timeout, delete it to avoid workload intervention")
-			return util.Ignore(apierrors.IsNotFound, ctx.Delete(pod))
+			// handle graceful logic in OnPreparingStop()
+			return evictPodGracefully(ctx, pod)
 		}
-
 		if time.Since(parsed) < c.cn.Spec.ScalingConfig.GetMinDelayDuration() {
 			return recon.ErrReSync("wait min delay duration", retryInterval)
 		}
@@ -118,6 +105,21 @@ func (c *withCNSet) patchPhase(ctx *recon.Context[*corev1.Pod], phase string) er
 	})
 	if err != nil {
 		return errors.WrapPrefix(err, "error patch CN phase idle", 0)
+	}
+	return nil
+}
+
+func evictPodGracefully(ctx *recon.Context[*corev1.Pod], pod *corev1.Pod) error {
+	p := pod.DeepCopy()
+	if err := ctx.Patch(p, func() error {
+		if p.Labels == nil {
+			p.Labels = map[string]string{}
+		}
+		p.Labels[kruisev1alpha1.SpecifiedDeleteKey] = "true"
+
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, 0)
 	}
 	return nil
 }
