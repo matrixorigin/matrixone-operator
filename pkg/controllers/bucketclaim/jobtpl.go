@@ -17,19 +17,20 @@ package bucketclaim
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
+	"strings"
+	"text/template"
+
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"path/filepath"
-	"strings"
-	"text/template"
 )
 
 const (
-	awsCliImage = "amazon/aws-cli"
+	defaultImage = "amazon/aws-cli"
 
 	// entrypoint of job pod
 	entrypoint  = "start.sh"
@@ -120,7 +121,7 @@ func (bca *Actor) NewJobTpl(bucket *v1alpha1.BucketClaim, cm *corev1.ConfigMap) 
 	mainContainer := util.FindFirst(podTpl.Spec.Containers, func(c corev1.Container) bool {
 		return c.Name == v1alpha1.ContainerMain
 	})
-	mainContainer.Image = awsCliImage
+	mainContainer.Image = bca.image
 	mainContainer.Command = []string{"/bin/sh", filepath.Join(cmMountPath, entrypoint)}
 	mainContainer.Args = []string{}
 	podTpl.Spec.RestartPolicy = corev1.RestartPolicyOnFailure

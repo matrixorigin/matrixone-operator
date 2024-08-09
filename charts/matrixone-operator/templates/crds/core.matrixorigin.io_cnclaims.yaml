@@ -67,6 +67,10 @@ spec:
                       type: array
                   type: object
                 type: array
+              nodeName:
+                description: NodeName is usually populated by controller and would
+                  be part of the claim spec
+                type: string
               ownerName:
                 type: string
               podName:
@@ -125,6 +129,20 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              sourcePod:
+                description: sourcePod is the pod that previously owned by this claim
+                  and is now being migrated
+                properties:
+                  nodeName:
+                    description: NodeName is usually populated by controller and would
+                      be part of the claim spec
+                    type: string
+                  podName:
+                    description: |-
+                      PodName is usually populated by controller and would be part of the claim spec
+                      that must be persisted once bound
+                    type: string
+                type: object
             required:
             - selector
             type: object

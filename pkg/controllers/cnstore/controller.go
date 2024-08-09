@@ -172,43 +172,57 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		ctx.Log.Info("store draining timeout, force delete CN", "uuid", uid)
 		return c.completeDraining(ctx)
 	}
-	ctx.Log.Info("call HAKeeper to drain CN store", "uuid", uid)
 
-	lockMigrated := true
+	var connMigrated, lockMigrated bool
 	err := c.withMOClientSet(ctx, func(timeout context.Context, h *mocli.ClientSet) error {
-		var multierr error
-		if err := h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
-			UUID:  uid,
-			State: metadata.WorkState_Draining,
-		}); err != nil {
-			multierr = errors.Join(multierr, err)
-		}
-		ok, err := c.handleLockMigration(ctx, uid, timeout, h)
+		var err error
+		connMigrated, err = c.handleConnectionDraining(ctx, uid, timeout, h)
 		if err != nil {
-			multierr = errors.Join(multierr, err)
+			return err
 		}
-		lockMigrated = ok
-		return multierr
+		if time.Since(startTime) < sc.GetMinDelayDuration() {
+			return recon.ErrReSync("wait min-delay for CN draining state get propagated", sc.GetMinDelayDuration())
+		}
+		// lock migration should be done after connection get migrated
+		if !connMigrated {
+			return nil
+		}
+		lockMigrated, err = c.handleLockMigration(ctx, uid, timeout, h)
+		if err != nil {
+			return err
+		}
+		return nil
 	})
 	if err != nil {
-		// optimize: if the CN does not exist in HAKeeper, shortcut to complete draining
+		// if the CN does not exist in HAKeeper, shortcut to complete draining
 		if strings.Contains(err.Error(), "does not exist") {
 			return c.completeDraining(ctx)
 		}
-		return errors.WrapPrefix(err, "error set CN state draining", 0)
+		return err
 	}
-	if time.Since(startTime) < sc.GetMinDelayDuration() {
-		return recon.ErrReSync("wait for min delay", retryInterval)
-	}
-
-	storeConnection, err := common.GetStoreScore(pod)
-	if err != nil {
-		return errors.WrapPrefix(err, "error get store connection count", 0)
-	}
-	if storeConnection.IsSafeToReclaim() && lockMigrated {
+	if connMigrated && lockMigrated {
 		return c.completeDraining(ctx)
 	}
 	return recon.ErrReSync("wait for CN store draining", retryInterval)
+}
+
+func (c *withCNSet) handleConnectionDraining(ctx *recon.Context[*corev1.Pod], uid string, timeout context.Context, h *mocli.ClientSet) (bool, error) {
+	pod := ctx.Obj
+	ctx.Log.Info("set CN store draining", "uuid", uid)
+	if err := h.Client.PatchCNStore(timeout, logpb.CNStateLabel{
+		UUID:  uid,
+		State: metadata.WorkState_Draining,
+	}); err != nil {
+		return false, errors.WrapPrefix(err, "error set CN state draining", 0)
+	}
+	storeConnection, err := common.GetStoreScore(pod)
+	if err != nil {
+		return false, errors.WrapPrefix(err, "error get store connection count", 0)
+	}
+	if !storeConnection.IsSafeToReclaim() {
+		ctx.Log.Info("wait store connection to be drained", "uuid", uid, "connections", storeConnection.SessionCount, "pipelines", storeConnection.PipelineCount)
+	}
+	return storeConnection.IsSafeToReclaim(), nil
 }
 
 func (c *withCNSet) handleLockMigration(ctx *recon.Context[*corev1.Pod], uid string, timeout context.Context, h *mocli.ClientSet) (bool, error) {
@@ -230,8 +244,7 @@ func (c *withCNSet) handleLockMigration(ctx *recon.Context[*corev1.Pod], uid str
 			handleLockDone = false
 			_, lockRestartSet := pod.Annotations[LockRestartSet]
 			if !lockRestartSet {
-				// cannot restart CN now, trigger lock migration
-				ctx.Log.Info("cannot restart CN now, trigger lock migration", "cn", uid, "pod", pod.Name)
+				ctx.Log.Info("set lock-service restarting", "cn", uid, "pod", pod.Name)
 				ok, err := h.LockServiceClient.SetRestartCN(timeout, uid)
 				if err != nil {
 					return false, err
@@ -250,7 +263,7 @@ func (c *withCNSet) handleLockMigration(ctx *recon.Context[*corev1.Pod], uid str
 				}
 			}
 		} else {
-			ctx.Log.Info("txn migrated, can restart CN now", "UUID", uid)
+			ctx.Log.Info("lock-service migrated, can restart CN now", "UUID", uid)
 		}
 	}
 	return handleLockDone, nil
