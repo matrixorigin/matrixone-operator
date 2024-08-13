@@ -15,6 +15,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -23,12 +24,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
+const (
+	PodNamespaceEnvKey = "POD_NAMESPACE"
+)
+
 // OperatorConfig includes configurations for this operator process
 type OperatorConfig struct {
-	DefaultArgs    *v1alpha1.DefaultArgs `json:"defaultArgs,omitempty" yaml:"defaultArgs,omitempty"`
-	FeatureGates   map[string]bool       `json:"featureGates,omitempty" yaml:"featureGates,omitempty"`
-	BRConfig       BrConfig              `json:"brConfig,omitempty" yaml:"brConfig,omitempty"`
-	BucketCleanJob BucketCleanJob        `json:"bucketCleanJob,omitempty" yaml:"bucketCleanJob,omitempty"`
+	DefaultArgs         *v1alpha1.DefaultArgs `json:"defaultArgs,omitempty" yaml:"defaultArgs,omitempty"`
+	FeatureGates        map[string]bool       `json:"featureGates,omitempty" yaml:"featureGates,omitempty"`
+	BRConfig            BrConfig              `json:"brConfig,omitempty" yaml:"brConfig,omitempty"`
+	BucketCleanJob      BucketCleanJob        `json:"bucketCleanJob,omitempty" yaml:"bucketCleanJob,omitempty"`
+	OnlyWatchReleasedNS bool                  `json:"onlyWatchReleasedNS,omitempty" yaml:"onlyWatchReleasedNS,omitempty"`
 }
 
 type BrConfig struct {
@@ -73,4 +79,12 @@ func insertSpaces(value string) string {
 		spaced += "\n"
 	}
 	return spaced
+}
+
+func GetRuntimeNS() (string, error) {
+	ns := os.Getenv(PodNamespaceEnvKey)
+	if ns == "" {
+		return "", fmt.Errorf("%s env must be set", PodNamespaceEnvKey)
+	}
+	return ns, nil
 }

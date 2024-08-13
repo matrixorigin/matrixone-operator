@@ -23,3 +23,5 @@ data:
 
   brConfig: |
     image: "{{- .Values.globalRegistryPrefix -}}{{- .Values.backupRestore.image -}}"
+
+  onlyWatchReleasedNS: "{{.Values.onlyWatchReleasedNS}}"
