@@ -9,7 +9,7 @@ replicaCount: 1
 
 image:
   repository: matrixorigin/matrixone-operator
-  tag: "1.2.0-alpha.4"
+  tag: "1.2.0-alpha.5"
   pullPolicy: IfNotPresent
 
 backupRestore:
@@ -85,6 +85,11 @@ defaultArgs:
   - name: proxy
     values:
     - -debug-http=:6060
+
+# Currently only public repository are accepted
+# If you are in China, you can use our public repository: ccr.ccs.tencentyun.com/mo-infra/aws-cli:latest
+#bucketCleanJob:
+#  image: amazon/aws-cli:latest
 
 featureGates:
   s3Reclaim: true

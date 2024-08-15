@@ -17,6 +17,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"k8s.io/kubernetes/pkg/capabilities"
+	"os"
+
 	"github.com/go-logr/zapr"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/br"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnclaim"
@@ -24,7 +27,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnpool"
 	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
 	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/matrixorigin/controller-runtime/pkg/metrics"
@@ -61,7 +63,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	//+kubebuilder:scaffold:imports
+	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -159,6 +161,17 @@ func main() {
 		exitIf(err, "unable to setup validating webhook controller")
 	}
 
+	if os.Getenv("ALLOW_PRIVILEGED") == "true" {
+		capabilities.Initialize(capabilities.Capabilities{
+			AllowPrivileged: true,
+			PrivilegedSources: capabilities.PrivilegedSources{
+				HostNetworkSources: []string{},
+				HostPIDSources:     []string{},
+				HostIPCSources:     []string{},
+			},
+		})
+	}
+
 	logSetActor := &logset.Actor{FailoverEnabled: failover}
 	err = logSetActor.Reconcile(mgr)
 	exitIf(err, "unable to set up log service controller")
@@ -210,7 +223,9 @@ func main() {
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) {
-		bucketActor := bucketclaim.Actor{}
+		bucketActor := bucketclaim.New(
+			bucketclaim.WithImage(operatorCfg.BucketCleanJob.Image),
+		)
 		err = bucketActor.Reconcile(mgr)
 		exitIf(err, "unable to set up bucketclaim cluster controller")
 	} else {
