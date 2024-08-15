@@ -223,10 +223,25 @@ spec:
                     boundTime:
                       format: date-time
                       type: string
+                    migrate:
+                      description: migrate is the migrating status of Pods under CNClaim
+                      properties:
+                        source:
+                          properties:
+                            connections:
+                              type: integer
+                            pipelines:
+                              type: integer
+                          type: object
+                      type: object
                     phase:
                       type: string
                     store:
                       properties:
+                        boundTime:
+                          description: BoundTime is the time when the CN is bound
+                          format: date-time
+                          type: string
                         labels:
                           items:
                             properties:
@@ -249,6 +264,9 @@ spec:
                         serviceID:
                           type: string
                         sqlAddress:
+                          type: string
+                        string:
+                          description: PodName is the CN PodName
                           type: string
                         workState:
                           format: int32
