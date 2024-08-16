@@ -47,6 +47,7 @@ var errWait = fmt.Errorf("wait for condition met")
 
 // node 1
 var namespacePrefix string
+var poolNamespacePrefix string
 
 // all nodes
 var restConfig *rest.Config
@@ -61,12 +62,15 @@ var minioForwardHandler *e2eutil.PortForwardHandler
 
 type Env struct {
 	Namespace string
+
+	PoolNamespace string
 }
 
 func TestMain(m *testing.M) {
 	flags := flag.CommandLine
 	flags.StringVar(&kubeconfig, "kube-config", os.Getenv("KUBECONFIG"), "the kubeconfig path to access infra apiserver")
 	flags.StringVar(&namespacePrefix, "namespace", "e2e", "the namespace prefix to run e2e test")
+	flags.StringVar(&poolNamespacePrefix, "pool-namespace", "poole2e", "the namespace prefix to run e2e test for CN pool")
 	flags.StringVar(&moVersion, "mo-version", "latest", "the version of mo to run e2e test")
 	flags.StringVar(&moImageRepo, "mo-image-repo", "matrixorigin/matrixone", "the image repository of mo to run e2e test")
 	flag.Parse()
@@ -82,7 +86,9 @@ func TestE2E(t *testing.T) {
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	// randomize a namespace name to avoid collision
-	env.Namespace = fmt.Sprintf("%s-%d", namespacePrefix, time.Now().UnixNano())
+	suffix := time.Now().UnixNano()
+	env.Namespace = fmt.Sprintf("%s-%d", namespacePrefix, suffix)
+	env.PoolNamespace = fmt.Sprintf("%s-pool-%d", poolNamespacePrefix, suffix)
 
 	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	Expect(err).To(Succeed())
@@ -100,6 +106,8 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		},
 	}
 	Expect(util.Ignore(apierrors.IsAlreadyExists, kubeCli.Create(ctx, ns))).To(Succeed())
+	poolNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: env.PoolNamespace}}
+	Expect(util.Ignore(apierrors.IsAlreadyExists, kubeCli.Create(ctx, poolNS))).To(Succeed())
 
 	buf, err := json.Marshal(env)
 	Expect(err).Should(BeNil())
