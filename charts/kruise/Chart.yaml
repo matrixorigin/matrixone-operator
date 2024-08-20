@@ -1,0 +1,24 @@
+annotations:
+  artifacthub.io/changes: |
+    - "[Changed]: https://github.com/openkruise/kruise/blob/master/CHANGELOG.md"
+    - "[Changed]: Support extra environment variables in the manager DaemonSet"
+apiVersion: v1
+appVersion: 1.4.0
+description: Helm chart for kruise components
+home: https://openkruise.io
+icon: https://openkruise.io/img/openkruise-logo-bg.jpg
+keywords:
+- openkruise
+- kubernetes
+- kruise
+- workload
+- statefulset
+- sidecar
+- job
+- deployment
+- cloneset
+kubeVersion: '>= 1.16.0-0'
+name: kruise
+sources:
+- https://github.com/openkruise/kruise
+version: 1.4.0
