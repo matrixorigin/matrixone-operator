@@ -115,8 +115,7 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 }
 
 func (r *Actor) claimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1.Pod) (*corev1.Pod, error) {
-	c := ctx.Obj
-	claimed, err := r.doClaimCN(ctx, orphans)
+	claimed, err := r.selectCN(ctx, orphans)
 	if err != nil {
 		return nil, errors.WrapPrefix(err, "error claim CN", 0)
 	}
@@ -124,21 +123,13 @@ func (r *Actor) claimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1.
 	if claimed == nil {
 		return nil, nil
 	}
-	// alter CN label and working state
-	store, err := r.patchStore(ctx, claimed, logpb.CNStateLabel{
-		State:  metadata.WorkState_Working,
-		Labels: common.ToStoreLabels(c.Spec.CNLabels),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, 0)
-	}
-	if err := r.bindPod(ctx, claimed, store); err != nil {
-		return nil, errors.WrapPrefix(err, "error bind pod", 0)
+	if err := r.syncBindPod(ctx, claimed); err != nil {
+		return nil, err
 	}
 	return claimed, nil
 }
 
-func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1.Pod) (*corev1.Pod, error) {
+func (r *Actor) selectCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1.Pod) (*corev1.Pod, error) {
 	c := ctx.Obj
 
 	// bound orphan CN first
@@ -165,27 +156,11 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 	sortCNByPriority(c, idleCNs)
 	for i := range idleCNs {
 		pod := &idleCNs[i]
-		if c.Spec.AdditionalPodLabels != nil {
-			for k, v := range c.Spec.AdditionalPodLabels {
-				pod.Labels[k] = v
-			}
-		}
-		pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseBound
-		pod.Labels[v1alpha1.PodClaimedByLabel] = c.Name
-		// pod belongs to a ClaimSet
-		csName := c.Labels[v1alpha1.ClaimSetNameLabel]
-		if csName != "" {
-			pod.Labels[v1alpha1.ClaimSetNameLabel] = csName
-		}
-		if c.Spec.OwnerName != nil {
-			pod.Labels[v1alpha1.PodOwnerNameLabel] = *c.Spec.OwnerName
-		}
-		// atomic operation with optimistic concurrency control, succeed means claimed
-		if err := ctx.Update(pod); err != nil {
+		if err := r.ensureOwnership(ctx, pod); err != nil {
 			if apierrors.IsConflict(err) {
 				ctx.Log.Info("CN pod is not up to date, try next", "podName", pod.Name)
 			} else {
-				ctx.Log.Error(err, "error claim Pod", "podName", pod.Name)
+				return nil, errors.WrapPrefix(err, "error claim Pod", 0)
 			}
 		} else {
 			return pod, nil
@@ -194,23 +169,67 @@ func (r *Actor) doClaimCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev
 	return nil, nil
 }
 
-func (r *Actor) bindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, store *metadata.CNService) error {
+func (r *Actor) ensureOwnership(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod) error {
 	c := ctx.Obj
-	c.Spec.PodName = pod.Name
-	c.Spec.PoolName = pod.Labels[v1alpha1.PoolNameLabel]
-	if c.Labels == nil {
-		c.Labels = map[string]string{}
+	if c.Spec.AdditionalPodLabels != nil {
+		for k, v := range c.Spec.AdditionalPodLabels {
+			pod.Labels[k] = v
+		}
 	}
-	c.Labels[v1alpha1.PoolNameLabel] = c.Spec.PoolName
-	if err := ctx.Update(c); err != nil {
-		return errors.WrapPrefix(err, "error bound pod to claim", 0)
+	pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseBound
+	pod.Labels[v1alpha1.PodClaimedByLabel] = c.Name
+	// pod belongs to a ClaimSet
+	csName := c.Labels[v1alpha1.ClaimSetNameLabel]
+	if csName != "" {
+		pod.Labels[v1alpha1.ClaimSetNameLabel] = csName
 	}
+	if c.Spec.OwnerName != nil {
+		pod.Labels[v1alpha1.PodOwnerNameLabel] = *c.Spec.OwnerName
+	}
+	// atomic operation with optimistic concurrency control, succeed means claimed
+	if err := ctx.Update(pod); err != nil {
+		return err
+	}
+	return nil
+}
 
-	c.Status.Phase = v1alpha1.CNPodPhaseBound
-	c.Status.Store = toStoreStatus(store)
-	c.Status.BoundTime = &metav1.Time{Time: time.Now()}
-	// if we failed to update status here, observe would help fulfill the status later
-	if err := ctx.UpdateStatus(c); err != nil {
+func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod) error {
+	c := ctx.Obj
+	// alter CN label and working state
+	store, err := r.patchStore(ctx, pod, logpb.CNStateLabel{
+		State:  metadata.WorkState_Working,
+		Labels: common.ToStoreLabels(c.Spec.CNLabels),
+	})
+	if err != nil {
+		return errors.Wrap(err, 0)
+	}
+	if err := ctx.Patch(c, func() error {
+		c.Spec.PodName = pod.Name
+		c.Spec.NodeName = pod.Spec.NodeName
+		c.Spec.PoolName = pod.Labels[v1alpha1.PoolNameLabel]
+		if c.Labels == nil {
+			c.Labels = map[string]string{}
+		}
+		c.Labels[v1alpha1.PoolNameLabel] = c.Spec.PoolName
+		return nil
+	}); err != nil {
+		return errors.WrapPrefix(err, "error update claim spec", 0)
+	}
+	if err := ctx.PatchStatus(c, func() error {
+		if c.Status.BoundTime == nil {
+			c.Status.BoundTime = &metav1.Time{Time: time.Now()}
+		}
+		c.Status.Phase = v1alpha1.CNPodPhaseBound
+		newStore := toStoreStatus(store, pod)
+		if c.Status.Store.PodName != newStore.PodName {
+			// refresh boundTime if store changed
+			newStore.BoundTime = &metav1.Time{Time: time.Now()}
+		} else {
+			newStore.BoundTime = c.Status.Store.BoundTime
+		}
+		c.Status.Store = newStore
+		return nil
+	}); err != nil {
 		return errors.WrapPrefix(err, "error update claim status", 0)
 	}
 	return nil
@@ -243,13 +262,58 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 		c.Status.Phase = v1alpha1.CNClaimPhaseLost
 		return nil
 	}
-	_, err = r.patchStore(ctx, pod, logpb.CNStateLabel{
-		State:  metadata.WorkState_Working,
-		Labels: common.ToStoreLabels(c.Spec.CNLabels),
-	})
-	if err != nil {
+	if err := r.ensureOwnership(ctx, pod); err != nil {
+		return errors.Wrap(err, 0)
+	}
+	if err := r.syncBindPod(ctx, pod); err != nil {
 		ctx.Log.Info("error keep bound CN working", "error", err)
 		return recon.ErrReSync("error keep bound CN working", retryPatchInterval)
+	}
+	// migrate
+	if c.Spec.SourcePod != nil {
+		if err := r.migrate(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Actor) reclaimCN(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod) error {
+	c := ctx.Obj
+	_, err := r.patchStore(ctx, pod, logpb.CNStateLabel{
+		State: metadata.WorkState_Draining,
+		// FIXME(aylei): HAKeeper does not support patch labels to empty yet, use a dummy one
+		Labels: map[string]metadata.LabelList{
+			"dummy": {Labels: []string{"pool"}},
+		},
+	})
+	if err != nil {
+		// #3177: skip if CN is not found
+		if !strings.Contains(err.Error(), "does not exist") {
+			return errors.Wrap(err, 0)
+		}
+	}
+	// set the CN Pod to draining phase and let the draining process handle recycling
+	if err := ctx.Patch(pod, func() error {
+		pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseDraining
+		delete(pod.Labels, v1alpha1.PodClaimedByLabel)
+		if v, ok := pod.Labels[v1alpha1.PodOwnerNameLabel]; ok {
+			// remove owner label, record last-owner label
+			delete(pod.Labels, v1alpha1.PodOwnerNameLabel)
+			pod.Labels[v1alpha1.PodLastOwnerLabel] = v
+		}
+		if c.Spec.AdditionalPodLabels != nil {
+			for k := range c.Spec.AdditionalPodLabels {
+				delete(pod.Labels, k)
+			}
+		}
+		if pod.Annotations == nil {
+			pod.Annotations = map[string]string{}
+		}
+		pod.Annotations[common.ReclaimedAt] = time.Now().Format(time.RFC3339)
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, 0)
 	}
 	return nil
 }
@@ -268,41 +332,8 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 	}
 	for i := range ownedCNs {
 		cn := ownedCNs[i]
-		// TODO(aylei): this will overwrite all labels, keep the base label if necessary
-		_, err := r.patchStore(ctx, &cn, logpb.CNStateLabel{
-			State: metadata.WorkState_Draining,
-			// FIXME(aylei): HAKeeper does not support patch labels to empty yet, use a dummy one
-			Labels: map[string]metadata.LabelList{
-				"dummy": {Labels: []string{"pool"}},
-			},
-		})
-		if err != nil {
-			// #3177: skip if CN is not found
-			if !strings.Contains(err.Error(), "does not exist") {
-				return false, errors.Wrap(err, 0)
-			}
-		}
-		// set the CN Pod to draining phase and let the draining process handle recycling
-		if err := ctx.Patch(&cn, func() error {
-			cn.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseDraining
-			delete(cn.Labels, v1alpha1.PodClaimedByLabel)
-			if v, ok := cn.Labels[v1alpha1.PodOwnerNameLabel]; ok {
-				// remove owner label, record last-owner label
-				delete(cn.Labels, v1alpha1.PodOwnerNameLabel)
-				cn.Labels[v1alpha1.PodLastOwnerLabel] = v
-			}
-			if c.Spec.AdditionalPodLabels != nil {
-				for k := range c.Spec.AdditionalPodLabels {
-					delete(cn.Labels, k)
-				}
-			}
-			if cn.Annotations == nil {
-				cn.Annotations = map[string]string{}
-			}
-			cn.Annotations[common.ReclaimedAt] = time.Now().Format(time.RFC3339)
-			return nil
-		}); err != nil {
-			return false, errors.Wrap(err, 0)
+		if err := r.reclaimCN(ctx, &cn); err != nil {
+			return false, err
 		}
 	}
 	return false, nil
@@ -365,7 +396,7 @@ func watchPodChange(b *builder.Builder) {
 	}), builder.WithPredicates(common.PodStatusChangedPredicate{}))
 }
 
-func toStoreStatus(cn *metadata.CNService) v1alpha1.CNStoreStatus {
+func toStoreStatus(cn *metadata.CNService, pod *corev1.Pod) v1alpha1.CNStoreStatus {
 	var ls []v1alpha1.CNLabel
 	for k, v := range cn.Labels {
 		ls = append(ls, v1alpha1.CNLabel{
@@ -384,6 +415,7 @@ func toStoreStatus(cn *metadata.CNService) v1alpha1.CNStoreStatus {
 		QueryAddress:           cn.QueryAddress,
 		WorkState:              int32(cn.WorkState),
 		Labels:                 ls,
+		PodName:                pod.Name,
 	}
 }
 

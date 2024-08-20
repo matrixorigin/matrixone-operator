@@ -79,6 +79,9 @@ type CNClaimStatus struct {
 	Store CNStoreStatus `json:"store,omitempty"`
 
 	BoundTime *metav1.Time `json:"boundTime,omitempty"`
+
+	// migrate is the migrating status of Pods under CNClaim
+	Migrate *MigrateStatus `json:"migrate,omitempty"`
 }
 
 type CNStoreStatus struct {
@@ -89,6 +92,20 @@ type CNStoreStatus struct {
 	QueryAddress           string    `json:"queryAddress,omitempty"`
 	WorkState              int32     `json:"workState,omitempty"`
 	Labels                 []CNLabel `json:"labels,omitempty"`
+
+	// PodName is the CN PodName
+	PodName string `json:"string,omitempty"`
+	// BoundTime is the time when the CN is bound
+	BoundTime *metav1.Time `json:"boundTime,omitempty"`
+}
+
+type MigrateStatus struct {
+	Source Workload `json:"source,omitempty"`
+}
+
+type Workload struct {
+	Connections int `json:"connections,omitempty"`
+	Pipelines   int `json:"pipelines,omitempty"`
 }
 
 // +kubebuilder:object:root=true

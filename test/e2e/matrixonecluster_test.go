@@ -108,7 +108,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 					},
 					SharedStorage: v1alpha1.SharedStorageProvider{
 						S3: &v1alpha1.S3Provider{
-							Path:     "matrixone",
+							Path:     "matrixone/test",
 							Type:     &s3TypeMinio,
 							Endpoint: "http://minio.default:9000",
 							SecretRef: &corev1.LocalObjectReference{

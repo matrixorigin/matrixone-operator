@@ -374,6 +374,7 @@ _Appears in:_
 | `phase` _[CNClaimPhase](#cnclaimphase)_ |  |  |  |
 | `store` _[CNStoreStatus](#cnstorestatus)_ |  |  |  |
 | `boundTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ |  |  |  |
+| `migrate` _[MigrateStatus](#migratestatus)_ | migrate is the migrating status of Pods under CNClaim |  |  |
 
 
 #### CNClaimTemplate
@@ -673,6 +674,8 @@ _Appears in:_
 | `queryAddress` _string_ |  |  |  |
 | `workState` _integer_ |  |  |  |
 | `labels` _[CNLabel](#cnlabel) array_ |  |  |  |
+| `string` _string_ | PodName is the CN PodName |  |  |
+| `boundTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | BoundTime is the time when the CN is bound |  |  |
 
 
 #### CertificateRef
@@ -1086,6 +1089,22 @@ _Appears in:_
 | `restoreFrom` _string_ |  |  |  |
 | `metricReaderEnabled` _boolean_ | MetricReaderEnabled enables metric reader for operator and other apps to query<br />metric from MO cluster |  |  |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set,<br />the semantic version of CN will be default to the image tag,<br />if the semantic version is not set, nor the image tag is a valid semantic version,<br />operator will treat the MO as unknown version and will not apply any version-specific<br />reconciliations |  |  |
+
+
+#### MigrateStatus
+
+
+
+
+
+
+
+_Appears in:_
+- [CNClaimStatus](#cnclaimstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `source` _[Workload](#workload)_ |  |  |  |
 
 
 
@@ -1686,5 +1705,22 @@ _Appears in:_
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service | ClusterIP | Enum: [ClusterIP NodePort LoadBalancer] <br /> |
 | `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy rolling update strategy |  |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |  |  |
+
+
+#### Workload
+
+
+
+
+
+
+
+_Appears in:_
+- [MigrateStatus](#migratestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `connections` _integer_ |  |  |  |
+| `pipelines` _integer_ |  |  |  |
 
 
