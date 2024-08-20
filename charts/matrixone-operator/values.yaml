@@ -19,6 +19,11 @@ backupRestore:
 # to a private registry
 globalRegistryPrefix: ""
 
+webhook:
+  createResource: true
+  # set secret if createResource=false
+  secretName: ""
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
