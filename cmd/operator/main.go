@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"k8s.io/kubernetes/pkg/capabilities"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/go-logr/zapr"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/br"
@@ -118,6 +119,13 @@ func main() {
 	err = features.DefaultMutableFeatureGate.SetFromMap(operatorCfg.FeatureGates)
 	exitIf(err, "failed to set feature gate")
 
+	cacheOptions := cache.Options{}
+	if operatorCfg.OnlyWatchReleasedNS {
+		ns, err := common.GetRuntimeNS()
+		exitIf(err, "failed to get runtime namespace")
+		cacheOptions.Namespaces = []string{ns}
+		setupLog.Info(fmt.Sprintf("controller-runtime only watch runtime namespace resources: %s", ns))
+	}
 	restCfg := ctrl.GetConfigOrDie()
 	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
 		Scheme:                 scheme,
@@ -130,6 +138,7 @@ func main() {
 		WebhookServer: webhook.NewServer(webhook.Options{
 			CertDir: webhookCertDir,
 		}),
+		Cache: cacheOptions,
 	})
 	exitIf(err, "failed to start manager")
 	directClient, err := client.New(restCfg, client.Options{

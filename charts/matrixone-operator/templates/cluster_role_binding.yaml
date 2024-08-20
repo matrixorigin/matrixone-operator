@@ -1,9 +1,8 @@
-{{- if and .Values.rbac.create .Values.onlyWatchReleasedNS }}
+{{- if .Values.rbac.create }}
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: {{ template "matrixone-operator.fullname" . }}
-  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "matrixone-operator.labels" . | nindent 4 }}
 subjects:
@@ -11,7 +10,7 @@ subjects:
   name: {{ include "matrixone-operator.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
 roleRef:
-  kind: Role
+  kind: ClusterRole
   name: {{ template "matrixone-operator.fullname" . }}
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
