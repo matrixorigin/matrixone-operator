@@ -104,6 +104,9 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 			return recon.ErrReSync("cannot find matching pool, requeue", retryBindInterval)
 		}
 		c.Spec.PoolName = pool.Name
+		if c.Labels == nil {
+			c.Labels = map[string]string{}
+		}
 		c.Labels[v1alpha1.PoolNameLabel] = c.Spec.PoolName
 		if err := ctx.Update(c); err != nil {
 			return errors.WrapPrefix(err, "error bind claim to pool", 0)
