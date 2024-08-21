@@ -1,3 +1,4 @@
+{{- if .Values.webhook.createResource }}
 apiVersion: v1
 kind: Secret
 type: kubernetes.io/tls
@@ -10,6 +11,7 @@ metadata:
     "helm.sh/hook-delete-policy": "before-hook-creation"
 data:
 {{ ( include "matrixone-operator.gen-certs" . ) | indent 2 }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -85,7 +87,11 @@ spec:
       volumes:
       - name: certs
         secret:
+        {{- if .Values.webhook.createResource }}
           secretName: {{ template "matrixone-operator.name" . }}-certs
+        {{- else }}
+          secretName: {{ .Values.webhook.secretName }}
+        {{- end }}
       - name: config
         configMap:
           name: {{ template "matrixone-operator.name" . }}-cm
