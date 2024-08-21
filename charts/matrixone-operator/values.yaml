@@ -67,6 +67,7 @@ tolerations: []
 affinity: {}
 
 kruise:
+  enabled: true
   featureGates: "StatefulSetAutoDeletePVC=true,PodUnavailableBudgetDeleteGate=true,PodUnavailableBudgetUpdateGate=true"
   manager:
     image:
