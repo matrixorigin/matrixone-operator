@@ -9,4 +9,5 @@ icon: https://raw.githubusercontent.com/matrixorigin/artwork/main/docs/overview/
 dependencies:
   - name: kruise
     version: "1.4.0"
-    repository: "https://openkruise.github.io/charts/"
+    repository: "https://matrixorigin.github.io/matrixone-operator"
+    condition: kruise.enabled
