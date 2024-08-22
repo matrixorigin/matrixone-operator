@@ -48,8 +48,10 @@ spec:
           image: {{ include "matrixone-operator.image" . }}
           command:
           - /manager
+          {{- with .Values.args }}
           args:
-          - -leader-elect
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             {{- range $key, $value :=  .Values.env }}
