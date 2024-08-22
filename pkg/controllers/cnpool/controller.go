@@ -77,6 +77,17 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 		}
 		totalPods += legacyReplicas
 	}
+	if err := iterateDirectLivePods(ctx, p, func(p *corev1.Pod) error {
+		// outdated direct pod, mark it
+		if p.Labels[common.InstanceLabelKey] != desired.Name {
+			if err := r.reclaimLegacyCNClaim(ctx, p); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, 0)
+	}
 
 	var inUse int32
 	var idlePods []*corev1.Pod
@@ -207,8 +218,15 @@ func (r *Actor) syncLegacySet(ctx *recon.Context[*v1alpha1.CNPool], cnSet *v1alp
 	}); err != nil {
 		return replicas, errors.Wrap(err, 0)
 	}
+	directOrphans := &corev1.PodList{}
+	if err := ctx.List(directOrphans, client.InNamespace(cnSet.Namespace), client.MatchingLabels(map[string]string{
+		common.InstanceLabelKey: cnSet.Name,
+		v1alpha1.DirectPodLabel: "y",
+	})); err != nil {
+		return 0, errors.Wrap(err, 0)
+	}
 	// legacy CNSet is scaled to zero the scaling has been done, GC it
-	if cnSet.Spec.Replicas == 0 && cnSet.Status.Replicas == 0 {
+	if cnSet.Spec.Replicas == 0 && cnSet.Status.Replicas == 0 && len(directOrphans.Items) == 0 {
 		if err := ctx.Delete(cnSet); err != nil {
 			return replicas, errors.Wrap(err, 0)
 		}
@@ -264,6 +282,27 @@ func iterateCNSetLivePods(cli recon.KubeClient, cnSet *v1alpha1.CNSet, fn func(p
 	}
 	podList := &corev1.PodList{}
 	if err := cli.List(podList, client.InNamespace(cnSet.Namespace), client.MatchingLabels(ls.MatchLabels)); err != nil {
+		return errors.Wrap(err, 0)
+	}
+	for i := range podList.Items {
+		p := &podList.Items[i]
+		if p.DeletionTimestamp != nil {
+			// Pod deleted, skip
+			continue
+		}
+		if err := fn(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func iterateDirectLivePods(cli recon.KubeClient, pool *v1alpha1.CNPool, fn func(p *corev1.Pod) error) error {
+	podList := &corev1.PodList{}
+	if err := cli.List(podList, client.InNamespace(pool.Namespace), client.MatchingLabels(map[string]string{
+		v1alpha1.PoolNameLabel:  pool.Name,
+		v1alpha1.DirectPodLabel: "y",
+	})); err != nil {
 		return errors.Wrap(err, 0)
 	}
 	for i := range podList.Items {

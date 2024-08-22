@@ -221,7 +221,9 @@ func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.P
 	if c.Status.BoundTime == nil {
 		c.Status.BoundTime = &metav1.Time{Time: time.Now()}
 	}
-	c.Status.Phase = v1alpha1.CNPodPhaseBound
+	if c.Status.Phase == "" || c.Status.Phase == v1alpha1.CNPodPhaseIdle || c.Status.Phase == v1alpha1.CNPodPhaseUnknown {
+		c.Status.Phase = v1alpha1.CNPodPhaseBound
+	}
 	newStore := toStoreStatus(store, pod)
 	if c.Status.Store.PodName != newStore.PodName {
 		// refresh boundTime if store changed
