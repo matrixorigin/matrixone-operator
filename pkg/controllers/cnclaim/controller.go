@@ -218,21 +218,19 @@ func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.P
 	}); err != nil {
 		return errors.WrapPrefix(err, "error update claim spec", 0)
 	}
-	if err := ctx.PatchStatus(c, func() error {
-		if c.Status.BoundTime == nil {
-			c.Status.BoundTime = &metav1.Time{Time: time.Now()}
-		}
-		c.Status.Phase = v1alpha1.CNPodPhaseBound
-		newStore := toStoreStatus(store, pod)
-		if c.Status.Store.PodName != newStore.PodName {
-			// refresh boundTime if store changed
-			newStore.BoundTime = &metav1.Time{Time: time.Now()}
-		} else {
-			newStore.BoundTime = c.Status.Store.BoundTime
-		}
-		c.Status.Store = newStore
-		return nil
-	}); err != nil {
+	if c.Status.BoundTime == nil {
+		c.Status.BoundTime = &metav1.Time{Time: time.Now()}
+	}
+	c.Status.Phase = v1alpha1.CNPodPhaseBound
+	newStore := toStoreStatus(store, pod)
+	if c.Status.Store.PodName != newStore.PodName {
+		// refresh boundTime if store changed
+		newStore.BoundTime = &metav1.Time{Time: time.Now()}
+	} else {
+		newStore.BoundTime = c.Status.Store.BoundTime
+	}
+	c.Status.Store = newStore
+	if err := ctx.UpdateStatus(c); err != nil {
 		return errors.WrapPrefix(err, "error update claim status", 0)
 	}
 	return nil

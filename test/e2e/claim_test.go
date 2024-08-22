@@ -31,7 +31,7 @@ import (
 
 const (
 	waitPoolTimeout = 10 * time.Minute
-	bindTimeout     = 1 * time.Minute
+	bindTimeout     = 2 * time.Minute
 	migrateTimeout  = 5 * time.Minute
 )
 

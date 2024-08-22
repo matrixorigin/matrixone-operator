@@ -29,6 +29,7 @@ import (
 	logpb "github.com/matrixorigin/matrixone/pkg/pb/logservice"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
 	"github.com/openkruise/kruise-api/apps/pub"
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
@@ -278,6 +279,11 @@ func (c *withCNSet) completeDraining(ctx *recon.Context[*corev1.Pod]) error {
 	}); err != nil {
 		return errors.WrapPrefix(err, "error removing CN draining finalizer", 0)
 	}
+	if _, ok := ctx.Obj.Labels[v1alpha1.DirectPodLabel]; ok {
+		if err := ctx.Delete(ctx.Obj); err != nil {
+			return errors.Wrap(err, 0)
+		}
+	}
 	return nil
 }
 
@@ -303,6 +309,18 @@ func (c *withCNSet) OnNormal(ctx *recon.Context[*corev1.Pod]) error {
 		return errors.WrapPrefix(err, "removing CN draining start time", 0)
 	}
 
+	if _, ok := ctx.Obj.Labels[v1alpha1.DirectPodLabel]; ok {
+		// GC idle direct-pod
+		if ctx.Obj.Labels[v1alpha1.CNPodPhaseLabel] == v1alpha1.CNPodPhaseIdle || ctx.Obj.Labels[kruisev1alpha1.SpecifiedDeleteKey] != "" {
+			if err := ctx.Patch(ctx.Obj, func() error {
+				ctx.Obj.Labels[pub.LifecycleStateKey] = string(pub.LifecycleStatePreparingDelete)
+				return nil
+			}); err != nil {
+				return errors.Wrap(err, 0)
+			}
+			return recon.ErrReSync("direct pod is idle, transfer to preparing delete")
+		}
+	}
 	// policy based reconciliation
 	if v1alpha1.IsPoolingPolicy(ctx.Obj) {
 		return c.poolingCNReconcile(ctx)
