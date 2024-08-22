@@ -20,6 +20,7 @@ jobs:
 
       - name: Docker meta
         uses: docker/metadata-action@v4
+        id: meta
         with:
           images: |
             matrixorigin/matrixone-operator
