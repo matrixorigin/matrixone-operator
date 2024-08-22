@@ -39,6 +39,11 @@ const (
 	ReclaimedAt = "matrixorigin.io/reclaimed-at"
 
 	SemanticVersionAnno = "matrixorigin.io/semantic-version"
+
+	sessionWeight  = 1
+	pipelineWeight = 0
+	phaseWeight    = 100
+	maxCost        = 1000
 )
 
 func AddReadinessGate(podSpec *corev1.PodSpec, ct corev1.PodConditionType) {
@@ -151,10 +156,24 @@ type StoreScore struct {
 	PipelineCount int `json:"pipelineCount"`
 
 	StartedTime *time.Time `json:"startedTime,omitempty"`
+	Phase       string     `json:"phase,omitempty"`
 }
 
 func (s *StoreScore) GenDeletionCost() int {
-	return s.SessionCount
+	deletionCost := s.SessionCount*sessionWeight + s.PipelineCount*pipelineWeight
+	switch s.Phase {
+	case v1alpha1.CNPodPhaseBound:
+		deletionCost += phaseWeight * 2 // Bound should not be deleted
+	case v1alpha1.CNPodPhaseIdle, v1alpha1.CNPodPhaseTerminating:
+		deletionCost += phaseWeight * 0 // Idle and Terminating should be deleted first
+	case v1alpha1.CNPodPhaseDraining:
+		deletionCost += phaseWeight / 2 // Draining may be deleted later
+	}
+	// if deletion cost is larger than maxScore, normalize it from [0, maxCost]
+	for deletionCost > maxCost {
+		deletionCost >>= 1
+	}
+	return deletionCost
 }
 
 func (s *StoreScore) IsSafeToReclaim() bool {

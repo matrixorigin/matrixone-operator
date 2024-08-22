@@ -466,6 +466,7 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		// clean previously recorded score and update startTime if CN is restarted
 		sc.Restarted(startedTime)
 	}
+	sc.Phase = pod.Annotations[v1alpha1.CNPodPhaseLabel]
 
 	uid := v1alpha1.GetCNPodUUID(pod)
 	moVersion := common.GetSemanticVersion(&pod.ObjectMeta)
