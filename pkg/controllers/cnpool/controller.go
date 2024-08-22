@@ -218,8 +218,15 @@ func (r *Actor) syncLegacySet(ctx *recon.Context[*v1alpha1.CNPool], cnSet *v1alp
 	}); err != nil {
 		return replicas, errors.Wrap(err, 0)
 	}
+	directOrphans := &corev1.PodList{}
+	if err := ctx.List(directOrphans, client.InNamespace(cnSet.Namespace), client.MatchingLabels(map[string]string{
+		common.InstanceLabelKey: cnSet.Name,
+		v1alpha1.DirectPodLabel: "y",
+	})); err != nil {
+		return 0, errors.Wrap(err, 0)
+	}
 	// legacy CNSet is scaled to zero the scaling has been done, GC it
-	if cnSet.Spec.Replicas == 0 && cnSet.Status.Replicas == 0 {
+	if cnSet.Spec.Replicas == 0 && cnSet.Status.Replicas == 0 && len(directOrphans.Items) == 0 {
 		if err := ctx.Delete(cnSet); err != nil {
 			return replicas, errors.Wrap(err, 0)
 		}
