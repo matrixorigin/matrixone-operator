@@ -29,6 +29,8 @@ const (
 
 const (
 	PodManagementPolicyPooling = "Pooling"
+
+	DirectPodLabel = "pool.matrixorigin.io/direct-pod"
 )
 
 const (
