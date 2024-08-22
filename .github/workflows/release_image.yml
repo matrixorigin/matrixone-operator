@@ -18,14 +18,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Docker tag
-        id: tag
-        shell: bash
-        run: |
-          VERSION=$(git describe --always --tags $(git rev-list --tags --max-count=1))
-          IMAGE_TAG=${VERSION}-$(git rev-parse --short HEAD)-$(date +'%Y-%m-%d')
-          echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-
       - name: Docker meta
         uses: docker/metadata-action@v4
         with:
