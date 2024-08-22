@@ -78,6 +78,10 @@ kruise:
     image:
       repository: openkruise/kruise-manager
 
+# operator arguments
+args:
+  - -leader-elect
+
 defaultArgs:
   - name: logService
     values:
