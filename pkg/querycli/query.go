@@ -36,8 +36,7 @@ func New(logger *zap.Logger) (*Client, error) {
 		func() *pb.Request { return &pb.Request{} },
 		func() *pb.Response { return &pb.Response{} })
 
-	queryCli, err := rpc.Config{}.NewClient("query-service",
-		logger,
+	queryCli, err := rpc.Config{}.NewClient("query-service", logger,
 		func() morpc.Message { return pool.AcquireResponse() })
 	if err != nil {
 		return nil, err
