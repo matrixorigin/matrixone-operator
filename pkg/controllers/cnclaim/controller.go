@@ -285,10 +285,6 @@ func (r *Actor) reclaimCN(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod
 	c := ctx.Obj
 	_, err := r.patchStore(ctx, pod, logpb.CNStateLabel{
 		State: metadata.WorkState_Draining,
-		// FIXME(aylei): HAKeeper does not support patch labels to empty yet, use a dummy one
-		Labels: map[string]metadata.LabelList{
-			"dummy": {Labels: []string{"pool"}},
-		},
 	})
 	if err != nil {
 		// #3177: skip if CN is not found
@@ -370,6 +366,16 @@ func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Po
 	// the cache may be stale, update it locally
 	cn.Labels = req.Labels
 	cn.WorkState = req.State
+	if req.Labels == nil {
+		// PatchStore with nil/empty label is a no-op, an extra update should be filed in such case
+		if err := hc.Client.UpdateCNLabel(timeout, logpb.CNStoreLabel{
+			UUID:   uid,
+			Labels: nil,
+		}); err != nil {
+			return nil, errors.Wrap(err, 0)
+		}
+		cn.Labels = nil
+	}
 	return &cn, nil
 }
 
