@@ -26,6 +26,7 @@ import (
 	"time"
 )
 
+// TODO(aylei): complete this CLI
 func main() {
 	zapLogger := logzap.NewRaw()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
