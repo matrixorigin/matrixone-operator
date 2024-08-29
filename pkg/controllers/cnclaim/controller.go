@@ -221,8 +221,8 @@ func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.P
 	if c.Status.BoundTime == nil {
 		c.Status.BoundTime = &metav1.Time{Time: time.Now()}
 	}
-	if c.Status.Phase == "" || c.Status.Phase == v1alpha1.CNPodPhaseIdle || c.Status.Phase == v1alpha1.CNPodPhaseUnknown {
-		c.Status.Phase = v1alpha1.CNPodPhaseBound
+	if c.Status.Phase == "" || c.Status.Phase == v1alpha1.CNClaimPhasePending {
+		c.Status.Phase = v1alpha1.CNClaimPhaseBound
 	}
 	newStore := toStoreStatus(store, pod)
 	if c.Status.Store.PodName != newStore.PodName {
@@ -240,16 +240,6 @@ func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.P
 
 func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 	c := ctx.Obj
-	switch c.Status.Phase {
-	case v1alpha1.CNClaimPhasePending:
-		return errors.Errorf("CN Claim %s/%s is pending, should bind it first", c.Namespace, c.Name)
-	case v1alpha1.CNClaimPhaseLost:
-		return nil
-	case v1alpha1.CNClaimPhaseBound, v1alpha1.CNClaimPhaseOutdated:
-		// noop
-	default:
-		return errors.Errorf("CN Claim %s/%s is in unknown phase %s", c.Namespace, c.Name, c.Status.Phase)
-	}
 	pod := &corev1.Pod{}
 	err := ctx.Get(types.NamespacedName{Namespace: c.Namespace, Name: c.Spec.PodName}, pod)
 	if err != nil {
