@@ -18,13 +18,11 @@ import (
 	"context"
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
-	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
-	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
+	"github.com/openkruise/kruise-api/apps/pub"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
 )
 
@@ -55,7 +53,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		if time.Since(parsed) > c.cn.Spec.ScalingConfig.GetStoreDrainTimeout() {
 			ctx.Log.Info("drain pool pod timeout, delete it to avoid workload intervention")
 			// handle graceful logic in OnPreparingStop()
-			return evictPodGracefully(ctx, pod)
+			return evictPoolPodGracefully(ctx, pod)
 		}
 		if time.Since(parsed) < c.cn.Spec.ScalingConfig.GetMinDelayDuration() {
 			return recon.ErrReSync("wait min delay duration", retryInterval)
@@ -66,8 +64,13 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 		}
 		if storeConnection.IsSafeToReclaim() {
 			if _, ok := pod.Annotations[v1alpha1.DeleteOnReclaimAnno]; ok {
-				ctx.Log.Info("delete pod since deleteOnReclaim is set")
-				return util.Ignore(apierrors.IsNotFound, ctx.Delete(pod))
+				ctx.Log.Info("evict pod since deleteOnReclaim is set")
+				return evictPoolPodGracefully(ctx, pod)
+			}
+			// #3971: do not reuse direct pod
+			if _, ok := pod.Labels[v1alpha1.DirectPodLabel]; ok {
+				ctx.Log.Info("evict direct pod on reclaim")
+				return evictPoolPodGracefully(ctx, pod)
 			}
 			return ctx.Patch(pod, func() error {
 				delete(pod.Annotations, common.ReclaimedAt)
@@ -109,14 +112,19 @@ func (c *withCNSet) patchPhase(ctx *recon.Context[*corev1.Pod], phase string) er
 	return nil
 }
 
-func evictPodGracefully(ctx *recon.Context[*corev1.Pod], pod *corev1.Pod) error {
+func evictPoolPodGracefully(ctx *recon.Context[*corev1.Pod], pod *corev1.Pod) error {
 	p := pod.DeepCopy()
 	if err := ctx.Patch(p, func() error {
 		if p.Labels == nil {
 			p.Labels = map[string]string{}
 		}
-		p.Labels[kruisev1alpha1.SpecifiedDeleteKey] = "true"
-
+		// fix: specified-delete a Pod from cloneset is not safe for pooling, all scale-in should
+		// be triggered by pool-manager. So we set the phase Terminating to let pool make the
+		// scale-in decision
+		p.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseTerminating
+		if p.Labels[v1alpha1.DirectPodLabel] != "" {
+			p.Labels[pub.LifecycleStateKey] = string(pub.LifecycleStatePreparingDelete)
+		}
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, 0)

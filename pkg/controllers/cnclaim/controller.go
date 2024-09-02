@@ -166,6 +166,7 @@ func (r *Actor) selectCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1
 				return nil, errors.WrapPrefix(err, "error claim Pod", 0)
 			}
 		} else {
+			ctx.Log.Info("CN bind success", "claimed CN", pod)
 			return pod, nil
 		}
 	}
@@ -271,7 +272,16 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 	return nil
 }
 
-func (r *Actor) reclaimCN(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod) error {
+type reclaimOpts func(*corev1.Pod)
+
+func deleteOnReclaim(p *corev1.Pod) {
+	if p.Annotations == nil {
+		p.Annotations = map[string]string{}
+	}
+	p.Annotations[v1alpha1.DeleteOnReclaimAnno] = "y"
+}
+
+func (r *Actor) reclaimCN(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, opts ...reclaimOpts) error {
 	c := ctx.Obj
 	_, err := r.patchStore(ctx, pod, logpb.CNStateLabel{
 		State: metadata.WorkState_Draining,
@@ -300,6 +310,9 @@ func (r *Actor) reclaimCN(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod
 			pod.Annotations = map[string]string{}
 		}
 		pod.Annotations[common.ReclaimedAt] = time.Now().Format(time.RFC3339)
+		for _, opt := range opts {
+			opt(pod)
+		}
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, 0)
@@ -308,6 +321,7 @@ func (r *Actor) reclaimCN(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod
 }
 
 func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
+	ctx.Log.Info("finalize CNClaim")
 	c := ctx.Obj
 	ownedCNs, err := common.ListPods(ctx, client.InNamespace(c.Namespace), client.MatchingLabels{
 		v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
@@ -321,6 +335,7 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 	}
 	for i := range ownedCNs {
 		cn := ownedCNs[i]
+		ctx.Log.Info("finalize CNClaim, reclaim bound CN", "cn", cn.Name)
 		if err := r.reclaimCN(ctx, &cn); err != nil {
 			return false, err
 		}

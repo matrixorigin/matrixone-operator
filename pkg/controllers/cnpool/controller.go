@@ -80,6 +80,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	if err := iterateDirectLivePods(ctx, p, func(p *corev1.Pod) error {
 		// outdated direct pod, mark it
 		if p.Labels[common.InstanceLabelKey] != desired.Name {
+			ctx.Log.Info("direct pod outdated, reclaim", "pod", client.ObjectKeyFromObject(p))
 			if err := r.reclaimLegacyCNClaim(ctx, p); err != nil {
 				return err
 			}
