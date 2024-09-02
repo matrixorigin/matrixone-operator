@@ -40,7 +40,7 @@ func (r *Actor) migrate(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 	source := &corev1.Pod{}
 	if err := ctx.Get(types.NamespacedName{Namespace: c.Namespace, Name: c.Spec.SourcePod.PodName}, source); err != nil {
 		if apierrors.IsNotFound(err) {
-			return nil
+			return r.completeMigration(ctx)
 		}
 	}
 	if c.Status.Store.BoundTime == nil {
@@ -57,7 +57,7 @@ func (r *Actor) migrate(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 		return recon.ErrReSync("source pod is still draining, requeue", migrationResyncInterval)
 	case v1alpha1.CNPodPhaseBound:
 		// use connection migration to migrate workload from source to target pod
-		if err := r.reclaimCN(ctx, source); err != nil {
+		if err := r.reclaimCN(ctx, source, deleteOnReclaim); err != nil {
 			return err
 		}
 		if err := r.reportProgress(ctx, source); err != nil {
