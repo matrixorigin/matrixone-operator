@@ -18,9 +18,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/blang/semver/v4"
 	"github.com/go-errors/errors"
 	gerrors "github.com/go-errors/errors"
+	"github.com/go-logr/logr"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -32,7 +38,6 @@ import (
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,9 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -56,6 +58,10 @@ const (
 	messageCNStoreNotRegistered = "CNStoreNotRegistered"
 
 	defaultConcurrency = 8
+
+	storeDrainTakesLongDuration = 5 * time.Minute
+
+	diagnosDrainingAnno = "matrixorigin.io/diagnos-draining"
 )
 
 const retryInterval = 5 * time.Second
@@ -184,8 +190,8 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		if time.Since(startTime) < sc.GetMinDelayDuration() {
 			return recon.ErrReSync("wait min-delay for CN draining state get propagated", sc.GetMinDelayDuration())
 		}
-		// lock migration should be done after connection get migrated
 		if !connMigrated {
+			// lock migration should be done after connection get migrated
 			return nil
 		}
 		lockMigrated, err = c.handleLockMigration(ctx, uid, timeout, h)
@@ -204,6 +210,18 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 	if connMigrated && lockMigrated {
 		return c.completeDraining(ctx)
 	}
+	if time.Since(startTime) > storeDrainTakesLongDuration {
+		ctx.Log.Info("store draining takes too long, collect diagnostic info", "uuid", uid)
+		if err := ctx.Patch(pod, func() error {
+			if pod.Annotations == nil {
+				pod.Annotations = map[string]string{}
+			}
+			pod.Annotations[diagnosDrainingAnno] = "y"
+			return nil
+		}); err != nil {
+			ctx.Log.Error(err, "error patching diagnos draining anno")
+		}
+	}
 	return recon.ErrReSync("wait for CN store draining", retryInterval)
 }
 
@@ -220,6 +238,7 @@ func (c *withCNSet) handleConnectionDraining(ctx *recon.Context[*corev1.Pod], ui
 	if err != nil {
 		return false, errors.WrapPrefix(err, "error get store connection count", 0)
 	}
+
 	if !storeConnection.IsSafeToReclaim() {
 		ctx.Log.Info("wait store connection to be drained", "uuid", uid, "connections", storeConnection.SessionCount, "pipelines", storeConnection.PipelineCount)
 	}
@@ -275,6 +294,7 @@ func (c *withCNSet) completeDraining(ctx *recon.Context[*corev1.Pod]) error {
 		controllerutil.RemoveFinalizer(ctx.Obj, common.CNDrainingFinalizer)
 		delete(ctx.Obj.Annotations, v1alpha1.StoreDrainingStartAnno)
 		delete(ctx.Obj.Annotations, LockRestartSet)
+		delete(ctx.Obj.Annotations, diagnosDrainingAnno)
 		return nil
 	}); err != nil {
 		return errors.WrapPrefix(err, "error removing CN draining finalizer", 0)
@@ -450,6 +470,11 @@ func (c *Controller) observe(ctx *recon.Context[*corev1.Pod]) error {
 	return recon.ErrReSync("resync", resyncInterval)
 }
 
+type connectionDiagnosis struct {
+	Logger  logr.Logger
+	Enabled bool
+}
+
 func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	pod := ctx.Obj
 
@@ -482,7 +507,12 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		return c.patchStoreStats(ctx, sc)
 	}
 
-	count, err := c.getSessionCount(queryAddress, moVersion)
+	_, diagnosDraining := pod.Annotations[diagnosDrainingAnno]
+	diagosis := &connectionDiagnosis{
+		Logger:  ctx.Log,
+		Enabled: diagnosDraining,
+	}
+	count, err := c.getSessionCount(queryAddress, moVersion, diagosis)
 	if err != nil {
 		ctx.Log.Info("error get session count", "error", err.Error())
 	} else {
@@ -491,7 +521,7 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	}
 	var pipelineCount int
 	if v1alpha1.HasMOFeature(moVersion, v1alpha1.MOFeaturePipelineInfo) {
-		pipelineCount, err = c.getPipelineCount(queryAddress)
+		pipelineCount, err = c.getPipelineCount(queryAddress, diagosis)
 		if err != nil {
 			ctx.Log.Info("error get pipeline count", "error", err.Error())
 		} else {
@@ -528,7 +558,7 @@ func (c *Controller) patchStoreStats(ctx *recon.Context[*corev1.Pod], sc *common
 	return nil
 }
 
-func (c *Controller) getSessionCount(queryAddress string, moVersion semver.Version) (int, error) {
+func (c *Controller) getSessionCount(queryAddress string, moVersion semver.Version, diagosis *connectionDiagnosis) (int, error) {
 	var count int
 	resp, err := c.queryCli.ShowProcessList(context.Background(), queryAddress)
 	if err != nil {
@@ -545,13 +575,19 @@ func (c *Controller) getSessionCount(queryAddress string, moVersion semver.Versi
 			}
 		}
 	}
+	if diagosis.Enabled && count > 0 {
+		diagosis.Logger.Info("CN sessions", "count", count, "detail", resp.GetSessions())
+	}
 	return count, nil
 }
 
-func (c *Controller) getPipelineCount(queryAddress string) (int, error) {
+func (c *Controller) getPipelineCount(queryAddress string, diagosis *connectionDiagnosis) (int, error) {
 	resp, err := c.queryCli.GetPipelineInfo(context.Background(), queryAddress)
 	if err != nil {
 		return 0, errors.WrapPrefix(err, "get pipeline info", 0)
+	}
+	if diagosis.Enabled {
+		diagosis.Logger.Info("CN pipeline count", "count", resp.GetCount())
 	}
 	return int(resp.GetCount()), nil
 }

@@ -17,6 +17,10 @@ package cnclaim
 import (
 	"cmp"
 	"context"
+	"slices"
+	"strings"
+	"time"
+
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -35,9 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"slices"
-	"strings"
-	"time"
 )
 
 const (
@@ -385,7 +386,7 @@ func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Po
 }
 
 func (r *Actor) Start(mgr manager.Manager) error {
-	return recon.Setup[*v1alpha1.CNClaim](&v1alpha1.CNClaim{}, "cn-claim-manager", mgr, r,
+	return recon.Setup(&v1alpha1.CNClaim{}, "cn-claim-manager", mgr, r,
 		recon.WithPredicate(predicate.ResourceVersionChangedPredicate{}),
 		recon.WithBuildFn(watchPodChange),
 	)
