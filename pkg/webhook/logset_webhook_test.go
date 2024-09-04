@@ -40,7 +40,7 @@ var _ = Describe("LogSet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 				},
 				Volume: v1alpha1.Volume{
@@ -64,7 +64,7 @@ var _ = Describe("LogSet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 				},
 				Volume: v1alpha1.Volume{
@@ -91,7 +91,7 @@ var _ = Describe("LogSet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 3,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 				},
 				Volume: v1alpha1.Volume{

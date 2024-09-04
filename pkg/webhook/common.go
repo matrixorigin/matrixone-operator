@@ -16,7 +16,7 @@ package webhook
 
 import (
 	"fmt"
-	"github.com/blang/semver/v4"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -96,11 +96,8 @@ func validatePodSet(podSet *v1alpha1.PodSet, path *field.Path) field.ErrorList {
 	if podSet.Overlay != nil {
 		errs = append(errs, validateOverlays(podSet.Overlay, path.Child("overlay"))...)
 	}
-	if podSet.SemanticVersion != nil {
-		_, err := semver.Parse(*podSet.SemanticVersion)
-		if err != nil {
-			errs = append(errs, field.Invalid(path.Child("semanticVersion"), *podSet.SemanticVersion, err.Error()))
-		}
+	if _, ok := podSet.GetSemVer(); !ok {
+		errs = append(errs, field.Invalid(path.Child("semanticVersion"), podSet.SemanticVersion, "a valid semanticVersion must be set or the image tag must be valid sematic version instead"))
 	}
 
 	if podSet.ExportToPrometheus != nil && *podSet.ExportToPrometheus {

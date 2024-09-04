@@ -117,10 +117,24 @@ func (c *cnSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) (
 	return nil, invalidOrNil(errs, cnSet)
 }
 
-func (c *cnSetValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (c *cnSetValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
 	warnings, err = c.ValidateCreate(ctx, newObj)
 	if err != nil {
 		return warnings, err
+	}
+	oldCN, ok := oldObj.(*v1alpha1.CNSet)
+	if !ok {
+		return nil, unexpectedKindError("CNSet", oldObj)
+	}
+	newCN, ok := newObj.(*v1alpha1.CNSet)
+	if !ok {
+		return nil, unexpectedKindError("CNSet", newObj)
+	}
+	if _, ok := oldCN.Spec.PodSet.GetSemVer(); ok {
+		// if the old CNSet has a semantic version, then we need to make sure the new one is compatible
+		if _, ok := newCN.Spec.PodSet.GetSemVer(); !ok {
+			return nil, field.Invalid(field.NewPath("spec").Child("podSet").Child("semanticVersion"), newCN.Spec.PodSet.SemanticVersion, "new version must also be semantic")
+		}
 	}
 	return warnings, nil
 }

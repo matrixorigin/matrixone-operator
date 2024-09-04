@@ -40,7 +40,7 @@ var _ = Describe("CNSet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 				},
 			},
@@ -68,7 +68,7 @@ var _ = Describe("CNSet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 				},
 				ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
@@ -98,7 +98,7 @@ var _ = Describe("CNSet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 				},
 			},
