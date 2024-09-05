@@ -36,7 +36,7 @@ var _ = Describe("ProxySet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 				},
 			},

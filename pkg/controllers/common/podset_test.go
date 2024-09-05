@@ -32,7 +32,7 @@ func Test_syncPodTemplate(t *testing.T) {
 		task: &SyncMOPodTask{
 			PodSet: &v1alpha1.PodSet{
 				MainContainer: v1alpha1.MainContainer{
-					Image: "test",
+					Image: "test:v1.2.3",
 				},
 				Overlay: &v1alpha1.Overlay{
 					SidecarContainers: []corev1.Container{{

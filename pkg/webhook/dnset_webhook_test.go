@@ -40,7 +40,7 @@ var _ = Describe("DNSet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 				},
 			},
@@ -68,7 +68,7 @@ var _ = Describe("DNSet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 				},
 				CacheVolume: &v1alpha1.Volume{
@@ -96,7 +96,7 @@ var _ = Describe("DNSet Webhook", func() {
 				PodSet: v1alpha1.PodSet{
 					Replicas: 2,
 					MainContainer: v1alpha1.MainContainer{
-						Image: "test",
+						Image: "test:v1.2.3",
 					},
 					Config: v1alpha1.NewTomlConfig(map[string]interface{}{
 						"tn": map[string]interface{}{

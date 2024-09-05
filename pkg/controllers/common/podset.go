@@ -16,6 +16,8 @@ package common
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/blang/semver/v4"
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -25,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strconv"
 )
 
 type SyncMOPodTask struct {
@@ -42,20 +43,19 @@ type SyncMOPodTask struct {
 
 // SyncPodMeta sync PodSet to pod object meta
 func SyncPodMeta(meta *metav1.ObjectMeta, p *v1alpha1.PodSet) {
-	v, ok := p.GetSemVer()
-	if !ok {
-		return
-	}
 	if meta.Annotations == nil {
 		meta.Annotations = make(map[string]string)
 	}
-	meta.Annotations[SemanticVersionAnno] = v.String()
 	if p.PromDiscoveredByPod() {
 		meta.Annotations[PrometheusScrapeAnno] = "true"
 		meta.Annotations[PrometheusPortAnno] = strconv.Itoa(MetricsPort)
 	} else {
 		delete(meta.Annotations, PrometheusScrapeAnno)
 		delete(meta.Annotations, PrometheusPortAnno)
+	}
+	v, ok := p.GetSemVer()
+	if ok {
+		meta.Annotations[SemanticVersionAnno] = v.String()
 	}
 }
 
