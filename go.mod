@@ -13,7 +13,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.6.0
-	github.com/matrixorigin/controller-runtime v0.0.0-20240516114812-aa9013774960
+	github.com/matrixorigin/controller-runtime v0.0.0-20240909085031-5f706d779ec6
 	github.com/matrixorigin/matrixone v0.7.1-0.20240509144206-2eeef9246a17
 	github.com/matrixorigin/matrixone-operator/api v0.0.0-20220926063007-e629f86256d2
 	github.com/minio/minio-go/v7 v7.0.63
