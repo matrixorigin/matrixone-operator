@@ -16,6 +16,8 @@ package cnstore
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -23,7 +25,6 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
 	"github.com/openkruise/kruise-api/apps/pub"
 	corev1 "k8s.io/api/core/v1"
-	"time"
 )
 
 func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
@@ -54,6 +55,9 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 			ctx.Log.Info("drain pool pod timeout, delete it to avoid workload intervention")
 			// handle graceful logic in OnPreparingStop()
 			return evictPoolPodGracefully(ctx, pod)
+		}
+		if time.Since(parsed) > storeDrainTakesLongDuration {
+			c.diagnosisDraining(ctx, uid)
 		}
 		if time.Since(parsed) < c.cn.Spec.ScalingConfig.GetMinDelayDuration() {
 			return recon.ErrReSync("wait min delay duration", retryInterval)
