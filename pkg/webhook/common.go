@@ -244,6 +244,10 @@ func validateMainContainerOverlay(overlay *v1alpha1.MainContainerOverlay, path *
 	errs = append(errs, validateWithConvert(overlay.Lifecycle, path.Child("lifecycle"),
 		apiscorev1.Convert_v1_Lifecycle_To_core_Lifecycle, corevalidation.ValidateLifecycle)...)
 
+	// validate SecurityContext
+	errs = append(errs,validateWithConvert(overlay.SecurityContext, path.Child("mainContainerSecurityContext"),
+	apiscorev1.Convert_v1_SecurityContext_To_core_SecurityContext, corevalidation.ValidateSecurityContext)... )
+
 	return errs
 }
 
