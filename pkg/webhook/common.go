@@ -17,7 +17,6 @@ package webhook
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/conversion"
@@ -61,12 +60,6 @@ func validateMainContainer(c *v1alpha1.MainContainer, parent *field.Path) field.
 		})...)
 
 	return errs
-}
-
-func validateContainerResource(_ *corev1.ResourceRequirements, _ *field.Path) field.ErrorList {
-	// TODO: use kubernetes/api/validation.ValidatePodSpec to perform through Validation after we migrate
-	// webhooks out of api package
-	return nil
 }
 
 func validateVolume(v *v1alpha1.Volume, parent *field.Path) field.ErrorList {
@@ -245,8 +238,8 @@ func validateMainContainerOverlay(overlay *v1alpha1.MainContainerOverlay, path *
 		apiscorev1.Convert_v1_Lifecycle_To_core_Lifecycle, corevalidation.ValidateLifecycle)...)
 
 	// validate SecurityContext
-	errs = append(errs,validateWithConvert(overlay.SecurityContext, path.Child("mainContainerSecurityContext"),
-	apiscorev1.Convert_v1_SecurityContext_To_core_SecurityContext, corevalidation.ValidateSecurityContext)... )
+	errs = append(errs, validateWithConvert(overlay.SecurityContext, path.Child("mainContainerSecurityContext"),
+		apiscorev1.Convert_v1_SecurityContext_To_core_SecurityContext, corevalidation.ValidateSecurityContext)...)
 
 	return errs
 }
