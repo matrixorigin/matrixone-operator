@@ -19,6 +19,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"time"
+
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
@@ -34,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"time"
 )
 
 const (
@@ -348,6 +349,9 @@ func setPodSetDefault(ps *v1alpha1.PodSet, mo *v1alpha1.MatrixOneCluster) {
 	}
 	if ps.SemanticVersion == nil {
 		ps.SemanticVersion = mo.Spec.SemanticVersion
+	}
+	if ps.OperatorVersion == nil {
+		ps.OperatorVersion = mo.Spec.OperatorVersion
 	}
 }
 
