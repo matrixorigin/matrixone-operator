@@ -20,12 +20,12 @@ import (
 	"text/template"
 
 	"github.com/go-errors/errors"
-	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -190,8 +190,13 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		// [tn] is configured, all config items should go to the [tn] toml table
 		configAlias = aliasTN
 	}
-	conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
-	// conf.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
+	if v1alpha1.GateUseDiscoveryService.Enabled(dn.Spec.GetOperatorVersion()) {
+		// issue: https://github.com/matrixorigin/MO-Cloud/issues/4158
+		// via discovery-address, operator can take off unhealthy logstores without restart CN/TN
+		conf.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
+	} else {
+		conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+	}
 	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &dn.Spec.SharedStorageCache))
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{configAlias, "listen-address"}, getListenAddress())

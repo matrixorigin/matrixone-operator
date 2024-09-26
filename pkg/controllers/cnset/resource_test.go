@@ -15,12 +15,13 @@
 package cnset
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"testing"
 )
 
 func Test_buildCNSetConfigMap(t *testing.T) {
@@ -90,7 +91,7 @@ name = "ETL"
 memory-capacity = "1B"
 
 [hakeeper-client]
-service-addresses = []
+discovery-address = "test:6001"
 `,
 		},
 		{
@@ -130,6 +131,70 @@ service-type = "CN"
 
 [cn]
 init-work-state = "Draining"
+port-base = 6002
+role = ""
+
+[cn.lockservice]
+listen-address = "0.0.0.0:6003"
+
+[[fileservice]]
+backend = "DISK"
+data-dir = "/var/lib/matrixone/data"
+name = "LOCAL"
+
+[[fileservice]]
+backend = "DISK"
+data-dir = "/test"
+name = "S3"
+
+[[fileservice]]
+backend = "DISK-ETL"
+data-dir = "/test"
+name = "ETL"
+
+[fileservice.cache]
+memory-capacity = "1B"
+
+[hakeeper-client]
+discovery-address = "test:6001"
+`,
+		},
+		{
+			name: "before 1.3.0",
+			args: args{
+				cn: &v1alpha1.CNSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: v1alpha1.CNSetSpec{
+						PodSet: v1alpha1.PodSet{
+							OperatorVersion: pointer.String("1.2.3"),
+						},
+					},
+				},
+				ls: &v1alpha1.LogSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: v1alpha1.LogSetSpec{SharedStorage: v1alpha1.SharedStorageProvider{
+						FileSystem: &v1alpha1.FileSystemProvider{
+							Path: "/test",
+						},
+					}},
+					Status: v1alpha1.LogSetStatus{
+						Discovery: &v1alpha1.LogSetDiscovery{
+							Port:    6001,
+							Address: "test",
+						},
+					},
+				},
+			},
+			wantConfig: `data-dir = "/var/lib/matrixone/data"
+service-type = "CN"
+
+[cn]
 port-base = 6002
 role = ""
 
