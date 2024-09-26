@@ -211,18 +211,23 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		return c.completeDraining(ctx)
 	}
 	if time.Since(startTime) > storeDrainTakesLongDuration {
-		ctx.Log.Info("store draining takes too long, collect diagnostic info", "uuid", uid)
-		if err := ctx.Patch(pod, func() error {
-			if pod.Annotations == nil {
-				pod.Annotations = map[string]string{}
-			}
-			pod.Annotations[diagnosDrainingAnno] = "y"
-			return nil
-		}); err != nil {
-			ctx.Log.Error(err, "error patching diagnos draining anno")
-		}
+		c.diagnosisDraining(ctx, uid)
 	}
 	return recon.ErrReSync("wait for CN store draining", retryInterval)
+}
+
+func (c *Controller) diagnosisDraining(ctx *recon.Context[*corev1.Pod], uid string) {
+	ctx.Log.Info("store draining takes too long, collect diagnostic info", "uuid", uid)
+	pod := ctx.Obj
+	if err := ctx.Patch(pod, func() error {
+		if pod.Annotations == nil {
+			pod.Annotations = map[string]string{}
+		}
+		pod.Annotations[diagnosDrainingAnno] = "y"
+		return nil
+	}); err != nil {
+		ctx.Log.Error(err, "error patching diagnos draining anno")
+	}
 }
 
 func (c *withCNSet) handleConnectionDraining(ctx *recon.Context[*corev1.Pod], uid string, timeout context.Context, h *mocli.ClientSet) (bool, error) {
