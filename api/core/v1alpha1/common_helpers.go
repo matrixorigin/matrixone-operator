@@ -19,13 +19,14 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/blang/semver/v4"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
-	"time"
 )
 
 const (
@@ -174,6 +175,9 @@ func (o *Overlay) OverlayMainContainer(c *corev1.Container) {
 	}
 	if mc.Lifecycle != nil {
 		c.Lifecycle = mc.Lifecycle
+	}
+	if mc.SecurityContext != nil {
+		c.SecurityContext = mc.SecurityContext
 	}
 	if mc.VolumeMounts != nil {
 		c.VolumeMounts = util.UpsertListByKey(c.VolumeMounts, o.VolumeMounts, func(v corev1.VolumeMount) string {

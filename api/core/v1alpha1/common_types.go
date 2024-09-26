@@ -174,6 +174,11 @@ type MainContainerOverlay struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
 	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`
+
+	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	SecurityContext *corev1.SecurityContext `json:"mainContainerSecurityContext,omitempty"`
 }
 
 // Overlay allows advanced customization of the pod spec in the set
