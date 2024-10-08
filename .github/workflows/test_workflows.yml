@@ -27,4 +27,4 @@ jobs:
       - name: run
         uses: ./.github/actions/e2e
         with:
-          mo_version: "1.0.0-rc1"
+          mo_version: "1.2.3"
