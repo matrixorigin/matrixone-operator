@@ -144,7 +144,7 @@ func (m *MORPCClientManager) newClientSet(ls *v1alpha1.LogSet) (*ClientSet, erro
 		return nil, errors.Errorf("logset discovery address not ready, logset: %s/%s", ls.Namespace, ls.Name)
 	}
 
-	cli, err := logservice.NewProxyHAKeeperClient(ctx, logservice.HAKeeperClientConfig{DiscoveryAddress: ls.Status.Discovery.String()})
+	cli, err := logservice.NewProxyHAKeeperClient(ctx, "", logservice.HAKeeperClientConfig{DiscoveryAddress: ls.Status.Discovery.String()})
 	if err != nil {
 		return nil, errors.WrapPrefix(err, "build HAKeeper client", 0)
 	}

@@ -23,15 +23,17 @@ const (
 	MOFeatureSessionSource MOFeature = "SessionSource"
 	MOFeatureLockMigration MOFeature = "LockMigration"
 
-	MOFeatureDiscoveryFixed MOFeature = "DiscoveryFixed"
+	MOFeatureDiscoveryFixed    MOFeature = "DiscoveryFixed"
+	MOFeatureShardingMigration MOFeature = "ShardingMigration"
 )
 
 var (
 	featureVersions = map[MOFeature][]semver.Version{
-		MOFeaturePipelineInfo:   {semver.MustParse("1.1.2"), semver.MustParse("1.2.0")},
-		MOFeatureSessionSource:  {semver.MustParse("1.1.2"), semver.MustParse("1.2.0")},
-		MOFeatureLockMigration:  {semver.MustParse("1.2.0")},
-		MOFeatureDiscoveryFixed: {semver.MustParse("2.0.0")},
+		MOFeaturePipelineInfo:      {semver.MustParse("1.1.2"), semver.MustParse("1.2.0")},
+		MOFeatureSessionSource:     {semver.MustParse("1.1.2"), semver.MustParse("1.2.0")},
+		MOFeatureLockMigration:     {semver.MustParse("1.2.0")},
+		MOFeatureShardingMigration: {semver.MustParse("1.3.0")},
+		MOFeatureDiscoveryFixed:    {semver.MustParse("2.0.0")},
 	}
 
 	MinimalVersion = semver.Version{Major: 0, Minor: 0, Patch: 0}

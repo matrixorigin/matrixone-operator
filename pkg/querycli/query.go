@@ -21,7 +21,6 @@ import (
 	"github.com/matrixorigin/matrixone/pkg/common/morpc"
 	pb "github.com/matrixorigin/matrixone/pkg/pb/query"
 	"github.com/matrixorigin/matrixone/pkg/txn/rpc"
-	"go.uber.org/zap"
 	"time"
 )
 
@@ -31,12 +30,12 @@ type Client struct {
 	c morpc.RPCClient
 }
 
-func New(logger *zap.Logger) (*Client, error) {
+func New() (*Client, error) {
 	pool := morpc.NewMessagePool(
 		func() *pb.Request { return &pb.Request{} },
 		func() *pb.Response { return &pb.Response{} })
 
-	queryCli, err := rpc.Config{}.NewClient("query-service", logger,
+	queryCli, err := rpc.Config{}.NewClient("", "query-service",
 		func() morpc.Message { return pool.AcquireResponse() })
 	if err != nil {
 		return nil, err
@@ -66,6 +65,17 @@ func (c *Client) GetPipelineInfo(ctx context.Context, address string) (*pb.GetPi
 		return nil, errors.WrapPrefix(err, "error send request", 0)
 	}
 	return resp.GetPipelineInfoResponse, nil
+}
+
+func (c *Client) GetReplicaCount(ctx context.Context, address string) (pb.GetReplicaCountResponse, error) {
+	resp, err := c.SendReq(ctx, address, &pb.Request{
+		CmdMethod:       pb.CmdMethod_GetReplicaCount,
+		GetReplicaCount: pb.GetReplicaCountRequest{},
+	})
+	if err != nil {
+		return pb.GetReplicaCountResponse{}, errors.WrapPrefix(err, "error send request", 0)
+	}
+	return resp.GetReplicaCount, nil
 }
 
 func (c *Client) SendReq(ctx context.Context, address string, req *pb.Request) (*pb.Response, error) {

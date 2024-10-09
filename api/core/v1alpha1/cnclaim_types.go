@@ -106,6 +106,8 @@ type MigrateStatus struct {
 type Workload struct {
 	Connections int `json:"connections,omitempty"`
 	Pipelines   int `json:"pipelines,omitempty"`
+	// Replicas is the sum of sharding tables served on the current CN
+	Replicas int `json:"replicas,omitempty"`
 }
 
 // +kubebuilder:object:root=true

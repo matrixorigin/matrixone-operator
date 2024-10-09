@@ -180,17 +180,17 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		return c.completeDraining(ctx)
 	}
 
-	var connMigrated, lockMigrated bool
+	var connAndShardMigrated, lockMigrated bool
 	err := c.withMOClientSet(ctx, func(timeout context.Context, h *mocli.ClientSet) error {
 		var err error
-		connMigrated, err = c.handleConnectionDraining(ctx, uid, timeout, h)
+		connAndShardMigrated, err = c.handleConnectionDraining(ctx, uid, timeout, h)
 		if err != nil {
 			return err
 		}
 		if time.Since(startTime) < sc.GetMinDelayDuration() {
 			return recon.ErrReSync("wait min-delay for CN draining state get propagated", sc.GetMinDelayDuration())
 		}
-		if !connMigrated {
+		if !connAndShardMigrated {
 			// lock migration should be done after connection get migrated
 			return nil
 		}
@@ -207,7 +207,7 @@ func (c *withCNSet) OnPreparingStop(ctx *recon.Context[*corev1.Pod]) error {
 		}
 		return err
 	}
-	if connMigrated && lockMigrated {
+	if connAndShardMigrated && lockMigrated {
 		return c.completeDraining(ctx)
 	}
 	if time.Since(startTime) > storeDrainTakesLongDuration {
@@ -245,7 +245,7 @@ func (c *withCNSet) handleConnectionDraining(ctx *recon.Context[*corev1.Pod], ui
 	}
 
 	if !storeConnection.IsSafeToReclaim() {
-		ctx.Log.Info("wait store connection to be drained", "uuid", uid, "connections", storeConnection.SessionCount, "pipelines", storeConnection.PipelineCount)
+		ctx.Log.Info("wait store connection to be drained", "uuid", uid, "connections", storeConnection.SessionCount, "pipelines", storeConnection.PipelineCount, "replicas", storeConnection.ReplicaCount)
 	}
 	return storeConnection.IsSafeToReclaim(), nil
 }
@@ -537,6 +537,17 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		// clear pipeline count if feature is disabled
 		sc.PipelineCount = 0
 	}
+	var replicaCount int
+	if v1alpha1.HasMOFeature(moVersion, v1alpha1.MOFeatureShardingMigration) {
+		replicaCount, err = c.getReplicaCount(queryAddress, diagosis)
+		if err != nil {
+			ctx.Log.Info("error get replica count", "error", err.Error())
+		} else {
+			sc.ReplicaCount = replicaCount
+		}
+	} else {
+		sc.ReplicaCount = 0
+	}
 
 	return c.patchStoreStats(ctx, sc)
 }
@@ -584,6 +595,17 @@ func (c *Controller) getSessionCount(queryAddress string, moVersion semver.Versi
 		diagosis.Logger.Info("CN sessions", "count", count, "detail", resp.GetSessions())
 	}
 	return count, nil
+}
+
+func (c *Controller) getReplicaCount(queryAddress string, diagosis *connectionDiagnosis) (int, error) {
+	resp, err := c.queryCli.GetReplicaCount(context.Background(), queryAddress)
+	if err != nil {
+		return 0, errors.WrapPrefix(err, "get replica count", 0)
+	}
+	if diagosis.Enabled {
+		diagosis.Logger.Info("CN replica count", "count", resp.GetCount())
+	}
+	return int(resp.GetCount()), nil
 }
 
 func (c *Controller) getPipelineCount(queryAddress string, diagosis *connectionDiagnosis) (int, error) {

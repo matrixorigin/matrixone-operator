@@ -232,6 +232,10 @@ spec:
                               type: integer
                             pipelines:
                               type: integer
+                            replicas:
+                              description: Replicas is the sum of sharding tables
+                                served on the current CN
+                              type: integer
                           type: object
                       type: object
                     phase:

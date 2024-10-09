@@ -17,6 +17,9 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -25,8 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
-	"time"
 )
 
 const (
@@ -149,6 +150,7 @@ func ToStoreLabels(labels []v1alpha1.CNLabel) map[string]metadata.LabelList {
 type StoreScore struct {
 	SessionCount  int `json:"sessionCount"`
 	PipelineCount int `json:"pipelineCount"`
+	ReplicaCount  int `json:"replicaCount"`
 
 	StartedTime *time.Time `json:"startedTime,omitempty"`
 }
@@ -158,12 +160,13 @@ func (s *StoreScore) GenDeletionCost() int {
 }
 
 func (s *StoreScore) IsSafeToReclaim() bool {
-	return s.SessionCount == 0 && s.PipelineCount == 0
+	return s.SessionCount == 0 && s.PipelineCount == 0 && s.ReplicaCount == 0
 }
 
 func (s *StoreScore) Restarted(startedTime *time.Time) {
 	s.SessionCount = 0
 	s.PipelineCount = 0
+	s.ReplicaCount = 0
 	s.StartedTime = startedTime
 }
 

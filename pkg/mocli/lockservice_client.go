@@ -33,7 +33,7 @@ func NewLockServiceClient(tnAddr string, logger *zap.Logger) (*LockServiceClient
 	logger.Info("new lockservice client", zap.String("TN addr", tnAddr))
 	cfg.BackendOptions = append(cfg.BackendOptions,
 		morpc.WithBackendReadTimeout(DefaultRPCTimeout))
-	client, err := cfg.NewClient("lock-client", logger, func() morpc.Message {
+	client, err := cfg.NewClient("", "lock-client", func() morpc.Message {
 		return &lock.Response{}
 	})
 	if err != nil {
