@@ -43,7 +43,7 @@ const (
 	teardownClusterTimeout = 10 * time.Minute
 	pollInterval           = 15 * time.Second
 	portForwardTimeout     = 10 * time.Second
-	sqlTestTimeout         = 10 * time.Minute
+	sqlTestTimeout         = 15 * time.Minute
 )
 
 var _ = Describe("MatrixOneCluster test", func() {

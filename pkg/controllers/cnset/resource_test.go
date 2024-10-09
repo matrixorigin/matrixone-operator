@@ -91,7 +91,7 @@ name = "ETL"
 memory-capacity = "1B"
 
 [hakeeper-client]
-discovery-address = "test:6001"
+service-addresses = []
 `,
 		},
 		{
@@ -156,7 +156,7 @@ name = "ETL"
 memory-capacity = "1B"
 
 [hakeeper-client]
-discovery-address = "test:6001"
+service-addresses = []
 `,
 		},
 		{

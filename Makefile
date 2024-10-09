@@ -4,8 +4,8 @@ SHELL=/usr/bin/env bash -o pipefail
 REPO ?= "matrixorigin/matrixone-operator"
 TAG ?= "latest"
 GOPROXY ?= "https://proxy.golang.org,direct"
-MO_VERSION ?= "v2.0.0-17562fa87-2024-10-09"
-MO_IMAGE_REPO ?= "registry.cn-hangzhou.aliyuncs.com/mocloud/matrixone"
+MO_VERSION ?= "1.2.3"
+MO_IMAGE_REPO ?= "matrixorigin/matrixone"
 BRANCH ?= main
 ENVTEST_K8S_VERSION = 1.24.1
 
