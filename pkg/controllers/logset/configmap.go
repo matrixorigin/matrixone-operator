@@ -43,6 +43,7 @@ const (
 // Since HA requires instance-based heterogeneous configuration (e.g. instance UUID and advertised addresses), we need a start script to build these configurations based on
 // the instance meta injected by k8s downward API
 // TODO(aylei): add logservice topology labels
+// Deprecated: use startScriptTplV2.sh instead
 var startScriptTpl = template.Must(template.New("logservice-start-script").Parse(`
 #!/bin/sh
 set -eu
@@ -64,6 +65,62 @@ raft-address = "${ADDR}:{{ .RaftPort }}"
 logservice-address = "${ADDR}:{{ .LogServicePort }}"
 gossip-address = "${POD_IP}:{{ .GossipPort }}"
 gossip-address-v2 = "${ADDR}:{{ .GossipPort }}"
+EOF
+
+# build instance config
+sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+
+# insert gossip config
+gossipTmp=$(mktemp)
+sed "/\[logservice\]/d" {{ .GossipFilePath }} > ${gossipTmp}
+sed -i "/\[logservice\]/r ${gossipTmp}" ${conf}
+
+# append bootstrap config
+sed "/\[logservice\]/d" {{ .BootstrapFilePath }} >> ${conf}
+
+# there is a chance that the dns is not yet added to kubedns and the
+# server will crash, wait before myself to be resolvable
+elapseTime=0
+period=1
+threshold=30
+while true; do
+    sleep ${period}
+    elapseTime=$(( elapseTime+period ))
+    if [ ${elapseTime} -ge ${threshold} ]; then
+        echo "waiting for dns resolvable timeout" >&2 && exit 1
+    fi
+    if nslookup ${ADDR} >/dev/null; then
+        break
+    else
+        echo "waiting pod dns name ${ADDR} resolvable" >&2
+    fi
+done
+
+echo "/mo-service -cfg ${conf} $@"
+exec /mo-service -cfg ${conf} $@
+`))
+
+var startScriptTplV2 = template.Must(template.New("logservice-start-script-v2").Parse(`
+#!/bin/sh
+set -eu
+
+POD_NAME=${POD_NAME:-$HOSTNAME}
+ADDR="${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc"
+ORDINAL=${POD_NAME##*-}
+if [ -z "${HOSTNAME_UUID+guard}" ]; then
+  UUID=$(printf '00000000-0000-0000-0000-0%011x' ${ORDINAL})
+else
+  UUID=$(echo ${ADDR} | sha256sum | od -x | head -1 | awk '{OFS="-"; print $2$3,$4,$5,$6,$7$8$9}')
+fi
+conf=$(mktemp)
+
+bc=$(mktemp)
+cat <<EOF > ${bc}
+uuid = "${UUID}"
+service-host = "${ADDR}"
+raft-port = {{ .RaftPort }}
+logservice-port = {{ .LogServicePort }}
+gossip-port = {{ .GossipPort }}
 EOF
 
 # build instance config
@@ -158,7 +215,12 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 
 	// 2. build the start script
 	buff := new(bytes.Buffer)
-	err = startScriptTpl.Execute(buff, &model{
+	tpl := startScriptTpl
+
+	if sv, ok := ls.Spec.GetSemVer(); ok && v1alpha1.HasMOFeature(*sv, v1alpha1.MOFeatureDiscoveryFixed) {
+		tpl = startScriptTplV2
+	}
+	err = tpl.Execute(buff, &model{
 		RaftPort:          raftPort,
 		LogServicePort:    logServicePort,
 		GossipPort:        gossipPort,
@@ -166,6 +228,7 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 		BootstrapFilePath: fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
 		GossipFilePath:    fmt.Sprintf("%s/%s", gossipPath, gossipFile),
 	})
+
 	if err != nil {
 		return nil, err
 	}

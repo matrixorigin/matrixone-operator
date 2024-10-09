@@ -259,7 +259,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	}
 	cfg.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &cn.Spec.SharedStorageCache))
 	cfg.Set([]string{"service-type"}, "CN")
-	if v1alpha1.GateUseDiscoveryService.Enabled(cn.Spec.GetOperatorVersion()) {
+	if sv, ok := cn.Spec.GetSemVer(); ok && v1alpha1.HasMOFeature(*sv, v1alpha1.MOFeatureDiscoveryFixed) {
 		// issue: https://github.com/matrixorigin/MO-Cloud/issues/4158
 		// via discovery-address, operator can take off unhealthy logstores without restart CN/TN
 		cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())

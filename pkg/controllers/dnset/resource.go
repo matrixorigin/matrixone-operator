@@ -190,7 +190,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		// [tn] is configured, all config items should go to the [tn] toml table
 		configAlias = aliasTN
 	}
-	if v1alpha1.GateUseDiscoveryService.Enabled(dn.Spec.GetOperatorVersion()) {
+	if sv, ok := dn.Spec.GetSemVer(); ok && v1alpha1.HasMOFeature(*sv, v1alpha1.MOFeatureDiscoveryFixed) {
 		// issue: https://github.com/matrixorigin/MO-Cloud/issues/4158
 		// via discovery-address, operator can take off unhealthy logstores without restart CN/TN
 		conf.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())

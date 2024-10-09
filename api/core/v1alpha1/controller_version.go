@@ -18,14 +18,8 @@ import "github.com/blang/semver/v4"
 
 type Gate string
 
-const (
-	GateUseDiscoveryService Gate = "UseDiscoveryService"
-)
-
 var (
-	gateVersions = map[Gate][]semver.Version{
-		GateUseDiscoveryService: {semver.MustParse("1.3.0")},
-	}
+	gateVersions = map[Gate][]semver.Version{}
 )
 
 func (g Gate) Enabled(v semver.Version) bool {
