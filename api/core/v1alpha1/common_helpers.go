@@ -33,6 +33,10 @@ const (
 	reasonEmpty = "empty"
 )
 
+var (
+	LatestOpVersion = semver.MustParse("1.3.0")
+)
+
 func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
 	if c.Conditions == nil {
 		c.Conditions = []metav1.Condition{}
@@ -292,4 +296,15 @@ func (p *PodSet) GetSemVer() (*semver.Version, bool) {
 		return nil, false
 	}
 	return &v, true
+}
+
+func (p *PodSet) GetOperatorVersion() semver.Version {
+	if p.OperatorVersion == nil {
+		return LatestOpVersion
+	}
+	v, err := semver.ParseTolerant(*p.OperatorVersion)
+	if err != nil {
+		return LatestOpVersion
+	}
+	return v
 }

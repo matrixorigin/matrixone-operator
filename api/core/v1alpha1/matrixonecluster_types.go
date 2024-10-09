@@ -97,6 +97,8 @@ type MatrixOneClusterSpec struct {
 	// reconciliations
 	// +optional
 	SemanticVersion *string `json:"semanticVersion,omitempty"`
+
+	OperatorVersion *string `json:"operatorVersion,omitempty"`
 }
 
 func (m *MatrixOneCluster) GetMetricReaderEnabled() bool {

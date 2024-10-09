@@ -114,6 +114,10 @@ type PodSet struct {
 	// reconciliations
 	// +optional
 	SemanticVersion *string `json:"semanticVersion,omitempty"`
+
+	// OperatorVersion is the controller version of mo-operator that should be used to
+	// reconcile this set
+	OperatorVersion *string `json:"operatorVersion,omitempty"`
 }
 
 // MainContainer is the description of the main container of a Pod

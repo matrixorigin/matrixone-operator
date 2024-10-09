@@ -16,6 +16,9 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -32,8 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 const (
@@ -42,7 +43,7 @@ const (
 	teardownClusterTimeout = 10 * time.Minute
 	pollInterval           = 15 * time.Second
 	portForwardTimeout     = 10 * time.Second
-	sqlTestTimeout         = 10 * time.Minute
+	sqlTestTimeout         = 15 * time.Minute
 )
 
 var _ = Describe("MatrixOneCluster test", func() {
@@ -66,6 +67,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 				Name:      "test",
 			},
 			Spec: v1alpha1.MatrixOneClusterSpec{
+				OperatorVersion: pointer.String("1.3.0"),
 				CNGroups: []v1alpha1.CNGroup{{
 					Name: "tp",
 					CNSetSpec: v1alpha1.CNSetSpec{

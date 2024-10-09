@@ -62,7 +62,7 @@ spec:
           command:
             - /manager
           image: {{ .Values.manager.image.repository }}:{{ .Values.manager.image.tag }}
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
           name: manager
           env:
 {{- if .Values.enableKubeCacheMutationDetector }}
@@ -193,7 +193,7 @@ spec:
         - --feature-gates={{ .Values.featureGates }}
         - --socket-file={{ .Values.daemon.socketFile }}
         image: {{ .Values.manager.image.repository }}:{{ .Values.manager.image.tag }}
-        imagePullPolicy: Always
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
         name: daemon
         env:
 {{- if .Values.enableKubeCacheMutationDetector }}

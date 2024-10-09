@@ -15,11 +15,12 @@
 package dnset
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func Test_buildDNSetConfigMap(t *testing.T) {
@@ -169,6 +170,75 @@ memory-capacity = "1B"
 
 [hakeeper-client]
 service-addresses = []
+`,
+		},
+		{
+			name: "2.0",
+			args: args{
+				dn: &v1alpha1.DNSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: v1alpha1.DNSetSpec{
+						PodSet: v1alpha1.PodSet{
+							MainContainer: v1alpha1.MainContainer{
+								Image: "test:v2.0.0",
+							},
+						},
+					},
+				},
+				ls: &v1alpha1.LogSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: v1alpha1.LogSetSpec{SharedStorage: v1alpha1.SharedStorageProvider{
+						FileSystem: &v1alpha1.FileSystemProvider{
+							Path: "/test",
+						},
+					}},
+					Status: v1alpha1.LogSetStatus{
+						Discovery: &v1alpha1.LogSetDiscovery{
+							Port:    6001,
+							Address: "test",
+						},
+					},
+				},
+			},
+			wantConfig: `data-dir = "/var/lib/matrixone/data"
+service-type = "DN"
+
+[dn]
+listen-address = "0.0.0.0:41010"
+port-base = 41010
+
+[dn.LogtailServer]
+listen-address = "0.0.0.0:32003"
+
+[dn.lockservice]
+listen-address = "0.0.0.0:6003"
+
+[[fileservice]]
+backend = "DISK"
+data-dir = "/var/lib/matrixone/data"
+name = "LOCAL"
+
+[[fileservice]]
+backend = "DISK"
+data-dir = "/test"
+name = "S3"
+
+[[fileservice]]
+backend = "DISK-ETL"
+data-dir = "/test"
+name = "ETL"
+
+[fileservice.cache]
+memory-capacity = "1B"
+
+[hakeeper-client]
+discovery-address = "test:6001"
 `,
 		},
 	}

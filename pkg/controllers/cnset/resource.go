@@ -259,8 +259,13 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	}
 	cfg.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &cn.Spec.SharedStorageCache))
 	cfg.Set([]string{"service-type"}, "CN")
-	cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
-	// cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
+	if sv, ok := cn.Spec.GetSemVer(); ok && v1alpha1.HasMOFeature(*sv, v1alpha1.MOFeatureDiscoveryFixed) {
+		// issue: https://github.com/matrixorigin/MO-Cloud/issues/4158
+		// via discovery-address, operator can take off unhealthy logstores without restart CN/TN
+		cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
+	} else {
+		cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+	}
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
 	cfg.Set([]string{"cn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
 	cfg.Set([]string{"cn", "port-base"}, cnPortBase)

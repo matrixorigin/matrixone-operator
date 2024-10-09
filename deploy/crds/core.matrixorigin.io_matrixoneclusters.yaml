@@ -138,6 +138,11 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  operatorVersion:
+                    description: |-
+                      OperatorVersion is the controller version of mo-operator that should be used to
+                      reconcile this set
+                    type: string
                   overlay:
                     x-kubernetes-preserve-unknown-fields: true
                   pauseUpdate:
@@ -489,6 +494,11 @@ spec:
                       additionalProperties:
                         type: string
                       type: object
+                    operatorVersion:
+                      description: |-
+                        OperatorVersion is the controller version of mo-operator that should be used to
+                        reconcile this set
+                      type: string
                     overlay:
                       x-kubernetes-preserve-unknown-fields: true
                     pauseUpdate:
@@ -824,6 +834,11 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  operatorVersion:
+                    description: |-
+                      OperatorVersion is the controller version of mo-operator that should be used to
+                      reconcile this set
+                    type: string
                   overlay:
                     x-kubernetes-preserve-unknown-fields: true
                   promDiscoveryScheme:
@@ -1021,6 +1036,11 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  operatorVersion:
+                    description: |-
+                      OperatorVersion is the controller version of mo-operator that should be used to
+                      reconcile this set
+                    type: string
                   overlay:
                     x-kubernetes-preserve-unknown-fields: true
                   promDiscoveryScheme:
@@ -1247,6 +1267,8 @@ spec:
                   NodeSelector specifies default node selector for all components,
                   this will be overridden by component-level config
                 type: object
+              operatorVersion:
+                type: string
               proxy:
                 description: Proxy defines an optional MO Proxy of this cluster
                 properties:
@@ -1288,6 +1310,11 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  operatorVersion:
+                    description: |-
+                      OperatorVersion is the controller version of mo-operator that should be used to
+                      reconcile this set
+                    type: string
                   overlay:
                     x-kubernetes-preserve-unknown-fields: true
                   promDiscoveryScheme:
@@ -1462,6 +1489,11 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  operatorVersion:
+                    description: |-
+                      OperatorVersion is the controller version of mo-operator that should be used to
+                      reconcile this set
+                    type: string
                   overlay:
                     x-kubernetes-preserve-unknown-fields: true
                   promDiscoveryScheme:
@@ -1670,6 +1702,11 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  operatorVersion:
+                    description: |-
+                      OperatorVersion is the controller version of mo-operator that should be used to
+                      reconcile this set
+                    type: string
                   overlay:
                     x-kubernetes-preserve-unknown-fields: true
                   pauseUpdate:
@@ -1979,6 +2016,11 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  operatorVersion:
+                    description: |-
+                      OperatorVersion is the controller version of mo-operator that should be used to
+                      reconcile this set
+                    type: string
                   overlay:
                     x-kubernetes-preserve-unknown-fields: true
                   promDiscoveryScheme:
