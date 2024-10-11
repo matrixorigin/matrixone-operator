@@ -85,6 +85,7 @@ func (r *Actor) reportProgress(ctx *recon.Context[*v1alpha1.CNClaim], source *co
 			Source: v1alpha1.Workload{
 				Connections: score.SessionCount,
 				Pipelines:   score.PipelineCount,
+				Replicas:    score.ReplicaCount,
 			},
 		}
 		return nil

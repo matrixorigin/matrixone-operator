@@ -24,7 +24,7 @@ import (
 
 func main() {
 	zapLogger := logzap.NewRaw()
-	qc, err := querycli.New(zapLogger.Named("querycli"))
+	qc, err := querycli.New()
 	if err != nil {
 		panic(err)
 	}

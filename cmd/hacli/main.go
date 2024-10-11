@@ -31,7 +31,7 @@ func main() {
 	zapLogger := logzap.NewRaw()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cli, err := logservice.NewProxyHAKeeperClient(ctx, logservice.HAKeeperClientConfig{ServiceAddresses: []string{"127.0.0.1:32001"}})
+	cli, err := logservice.NewProxyHAKeeperClient(ctx, "", logservice.HAKeeperClientConfig{ServiceAddresses: []string{"127.0.0.1:32001"}})
 	if err != nil {
 		panic(err)
 	}

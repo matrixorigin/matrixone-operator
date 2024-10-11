@@ -241,7 +241,7 @@ func main() {
 		setupLog.Info(fmt.Sprintf("s3 reclaim feature not enabled, skip setup bucketclaim actor"))
 	}
 
-	qc, err := querycli.New(zapLogger.Named("querycli"))
+	qc, err := querycli.New()
 	exitIf(err, "unable to create query client")
 	haCliMgr := mocli.NewManager(mgr.GetClient(), zapLogger.Named("mocli-manager"))
 	if features.DefaultFeatureGate.Enabled(features.CNLabel) {

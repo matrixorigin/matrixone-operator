@@ -1734,5 +1734,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `connections` _integer_ |  |  |  |
 | `pipelines` _integer_ |  |  |  |
+| `replicas` _integer_ | Replicas is the sum of sharding tables served on the current CN |  |  |
 
 
