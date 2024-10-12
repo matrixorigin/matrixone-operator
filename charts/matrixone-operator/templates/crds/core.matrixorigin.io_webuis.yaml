@@ -214,6 +214,8 @@ spec:
                       can be unavailable during the update process.
                     x-kubernetes-int-or-string: true
                 type: object
+            required:
+            - replicas
             type: object
           status:
             properties:

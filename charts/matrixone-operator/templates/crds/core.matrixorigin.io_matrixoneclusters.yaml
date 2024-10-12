@@ -409,6 +409,8 @@ spec:
                           can be unavailable during the update process.
                         x-kubernetes-int-or-string: true
                     type: object
+                required:
+                - replicas
                 type: object
               cnGroups:
                 description: CNGroups are CN pod sets that have different spec like
@@ -770,6 +772,7 @@ spec:
                       type: object
                   required:
                   - name
+                  - replicas
                   type: object
                 type: array
                 x-kubernetes-list-map-keys:
@@ -959,6 +962,8 @@ spec:
                     items:
                       type: string
                     type: array
+                required:
+                - replicas
                 type: object
               imagePullPolicy:
                 description: PullPolicy describes a policy for if/when to pull a container
@@ -1252,6 +1257,7 @@ spec:
                         type: string
                     type: object
                 required:
+                - replicas
                 - sharedStorage
                 - volume
                 type: object
@@ -1421,6 +1427,8 @@ spec:
                     items:
                       type: string
                     type: array
+                required:
+                - replicas
                 type: object
               restoreFrom:
                 type: string
@@ -1614,6 +1622,8 @@ spec:
                     items:
                       type: string
                     type: array
+                required:
+                - replicas
                 type: object
               topologySpread:
                 description: |-
@@ -1973,6 +1983,8 @@ spec:
                           can be unavailable during the update process.
                         x-kubernetes-int-or-string: true
                     type: object
+                required:
+                - replicas
                 type: object
               version:
                 description: |-
@@ -2141,6 +2153,8 @@ spec:
                           can be unavailable during the update process.
                         x-kubernetes-int-or-string: true
                     type: object
+                required:
+                - replicas
                 type: object
             required:
             - logService
