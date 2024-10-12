@@ -54,7 +54,7 @@ sql-address = "${POD_IP}:{{ .CNSQLPort }}"
 service-host = "${POD_IP}"
 EOF
 # build instance config
-sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
 
 # append lock-service configs
 lsc=$(mktemp)
@@ -196,6 +196,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
+		util.FieldRefEnv(common.ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", common.ConfigSuffixAnno)),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
 		util.FieldRefEnv(common.PodIPEnvKey, "status.podIP"),
 	}
@@ -249,9 +250,9 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	}
 }
 
-func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
+func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 	if ls.Status.Discovery == nil {
-		return nil, errors.New("logset had not yet exposed HAKeeper discovery address")
+		return nil, "", errors.New("logset had not yet exposed HAKeeper discovery address")
 	}
 	cfg := cn.Spec.Config
 	if cfg == nil {
@@ -285,7 +286,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	}
 	s, err := cfg.ToString()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
@@ -295,9 +296,10 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		LockServicePort: common.LockServicePort,
 	})
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
+	configSuffix := common.DataDigest([]byte(s))
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMapName(cn),
@@ -305,8 +307,8 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 			Labels:    common.SubResourceLabels(cn),
 		},
 		Data: map[string]string{
-			common.ConfigFile: s,
+			fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix): s,
 			common.Entrypoint: buff.String(),
 		},
-	}, nil
+	}, configSuffix, nil
 }

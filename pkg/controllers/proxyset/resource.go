@@ -58,7 +58,7 @@ cat <<EOF > ${bc}
 uuid = "${UUID}"
 EOF
 # build instance config
-sed "/\[proxy\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+sed "/\[proxy\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
 
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
@@ -69,7 +69,7 @@ func buildCloneSet(proxy *v1alpha1.ProxySet) *kruisev1alpha1.CloneSet {
 }
 
 func syncCloneSet(ctx *recon.Context[*v1alpha1.ProxySet], proxy *v1alpha1.ProxySet, cs *kruisev1alpha1.CloneSet) error {
-	cm, err := buildProxyConfigMap(proxy, ctx.Dep.Deps.LogSet)
+	cm, configSuffix, err := buildProxyConfigMap(proxy, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return errors.WrapPrefix(err, "build configmap", 0)
 	}
@@ -81,6 +81,7 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.ProxySet], proxy *v1alpha1.ProxyS
 		ConfigMap:       cm,
 		KubeCli:         ctx,
 		StorageProvider: &ctx.Dep.Deps.LogSet.Spec.SharedStorage,
+		ConfigSuffix:    configSuffix,
 		MutateContainer: syncMainContainer,
 	})
 }
@@ -145,9 +146,9 @@ func syncSvc(proxy *v1alpha1.ProxySet, svc *corev1.Service) {
 	}
 }
 
-func buildProxyConfigMap(proxy *v1alpha1.ProxySet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
+func buildProxyConfigMap(proxy *v1alpha1.ProxySet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 	if ls.Status.Discovery == nil {
-		return nil, errors.New("HAKeeper discovery address not ready")
+		return nil, "", errors.New("HAKeeper discovery address not ready")
 	}
 	conf := proxy.Spec.Config
 	if conf == nil {
@@ -162,7 +163,7 @@ func buildProxyConfigMap(proxy *v1alpha1.ProxySet, ls *v1alpha1.LogSet) (*corev1
 	}
 	s, err := conf.ToString()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	buff := new(bytes.Buffer)
@@ -170,16 +171,17 @@ func buildProxyConfigMap(proxy *v1alpha1.ProxySet, ls *v1alpha1.LogSet) (*corev1
 		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
 	})
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
+	configSuffix := common.DataDigest([]byte(s))
 	return &corev1.ConfigMap{
 		ObjectMeta: configMapKey(proxy),
 		Data: map[string]string{
-			common.ConfigFile: s,
+			fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix): s,
 			common.Entrypoint: buff.String(),
 		},
-	}, nil
+	}, configSuffix, nil
 }
 
 func configMapKey(p *v1alpha1.ProxySet) metav1.ObjectMeta {

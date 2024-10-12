@@ -33,7 +33,6 @@ func TestAddConfigMapDigest(t *testing.T) {
 	}
 	g := NewGomegaWithT(t)
 	for _, cm := range cmList {
-		g.Expect(addConfigMapDigest(cm)).To(Succeed())
 		g.Expect(utf8string.NewString(cm.Name).IsASCII()).To(BeTrue())
 	}
 }
