@@ -65,8 +65,7 @@ type PodSet struct {
 	Overlay *Overlay `json:"overlay,omitempty"`
 
 	// Replicas is the desired number of pods of this set
-	// +optional
-	Replicas int32 `json:"replicas,omitempty"`
+	Replicas int32 `json:"replicas"`
 
 	// TopologyEvenSpread specifies what topology domains the Pods in set should be
 	// evenly spread in.
