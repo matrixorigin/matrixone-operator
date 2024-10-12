@@ -106,9 +106,7 @@ func syncPodTemplate(t *SyncMOPodTask) {
 	if t.MutatePod != nil {
 		t.MutatePod(t.TargetTemplate)
 	}
-	if t.ConfigSuffix != "" {
-		t.TargetTemplate.ObjectMeta.Annotations[ConfigSuffixAnno] = t.ConfigSuffix
-	}
+	t.TargetTemplate.ObjectMeta.Annotations[ConfigSuffixAnno] = t.ConfigSuffix
 
 	p.Overlay.OverlayPodMeta(&t.TargetTemplate.ObjectMeta)
 	p.Overlay.OverlayPodSpec(specRef)
