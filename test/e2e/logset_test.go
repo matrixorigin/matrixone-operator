@@ -157,10 +157,6 @@ var _ = Describe("MatrixOneCluster test", func() {
 	})
 
 	It("Should restart log pod inplace when only config changed", func() {
-		type podInfo struct {
-			uid     types.UID
-			restart int32
-		}
 		By("Create logset")
 		pull := corev1.PullIfNotPresent
 		l := &v1alpha1.LogSet{
@@ -207,9 +203,11 @@ var _ = Describe("MatrixOneCluster test", func() {
 		By("Logset update config")
 		oldPodList := &corev1.PodList{}
 		Expect(kubeCli.List(ctx, oldPodList, client.MatchingLabels(map[string]string{common.InstanceLabelKey: l.Name}))).To(Succeed())
-		oldPodNameToUID := map[string]podInfo{}
+		oldPodNameToUID := map[string]types.UID{}
+		var oldSuffix string
 		for _, pod := range oldPodList.Items {
-			oldPodNameToUID[pod.Name] = podInfo{uid: pod.UID, restart: pod.Status.ContainerStatuses[0].RestartCount}
+			oldSuffix = pod.Annotations[common.ConfigSuffixAnno]
+			oldPodNameToUID[pod.Name] = pod.UID
 		}
 		newConfig := l.Spec.Config.DeepCopy()
 		if newConfig == nil {
@@ -236,7 +234,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 			}
 			// expect pods not change, but restarted
 			for _, pod := range podList.Items {
-				if v, ok := oldPodNameToUID[pod.Name]; ok && v.uid == pod.UID && v.restart < pod.Status.ContainerStatuses[0].RestartCount {
+				if uid, ok := oldPodNameToUID[pod.Name]; ok && uid == pod.UID &&
+					oldSuffix != pod.Annotations[common.ConfigSuffixAnno] {
 					continue
 				}
 				logger.Infow("waiting pod update", "pod", pod.Name)
