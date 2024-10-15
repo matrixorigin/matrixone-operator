@@ -156,6 +156,123 @@ var _ = Describe("MatrixOneCluster test", func() {
 		}, teardownClusterTimeout, pollInterval).Should(Succeed())
 	})
 
+	It("Should restart log pod inplace when only config changed", func() {
+		type podInfo struct {
+			uid     types.UID
+			restart int32
+		}
+		By("Create logset")
+		pull := corev1.PullIfNotPresent
+		l := &v1alpha1.LogSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: env.Namespace,
+				Name:      "log-" + rand.String(6),
+			},
+			Spec: v1alpha1.LogSetSpec{
+				PodSet: v1alpha1.PodSet{
+					Replicas: 3,
+					MainContainer: v1alpha1.MainContainer{
+						Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
+					},
+					Overlay: &v1alpha1.Overlay{
+						MainContainerOverlay: v1alpha1.MainContainerOverlay{
+							ImagePullPolicy: &pull,
+						},
+					},
+				},
+				Volume: v1alpha1.Volume{
+					Size: resource.MustParse("100Mi"),
+				},
+				SharedStorage: v1alpha1.SharedStorageProvider{
+					FileSystem: &v1alpha1.FileSystemProvider{
+						Path: "/test",
+					},
+				},
+				StoreFailureTimeout: &metav1.Duration{Duration: 2 * time.Minute},
+			},
+		}
+		Expect(kubeCli.Create(ctx, l)).To(Succeed())
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(l), l); err != nil {
+				logger.Errorw("error get logset status", "logset", l.Name, "error", err)
+				return err
+			}
+			if !recon.IsReady(&l.Status.ConditionalStatus) {
+				logger.Infow("wait logset ready", "logset", l.Name)
+				return errWait
+			}
+			return nil
+		}, createLogSetTimeout, pollInterval).Should(Succeed())
+
+		By("Logset update config")
+		oldPodList := &corev1.PodList{}
+		Expect(kubeCli.List(ctx, oldPodList, client.MatchingLabels(map[string]string{common.InstanceLabelKey: l.Name}))).To(Succeed())
+		oldPodNameToUID := map[string]podInfo{}
+		for _, pod := range oldPodList.Items {
+			oldPodNameToUID[pod.Name] = podInfo{uid: pod.UID, restart: pod.Status.ContainerStatuses[0].RestartCount}
+		}
+		newConfig := l.Spec.Config.DeepCopy()
+		if newConfig == nil {
+			newConfig = v1alpha1.NewTomlConfig(map[string]interface{}{})
+		}
+		Expect(e2eutil.Patch(ctx, kubeCli, l, func() error {
+			newConfig.Set([]string{"observability.labelSelector", "role"}, "__MO_UPDATE_TESTER__")
+			l.Spec.Config = newConfig
+			return nil
+		})).To(Succeed())
+		Eventually(func() error {
+			podList := &corev1.PodList{}
+			clone := l.DeepCopy()
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(l), clone); err != nil {
+				logger.Errorw("error get logset status", "logset", l.Name, "error", err)
+			}
+			if !recon.IsReady(&clone.Status.ConditionalStatus) {
+				logger.Infow("wait logset ready", "logset", l.Name)
+				return errWait
+			}
+			if err := kubeCli.List(ctx, podList, client.MatchingLabels(map[string]string{common.InstanceLabelKey: l.Name})); err != nil {
+				logger.Errorw("error list pods", "logset", l.Name, "error", err)
+				return err
+			}
+			// expect pods not change, but restarted
+			for _, pod := range podList.Items {
+				if v, ok := oldPodNameToUID[pod.Name]; ok && v.uid == pod.UID && v.restart < pod.Status.ContainerStatuses[0].RestartCount {
+					continue
+				}
+				logger.Infow("waiting pod update", "pod", pod.Name)
+				return errWait
+			}
+			return nil
+		}, createLogSetTimeout, pollInterval).Should(Succeed())
+
+		By("Teardown logset")
+		Expect(kubeCli.Delete(ctx, l)).To(Succeed())
+		Eventually(func() error {
+			err := kubeCli.Get(ctx, client.ObjectKeyFromObject(l), l)
+			if err == nil {
+				logger.Infow("wait logset teardown", "logset", l.Name)
+				return errWait
+			}
+			if !apierrors.IsNotFound(err) {
+				logger.Errorw("unexpected error when get logset", "logset", l, "error", err)
+				return err
+			}
+			podList := &corev1.PodList{}
+			err = kubeCli.List(ctx, podList, client.InNamespace(l.Namespace))
+			if err != nil {
+				logger.Errorw("error list pods", "error", err)
+				return err
+			}
+			for _, pod := range podList.Items {
+				if strings.HasPrefix(pod.Name, l.Name) {
+					logger.Infow("Pod that belongs to the logset is not cleaned", "pod", pod.Name)
+					return errWait
+				}
+			}
+			return nil
+		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+	})
+
 	It("Should start logset service successfully when logset replicas is 1", func() {
 		By("Create logset")
 		l := &v1alpha1.LogSet{
