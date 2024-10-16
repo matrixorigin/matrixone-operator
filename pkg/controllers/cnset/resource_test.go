@@ -227,13 +227,14 @@ service-addresses = []
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			got, err := buildCNSetConfigMap(tt.args.cn, tt.args.ls)
+			got, configSuffix, err := buildCNSetConfigMap(tt.args.cn, tt.args.ls)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildDNSetConfigMap() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			g.Expect(got.Data["config.toml"]).NotTo(BeNil())
-			g.Expect(cmp.Diff(tt.wantConfig, got.Data["config.toml"])).To(BeEmpty())
+			configKey := "config.toml-" + configSuffix
+			g.Expect(got.Data[configKey]).NotTo(BeNil())
+			g.Expect(cmp.Diff(tt.wantConfig, got.Data[configKey])).To(BeEmpty())
 		})
 	}
 }

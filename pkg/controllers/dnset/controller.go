@@ -186,12 +186,14 @@ func (d *Actor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	syncPodSpec(dn, dnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	syncPersistentVolumeClaim(dn, dnSet)
 
-	configMap, err := buildDNSetConfigMap(dn, ctx.Dep.Deps.LogSet)
+	configMap, configSuffix, err := buildDNSetConfigMap(dn, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err
 	}
-
-	if err := common.SyncConfigMap(ctx, &dnSet.Spec.Template.Spec, configMap); err != nil {
+	if dn.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		dnSet.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	}
+	if err := common.SyncConfigMap(ctx, &dnSet.Spec.Template.Spec, configMap, dn.Spec.GetOperatorVersion()); err != nil {
 		return err
 	}
 

@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAddConfigMapDigest(t *testing.T) {
+func TestDataDigest(t *testing.T) {
 	// need fuzz?
 	cmList := []*corev1.ConfigMap{
 		newCM(""),
@@ -33,8 +33,8 @@ func TestAddConfigMapDigest(t *testing.T) {
 	}
 	g := NewGomegaWithT(t)
 	for _, cm := range cmList {
-		g.Expect(addConfigMapDigest(cm)).To(Succeed())
-		g.Expect(utf8string.NewString(cm.Name).IsASCII()).To(BeTrue())
+		digest := DataDigest([]byte(cm.Data["config"]))
+		g.Expect(utf8string.NewString(digest).IsASCII()).To(BeTrue())
 	}
 }
 

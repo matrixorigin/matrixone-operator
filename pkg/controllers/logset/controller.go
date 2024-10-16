@@ -164,11 +164,14 @@ func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 		return err
 	}
 	// sync the config
-	cm, err := buildConfigMap(ls)
+	cm, configSuffix, err := buildConfigMap(ls)
 	if err != nil {
 		return err
 	}
-	if err := common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm); err != nil {
+	if ls.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	}
+	if err := common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ls.Spec.GetOperatorVersion()); err != nil {
 		return err
 	}
 
@@ -367,13 +370,16 @@ func updateGossipConfig(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.Stat
 }
 
 func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) error {
-	cm, err := buildConfigMap(ctx.Obj)
+	cm, configSuffix, err := buildConfigMap(ctx.Obj)
 	if err != nil {
 		return err
 	}
 	syncPodMeta(ctx.Obj, sts)
+	if ctx.Obj.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	}
 	syncPodSpec(ctx.Obj, &sts.Spec.Template.Spec)
-	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
+	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ctx.Obj.Spec.GetOperatorVersion())
 }
 
 func (r *Actor) Reconcile(mgr manager.Manager) error {

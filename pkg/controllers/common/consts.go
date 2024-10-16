@@ -31,4 +31,6 @@ const (
 
 	LabelManagedBy = "matrixorigin.io/managed-by"
 	LabelOwnerUID  = "matrixorigin.io/owner-uid"
+
+	ConfigSuffixAnno = "matrixorigin.io/config-suffix"
 )

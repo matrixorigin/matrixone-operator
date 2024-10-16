@@ -117,6 +117,14 @@ func Test_syncPodSpec(t *testing.T) {
 						},
 					},
 				}, {
+					Name: "CONFIG_SUFFIX",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							APIVersion: "v1",
+							FieldPath:  "metadata.annotations['matrixorigin.io/config-suffix']",
+						},
+					},
+				}, {
 					Name: "POD_IP",
 					ValueFrom: &corev1.EnvVarSource{
 						FieldRef: &corev1.ObjectFieldSelector{

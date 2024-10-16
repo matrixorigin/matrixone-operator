@@ -17,12 +17,16 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/blang/semver/v4"
 	"github.com/cespare/xxhash"
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 const (
@@ -38,14 +42,19 @@ const (
 
 // SyncConfigMap syncs the desired configmap for pods, which will cause rolling-update if the
 // data of the configmap is changed
-func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1.ConfigMap) error {
+func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1.ConfigMap, operatorVersion semver.Version) error {
 	var currentCmName string
+	var desiredName string
+	var err error
 	vp := util.FindFirst(podSpec.Volumes, util.WithVolumeName("config"))
 	if vp != nil {
 		currentCmName = vp.Name
 	}
-	// TODO(aylei): GC stale configmaps (maybe in another worker?)
-	desiredName, err := ensureConfigMap(kubeCli, currentCmName, cm)
+	if operatorVersion.Equals(v1alpha1.LatestOpVersion) {
+		desiredName, err = ensureConfigMap(kubeCli, cm)
+	} else {
+		desiredName, err = ensureConfigMapLegacy(kubeCli, currentCmName, cm)
+	}
 	if err != nil {
 		return err
 	}
@@ -66,10 +75,40 @@ func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1
 }
 
 // ensureConfigMap ensures the configmap exist in k8s
-func ensureConfigMap(kubeCli recon.KubeClient, currentCm string, desired *corev1.ConfigMap) (string, error) {
+func ensureConfigMap(kubeCli recon.KubeClient, desired *corev1.ConfigMap) (string, error) {
+	c := desired.DeepCopy()
+	old := &corev1.ConfigMap{}
+	exist, err := kubeCli.Exist(client.ObjectKeyFromObject(c), old)
+	if err != nil {
+		return "", err
+	}
+	if exist {
+		podList := &corev1.PodList{}
+		err = kubeCli.List(podList, client.InNamespace(c.Namespace))
+		if err != nil {
+			return "", err
+		}
+		for key, v := range old.Data {
+			if withDigest(key, v) && configInUse(key, podList.Items) {
+				// append item that is still in use
+				c.Data[key] = v
+			}
+		}
+		err = kubeCli.Update(c)
+	} else {
+		err = kubeCli.CreateOwned(c)
+	}
+	if err != nil {
+		return "", err
+	}
+	return c.Name, nil
+}
+
+// Deprecated: use ensureConfigMap instead
+func ensureConfigMapLegacy(kubeCli recon.KubeClient, currentCm string, desired *corev1.ConfigMap) (string, error) {
 	c := desired.DeepCopy()
 	if err := addConfigMapDigest(c); err != nil {
-		return "", err
+		return "", errors.Wrap(err, 0)
 	}
 	// config digest not changed
 	if c.Name == currentCm {
@@ -78,9 +117,28 @@ func ensureConfigMap(kubeCli recon.KubeClient, currentCm string, desired *corev1
 	// otherwise ensure the configmap exists
 	err := util.Ignore(apierrors.IsAlreadyExists, kubeCli.CreateOwned(c))
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, 0)
 	}
 	return c.Name, nil
+}
+
+func withDigest(key string, v string) bool {
+	return strings.Contains(key, DataDigest([]byte(v)))
+}
+
+func configInUse(key string, podList []corev1.Pod) bool {
+	for _, pod := range podList {
+		s := pod.Annotations[ConfigSuffixAnno]
+		if len(s) > 0 && strings.Contains(key, s) {
+			return true
+		}
+	}
+	return false
+}
+
+func DataDigest(data []byte) string {
+	sum := xxhash.Sum64(data)
+	return fmt.Sprintf("%x", sum)[0:7]
 }
 
 func addConfigMapDigest(cm *corev1.ConfigMap) error {

@@ -59,6 +59,8 @@ const (
 	NamespaceEnvKey = "NAMESPACE"
 	// PodIPEnvKey is the container environment variable to reflect the IP of the Pod that runs the container
 	PodIPEnvKey = "POD_IP"
+	// ConfigSuffixEnvKey is the container environment variable to reflect the config suffix
+	ConfigSuffixEnvKey = "CONFIG_SUFFIX"
 )
 
 // SubResourceLabels generate labels for sub-resources

@@ -54,7 +54,7 @@ type cnSetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &cnSetDefaulter{}
 
-func (c *cnSetDefaulter) Default(_ context.Context, obj runtime.Object) error {
+func (c *cnSetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
 	cnSet, ok := obj.(*v1alpha1.CNSet)
 	if !ok {
 		return unexpectedKindError("CNSet", obj)
@@ -64,7 +64,7 @@ func (c *cnSetDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	if cnSet.Spec.Role == "" {
 		cnSet.Spec.Role = v1alpha1.CNRoleTP
 	}
-	return nil
+	return setDefaultOperatorVersion(ctx, &cnSet.Spec.PodSet)
 }
 
 func (c *cnSetDefaulter) DefaultSpec(spec *v1alpha1.CNSetSpec) {

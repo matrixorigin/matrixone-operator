@@ -15,13 +15,18 @@
 package webhook
 
 import (
+	"context"
 	"fmt"
+
 	"github.com/go-errors/errors"
-	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
 
 // DefaultArgs alias to v1alpha1.DefaultArgs
@@ -64,7 +69,6 @@ func setPodSetDefaults(s *v1alpha1.PodSet) {
 	s.Overlay.Env = appendIfNotExist(s.Overlay.Env, corev1.EnvVar{Name: v1alpha1.EnvGoDebug, Value: v1alpha1.DefaultGODebug}, func(v corev1.EnvVar) string {
 		return v.Name
 	})
-
 	if s.ExportToPrometheus != nil && *s.ExportToPrometheus {
 		if s.PromDiscoveryScheme == nil {
 			s.PromDiscoveryScheme = (*v1alpha1.PromDiscoveryScheme)(pointer.String(string(v1alpha1.PromDiscoverySchemeService)))
@@ -89,4 +93,15 @@ func defaultDiskCacheSize(total *resource.Quantity) *resource.Quantity {
 
 func unexpectedKindError(expected string, obj runtime.Object) error {
 	return errors.Errorf("expected %s but received %T", expected, obj)
+}
+
+func setDefaultOperatorVersion(ctx context.Context, podSet *v1alpha1.PodSet) error {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if req.AdmissionRequest.Operation == admissionv1.Create && podSet.OperatorVersion == nil {
+		podSet.OperatorVersion = pointer.String(v1alpha1.LatestOpVersion.String())
+	}
+	return nil
 }

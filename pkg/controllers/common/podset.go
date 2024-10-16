@@ -35,7 +35,7 @@ type SyncMOPodTask struct {
 	ConfigMap       *corev1.ConfigMap
 	KubeCli         recon.KubeClient
 	StorageProvider *v1alpha1.SharedStorageProvider
-
+	ConfigSuffix    string
 	// optional
 	MutateContainer func(c *corev1.Container)
 	MutatePod       func(p *corev1.PodTemplateSpec)
@@ -74,7 +74,7 @@ func GetSemanticVersion(meta *metav1.ObjectMeta) semver.Version {
 // SyncMOPod execute the given SyncMOPodTask which keeps the pod spec update to date
 func SyncMOPod(t *SyncMOPodTask) error {
 	syncPodTemplate(t)
-	if err := SyncConfigMap(t.KubeCli, &t.TargetTemplate.Spec, t.ConfigMap); err != nil {
+	if err := SyncConfigMap(t.KubeCli, &t.TargetTemplate.Spec, t.ConfigMap, t.PodSet.GetOperatorVersion()); err != nil {
 		return errors.WrapPrefix(err, "sync configmap", 0)
 	}
 	return nil
@@ -106,6 +106,9 @@ func syncPodTemplate(t *SyncMOPodTask) {
 	if t.MutatePod != nil {
 		t.MutatePod(t.TargetTemplate)
 	}
+	if t.PodSet.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		t.TargetTemplate.ObjectMeta.Annotations[ConfigSuffixAnno] = t.ConfigSuffix
+	}
 
 	p.Overlay.OverlayPodMeta(&t.TargetTemplate.ObjectMeta)
 	p.Overlay.OverlayPodSpec(specRef)
@@ -119,6 +122,7 @@ func syncMainContainer(p *v1alpha1.PodSet, c *corev1.Container, mutateFn func(c 
 	c.Env = []corev1.EnvVar{
 		util.FieldRefEnv(PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(NamespaceEnvKey, "metadata.namespace"),
+		util.FieldRefEnv(ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", ConfigSuffixAnno)),
 	}
 	memLimitEnv := GoMemLimitEnv(p.MemoryLimitPercent, c.Resources.Limits.Memory(), p.Overlay)
 	if memLimitEnv != nil {

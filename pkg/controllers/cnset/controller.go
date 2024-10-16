@@ -324,11 +324,14 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	// ref: https://openkruise.io/zh/docs/next/user-manuals/cloneset/#%E6%94%AF%E6%8C%81-pvc-%E6%A8%A1%E6%9D%BF
 	syncPersistentVolumeClaim(cn, cs)
 
-	cm, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
+	cm, configSuffix, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err
 	}
-	return common.SyncConfigMap(ctx, &cs.Spec.Template.Spec, cm)
+	if cn.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		cs.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	}
+	return common.SyncConfigMap(ctx, &cs.Spec.Template.Spec, cm, cn.Spec.GetOperatorVersion())
 }
 
 func setReady(cn *v1alpha1.CNSet) {

@@ -62,7 +62,11 @@ service-address = "${ADDR}:{{ .DNServicePort }}"
 service-host = "${ADDR}"
 EOF
 # build instance config
-sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+if [ -n "${CONFIG_SUFFIX}" ]; then
+  sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+else
+  sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+fi
 
 # append lock-service configs
 lsc=$(mktemp)
@@ -152,6 +156,7 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
+		util.FieldRefEnv(common.ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", common.ConfigSuffixAnno)),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
 	}
 	memLimitEnv := common.GoMemLimitEnv(dn.Spec.MemoryLimitPercent, dn.Spec.Resources.Limits.Memory(), dn.Spec.Overlay)
@@ -177,9 +182,9 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 }
 
 // buildDNSetConfigMap return dn set configmap
-func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
+func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 	if ls.Status.Discovery == nil {
-		return nil, errors.New("HAKeeper discovery address not ready")
+		return nil, "", errors.New("HAKeeper discovery address not ready")
 	}
 	conf := dn.Spec.Config
 	if conf == nil {
@@ -208,7 +213,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	}
 	s, err := conf.ToString()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	buff := new(bytes.Buffer)
@@ -220,16 +225,17 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		ConfigAlias:     configAlias,
 	})
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
+	configSuffix := common.DataDigest([]byte(s))
 	return &corev1.ConfigMap{
 		ObjectMeta: common.ObjMetaTemplate(dn, configMapName(dn)),
 		Data: map[string]string{
-			common.ConfigFile: s,
+			fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix): s,
 			common.Entrypoint: buff.String(),
 		},
-	}, nil
+	}, configSuffix, nil
 }
 
 func buildHeadlessSvc(dn *v1alpha1.DNSet) *corev1.Service {
@@ -250,16 +256,18 @@ func syncPersistentVolumeClaim(dn *v1alpha1.DNSet, sts *kruise.StatefulSet) {
 }
 
 func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) error {
-	cm, err := buildDNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
+	cm, configSuffix, err := buildDNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
 	if err != nil {
 		return err
 	}
-
 	syncPodMeta(ctx.Obj, sts)
+	if ctx.Obj.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	}
 	if ctx.Dep != nil {
 		syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 
 	}
 
-	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
+	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ctx.Obj.Spec.GetOperatorVersion())
 }

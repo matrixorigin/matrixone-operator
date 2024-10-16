@@ -17,6 +17,8 @@ package webhook
 import (
 	"context"
 	"fmt"
+	admissionv1 "k8s.io/api/admission/v1"
+	"k8s.io/utils/pointer"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -68,7 +70,7 @@ type matrixOneClusterDefaulter struct {
 
 var _ webhook.CustomDefaulter = &matrixOneClusterDefaulter{}
 
-func (m *matrixOneClusterDefaulter) Default(_ context.Context, obj runtime.Object) error {
+func (m *matrixOneClusterDefaulter) Default(ctx context.Context, obj runtime.Object) error {
 	moc, ok := obj.(*v1alpha1.MatrixOneCluster)
 	if !ok {
 		return unexpectedKindError("MatrixOneCluster", obj)
@@ -88,6 +90,13 @@ func (m *matrixOneClusterDefaulter) Default(_ context.Context, obj runtime.Objec
 	}
 	for i := range moc.Spec.CNGroups {
 		m.cn.DefaultSpec(&moc.Spec.CNGroups[i].CNSetSpec)
+	}
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if req.AdmissionRequest.Operation == admissionv1.Create && moc.Spec.OperatorVersion == nil {
+		moc.Spec.OperatorVersion = pointer.String(v1alpha1.LatestOpVersion.String())
 	}
 	return nil
 }

@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
@@ -116,6 +117,7 @@ var _ = Describe("CNClaim and CNPool test", func() {
 						MainContainer: v1alpha1.MainContainer{
 							Image: fmt.Sprintf("%s:%s", moImageRepo, moVersion),
 						},
+						OperatorVersion: pointer.String(v1alpha1.LatestOpVersion.String()),
 					},
 				},
 				Deps: v1alpha1.CNSetDeps{

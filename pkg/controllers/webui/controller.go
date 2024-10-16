@@ -160,7 +160,7 @@ func (w *Actor) Create(ctx *recon.Context[*v1alpha1.WebUI]) error {
 		return err
 	}
 
-	if err := common.SyncConfigMap(ctx, &wiObj.Spec.Template.Spec, configMap); err != nil {
+	if err := common.SyncConfigMap(ctx, &wiObj.Spec.Template.Spec, configMap, wi.Spec.GetOperatorVersion()); err != nil {
 		return err
 	}
 

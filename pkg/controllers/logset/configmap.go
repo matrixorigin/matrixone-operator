@@ -68,7 +68,11 @@ gossip-address-v2 = "${ADDR}:{{ .GossipPort }}"
 EOF
 
 # build instance config
-sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+if [ -n "${CONFIG_SUFFIX}" ]; then
+  sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+else
+  sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+fi
 
 # insert gossip config
 gossipTmp=$(mktemp)
@@ -124,7 +128,11 @@ gossip-port = {{ .GossipPort }}
 EOF
 
 # build instance config
-sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+if [ -n "${CONFIG_SUFFIX}" ]; then
+  sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+else
+  sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+fi
 
 # insert gossip config
 gossipTmp=$(mktemp)
@@ -185,7 +193,7 @@ func buildGossipSeedsConfigMap(ls *v1alpha1.LogSet, sts *kruisev1.StatefulSet) (
 }
 
 // buildConfigMap build the configmap for log service
-func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
+func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 	conf := ls.Spec.Config
 	if conf == nil {
 		conf = v1alpha1.NewTomlConfig(map[string]interface{}{})
@@ -210,7 +218,7 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	}
 	s, err := conf.ToString()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// 2. build the start script
@@ -228,11 +236,11 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 		BootstrapFilePath: fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
 		GossipFilePath:    fmt.Sprintf("%s/%s", gossipPath, gossipFile),
 	})
-
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
+	configSuffix := common.DataDigest([]byte(s))
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ls.Namespace,
@@ -240,10 +248,10 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 			Labels:    common.SubResourceLabels(ls),
 		},
 		Data: map[string]string{
-			configFile: s,
+			fmt.Sprintf("%s-%s", configFile, configSuffix): s,
 			entrypoint: buff.String(),
 		},
-	}, nil
+	}, configSuffix, nil
 }
 
 func HaKeeperAdds(ls *v1alpha1.LogSet) []string {

@@ -34,6 +34,7 @@ const (
 )
 
 var (
+	LegacyOpVersion = semver.MustParse("1.2.0")
 	LatestOpVersion = semver.MustParse("1.3.0")
 )
 
@@ -300,11 +301,11 @@ func (p *PodSet) GetSemVer() (*semver.Version, bool) {
 
 func (p *PodSet) GetOperatorVersion() semver.Version {
 	if p.OperatorVersion == nil {
-		return LatestOpVersion
+		return LegacyOpVersion
 	}
 	v, err := semver.ParseTolerant(*p.OperatorVersion)
 	if err != nil {
-		return LatestOpVersion
+		return LegacyOpVersion
 	}
 	return v
 }
