@@ -15,12 +15,16 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/blang/semver/v4"
 	"github.com/cespare/xxhash"
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
@@ -38,9 +42,15 @@ const (
 
 // SyncConfigMap syncs the desired configmap for pods, which will cause rolling-update if the
 // data of the configmap is changed
-func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1.ConfigMap) error {
+func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1.ConfigMap, operatorVersion semver.Version) error {
 	vp := util.FindFirst(podSpec.Volumes, util.WithVolumeName("config"))
-	desiredName, err := ensureConfigMap(kubeCli, cm)
+	var desiredName string
+	var err error
+	if operatorVersion.Equals(v1alpha1.LatestOpVersion) {
+		desiredName, err = ensureConfigMap(kubeCli, cm)
+	} else {
+		desiredName, err = ensureConfigMapLegacy(kubeCli, vp.ConfigMap.Name, cm)
+	}
 	if err != nil {
 		return err
 	}
@@ -90,6 +100,24 @@ func ensureConfigMap(kubeCli recon.KubeClient, desired *corev1.ConfigMap) (strin
 	return c.Name, nil
 }
 
+// Deprecated: use ensureConfigMap instead
+func ensureConfigMapLegacy(kubeCli recon.KubeClient, currentCm string, desired *corev1.ConfigMap) (string, error) {
+	c := desired.DeepCopy()
+	if err := addConfigMapDigest(c); err != nil {
+		return "", err
+	}
+	// config digest not changed
+	if c.Name == currentCm {
+		return currentCm, nil
+	}
+	// otherwise ensure the configmap exists
+	err := util.Ignore(apierrors.IsAlreadyExists, kubeCli.CreateOwned(c))
+	if err != nil {
+		return "", err
+	}
+	return c.Name, nil
+}
+
 func withDigest(key string, v string) bool {
 	return strings.Contains(key, DataDigest([]byte(v)))
 }
@@ -107,4 +135,15 @@ func configInUse(key string, podList []corev1.Pod) bool {
 func DataDigest(data []byte) string {
 	sum := xxhash.Sum64(data)
 	return fmt.Sprintf("%x", sum)[0:7]
+}
+
+func addConfigMapDigest(cm *corev1.ConfigMap) error {
+	s, err := json.Marshal(cm.Data)
+	if err != nil {
+		return err
+	}
+	sum := xxhash.Sum64(s)
+	suffix := fmt.Sprintf("%x", sum)[0:7]
+	cm.Name = fmt.Sprintf("%s-%s", cm.Name, suffix)
+	return nil
 }

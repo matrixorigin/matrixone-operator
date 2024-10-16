@@ -135,7 +135,7 @@ func syncPods(ctx *recon.Context[*v1alpha1.WebUI], dp *appsv1.Deployment) error 
 	syncPodMeta(ctx.Obj, dp)
 	syncPodSpec(ctx.Obj, dp)
 
-	return common.SyncConfigMap(ctx, &dp.Spec.Template.Spec, cm)
+	return common.SyncConfigMap(ctx, &dp.Spec.Template.Spec, cm, ctx.Obj.Spec.GetOperatorVersion())
 }
 
 func syncServiceType(wi *v1alpha1.WebUI, svc *corev1.Service) {

@@ -15,7 +15,6 @@
 package logset
 
 import (
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"strconv"
 	"time"
 
@@ -169,8 +168,10 @@ func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	if err != nil {
 		return err
 	}
-	sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
-	if err := common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm); err != nil {
+	if ls.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	}
+	if err := common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ls.Spec.GetOperatorVersion()); err != nil {
 		return err
 	}
 
@@ -374,9 +375,11 @@ func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) e
 		return err
 	}
 	syncPodMeta(ctx.Obj, sts)
-	sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	if ctx.Obj.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	}
 	syncPodSpec(ctx.Obj, &sts.Spec.Template.Spec)
-	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
+	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ctx.Obj.Spec.GetOperatorVersion())
 }
 
 func (r *Actor) Reconcile(mgr manager.Manager) error {
@@ -385,13 +388,5 @@ func (r *Actor) Reconcile(mgr manager.Manager) error {
 			// watch all changes on the owned statefulset since we need perform failover if there is a pod failure
 			b.Owns(&kruisev1.StatefulSet{}).
 				Owns(&corev1.Service{})
-			b.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-				set, ok := obj.(*v1alpha1.LogSet)
-				if ok && !set.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
-					// only filter LogSet
-					return false
-				}
-				return true
-			}))
 		}))
 }

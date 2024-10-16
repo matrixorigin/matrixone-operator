@@ -58,8 +58,11 @@ cat <<EOF > ${bc}
 uuid = "${UUID}"
 EOF
 # build instance config
-sed "/\[proxy\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
-
+if [ -n "${CONFIG_SUFFIX}" ]; then
+  sed "/\[proxy\]/r ${bc}" "{{ .ConfigFilePath }}-${CONFIG_SUFFIX}" > ${conf}
+else
+  sed "/\[proxy\]/r ${bc}" "{{ .ConfigFilePath }}" > ${conf}
+fi
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
 `))

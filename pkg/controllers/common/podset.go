@@ -74,7 +74,7 @@ func GetSemanticVersion(meta *metav1.ObjectMeta) semver.Version {
 // SyncMOPod execute the given SyncMOPodTask which keeps the pod spec update to date
 func SyncMOPod(t *SyncMOPodTask) error {
 	syncPodTemplate(t)
-	if err := SyncConfigMap(t.KubeCli, &t.TargetTemplate.Spec, t.ConfigMap); err != nil {
+	if err := SyncConfigMap(t.KubeCli, &t.TargetTemplate.Spec, t.ConfigMap, t.PodSet.GetOperatorVersion()); err != nil {
 		return errors.WrapPrefix(err, "sync configmap", 0)
 	}
 	return nil
@@ -106,7 +106,9 @@ func syncPodTemplate(t *SyncMOPodTask) {
 	if t.MutatePod != nil {
 		t.MutatePod(t.TargetTemplate)
 	}
-	t.TargetTemplate.ObjectMeta.Annotations[ConfigSuffixAnno] = t.ConfigSuffix
+	if t.PodSet.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		t.TargetTemplate.ObjectMeta.Annotations[ConfigSuffixAnno] = t.ConfigSuffix
+	}
 
 	p.Overlay.OverlayPodMeta(&t.TargetTemplate.ObjectMeta)
 	p.Overlay.OverlayPodSpec(specRef)

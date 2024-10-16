@@ -17,7 +17,6 @@ package dnset
 import (
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"github.com/matrixorigin/matrixone-operator/pkg/utils"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"strconv"
 	"time"
 
@@ -191,8 +190,10 @@ func (d *Actor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	if err != nil {
 		return err
 	}
-	dnSet.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
-	if err := common.SyncConfigMap(ctx, &dnSet.Spec.Template.Spec, configMap); err != nil {
+	if dn.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		dnSet.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	}
+	if err := common.SyncConfigMap(ctx, &dnSet.Spec.Template.Spec, configMap, dn.Spec.GetOperatorVersion()); err != nil {
 		return err
 	}
 
@@ -256,14 +257,6 @@ func (d *Actor) Reconcile(mgr manager.Manager) error {
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&kruise.StatefulSet{}).
 				Owns(&corev1.Service{})
-			b.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-				set, ok := obj.(*v1alpha1.DNSet)
-				if ok && !set.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
-					// only filter DNSet
-					return false
-				}
-				return true
-			}))
 		}))
 	if err != nil {
 		return err

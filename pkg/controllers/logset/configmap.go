@@ -68,7 +68,11 @@ gossip-address-v2 = "${ADDR}:{{ .GossipPort }}"
 EOF
 
 # build instance config
-sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+if [ -n "${CONFIG_SUFFIX}" ]; then
+  sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+else
+  sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+fi
 
 # insert gossip config
 gossipTmp=$(mktemp)
@@ -124,7 +128,11 @@ gossip-port = {{ .GossipPort }}
 EOF
 
 # build instance config
-sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+if [ -n "${CONFIG_SUFFIX}" ]; then
+  sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+else
+  sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+fi
 
 # insert gossip config
 gossipTmp=$(mktemp)

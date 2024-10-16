@@ -62,7 +62,11 @@ service-address = "${ADDR}:{{ .DNServicePort }}"
 service-host = "${ADDR}"
 EOF
 # build instance config
-sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+if [ -n "${CONFIG_SUFFIX}" ]; then
+  sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+else
+  sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+fi
 
 # append lock-service configs
 lsc=$(mktemp)
@@ -257,11 +261,13 @@ func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) erro
 		return err
 	}
 	syncPodMeta(ctx.Obj, sts)
-	sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	if ctx.Obj.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+		sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
+	}
 	if ctx.Dep != nil {
 		syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 
 	}
 
-	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm)
+	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ctx.Obj.Spec.GetOperatorVersion())
 }

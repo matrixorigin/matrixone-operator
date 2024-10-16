@@ -43,13 +43,13 @@ type dnSetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &dnSetDefaulter{}
 
-func (d *dnSetDefaulter) Default(_ context.Context, obj runtime.Object) error {
+func (d *dnSetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
 	dnSet, ok := obj.(*v1alpha1.DNSet)
 	if !ok {
 		return unexpectedKindError("DNSet", obj)
 	}
 	d.DefaultSpec(&dnSet.Spec)
-	return nil
+	return setDefaultOperatorVersion(ctx, &dnSet.Spec.PodSet)
 }
 
 func (d *dnSetDefaulter) DefaultSpec(spec *v1alpha1.DNSetSpec) {

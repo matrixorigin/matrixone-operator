@@ -43,13 +43,13 @@ type proxySetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &proxySetDefaulter{}
 
-func (p *proxySetDefaulter) Default(_ context.Context, obj runtime.Object) error {
+func (p *proxySetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
 	proxySet, ok := obj.(*v1alpha1.ProxySet)
 	if !ok {
 		return unexpectedKindError("ProxySet", obj)
 	}
 	p.DefaultSpec(&proxySet.Spec)
-	return nil
+	return setDefaultOperatorVersion(ctx, &proxySet.Spec.PodSet)
 }
 
 func (p *proxySetDefaulter) DefaultSpec(spec *v1alpha1.ProxySetSpec) {

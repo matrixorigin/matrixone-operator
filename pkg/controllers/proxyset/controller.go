@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 const (
@@ -102,13 +101,5 @@ func (r *Actor) Reconcile(mgr manager.Manager) error {
 	return recon.Setup[*v1alpha1.ProxySet](&v1alpha1.ProxySet{}, "proxyset", mgr, r,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&kruisev1alpha1.CloneSet{})
-			b.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-				set, ok := obj.(*v1alpha1.ProxySet)
-				if ok && !set.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
-					// only filter ProxySet
-					return false
-				}
-				return true
-			}))
 		}))
 }

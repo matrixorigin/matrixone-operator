@@ -54,7 +54,11 @@ sql-address = "${POD_IP}:{{ .CNSQLPort }}"
 service-host = "${POD_IP}"
 EOF
 # build instance config
-sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+if [ -n "${CONFIG_SUFFIX}" ]; then
+  sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
+else
+  sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+fi
 
 # append lock-service configs
 lsc=$(mktemp)
