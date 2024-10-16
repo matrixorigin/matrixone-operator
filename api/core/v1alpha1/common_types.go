@@ -116,6 +116,7 @@ type PodSet struct {
 
 	// OperatorVersion is the controller version of mo-operator that should be used to
 	// reconcile this set
+	// +kubebuilder:default="1.2.0"
 	OperatorVersion *string `json:"operatorVersion,omitempty"`
 }
 

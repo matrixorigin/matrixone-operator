@@ -139,6 +139,7 @@ spec:
                       type: string
                     type: object
                   operatorVersion:
+                    default: 1.2.0
                     description: |-
                       OperatorVersion is the controller version of mo-operator that should be used to
                       reconcile this set
@@ -497,6 +498,7 @@ spec:
                         type: string
                       type: object
                     operatorVersion:
+                      default: 1.2.0
                       description: |-
                         OperatorVersion is the controller version of mo-operator that should be used to
                         reconcile this set
@@ -838,6 +840,7 @@ spec:
                       type: string
                     type: object
                   operatorVersion:
+                    default: 1.2.0
                     description: |-
                       OperatorVersion is the controller version of mo-operator that should be used to
                       reconcile this set
@@ -1042,6 +1045,7 @@ spec:
                       type: string
                     type: object
                   operatorVersion:
+                    default: 1.2.0
                     description: |-
                       OperatorVersion is the controller version of mo-operator that should be used to
                       reconcile this set
@@ -1317,6 +1321,7 @@ spec:
                       type: string
                     type: object
                   operatorVersion:
+                    default: 1.2.0
                     description: |-
                       OperatorVersion is the controller version of mo-operator that should be used to
                       reconcile this set
@@ -1498,6 +1503,7 @@ spec:
                       type: string
                     type: object
                   operatorVersion:
+                    default: 1.2.0
                     description: |-
                       OperatorVersion is the controller version of mo-operator that should be used to
                       reconcile this set
@@ -1713,6 +1719,7 @@ spec:
                       type: string
                     type: object
                   operatorVersion:
+                    default: 1.2.0
                     description: |-
                       OperatorVersion is the controller version of mo-operator that should be used to
                       reconcile this set
@@ -2029,6 +2036,7 @@ spec:
                       type: string
                     type: object
                   operatorVersion:
+                    default: 1.2.0
                     description: |-
                       OperatorVersion is the controller version of mo-operator that should be used to
                       reconcile this set

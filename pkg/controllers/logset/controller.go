@@ -15,6 +15,7 @@
 package logset
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"strconv"
 	"time"
 
@@ -384,5 +385,13 @@ func (r *Actor) Reconcile(mgr manager.Manager) error {
 			// watch all changes on the owned statefulset since we need perform failover if there is a pod failure
 			b.Owns(&kruisev1.StatefulSet{}).
 				Owns(&corev1.Service{})
+			b.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+				set, ok := obj.(*v1alpha1.LogSet)
+				if ok && !set.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+					// only filter LogSet
+					return false
+				}
+				return true
+			}))
 		}))
 }
