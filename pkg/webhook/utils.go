@@ -69,7 +69,6 @@ func setPodSetDefaults(s *v1alpha1.PodSet) {
 	s.Overlay.Env = appendIfNotExist(s.Overlay.Env, corev1.EnvVar{Name: v1alpha1.EnvGoDebug, Value: v1alpha1.DefaultGODebug}, func(v corev1.EnvVar) string {
 		return v.Name
 	})
-	s.OperatorVersion = pointer.String(v1alpha1.LatestOpVersion.String())
 	if s.ExportToPrometheus != nil && *s.ExportToPrometheus {
 		if s.PromDiscoveryScheme == nil {
 			s.PromDiscoveryScheme = (*v1alpha1.PromDiscoveryScheme)(pointer.String(string(v1alpha1.PromDiscoverySchemeService)))

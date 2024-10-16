@@ -16,8 +16,6 @@ package webhook
 
 import (
 	"context"
-	"k8s.io/utils/pointer"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -54,7 +52,6 @@ func (p *proxySetDefaulter) Default(ctx context.Context, obj runtime.Object) err
 
 func (p *proxySetDefaulter) DefaultSpec(spec *v1alpha1.ProxySetSpec) {
 	setDefaultServiceArgs(spec)
-	spec.OperatorVersion = pointer.String(v1alpha1.LatestOpVersion.String())
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-proxyset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=proxysets,verbs=create;update,versions=v1alpha1,name=vproxyset.kb.io,admissionReviewVersions={v1,v1beta1}
