@@ -43,13 +43,17 @@ const (
 // SyncConfigMap syncs the desired configmap for pods, which will cause rolling-update if the
 // data of the configmap is changed
 func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1.ConfigMap, operatorVersion semver.Version) error {
-	vp := util.FindFirst(podSpec.Volumes, util.WithVolumeName("config"))
+	var currentCmName string
 	var desiredName string
 	var err error
+	vp := util.FindFirst(podSpec.Volumes, util.WithVolumeName("config"))
+	if vp != nil {
+		currentCmName = vp.Name
+	}
 	if operatorVersion.Equals(v1alpha1.LatestOpVersion) {
 		desiredName, err = ensureConfigMap(kubeCli, cm)
 	} else {
-		desiredName, err = ensureConfigMapLegacy(kubeCli, vp.ConfigMap.Name, cm)
+		desiredName, err = ensureConfigMapLegacy(kubeCli, currentCmName, cm)
 	}
 	if err != nil {
 		return err
@@ -104,7 +108,7 @@ func ensureConfigMap(kubeCli recon.KubeClient, desired *corev1.ConfigMap) (strin
 func ensureConfigMapLegacy(kubeCli recon.KubeClient, currentCm string, desired *corev1.ConfigMap) (string, error) {
 	c := desired.DeepCopy()
 	if err := addConfigMapDigest(c); err != nil {
-		return "", err
+		return "", errors.Wrap(err, 0)
 	}
 	// config digest not changed
 	if c.Name == currentCm {
@@ -113,7 +117,7 @@ func ensureConfigMapLegacy(kubeCli recon.KubeClient, currentCm string, desired *
 	// otherwise ensure the configmap exists
 	err := util.Ignore(apierrors.IsAlreadyExists, kubeCli.CreateOwned(c))
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, 0)
 	}
 	return c.Name, nil
 }

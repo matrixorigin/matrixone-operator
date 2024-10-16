@@ -68,12 +68,12 @@ type matrixOneClusterDefaulter struct {
 
 var _ webhook.CustomDefaulter = &matrixOneClusterDefaulter{}
 
-func (m *matrixOneClusterDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (m *matrixOneClusterDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	moc, ok := obj.(*v1alpha1.MatrixOneCluster)
 	if !ok {
 		return unexpectedKindError("MatrixOneCluster", obj)
 	}
-	m.logService.DefaultSpec(ctx, &moc.Spec.LogService)
+	m.logService.DefaultSpec(&moc.Spec.LogService)
 	if moc.Spec.DN != nil {
 		m.dn.DefaultSpec(moc.Spec.DN)
 	}
