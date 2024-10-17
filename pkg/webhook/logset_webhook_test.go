@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
@@ -111,5 +112,34 @@ var _ = Describe("LogSet Webhook", func() {
 		modified := ls.DeepCopy()
 		modified.Spec.SharedStorage.S3.Path = "test/data-new"
 		Expect(k8sClient.Update(context.TODO(), modified)).NotTo(Succeed())
+	})
+
+	It("should allow scale to zero", func() {
+		ls := &v1alpha1.LogSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ls-" + randomString(5),
+				Namespace: "default",
+			},
+			Spec: v1alpha1.LogSetSpec{
+				InitialConfig: v1alpha1.InitialConfig{
+					LogShardReplicas: pointer.Int(3),
+				},
+				PodSet: v1alpha1.PodSet{
+					Replicas: 3,
+					MainContainer: v1alpha1.MainContainer{
+						Image: "test:v1.2.3",
+					},
+				},
+				Volume: v1alpha1.Volume{
+					Size: resource.MustParse("10Gi"),
+				},
+				SharedStorage: v1alpha1.SharedStorageProvider{
+					S3: &v1alpha1.S3Provider{Path: "test/data"},
+				},
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), ls)).To(Succeed())
+		ls.Spec.Replicas = 0
+		Expect(k8sClient.Update(context.TODO(), ls)).To(Succeed())
 	})
 })
