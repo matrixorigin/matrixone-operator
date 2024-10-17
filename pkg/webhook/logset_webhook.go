@@ -230,7 +230,7 @@ func (l *logSetValidator) validateInitialConfig(spec *v1alpha1.LogSetSpec) field
 
 	if lrs := spec.InitialConfig.LogShardReplicas; lrs == nil {
 		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must be set"))
-	} else if *lrs > int(spec.Replicas) {
+	} else if spec.Replicas != 0 && *lrs > int(spec.Replicas) {
 		errs = append(errs, field.Invalid(parent.Child("logShardReplicas"), lrs, "logShardReplicas must not larger then logservice replicas"))
 	}
 
