@@ -106,7 +106,7 @@ func syncPodTemplate(t *SyncMOPodTask) {
 	if t.MutatePod != nil {
 		t.MutatePod(t.TargetTemplate)
 	}
-	if t.PodSet.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(t.PodSet.GetOperatorVersion()) {
 		t.TargetTemplate.ObjectMeta.Annotations[ConfigSuffixAnno] = t.ConfigSuffix
 	}
 
@@ -122,7 +122,9 @@ func syncMainContainer(p *v1alpha1.PodSet, c *corev1.Container, mutateFn func(c 
 	c.Env = []corev1.EnvVar{
 		util.FieldRefEnv(PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(NamespaceEnvKey, "metadata.namespace"),
-		util.FieldRefEnv(ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", ConfigSuffixAnno)),
+	}
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(p.GetOperatorVersion()) {
+		c.Env = append(c.Env, util.FieldRefEnv(ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", ConfigSuffixAnno)))
 	}
 	memLimitEnv := GoMemLimitEnv(p.MemoryLimitPercent, c.Resources.Limits.Memory(), p.Overlay)
 	if memLimitEnv != nil {

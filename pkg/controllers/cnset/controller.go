@@ -328,7 +328,7 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	if err != nil {
 		return err
 	}
-	if cn.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(cn.Spec.GetOperatorVersion()) {
 		cs.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
 	}
 	return common.SyncConfigMap(ctx, &cs.Spec.Template.Spec, cm, cn.Spec.GetOperatorVersion())

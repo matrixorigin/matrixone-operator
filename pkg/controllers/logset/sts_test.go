@@ -14,6 +14,8 @@
 package logset
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -24,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"testing"
 )
 
 var lsMeta = metav1.ObjectMeta{
@@ -114,14 +115,6 @@ func Test_syncPodSpec(t *testing.T) {
 						FieldRef: &corev1.ObjectFieldSelector{
 							APIVersion: "v1",
 							FieldPath:  "metadata.namespace",
-						},
-					},
-				}, {
-					Name: "CONFIG_SUFFIX",
-					ValueFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							APIVersion: "v1",
-							FieldPath:  "metadata.annotations['matrixorigin.io/config-suffix']",
 						},
 					},
 				}, {

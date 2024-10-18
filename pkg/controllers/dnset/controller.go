@@ -190,7 +190,7 @@ func (d *Actor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	if err != nil {
 		return err
 	}
-	if dn.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(dn.Spec.GetOperatorVersion()) {
 		dnSet.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
 	}
 	if err := common.SyncConfigMap(ctx, &dnSet.Spec.Template.Spec, configMap, dn.Spec.GetOperatorVersion()); err != nil {

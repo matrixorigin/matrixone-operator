@@ -16,6 +16,7 @@ package logset
 
 import (
 	"fmt"
+
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
@@ -78,9 +79,11 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(NamespaceEnvKey, "metadata.namespace"),
-		util.FieldRefEnv(common.ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", common.ConfigSuffixAnno)),
 		util.FieldRefEnv(PodIPEnvKey, "status.podIP"),
 		{Name: HeadlessSvcEnvKey, Value: headlessSvcName(ls)},
+	}
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(ls.Spec.GetOperatorVersion()) {
+		mainRef.Env = append(mainRef.Env, util.FieldRefEnv(common.ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", common.ConfigSuffixAnno)))
 	}
 	memLimitEnv := common.GoMemLimitEnv(ls.Spec.MemoryLimitPercent, ls.Spec.Resources.Limits.Memory(), ls.Spec.Overlay)
 	if memLimitEnv != nil {
