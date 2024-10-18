@@ -17,6 +17,8 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/blang/semver/v4"
 	"github.com/cespare/xxhash"
 	"github.com/go-errors/errors"
@@ -26,7 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 const (
@@ -50,7 +51,7 @@ func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1
 	if vp != nil {
 		currentCmName = vp.Name
 	}
-	if operatorVersion.Equals(v1alpha1.LatestOpVersion) {
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(operatorVersion) {
 		desiredName, err = ensureConfigMap(kubeCli, cm)
 	} else {
 		desiredName, err = ensureConfigMapLegacy(kubeCli, currentCmName, cm)

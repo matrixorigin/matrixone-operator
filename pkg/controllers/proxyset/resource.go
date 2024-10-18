@@ -43,7 +43,8 @@ const (
 )
 
 type model struct {
-	ConfigFilePath string
+	ConfigFilePath         string
+	InPlaceConfigMapUpdate bool
 }
 
 var startScriptTpl = template.Must(template.New("proxy-start-script").Parse(`
@@ -58,11 +59,16 @@ cat <<EOF > ${bc}
 uuid = "${UUID}"
 EOF
 # build instance config
+{{- if .InPlaceConfigMapUpdate }}
 if [ -n "${CONFIG_SUFFIX}" ]; then
   sed "/\[proxy\]/r ${bc}" "{{ .ConfigFilePath }}-${CONFIG_SUFFIX}" > ${conf}
 else
   sed "/\[proxy\]/r ${bc}" "{{ .ConfigFilePath }}" > ${conf}
 fi
+{{- else }}
+sed "/\[proxy\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+{{- end }}
+
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
 `))
@@ -171,20 +177,28 @@ func buildProxyConfigMap(proxy *v1alpha1.ProxySet, ls *v1alpha1.LogSet) (*corev1
 
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
-		ConfigFilePath: fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
+		ConfigFilePath:         fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
+		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(proxy.Spec.GetOperatorVersion()),
 	})
 	if err != nil {
 		return nil, "", err
 	}
 
-	configSuffix := common.DataDigest([]byte(s))
-	return &corev1.ConfigMap{
+	var configSuffix string
+	cm := &corev1.ConfigMap{
 		ObjectMeta: configMapKey(proxy),
 		Data: map[string]string{
-			fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix): s,
 			common.Entrypoint: buff.String(),
 		},
-	}, configSuffix, nil
+	}
+	// keep backward-compatible
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(proxy.Spec.GetOperatorVersion()) {
+		configSuffix = common.DataDigest([]byte(s))
+		cm.Data[fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix)] = s
+	} else {
+		cm.Data[common.ConfigFile] = s
+	}
+	return cm, configSuffix, nil
 }
 
 func configMapKey(p *v1alpha1.ProxySet) metav1.ObjectMeta {

@@ -34,8 +34,10 @@ const (
 )
 
 var (
-	LegacyOpVersion = semver.MustParse("1.2.0")
-	LatestOpVersion = semver.MustParse("1.3.0")
+	OpVersion1_2_0  = semver.MustParse("1.2.0")
+	OpVersion1_3_0  = semver.MustParse("1.3.0")
+	LatestOpVersion = OpVersion1_3_0
+	FirstOpVersion  = OpVersion1_2_0
 )
 
 func (c *ConditionalStatus) SetCondition(condition metav1.Condition) {
@@ -301,11 +303,11 @@ func (p *PodSet) GetSemVer() (*semver.Version, bool) {
 
 func (p *PodSet) GetOperatorVersion() semver.Version {
 	if p.OperatorVersion == nil {
-		return LegacyOpVersion
+		return FirstOpVersion
 	}
 	v, err := semver.ParseTolerant(*p.OperatorVersion)
 	if err != nil {
-		return LegacyOpVersion
+		return FirstOpVersion
 	}
 	return v
 }

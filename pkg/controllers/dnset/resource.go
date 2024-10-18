@@ -62,11 +62,15 @@ service-address = "${ADDR}:{{ .DNServicePort }}"
 service-host = "${ADDR}"
 EOF
 # build instance config
+{{- if .InPlaceConfigMapUpdate }}
 if [ -n "${CONFIG_SUFFIX}" ]; then
   sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
 else
   sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
 fi
+{{- else }}
+sed "/\[{{ .ConfigAlias }}\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+{{- end }}
 
 # append lock-service configs
 lsc=$(mktemp)
@@ -109,8 +113,9 @@ type model struct {
 	ConfigFilePath string
 	ConfigAlias    string
 
-	LockServicePort int
-	LogtailPort     int
+	LockServicePort        int
+	LogtailPort            int
+	InPlaceConfigMapUpdate bool
 }
 
 func syncReplicas(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
@@ -156,8 +161,10 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
-		util.FieldRefEnv(common.ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", common.ConfigSuffixAnno)),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(dn)},
+	}
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(dn.Spec.GetOperatorVersion()) {
+		mainRef.Env = append(mainRef.Env, util.FieldRefEnv(common.ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", common.ConfigSuffixAnno)))
 	}
 	memLimitEnv := common.GoMemLimitEnv(dn.Spec.MemoryLimitPercent, dn.Spec.Resources.Limits.Memory(), dn.Spec.Overlay)
 	if memLimitEnv != nil {
@@ -218,24 +225,32 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
-		DNServicePort:   dnServicePort,
-		LockServicePort: common.LockServicePort,
-		LogtailPort:     common.LogtailPort,
-		ConfigFilePath:  fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
-		ConfigAlias:     configAlias,
+		DNServicePort:          dnServicePort,
+		LockServicePort:        common.LockServicePort,
+		LogtailPort:            common.LogtailPort,
+		ConfigFilePath:         fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
+		ConfigAlias:            configAlias,
+		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(dn.Spec.GetOperatorVersion()),
 	})
 	if err != nil {
 		return nil, "", err
 	}
 
-	configSuffix := common.DataDigest([]byte(s))
-	return &corev1.ConfigMap{
+	var configSuffix string
+	cm := &corev1.ConfigMap{
 		ObjectMeta: common.ObjMetaTemplate(dn, configMapName(dn)),
 		Data: map[string]string{
-			fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix): s,
 			common.Entrypoint: buff.String(),
 		},
-	}, configSuffix, nil
+	}
+	// keep backward-compatible
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(dn.Spec.GetOperatorVersion()) {
+		configSuffix = common.DataDigest([]byte(s))
+		cm.Data[fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix)] = s
+	} else {
+		cm.Data[common.ConfigFile] = s
+	}
+	return cm, configSuffix, nil
 }
 
 func buildHeadlessSvc(dn *v1alpha1.DNSet) *corev1.Service {
@@ -261,7 +276,7 @@ func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) erro
 		return err
 	}
 	syncPodMeta(ctx.Obj, sts)
-	if ctx.Obj.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(ctx.Obj.Spec.GetOperatorVersion()) {
 		sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
 	}
 	if ctx.Dep != nil {
