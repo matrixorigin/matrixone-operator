@@ -68,11 +68,15 @@ gossip-address-v2 = "${ADDR}:{{ .GossipPort }}"
 EOF
 
 # build instance config
+{{- if .InPlaceConfigMapUpdate }}
 if [ -n "${CONFIG_SUFFIX}" ]; then
   sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
 else
   sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
 fi
+{{- else }}
+sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+{{- end }}
 
 # insert gossip config
 gossipTmp=$(mktemp)
@@ -128,11 +132,15 @@ gossip-port = {{ .GossipPort }}
 EOF
 
 # build instance config
+{{- if .InPlaceConfigMapUpdate }}
 if [ -n "${CONFIG_SUFFIX}" ]; then
   sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
 else
   sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
 fi
+{{- else }}
+sed "/\[logservice\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+{{- end }}
 
 # insert gossip config
 gossipTmp=$(mktemp)
@@ -165,12 +173,13 @@ exec /mo-service -cfg ${conf} $@
 `))
 
 type model struct {
-	RaftPort          int
-	LogServicePort    int
-	GossipPort        int
-	ConfigFilePath    string
-	BootstrapFilePath string
-	GossipFilePath    string
+	RaftPort               int
+	LogServicePort         int
+	GossipPort             int
+	ConfigFilePath         string
+	BootstrapFilePath      string
+	GossipFilePath         string
+	InPlaceConfigMapUpdate bool
 }
 
 // buildGossipSeedsConfigMap build the gossip seeds configmap for log service, which will not trigger rolling-update
@@ -229,29 +238,37 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 		tpl = startScriptTplV2
 	}
 	err = tpl.Execute(buff, &model{
-		RaftPort:          raftPort,
-		LogServicePort:    logServicePort,
-		GossipPort:        gossipPort,
-		ConfigFilePath:    fmt.Sprintf("%s/%s", configPath, configFile),
-		BootstrapFilePath: fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
-		GossipFilePath:    fmt.Sprintf("%s/%s", gossipPath, gossipFile),
+		RaftPort:               raftPort,
+		LogServicePort:         logServicePort,
+		GossipPort:             gossipPort,
+		ConfigFilePath:         fmt.Sprintf("%s/%s", configPath, configFile),
+		BootstrapFilePath:      fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
+		GossipFilePath:         fmt.Sprintf("%s/%s", gossipPath, gossipFile),
+		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(ls.Spec.GetOperatorVersion()),
 	})
 	if err != nil {
 		return nil, "", err
 	}
 
-	configSuffix := common.DataDigest([]byte(s))
-	return &corev1.ConfigMap{
+	var configSuffix string
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ls.Namespace,
 			Name:      configMapName(ls),
 			Labels:    common.SubResourceLabels(ls),
 		},
 		Data: map[string]string{
-			fmt.Sprintf("%s-%s", configFile, configSuffix): s,
 			entrypoint: buff.String(),
 		},
-	}, configSuffix, nil
+	}
+	// keep backward-compatible
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(ls.Spec.GetOperatorVersion()) {
+		configSuffix = common.DataDigest([]byte(s))
+		cm.Data[fmt.Sprintf("%s-%s", configFile, configSuffix)] = s
+	} else {
+		cm.Data[configFile] = s
+	}
+	return cm, configSuffix, nil
 }
 
 func HaKeeperAdds(ls *v1alpha1.LogSet) []string {

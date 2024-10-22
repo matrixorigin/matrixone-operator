@@ -168,7 +168,7 @@ func (r *Actor) Create(ctx *recon.Context[*v1alpha1.LogSet]) error {
 	if err != nil {
 		return err
 	}
-	if ls.Spec.GetOperatorVersion().Equals(v1alpha1.LatestOpVersion) {
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(ls.Spec.GetOperatorVersion()) {
 		sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
 	}
 	if err := common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ls.Spec.GetOperatorVersion()); err != nil {

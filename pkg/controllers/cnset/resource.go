@@ -54,11 +54,15 @@ sql-address = "${POD_IP}:{{ .CNSQLPort }}"
 service-host = "${POD_IP}"
 EOF
 # build instance config
+{{- if .InPlaceConfigMapUpdate }}
 if [ -n "${CONFIG_SUFFIX}" ]; then
   sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }}-${CONFIG_SUFFIX} > ${conf}
 else
   sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
 fi
+{{- else }}
+sed "/\[cn\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+{{- end }}
 
 # append lock-service configs
 lsc=$(mktemp)
@@ -76,7 +80,8 @@ type model struct {
 	CNSQLPort      int
 	CNRpcPort      int
 
-	LockServicePort int
+	LockServicePort        int
+	InPlaceConfigMapUpdate bool
 }
 
 func buildHeadlessSvc(cn *v1alpha1.CNSet) *corev1.Service {
@@ -200,9 +205,11 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	mainRef.Env = []corev1.EnvVar{
 		util.FieldRefEnv(common.PodNameEnvKey, "metadata.name"),
 		util.FieldRefEnv(common.NamespaceEnvKey, "metadata.namespace"),
-		util.FieldRefEnv(common.ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", common.ConfigSuffixAnno)),
 		{Name: common.HeadlessSvcEnvKey, Value: headlessSvcName(cn)},
 		util.FieldRefEnv(common.PodIPEnvKey, "status.podIP"),
+	}
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(cn.Spec.GetOperatorVersion()) {
+		mainRef.Env = append(mainRef.Env, util.FieldRefEnv(common.ConfigSuffixEnvKey, fmt.Sprintf("metadata.annotations['%s']", common.ConfigSuffixAnno)))
 	}
 	memLimitEnv := common.GoMemLimitEnv(cn.Spec.MemoryLimitPercent, cn.Spec.Resources.Limits.Memory(), cn.Spec.Overlay)
 	if memLimitEnv != nil {
@@ -294,25 +301,33 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	}
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
-		ConfigFilePath:  fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
-		CNSQLPort:       CNSQLPort,
-		CNRpcPort:       cnRPCPort,
-		LockServicePort: common.LockServicePort,
+		ConfigFilePath:         fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
+		CNSQLPort:              CNSQLPort,
+		CNRpcPort:              cnRPCPort,
+		LockServicePort:        common.LockServicePort,
+		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(cn.Spec.GetOperatorVersion()),
 	})
 	if err != nil {
 		return nil, "", err
 	}
 
-	configSuffix := common.DataDigest([]byte(s))
-	return &corev1.ConfigMap{
+	var configSuffix string
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMapName(cn),
 			Namespace: cn.Namespace,
 			Labels:    common.SubResourceLabels(cn),
 		},
 		Data: map[string]string{
-			fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix): s,
 			common.Entrypoint: buff.String(),
 		},
-	}, configSuffix, nil
+	}
+	// keep backward-compatible
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(cn.Spec.GetOperatorVersion()) {
+		configSuffix = common.DataDigest([]byte(s))
+		cm.Data[fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix)] = s
+	} else {
+		cm.Data[common.ConfigFile] = s
+	}
+	return cm, configSuffix, nil
 }

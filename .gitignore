@@ -8,10 +8,6 @@ cover.out
 # tools binary files
 tmp/
 
-# go workspace
-go.work
-go.work.sum
-
 # Emacs save files
 *~
 \#*\#

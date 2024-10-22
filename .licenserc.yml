@@ -30,4 +30,5 @@ header:
     - 'playground/*'
     - ".dockerignore"
     - 'pkg/webhook/corevalidation/validation.go'
+    - '**/go.*'
   comment: on-failure

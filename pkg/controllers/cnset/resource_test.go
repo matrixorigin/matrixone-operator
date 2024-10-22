@@ -232,7 +232,10 @@ service-addresses = []
 				t.Errorf("buildDNSetConfigMap() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			configKey := "config.toml-" + configSuffix
+			configKey := "config.toml"
+			if configSuffix != "" {
+				configKey = "config.toml-" + configSuffix
+			}
 			g.Expect(got.Data[configKey]).NotTo(BeNil())
 			g.Expect(cmp.Diff(tt.wantConfig, got.Data[configKey])).To(BeEmpty())
 		})

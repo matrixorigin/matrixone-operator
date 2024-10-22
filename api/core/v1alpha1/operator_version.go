@@ -19,7 +19,13 @@ import "github.com/blang/semver/v4"
 type Gate string
 
 var (
-	gateVersions = map[Gate][]semver.Version{}
+	gateVersions = map[Gate][]semver.Version{
+		GateInplaceConfigmapUpdate: {semver.MustParse("1.3.0")},
+	}
+)
+
+const (
+	GateInplaceConfigmapUpdate Gate = "InplaceConfigmapUpdate"
 )
 
 func (g Gate) Enabled(v semver.Version) bool {
