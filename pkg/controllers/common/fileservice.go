@@ -152,7 +152,6 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 		// init default values
 		// TODO: let AWS SDK discover its own endpoint by default
 		s3Config["endpoint"] = "s3.us-west-2.amazonaws.com"
-		s3Config["region"] = "us-west-2"
 
 		if s3.Endpoint != "" {
 			s3Config["endpoint"] = s3.Endpoint
