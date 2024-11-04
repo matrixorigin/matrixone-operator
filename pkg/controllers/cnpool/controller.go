@@ -378,6 +378,11 @@ func generateRevisionHash(cn *v1alpha1.CNSetSpec) (string, error) {
 	// special case: PodMeta can be in-place updated without restarting container
 	tpl.PodSet.Overlay.PodLabels = nil
 	tpl.PodSet.Overlay.PodAnnotations = nil
+	if v1alpha1.GateInplacePoolRollingUpdate.Enabled(cn.GetOperatorVersion()) {
+		// in-place update image and config
+		tpl.PodSet.Image = ""
+		tpl.PodSet.Config = nil
+	}
 	return common.HashControllerRevision(tpl)
 }
 

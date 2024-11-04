@@ -57,6 +57,8 @@ func SyncPodMeta(meta *metav1.ObjectMeta, p *v1alpha1.PodSet) {
 	if ok {
 		meta.Annotations[SemanticVersionAnno] = v.String()
 	}
+	ov := p.GetOperatorVersion()
+	meta.Annotations[v1alpha1.OperatorVersionAnno] = ov.String()
 }
 
 // GetSemanticVersion returns the semantic of the target MO pod,
