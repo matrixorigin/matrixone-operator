@@ -28,6 +28,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/mocli"
 	logpb "github.com/matrixorigin/matrixone/pkg/pb/logservice"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
+	"github.com/openkruise/kruise-api/apps/pub"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -199,6 +200,10 @@ func (r *Actor) ensureOwnership(ctx *recon.Context[*v1alpha1.CNClaim], pod *core
 }
 
 func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod) error {
+	if pod.Labels[pub.LifecycleStateKey] != string(pub.LifecycleStateNormal) {
+		// pod is not in normal state, skip binding and wait underlying operation to complete
+		return recon.ErrReSync("pod is not in normal state, wait", retryPatchInterval)
+	}
 	c := ctx.Obj
 	// alter CN label and working state
 	store, err := r.patchStore(ctx, pod, logpb.CNStateLabel{

@@ -338,6 +338,12 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 			cs.Annotations = map[string]string{}
 		}
 		cs.Annotations[cloneSetForceSpecifiedDelete] = "y"
+		if v1alpha1.GateInplacePoolRollingUpdate.Enabled(cn.Spec.GetOperatorVersion()) {
+			if cs.Spec.Template.Annotations == nil {
+				cs.Spec.Template.Annotations = map[string]string{}
+			}
+			cs.Spec.Template.Annotations[v1alpha1.InPlacePoolRollingAnnoKey] = "y"
+		}
 	}
 
 	cm, configSuffix, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)

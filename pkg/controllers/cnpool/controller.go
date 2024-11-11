@@ -347,8 +347,12 @@ func syncCNSetSpec(p *v1alpha1.CNPool, csSpec *v1alpha1.CNSetSpec) {
 	// override fields that managed by Pool, we expect the webhook will reject these fields if
 	// they are set by user, so that this process would not silently change users' expectation.
 	csSpec.PodManagementPolicy = pointer.String(v1alpha1.PodManagementPolicyPooling)
-	// pause update, cn pool don't rolling-update a single set, instead, we roll-out new sets if spec changes
-	csSpec.PauseUpdate = true
+	if v1alpha1.GateInplacePoolRollingUpdate.Enabled(p.Spec.Template.GetOperatorVersion()) {
+		csSpec.PauseUpdate = false
+	} else {
+		// pause update, cn pool don't rolling-update a single set, instead, we roll-out new sets if spec changes
+		csSpec.PauseUpdate = true
+	}
 	csSpec.ScalingConfig.StoreDrainEnabled = pointer.Bool(true)
 	csSpec.Labels = nil
 	csSpec.PodSet.Replicas = 0
