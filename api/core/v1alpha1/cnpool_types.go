@@ -15,8 +15,9 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -31,6 +32,10 @@ const (
 	PodManagementPolicyPooling = "Pooling"
 
 	DirectPodLabel = "pool.matrixorigin.io/direct-pod"
+)
+
+const (
+	InPlacePoolRollingAnnoKey = "pool.matrixorigin.io/in-place-rolling"
 )
 
 const (

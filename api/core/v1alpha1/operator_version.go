@@ -18,14 +18,20 @@ import "github.com/blang/semver/v4"
 
 type Gate string
 
-var (
-	gateVersions = map[Gate][]semver.Version{
-		GateInplaceConfigmapUpdate: {semver.MustParse("1.3.0")},
-	}
+const (
+	OperatorVersionAnno = "matrixorigin.io/operator-version"
 )
 
 const (
-	GateInplaceConfigmapUpdate Gate = "InplaceConfigmapUpdate"
+	GateInplaceConfigmapUpdate   Gate = "InplaceConfigmapUpdate"
+	GateInplacePoolRollingUpdate Gate = "InplacePoolRollingUpdate"
+)
+
+var (
+	gateVersions = map[Gate][]semver.Version{
+		GateInplaceConfigmapUpdate:   {semver.MustParse("1.3.0")},
+		GateInplacePoolRollingUpdate: {semver.MustParse("1.3.0")},
+	}
 )
 
 func (g Gate) Enabled(v semver.Version) bool {

@@ -16,12 +16,13 @@ package cnset
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/features"
 	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"k8s.io/utils/pointer"
-	"time"
 
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -44,6 +45,8 @@ const (
 	cnReadySeconds = 30
 
 	reSyncAfter = 10 * time.Second
+
+	cloneSetForceSpecifiedDelete = "apps.kruise.io/force-specified-delete"
 )
 
 type Actor struct{}
@@ -97,13 +100,16 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 	if !equality.Semantic.DeepEqual(origin, cs) {
 		if cn.Spec.PauseUpdate {
-			ctx.Log.Info("CNSet does not reach desired state, but update is paused, only strategy and label/anno fields will be updated")
+			ctx.Log.Info("CNSet does not reach desired state, but update is paused, only in-place update will be applied")
 			inplaceMutated := origin.DeepCopy()
 			inplaceMutated.Spec.ScaleStrategy = cs.Spec.ScaleStrategy
 			inplaceMutated.Spec.UpdateStrategy = cs.Spec.UpdateStrategy
 			inplaceMutated.Spec.Lifecycle = cs.Spec.Lifecycle
 			inplaceMutated.Spec.Template.ObjectMeta.Labels = cs.Spec.Template.ObjectMeta.Labels
 			inplaceMutated.Spec.Template.ObjectMeta.Annotations = cs.Spec.Template.ObjectMeta.Annotations
+
+			inplaceMutated.Labels = cs.Labels
+			inplaceMutated.Annotations = cs.Annotations
 			if !equality.Semantic.DeepEqual(inplaceMutated, origin) {
 				return c.with(inplaceMutated).Update, nil
 			}
@@ -287,7 +293,11 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 }
 func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneSet) error {
 	cn := ctx.Obj
+	pooling := cn.Spec.PodManagementPolicy != nil && *cn.Spec.PodManagementPolicy == v1alpha1.PodManagementPolicyPooling
 	cs.Spec.UpdateStrategy.Type = kruisev1alpha1.InPlaceIfPossibleCloneSetUpdateStrategyType
+	if pooling {
+		cs.Spec.UpdateStrategy.Type = kruisev1alpha1.InPlaceOnlyCloneSetUpdateStrategyType
+	}
 	cs.Spec.UpdateStrategy.MaxUnavailable = cn.Spec.UpdateStrategy.MaxUnavailable
 	cs.Spec.UpdateStrategy.MaxSurge = cn.Spec.UpdateStrategy.MaxSurge
 	cs.Spec.MinReadySeconds = cnReadySeconds
@@ -323,6 +333,18 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	// support update cacheVolume, NOTE: pvc only updated when pod rolling updated
 	// ref: https://openkruise.io/zh/docs/next/user-manuals/cloneset/#%E6%94%AF%E6%8C%81-pvc-%E6%A8%A1%E6%9D%BF
 	syncPersistentVolumeClaim(cn, cs)
+	if pooling {
+		if cs.Annotations == nil {
+			cs.Annotations = map[string]string{}
+		}
+		cs.Annotations[cloneSetForceSpecifiedDelete] = "y"
+		if v1alpha1.GateInplacePoolRollingUpdate.Enabled(cn.Spec.GetOperatorVersion()) {
+			if cs.Spec.Template.Annotations == nil {
+				cs.Spec.Template.Annotations = map[string]string{}
+			}
+			cs.Spec.Template.Annotations[v1alpha1.InPlacePoolRollingAnnoKey] = "y"
+		}
+	}
 
 	cm, configSuffix, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
 	if err != nil {
