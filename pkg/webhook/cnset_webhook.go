@@ -54,7 +54,7 @@ type cnSetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &cnSetDefaulter{}
 
-func (c *cnSetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (c *cnSetDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	cnSet, ok := obj.(*v1alpha1.CNSet)
 	if !ok {
 		return unexpectedKindError("CNSet", obj)
@@ -64,7 +64,7 @@ func (c *cnSetDefaulter) Default(ctx context.Context, obj runtime.Object) error 
 	if cnSet.Spec.Role == "" {
 		cnSet.Spec.Role = v1alpha1.CNRoleTP
 	}
-	return setDefaultOperatorVersion(ctx, &cnSet.Spec.PodSet)
+	return nil
 }
 
 func (c *cnSetDefaulter) DefaultSpec(spec *v1alpha1.CNSetSpec) {
@@ -118,6 +118,7 @@ func (c *cnSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) (
 }
 
 func (c *cnSetValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+	var errs field.ErrorList
 	warnings, err = c.ValidateCreate(ctx, newObj)
 	if err != nil {
 		return warnings, err
@@ -130,13 +131,8 @@ func (c *cnSetValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runt
 	if !ok {
 		return nil, unexpectedKindError("CNSet", newObj)
 	}
-	if _, ok := oldCN.Spec.PodSet.GetSemVer(); ok {
-		// if the old CNSet has a semantic version, then we need to make sure the new one is compatible
-		if _, ok := newCN.Spec.PodSet.GetSemVer(); !ok {
-			return nil, field.Invalid(field.NewPath("spec").Child("podSet").Child("semanticVersion"), newCN.Spec.PodSet.SemanticVersion, "new version must also be semantic")
-		}
-	}
-	return warnings, nil
+	errs = append(errs, validatePodSetUpdate(&oldCN.Spec.PodSet, &newCN.Spec.PodSet, field.NewPath("spec"))...)
+	return nil, invalidOrNil(errs, newCN)
 }
 
 func (c *cnSetValidator) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {

@@ -66,6 +66,7 @@ func (c *Actor) with(cs *kruisev1alpha1.CloneSet) *WithResources {
 func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1alpha1.CNSet], error) {
 	cn := ctx.Obj
 
+	ctx.Log.Info("observe cnset", "name", cn.Name, "operatorVersion", cn.Spec.GetOperatorVersion())
 	cs := &kruisev1alpha1.CloneSet{}
 	err, foundCs := util.IsFound(ctx.Get(client.ObjectKey{Namespace: cn.Namespace, Name: setName(cn)}, cs))
 	if err != nil {

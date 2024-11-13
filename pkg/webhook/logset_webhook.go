@@ -61,13 +61,13 @@ type logSetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &logSetDefaulter{}
 
-func (l *logSetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (l *logSetDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	logSet, ok := obj.(*v1alpha1.LogSet)
 	if !ok {
 		return unexpectedKindError("LogSet", obj)
 	}
 	l.DefaultSpec(&logSet.Spec)
-	return setDefaultOperatorVersion(ctx, &logSet.Spec.PodSet)
+	return nil
 }
 
 func (l *logSetDefaulter) DefaultSpec(spec *v1alpha1.LogSetSpec) {
