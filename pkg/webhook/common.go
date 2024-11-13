@@ -283,3 +283,17 @@ func validateVolumeClaims(pvcs []core.PersistentVolumeClaim, path *field.Path) f
 	}
 	return errs
 }
+
+func validatePodSetUpdate(oldPodSet, newPodSet *v1alpha1.PodSet, path *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	if _, ok := oldPodSet.GetSemVer(); ok {
+		// if the old CNSet has a semantic version, then we need to make sure the new one is compatible
+		if _, ok := newPodSet.GetSemVer(); !ok {
+			errs = append(errs, field.Invalid(path.Child("semanticVersion"), newPodSet.SemanticVersion, "new version must also be semantic"))
+		}
+	}
+	if newPodSet.GetOperatorVersion().LT(oldPodSet.GetOperatorVersion()) {
+		errs = append(errs, field.Invalid(path.Child("operatorVersion"), newPodSet.OperatorVersion, "new operatorVersion must be greater than or equal to the oldVersion"))
+	}
+	return errs
+}

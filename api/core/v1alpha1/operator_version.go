@@ -14,7 +14,9 @@
 
 package v1alpha1
 
-import "github.com/blang/semver/v4"
+import (
+	"github.com/blang/semver/v4"
+)
 
 type Gate string
 
