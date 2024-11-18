@@ -200,7 +200,8 @@ func (r *Actor) ensureOwnership(ctx *recon.Context[*v1alpha1.CNClaim], pod *core
 }
 
 func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod) error {
-	if pod.Labels[pub.LifecycleStateKey] != string(pub.LifecycleStateNormal) {
+	_, directPod := pod.Labels[v1alpha1.DirectPodLabel]
+	if !directPod && pod.Labels[pub.LifecycleStateKey] != string(pub.LifecycleStateNormal) {
 		// pod is not in normal state, skip binding and wait underlying operation to complete
 		return recon.ErrReSync("pod is not in normal state, wait", retryPatchInterval)
 	}
