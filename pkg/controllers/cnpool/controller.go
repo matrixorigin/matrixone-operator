@@ -129,13 +129,14 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	// ensure and scale desired CNSet to provide enough CN pods
 	err = recon.CreateOwnedOrUpdate(ctx, desired, func() error {
 		// apply update, since the CNSet revision hash is not changed, this must be an inplace-update
+		specReplicas := desired.Spec.Replicas
 		csSpec := p.Spec.Template.DeepCopy()
 		syncCNSetSpec(p, csSpec)
 		desired.Spec = *csSpec
 		ctx.Log.Info("scale cnset", "cnset", desired.Name, "replicas", desiredReplicas)
 		// sync terminating pods to delete
 		desired.Spec.PodsToDelete = podNames(terminatingPods)
-		if desired.Spec.Replicas > desiredReplicas {
+		if desiredReplicas <= specReplicas {
 			// CNSet is going to be scaled-in
 			if pendingClaims > 0 {
 				// don't scale-in if we still have pending claims
@@ -146,7 +147,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 					"in use pods", inUse)
 				return nil
 			}
-			scaleInCount := desired.Spec.Replicas - desiredReplicas
+			scaleInCount := max(desired.Status.Replicas-desiredReplicas, 0)
 			sortPodByDeletionOrder(idlePods)
 			if int32(len(idlePods)) > scaleInCount {
 				// pick first N to scale-in
@@ -165,7 +166,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 				deleted = append(deleted, pod)
 			}
 			ctx.Log.Info("scale-in CN Pool complete", "deleted", len(deleted))
-			desired.Spec.Replicas = desired.Spec.Replicas - int32(len(deleted))
+			desired.Spec.Replicas = max(desired.Spec.Replicas-int32(len(deleted)), desiredReplicas)
 			desired.Spec.PodsToDelete = append(desired.Spec.PodsToDelete, podNames(deleted)...)
 		} else {
 			// scale-out, if we have terminating pods left, replace them
