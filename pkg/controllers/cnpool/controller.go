@@ -133,7 +133,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 		csSpec := p.Spec.Template.DeepCopy()
 		syncCNSetSpec(p, csSpec)
 		desired.Spec = *csSpec
-		ctx.Log.Info("scale cnset", "cnset", desired.Name, "replicas", desiredReplicas)
+		ctx.Log.Info("scale cnset", "cnset", desired.Name, "replicas", desiredReplicas, "spec replicas", specReplicas)
 		// sync terminating pods to delete
 		desired.Spec.PodsToDelete = podNames(terminatingPods)
 		if desiredReplicas <= specReplicas {
@@ -166,7 +166,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 				deleted = append(deleted, pod)
 			}
 			ctx.Log.Info("scale-in CN Pool complete", "deleted", len(deleted))
-			desired.Spec.Replicas = max(desired.Spec.Replicas-int32(len(deleted)), desiredReplicas)
+			desired.Spec.Replicas = max(specReplicas-int32(len(deleted)), desiredReplicas)
 			desired.Spec.PodsToDelete = append(desired.Spec.PodsToDelete, podNames(deleted)...)
 		} else {
 			// scale-out, if we have terminating pods left, replace them
