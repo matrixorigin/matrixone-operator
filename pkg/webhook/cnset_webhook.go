@@ -132,6 +132,7 @@ func (c *cnSetValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runt
 		return nil, unexpectedKindError("CNSet", newObj)
 	}
 	errs = append(errs, validatePodSetUpdate(&oldCN.Spec.PodSet, &newCN.Spec.PodSet, field.NewPath("spec"))...)
+	errs = append(errs, validateVolumeUpdate(oldCN.Spec.CacheVolume, newCN.Spec.CacheVolume, field.NewPath("spec").Child("cacheVolume"))...)
 	return nil, invalidOrNil(errs, newCN)
 }
 

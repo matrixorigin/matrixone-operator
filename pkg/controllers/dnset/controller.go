@@ -15,10 +15,11 @@
 package dnset
 
 import (
-	"github.com/matrixorigin/matrixone-operator/api/features"
-	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	"strconv"
 	"time"
+
+	"github.com/matrixorigin/matrixone-operator/api/features"
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -132,6 +133,11 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return d.with(sts, svc).Update, nil
 	}
 
+	if dn.Spec.CacheVolume != nil {
+		if err := common.SyncStsVolumeSize(ctx, dn, dn.Spec.CacheVolume.Size, sts); err != nil {
+			return nil, errors.WrapPrefix(err, "sync volume size", 0)
+		}
+	}
 	if err := d.syncMetricService(ctx); err != nil {
 		return nil, errors.WrapPrefix(err, "sync metric service", 0)
 	}

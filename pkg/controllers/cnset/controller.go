@@ -164,6 +164,12 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return c.with(cs).Scale, nil
 	}
 
+	if cn.Spec.CacheVolume != nil {
+		if err := common.SyncCloneSetVolumeSize(ctx, cn, cn.Spec.CacheVolume.Size, cs); err != nil {
+			return nil, errors.WrapPrefix(err, "sync volume size", 0)
+		}
+	}
+
 	if recon.IsReady(&cn.Status.ConditionalStatus) {
 		cn.Status.Host = fmt.Sprintf("%s.%s", svc.Name, svc.Namespace)
 		cn.Status.Port = CNSQLPort
@@ -263,6 +269,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	if err := syncCloneSet(ctx, cnSet); err != nil {
 		return errors.WrapPrefix(err, "sync clone set", 0)
 	}
+	syncPersistentVolumeClaim(cn, cnSet)
 
 	// create all resources
 	err := lo.Reduce[client.Object, error]([]client.Object{
@@ -331,9 +338,6 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	if ctx.Dep != nil {
 		syncPodSpec(ctx.Obj, cs, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	}
-	// support update cacheVolume, NOTE: pvc only updated when pod rolling updated
-	// ref: https://openkruise.io/zh/docs/next/user-manuals/cloneset/#%E6%94%AF%E6%8C%81-pvc-%E6%A8%A1%E6%9D%BF
-	syncPersistentVolumeClaim(cn, cs)
 	if pooling {
 		if cs.Annotations == nil {
 			cs.Annotations = map[string]string{}

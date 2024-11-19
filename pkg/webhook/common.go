@@ -297,3 +297,14 @@ func validatePodSetUpdate(oldPodSet, newPodSet *v1alpha1.PodSet, path *field.Pat
 	}
 	return errs
 }
+
+func validateVolumeUpdate(oldVolume, newVolume *v1alpha1.Volume, path *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	if newVolume.StorageClassName != nil && oldVolume.StorageClassName != nil && *newVolume.StorageClassName != *oldVolume.StorageClassName {
+		errs = append(errs, field.Invalid(path.Child("storageClassName"), *newVolume.StorageClassName, "storageClassName is immutable"))
+	}
+	if newVolume.Size.Cmp(oldVolume.Size) < 0 {
+		errs = append(errs, field.Invalid(path.Child("size"), newVolume.Size, "volume size cannot be decreased"))
+	}
+	return errs
+}
