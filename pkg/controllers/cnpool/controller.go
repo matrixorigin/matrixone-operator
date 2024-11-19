@@ -122,6 +122,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	}
 
 	desiredReplicas := inUse + pendingClaims + p.Spec.Strategy.ScaleStrategy.MaxIdle
+	activeReplicas := inUse + int32(len(idlePods))
 	totalPods += desiredReplicas
 	if totalPods > maxPods {
 		return recon.ErrReSync(fmt.Sprintf("Pool %s has reached MaxPods limit %d, total Pods: %d, requeue", p.Name, totalPods, maxPods), time.Minute)
@@ -147,7 +148,8 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 					"in use pods", inUse)
 				return nil
 			}
-			scaleInCount := max(desired.Status.Replicas-desiredReplicas, 0)
+			// activeReplicas may be greater than desiredReplicas, we should scale-in more
+			scaleInCount := max(activeReplicas-desiredReplicas, specReplicas-desiredReplicas)
 			sortPodByDeletionOrder(idlePods)
 			if int32(len(idlePods)) > scaleInCount {
 				// pick first N to scale-in
