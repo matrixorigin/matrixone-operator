@@ -300,6 +300,9 @@ func validatePodSetUpdate(oldPodSet, newPodSet *v1alpha1.PodSet, path *field.Pat
 
 func validateVolumeUpdate(oldVolume, newVolume *v1alpha1.Volume, path *field.Path) field.ErrorList {
 	var errs field.ErrorList
+	if oldVolume == nil || newVolume == nil {
+		return nil
+	}
 	if newVolume.StorageClassName != nil && oldVolume.StorageClassName != nil && *newVolume.StorageClassName != *oldVolume.StorageClassName {
 		errs = append(errs, field.Invalid(path.Child("storageClassName"), *newVolume.StorageClassName, "storageClassName is immutable"))
 	}
