@@ -17,6 +17,8 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -27,7 +29,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"time"
 )
 
 const (

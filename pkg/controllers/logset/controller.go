@@ -124,6 +124,10 @@ func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.LogSet]) (recon.Action[*v1a
 		return r.with(sts).Update, nil
 	}
 
+	if err = common.SyncStsVolumeSize(ctx, ls, ls.Spec.Volume.Size, sts); err != nil {
+		return nil, errors.WrapPrefix(err, "sync volume size", 0)
+	}
+
 	if err = r.syncBucketClaim(ctx, sts); err != nil {
 		return nil, errors.WrapPrefix(err, "sync bucket claim", 0)
 	}

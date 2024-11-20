@@ -151,9 +151,11 @@ func (l *logSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) 
 }
 
 func (l *logSetValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+	var errs field.ErrorList
 	old := oldObj.(*v1alpha1.LogSet)
 	logSet := newObj.(*v1alpha1.LogSet)
-	errs := l.ValidateSpecUpdate(&old.Spec, &logSet.Spec, logSet.ObjectMeta)
+	errs = append(errs, l.ValidateSpecUpdate(&old.Spec, &logSet.Spec, logSet.ObjectMeta)...)
+	errs = append(errs, validateVolumeUpdate(&old.Spec.Volume, &logSet.Spec.Volume, field.NewPath("spec").Child("volume"))...)
 	return nil, invalidOrNil(errs, logSet)
 }
 

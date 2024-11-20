@@ -32,6 +32,7 @@ require (
 	k8s.io/apiserver v0.27.2
 	k8s.io/client-go v0.27.2
 	k8s.io/component-helpers v0.27.2
+	k8s.io/klog v1.0.0
 	k8s.io/kubelet v0.27.2
 	k8s.io/kubernetes v1.27.2
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
