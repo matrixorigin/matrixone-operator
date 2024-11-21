@@ -61,6 +61,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 			},
 		}
 		Expect(kubeCli.Create(context.TODO(), minioSecret)).To(Succeed())
+		memoryFsSize := resource.MustParse("256Mi")
 		mo := &v1alpha1.MatrixOneCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: env.Namespace,
@@ -127,6 +128,8 @@ var _ = Describe("MatrixOneCluster test", func() {
 				},
 				Version:         moVersion,
 				ImageRepository: moImageRepo,
+				// enable memory fs to pin mo binary in memory
+				MemoryFsSize: &memoryFsSize,
 			},
 		}
 
