@@ -104,8 +104,16 @@ while true; do
     fi
 done
 
+{{- if .EnableMemoryBinPath }}
+MO_BIN=${MO_BIN_PATH}/mo-service
+mkdir -p ${MO_BIN_PATH}
+cp /mo-service ${MO_BIN}
+echo "${MO_BIN} -cfg ${conf} $@"
+exec ${MO_BIN} -cfg ${conf} $@
+{{- else }}
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
+{{- end }}
 `))
 
 var startScriptTplV2 = template.Must(template.New("logservice-start-script-v2").Parse(`
@@ -168,8 +176,16 @@ while true; do
     fi
 done
 
+{{- if .EnableMemoryBinPath }}
+MO_BIN=${MO_BIN_PATH}/mo-service
+mkdir -p ${MO_BIN_PATH}
+cp /mo-service ${MO_BIN}
+echo "${MO_BIN} -cfg ${conf} $@"
+exec ${MO_BIN} -cfg ${conf} $@
+{{- else }}
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
+{{- end }}
 `))
 
 type model struct {
@@ -180,6 +196,7 @@ type model struct {
 	BootstrapFilePath      string
 	GossipFilePath         string
 	InPlaceConfigMapUpdate bool
+	EnableMemoryBinPath    bool
 }
 
 // buildGossipSeedsConfigMap build the gossip seeds configmap for log service, which will not trigger rolling-update
@@ -245,6 +262,7 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 		BootstrapFilePath:      fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
 		GossipFilePath:         fmt.Sprintf("%s/%s", gossipPath, gossipFile),
 		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(ls.Spec.GetOperatorVersion()),
+		EnableMemoryBinPath:    ls.Spec.MemoryFsSize != nil,
 	})
 	if err != nil {
 		return nil, "", err

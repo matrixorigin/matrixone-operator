@@ -104,8 +104,16 @@ while true; do
     fi
 done
 
+{{- if .EnableMemoryBinPath }}
+MO_BIN=${MO_BIN_PATH}/mo-service
+mkdir -p ${MO_BIN_PATH}
+cp /mo-service ${MO_BIN}
+echo "${MO_BIN} -cfg ${conf} $@"
+exec ${MO_BIN} -cfg ${conf} $@
+{{- else }}
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
+{{- end }}
 `))
 
 type model struct {
@@ -116,6 +124,7 @@ type model struct {
 	LockServicePort        int
 	LogtailPort            int
 	InPlaceConfigMapUpdate bool
+	EnableMemoryBinPath    bool
 }
 
 func syncReplicas(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
@@ -186,6 +195,8 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	common.SyncTopology(dn.Spec.TopologyEvenSpread, specRef, sts.Spec.Selector)
 
 	dn.Spec.Overlay.OverlayPodSpec(specRef)
+
+	common.SetupMemoryFsVolume(specRef, dn.Spec.MemoryFsSize)
 }
 
 // buildDNSetConfigMap return dn set configmap
@@ -231,6 +242,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		ConfigFilePath:         fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
 		ConfigAlias:            configAlias,
 		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(dn.Spec.GetOperatorVersion()),
+		EnableMemoryBinPath:    dn.Spec.MemoryFsSize != nil,
 	})
 	if err != nil {
 		return nil, "", err
@@ -281,7 +293,6 @@ func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) erro
 	}
 	if ctx.Dep != nil {
 		syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
-
 	}
 
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ctx.Obj.Spec.GetOperatorVersion())

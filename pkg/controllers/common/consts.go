@@ -33,4 +33,8 @@ const (
 	LabelOwnerUID  = "matrixorigin.io/owner-uid"
 
 	ConfigSuffixAnno = "matrixorigin.io/config-suffix"
+
+	MemoryFsVolume = "tmpfs"
+	MemoryBinPath  = "/matrixone/bin"
+	BinPathEnvKey  = "MO_BIN_PATH"
 )

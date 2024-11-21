@@ -358,6 +358,9 @@ func setPodSetDefault(ps *v1alpha1.PodSet, mo *v1alpha1.MatrixOneCluster) {
 	if ps.OperatorVersion == nil {
 		ps.OperatorVersion = mo.Spec.OperatorVersion
 	}
+	if ps.MemoryFsSize == nil {
+		ps.MemoryFsSize = mo.Spec.MemoryFsSize
+	}
 }
 
 func setOverlay(o **v1alpha1.Overlay, mo *v1alpha1.MatrixOneCluster) {

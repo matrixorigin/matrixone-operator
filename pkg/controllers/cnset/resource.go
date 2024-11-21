@@ -71,8 +71,16 @@ service-address = "${POD_IP}:{{ .LockServicePort }}"
 EOF
 sed -i "/\[cn.lockservice\]/r ${lsc}" ${conf}
 
+{{- if .EnableMemoryBinPath }}
+MO_BIN=${MO_BIN_PATH}/mo-service
+mkdir -p ${MO_BIN_PATH}
+cp /mo-service ${MO_BIN}
+echo "${MO_BIN} -cfg ${conf} $@"
+exec ${MO_BIN} -cfg ${conf} $@
+{{- else }}
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
+{{- end }}
 `))
 
 type model struct {
@@ -82,6 +90,7 @@ type model struct {
 
 	LockServicePort        int
 	InPlaceConfigMapUpdate bool
+	EnableMemoryBinPath    bool
 }
 
 func buildHeadlessSvc(cn *v1alpha1.CNSet) *corev1.Service {
@@ -191,7 +200,6 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 			MountPath: common.ConfigPath,
 		},
 	}
-
 	dataVolume := corev1.VolumeMount{
 		Name:      common.DataVolume,
 		MountPath: common.DataPath,
@@ -200,6 +208,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	if cn.Spec.CacheVolume != nil {
 		volumeMountsList = append(volumeMountsList, dataVolume)
 	}
+
 	mainRef.VolumeMounts = volumeMountsList
 
 	mainRef.Env = []corev1.EnvVar{
@@ -229,6 +238,8 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	common.SetStorageProviderConfig(sp, specRef)
 	common.SyncTopology(cn.Spec.TopologyEvenSpread, specRef, cs.Spec.Selector)
 	cn.Spec.Overlay.OverlayPodSpec(specRef)
+
+	common.SetupMemoryFsVolume(specRef, cn.Spec.MemoryFsSize)
 
 	// create or delete python udf sidecar
 	sidecar := cn.Spec.PythonUdfSidecar
@@ -306,6 +317,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		CNRpcPort:              cnRPCPort,
 		LockServicePort:        common.LockServicePort,
 		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(cn.Spec.GetOperatorVersion()),
+		EnableMemoryBinPath:    cn.Spec.MemoryFsSize != nil,
 	})
 	if err != nil {
 		return nil, "", err

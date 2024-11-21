@@ -19,6 +19,8 @@ import (
 
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
+	"github.com/matrixorigin/controller-runtime/pkg/util"
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +28,36 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func SetupMemoryFsVolume(specRef *corev1.PodSpec, memoryFsSize *resource.Quantity) {
+	if memoryFsSize == nil {
+		return
+	}
+	specRef.Volumes = util.UpsertByKey(specRef.Volumes, corev1.Volume{
+		Name: MemoryFsVolume,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium:    corev1.StorageMediumMemory,
+				SizeLimit: memoryFsSize,
+			},
+		},
+	}, func(v corev1.Volume) string {
+		return v.Name
+	})
+	for i := range specRef.Containers {
+		if specRef.Containers[i].Name == v1alpha1.ContainerMain {
+			specRef.Containers[i].VolumeMounts = util.UpsertByKey(specRef.Containers[i].VolumeMounts, corev1.VolumeMount{
+				Name:      MemoryFsVolume,
+				MountPath: MemoryBinPath,
+			}, func(v corev1.VolumeMount) string {
+				return v.Name
+			})
+			specRef.Containers[i].Env = util.UpsertByKey(specRef.Containers[i].Env, corev1.EnvVar{Name: BinPathEnvKey, Value: MemoryBinPath}, func(e corev1.EnvVar) string {
+				return e.Name
+			})
+		}
+	}
+}
 
 func SyncCloneSetVolumeSize(kubeCli recon.KubeClient, owner client.Object, size resource.Quantity, cs *kruisev1alpha1.CloneSet) error {
 	var changed bool

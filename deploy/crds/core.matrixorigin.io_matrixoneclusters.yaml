@@ -123,6 +123,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -477,6 +486,15 @@ spec:
                     image:
                       description: Image is the docker image of the main container
                       type: string
+                    memoryFsSize:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: |-
+                        MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                        Binary would be loaded from disk if MemoryFsSize is not set
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
                     memoryLimitPercent:
                       description: |-
                         MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -828,6 +846,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -1032,6 +1059,15 @@ spec:
                           from the given path when hakeeper is bootstrapped
                         type: string
                     type: object
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -1261,6 +1297,12 @@ spec:
                 - sharedStorage
                 - volume
                 type: object
+              memoryFsSize:
+                anyOf:
+                - type: integer
+                - type: string
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
               metricReaderEnabled:
                 description: |-
                   MetricReaderEnabled enables metric reader for operator and other apps to query
@@ -1298,6 +1340,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -1488,6 +1539,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -1697,6 +1757,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -2019,6 +2088,15 @@ spec:
                     description: PullPolicy describes a policy for if/when to pull
                       a container image
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].

@@ -422,6 +422,7 @@ _Appears in:_
 | `promDiscoveryScheme` _[PromDiscoveryScheme](#promdiscoveryscheme)_ | PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options:<br />- Pod: the pod will be discovered via will-known labels on the Pod<br />- Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods<br />default to Service |  |  |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set,<br />the semantic version of CN will be default to the image tag,<br />if the semantic version is not set, nor the image tag is a valid semantic version,<br />operator will treat the MO as unknown version and will not apply any version-specific<br />reconciliations |  |  |
 | `operatorVersion` _string_ | OperatorVersion is the controller version of mo-operator that should be used to<br />reconcile this set |  |  |
+| `memoryFsSize` _[Quantity](#quantity)_ | MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead<br />Binary would be loaded from disk if MemoryFsSize is not set |  |  |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet,<br />node storage will be used if not specified |  |  |
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |  |  |
 | `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the python udf server in CN |  |  |
@@ -623,6 +624,7 @@ _Appears in:_
 | `promDiscoveryScheme` _[PromDiscoveryScheme](#promdiscoveryscheme)_ | PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options:<br />- Pod: the pod will be discovered via will-known labels on the Pod<br />- Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods<br />default to Service |  |  |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set,<br />the semantic version of CN will be default to the image tag,<br />if the semantic version is not set, nor the image tag is a valid semantic version,<br />operator will treat the MO as unknown version and will not apply any version-specific<br />reconciliations |  |  |
 | `operatorVersion` _string_ | OperatorVersion is the controller version of mo-operator that should be used to<br />reconcile this set |  |  |
+| `memoryFsSize` _[Quantity](#quantity)_ | MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead<br />Binary would be loaded from disk if MemoryFsSize is not set |  |  |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet,<br />node storage will be used if not specified |  |  |
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |  |  |
 | `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the python udf server in CN |  |  |
@@ -820,6 +822,7 @@ _Appears in:_
 | `promDiscoveryScheme` _[PromDiscoveryScheme](#promdiscoveryscheme)_ | PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options:<br />- Pod: the pod will be discovered via will-known labels on the Pod<br />- Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods<br />default to Service |  |  |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set,<br />the semantic version of CN will be default to the image tag,<br />if the semantic version is not set, nor the image tag is a valid semantic version,<br />operator will treat the MO as unknown version and will not apply any version-specific<br />reconciliations |  |  |
 | `operatorVersion` _string_ | OperatorVersion is the controller version of mo-operator that should be used to<br />reconcile this set |  |  |
+| `memoryFsSize` _[Quantity](#quantity)_ | MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead<br />Binary would be loaded from disk if MemoryFsSize is not set |  |  |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for DNSet,<br />node storage will be used if not specified |  |  |
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ |  |  |  |
 
@@ -987,6 +990,7 @@ _Appears in:_
 | `promDiscoveryScheme` _[PromDiscoveryScheme](#promdiscoveryscheme)_ | PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options:<br />- Pod: the pod will be discovered via will-known labels on the Pod<br />- Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods<br />default to Service |  |  |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set,<br />the semantic version of CN will be default to the image tag,<br />if the semantic version is not set, nor the image tag is a valid semantic version,<br />operator will treat the MO as unknown version and will not apply any version-specific<br />reconciliations |  |  |
 | `operatorVersion` _string_ | OperatorVersion is the controller version of mo-operator that should be used to<br />reconcile this set |  |  |
+| `memoryFsSize` _[Quantity](#quantity)_ | MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead<br />Binary would be loaded from disk if MemoryFsSize is not set |  |  |
 | `volume` _[Volume](#volume)_ | Volume is the local persistent volume for each LogService instance |  |  |
 | `sharedStorage` _[SharedStorageProvider](#sharedstorageprovider)_ | SharedStorage is an external shared storage shared by all LogService instances |  |  |
 | `initialConfig` _[InitialConfig](#initialconfig)_ | InitialConfig is the initial configuration of HAKeeper<br />InitialConfig is immutable |  |  |
@@ -1097,6 +1101,7 @@ _Appears in:_
 | `metricReaderEnabled` _boolean_ | MetricReaderEnabled enables metric reader for operator and other apps to query<br />metric from MO cluster |  |  |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set,<br />the semantic version of CN will be default to the image tag,<br />if the semantic version is not set, nor the image tag is a valid semantic version,<br />operator will treat the MO as unknown version and will not apply any version-specific<br />reconciliations |  |  |
 | `operatorVersion` _string_ |  |  |  |
+| `memoryFsSize` _[Quantity](#quantity)_ |  |  |  |
 
 
 #### MigrateStatus
@@ -1216,6 +1221,7 @@ _Appears in:_
 | `promDiscoveryScheme` _[PromDiscoveryScheme](#promdiscoveryscheme)_ | PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options:<br />- Pod: the pod will be discovered via will-known labels on the Pod<br />- Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods<br />default to Service |  |  |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set,<br />the semantic version of CN will be default to the image tag,<br />if the semantic version is not set, nor the image tag is a valid semantic version,<br />operator will treat the MO as unknown version and will not apply any version-specific<br />reconciliations |  |  |
 | `operatorVersion` _string_ | OperatorVersion is the controller version of mo-operator that should be used to<br />reconcile this set |  |  |
+| `memoryFsSize` _[Quantity](#quantity)_ | MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead<br />Binary would be loaded from disk if MemoryFsSize is not set |  |  |
 
 
 #### PoolScaleStrategy
@@ -1371,6 +1377,7 @@ _Appears in:_
 | `promDiscoveryScheme` _[PromDiscoveryScheme](#promdiscoveryscheme)_ | PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options:<br />- Pod: the pod will be discovered via will-known labels on the Pod<br />- Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods<br />default to Service |  |  |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set,<br />the semantic version of CN will be default to the image tag,<br />if the semantic version is not set, nor the image tag is a valid semantic version,<br />operator will treat the MO as unknown version and will not apply any version-specific<br />reconciliations |  |  |
 | `operatorVersion` _string_ | OperatorVersion is the controller version of mo-operator that should be used to<br />reconcile this set |  |  |
+| `memoryFsSize` _[Quantity](#quantity)_ | MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead<br />Binary would be loaded from disk if MemoryFsSize is not set |  |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of proxy service | ClusterIP | Enum: [ClusterIP NodePort LoadBalancer] <br /> |
 | `serviceAnnotations` _object (keys:string, values:string)_ | ServiceAnnotations are the annotations for the proxy service |  |  |
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer,<br />reconciling will fail if the node port is not available. |  |  |
@@ -1714,6 +1721,7 @@ _Appears in:_
 | `promDiscoveryScheme` _[PromDiscoveryScheme](#promdiscoveryscheme)_ | PromDiscoveryScheme indicates how the Pod will be discovered by prometheus, options:<br />- Pod: the pod will be discovered via will-known labels on the Pod<br />- Service: the pod will be discovered via will-known annotations in the service which expose endpoints to the pods<br />default to Service |  |  |
 | `semanticVersion` _string_ | SemanticVersion override the semantic version of CN if set,<br />the semantic version of CN will be default to the image tag,<br />if the semantic version is not set, nor the image tag is a valid semantic version,<br />operator will treat the MO as unknown version and will not apply any version-specific<br />reconciliations |  |  |
 | `operatorVersion` _string_ | OperatorVersion is the controller version of mo-operator that should be used to<br />reconcile this set |  |  |
+| `memoryFsSize` _[Quantity](#quantity)_ | MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead<br />Binary would be loaded from disk if MemoryFsSize is not set |  |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service | ClusterIP | Enum: [ClusterIP NodePort LoadBalancer] <br /> |
 | `updateStrategy` _[RollingUpdateStrategy](#rollingupdatestrategy)_ | UpdateStrategy rolling update strategy |  |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |  |  |
