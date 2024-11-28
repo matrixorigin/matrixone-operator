@@ -16,6 +16,8 @@ package main
 
 import (
 	"context"
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	"github.com/matrixorigin/matrixone/pkg/logservice"
@@ -23,7 +25,10 @@ import (
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
 	"go.uber.org/zap"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"time"
+)
+
+var (
+	skip = true
 )
 
 // TODO(aylei): complete this CLI
@@ -39,39 +44,46 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	store := cluster.CNStores[0]
-	err = cli.PatchCNStore(ctx, logpb.CNStateLabel{
-		UUID:  store.UUID,
-		State: metadata.WorkState_Working,
-		Labels: common.ToStoreLabels([]v1alpha1.CNLabel{{
-			Key:    "test",
-			Values: []string{"testv"},
-		}}),
-	})
+	zapLogger.Info("cluster detail", zap.Any("cluster", cluster))
+	err = cli.CheckLogServiceHealth(ctx)
 	if err != nil {
 		panic(err)
 	}
-	err = cli.PatchCNStore(ctx, logpb.CNStateLabel{
-		UUID:  store.UUID,
-		State: metadata.WorkState_Working,
-		Labels: common.ToStoreLabels([]v1alpha1.CNLabel{{
-			Key:    "test",
-			Values: []string{"testv"},
-		}}),
-	})
-	if err != nil {
-		panic(err)
+	if !skip {
+		store := cluster.CNStores[0]
+		err = cli.PatchCNStore(ctx, logpb.CNStateLabel{
+			UUID:  store.UUID,
+			State: metadata.WorkState_Working,
+			Labels: common.ToStoreLabels([]v1alpha1.CNLabel{{
+				Key:    "test",
+				Values: []string{"testv"},
+			}}),
+		})
+		if err != nil {
+			panic(err)
+		}
+		err = cli.PatchCNStore(ctx, logpb.CNStateLabel{
+			UUID:  store.UUID,
+			State: metadata.WorkState_Working,
+			Labels: common.ToStoreLabels([]v1alpha1.CNLabel{{
+				Key:    "test",
+				Values: []string{"testv"},
+			}}),
+		})
+		if err != nil {
+			panic(err)
+		}
+		err = cli.UpdateCNLabel(ctx, logpb.CNStoreLabel{
+			UUID:   store.UUID,
+			Labels: nil,
+		})
+		if err != nil {
+			panic(err)
+		}
+		cluster, err = cli.GetClusterDetails(ctx)
+		if err != nil {
+			panic(err)
+		}
+		zapLogger.Info("resp", zap.Any("resp", cluster.CNStores[0].Labels))
 	}
-	err = cli.UpdateCNLabel(ctx, logpb.CNStoreLabel{
-		UUID:   store.UUID,
-		Labels: nil,
-	})
-	if err != nil {
-		panic(err)
-	}
-	cluster, err = cli.GetClusterDetails(ctx)
-	if err != nil {
-		panic(err)
-	}
-	zapLogger.Info("resp", zap.Any("resp", cluster.CNStores[0].Labels))
 }
