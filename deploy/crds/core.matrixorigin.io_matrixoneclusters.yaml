@@ -1478,6 +1478,10 @@ spec:
                     items:
                       type: string
                     type: array
+                  waitPluginAddr:
+                    description: WaitPluginAddr is the address of the plugin to wait
+                      for
+                    type: string
                 required:
                 - replicas
                 type: object

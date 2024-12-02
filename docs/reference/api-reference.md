@@ -1382,6 +1382,7 @@ _Appears in:_
 | `serviceAnnotations` _object (keys:string, values:string)_ | ServiceAnnotations are the annotations for the proxy service |  |  |
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer,<br />reconciling will fail if the node port is not available. |  |  |
 | `minReadySeconds` _integer_ |  |  |  |
+| `waitPluginAddr` _string_ | WaitPluginAddr is the address of the plugin to wait for |  |  |
 
 
 
