@@ -39,6 +39,10 @@ type ProxySetSpec struct {
 	NodePort *int32 `json:"nodePort,omitempty"`
 
 	MinReadySeconds int32 `json:"minReadySeconds,omitempty"`
+
+	// WaitPluginAddr is the address of the plugin to wait for
+	// +optional
+	WaitPluginAddr *string `json:"waitPluginAddr,omitempty"`
 }
 
 type ProxySetStatus struct {

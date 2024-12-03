@@ -18,12 +18,14 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
@@ -45,6 +47,7 @@ const (
 type model struct {
 	ConfigFilePath         string
 	InPlaceConfigMapUpdate bool
+	PluginSocket           *string
 }
 
 var startScriptTpl = template.Must(template.New("proxy-start-script").Parse(`
@@ -67,6 +70,12 @@ else
 fi
 {{- else }}
 sed "/\[proxy\]/r ${bc}" {{ .ConfigFilePath }} > ${conf}
+{{- end }}
+{{- if .PluginSocket }}
+while ! timeout 2 bash -c "</dev/tcp/{{ .PluginSocket }}"; do
+  echo "waiting for plugin socket: {{ .PluginSocket }}"
+  sleep 1
+done
 {{- end }}
 
 echo "/mo-service -cfg ${conf} $@"
@@ -176,10 +185,15 @@ func buildProxyConfigMap(proxy *v1alpha1.ProxySet, ls *v1alpha1.LogSet) (*corev1
 	}
 
 	buff := new(bytes.Buffer)
-	err = startScriptTpl.Execute(buff, &model{
+	m := &model{
 		ConfigFilePath:         fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
 		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(proxy.Spec.GetOperatorVersion()),
-	})
+	}
+	if proxy.Spec.WaitPluginAddr != nil {
+		parts := strings.Split(*proxy.Spec.WaitPluginAddr, ":")
+		m.PluginSocket = utils.PtrTo(strings.Join(parts, "/"))
+	}
+	err = startScriptTpl.Execute(buff, m)
 	if err != nil {
 		return nil, "", err
 	}
