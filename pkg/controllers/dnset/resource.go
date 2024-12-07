@@ -104,7 +104,7 @@ while true; do
     fi
 done
 
-{{- if .EnableMemoryBinPath }}
+{{ if .EnableMemoryBinPath }}
 MO_BIN=${MO_BIN_PATH}/mo-service
 mkdir -p ${MO_BIN_PATH}
 cp /mo-service ${MO_BIN}
