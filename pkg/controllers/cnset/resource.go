@@ -70,7 +70,6 @@ cat <<EOF > ${lsc}
 service-address = "${POD_IP}:{{ .LockServicePort }}"
 EOF
 sed -i "/\[cn.lockservice\]/r ${lsc}" ${conf}
-
 {{ if .EnableMemoryBinPath }}
 MO_BIN=${MO_BIN_PATH}/mo-service
 mkdir -p ${MO_BIN_PATH}

@@ -103,7 +103,6 @@ while true; do
         echo "waiting pod dns name ${ADDR} resolvable" >&2
     fi
 done
-
 {{ if .EnableMemoryBinPath }}
 MO_BIN=${MO_BIN_PATH}/mo-service
 mkdir -p ${MO_BIN_PATH}
@@ -175,7 +174,6 @@ while true; do
         echo "waiting pod dns name ${ADDR} resolvable" >&2
     fi
 done
-
 {{ if .EnableMemoryBinPath }}
 MO_BIN=${MO_BIN_PATH}/mo-service
 mkdir -p ${MO_BIN_PATH}
