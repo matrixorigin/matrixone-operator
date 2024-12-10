@@ -134,6 +134,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 		csSpec := p.Spec.Template.DeepCopy()
 		syncCNSetSpec(p, csSpec)
 		desired.Spec = *csSpec
+		desired.Spec.Replicas = specReplicas
 		ctx.Log.Info("scale cnset", "cnset", desired.Name, "replicas", desiredReplicas, "spec replicas", specReplicas)
 		// sync terminating pods to delete
 		desired.Spec.PodsToDelete = podNames(terminatingPods)
