@@ -27,7 +27,7 @@ func TestHasMOFeature(t *testing.T) {
 	g.Expect(HasMOFeature(mustParse("1.1.2"), MOFeaturePipelineInfo)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("1.1.3"), MOFeaturePipelineInfo)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("1.2.0"), MOFeaturePipelineInfo)).To(BeTrue())
-	g.Expect(HasMOFeature(mustParse("2.0.0"), MOFeaturePipelineInfo)).To(BeFalse())
+	g.Expect(HasMOFeature(mustParse("2.0.0"), MOFeaturePipelineInfo)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("1.1.1"), MOFeaturePipelineInfo)).To(BeFalse())
 	g.Expect(HasMOFeature(mustParse("1.1.1"), MOFeaturePipelineInfo)).To(BeFalse())
 	g.Expect(HasMOFeature(mustParse("1.1.2"), MOFeaturePipelineInfo)).To(BeTrue())
@@ -35,6 +35,7 @@ func TestHasMOFeature(t *testing.T) {
 	g.Expect(HasMOFeature(mustParse("v1.1.2-rc1"), MOFeaturePipelineInfo)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("v1.2.0-alpha.1"), MOFeatureLockMigration)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("v1.2.2-woraround-something-else"), MOFeatureLockMigration)).To(BeTrue())
+	g.Expect(HasMOFeature(mustParse("2.0.1"), MOFeatureLockMigration)).To(BeTrue())
 	featureVersions["dummy"] = []semver.Version{mustParse("1.2.3")}
 	g.Expect(HasMOFeature(mustParse("v1.2.3"), "dummy")).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("v1.3.0"), "dummy")).To(BeFalse())
