@@ -29,9 +29,9 @@ const (
 
 var (
 	featureVersions = map[MOFeature][]semver.Version{
-		MOFeaturePipelineInfo:      {semver.MustParse("1.1.2"), semver.MustParse("1.2.0")},
-		MOFeatureSessionSource:     {semver.MustParse("1.1.2"), semver.MustParse("1.2.0")},
-		MOFeatureLockMigration:     {semver.MustParse("1.2.0")},
+		MOFeaturePipelineInfo:      {semver.MustParse("1.1.2"), semver.MustParse("1.2.0"), semver.MustParse("2.0.0")},
+		MOFeatureSessionSource:     {semver.MustParse("1.1.2"), semver.MustParse("1.2.0"), semver.MustParse("2.0.0")},
+		MOFeatureLockMigration:     {semver.MustParse("1.2.0"), semver.MustParse("2.0.0")},
 		MOFeatureShardingMigration: {semver.MustParse("2.0.0")},
 		MOFeatureDiscoveryFixed:    {semver.MustParse("2.0.0")},
 	}
