@@ -114,6 +114,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 	common.SetStorageProviderConfig(ls.Spec.SharedStorage, specRef)
 	common.SyncTopology(ls.Spec.TopologyEvenSpread, specRef, &metav1.LabelSelector{MatchLabels: common.SubResourceLabels(ls)})
 	ls.Spec.Overlay.OverlayPodSpec(specRef)
+	common.SetupMemoryFsVolume(specRef, ls.Spec.MemoryFsSize)
 }
 
 // syncPersistentVolumeClaim controls the persistent volume claim of underlying pods

@@ -383,7 +383,6 @@ func syncPods(ctx *recon.Context[*v1alpha1.LogSet], sts *kruisev1.StatefulSet) e
 		sts.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
 	}
 	syncPodSpec(ctx.Obj, &sts.Spec.Template.Spec)
-	common.SetupMemoryFsVolume(&sts.Spec.Template.Spec, ctx.Obj.Spec.MemoryFsSize)
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ctx.Obj.Spec.GetOperatorVersion())
 }
 
