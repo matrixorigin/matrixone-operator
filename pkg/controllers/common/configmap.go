@@ -27,6 +27,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -93,6 +94,10 @@ func ensureConfigMap(kubeCli recon.KubeClient, desired *corev1.ConfigMap) (strin
 			if withDigest(key, v) && configInUse(key, podList.Items) {
 				// append item that is still in use
 				c.Data[key] = v
+			} else {
+				// log roll-out event to track configmap changes
+				klog.Infof("config key %s is not in use, will be deleted. configmap %s/%s, value: %s",
+					key, c.Namespace, c.Name, v)
 			}
 		}
 		err = kubeCli.Update(c)
