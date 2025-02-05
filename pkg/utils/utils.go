@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package utils
 
 import (
 	"fmt"
+
 	"github.com/cespare/xxhash"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"

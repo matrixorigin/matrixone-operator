@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +17,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"k8s.io/kubernetes/pkg/capabilities"
 	"os"
+
+	"k8s.io/kubernetes/pkg/capabilities"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/go-logr/zapr"
@@ -52,6 +53,7 @@ import (
 	zaporigin "go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	controllermetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"

@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
 package logset
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
-	"testing"
 )
 
 func Test_gossipSeeds(t *testing.T) {

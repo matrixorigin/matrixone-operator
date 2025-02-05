@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,10 @@ package cnpool
 
 import (
 	"context"
+	"math/rand"
+	"testing"
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	"github.com/matrixorigin/controller-runtime/pkg/fake"
@@ -28,10 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"math/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
-	"time"
 
 	. "github.com/onsi/gomega"
 )

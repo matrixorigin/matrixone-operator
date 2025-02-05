@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@ package querycli
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-errors/errors"
 	"github.com/matrixorigin/matrixone-operator/pkg/metric"
 	"github.com/matrixorigin/matrixone/pkg/common/morpc"
 	pb "github.com/matrixorigin/matrixone/pkg/pb/query"
 	"github.com/matrixorigin/matrixone/pkg/txn/rpc"
-	"time"
 )
 
 var timeout = 10 * time.Second
