@@ -289,16 +289,20 @@ func (p *PodSet) GetSemVer() (*semver.Version, bool) {
 	if p.SemanticVersion != nil {
 		s = *p.SemanticVersion
 	} else {
-		ss := strings.Split(p.Image, ":")
-		if len(ss) == 2 {
-			s = ss[1]
-		}
+		s = getImageTag(p.Image)
 	}
 	v, err := semver.ParseTolerant(s)
 	if err != nil {
 		return nil, false
 	}
 	return &v, true
+}
+
+func getImageTag(image string) string {
+	if idx := strings.LastIndex(image, ":"); idx >= 0 {
+		return image[idx+1:]
+	}
+	return ""
 }
 
 func (p *PodSet) GetOperatorVersion() semver.Version {
