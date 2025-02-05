@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,10 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -27,10 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 const (

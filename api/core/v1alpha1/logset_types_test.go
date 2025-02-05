@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
 package v1alpha1
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSetDefaultRetentionPolicy(t *testing.T) {

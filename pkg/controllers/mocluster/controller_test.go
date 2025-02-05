@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@ package mocluster
 
 import (
 	"context"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/matrixorigin/controller-runtime/pkg/fake"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -32,7 +34,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 func TestMatrixOneClusterActor_Observe(t *testing.T) {

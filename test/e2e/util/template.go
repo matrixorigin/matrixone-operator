@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
 package util
 
 import (
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"time"
 )
 
 // NewLogSetTpl return a logSet template, name is random generated

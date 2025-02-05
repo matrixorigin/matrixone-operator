@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@ package mocli
 
 import (
 	"context"
+	"sync"
+	"time"
+
 	"github.com/go-errors/errors"
 	"github.com/go-logr/zapr"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -25,8 +28,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sync"
-	"time"
 )
 
 const (
