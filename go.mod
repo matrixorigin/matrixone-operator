@@ -211,7 +211,9 @@ replace (
 
 replace (
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.27.2
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.27.2
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.27.2
+	k8s.io/controller-manager => k8s.io/controller-manager v0.27.2
 	k8s.io/cri-api => k8s.io/cri-api v0.27.2
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.27.2
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.27.2
