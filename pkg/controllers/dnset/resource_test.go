@@ -18,6 +18,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
@@ -166,6 +167,94 @@ name = "ETL"
 
 [fileservice.cache]
 memory-capacity = "1B"
+
+[hakeeper-client]
+service-addresses = []
+`,
+		},
+		{
+			name: "user fileservice config preserved after merge",
+			args: args{
+				dn: &v1alpha1.DNSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: v1alpha1.DNSetSpec{PodSet: v1alpha1.PodSet{
+						Config: v1alpha1.NewTomlConfig(map[string]interface{}{
+							"fileservice": []map[string]interface{}{
+								{
+									"name":    "S3",
+									"backend": "S3",
+									"s3": map[string]interface{}{
+										"parallel-mode": "1",
+									},
+								},
+							},
+						}),
+					}},
+				},
+				ls: &v1alpha1.LogSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: v1alpha1.LogSetSpec{SharedStorage: v1alpha1.SharedStorageProvider{
+						S3: &v1alpha1.S3Provider{
+							Path:     "bucket-name/mo",
+							Endpoint: "http://obs.cn-szinternal.com",
+							SecretRef: &corev1.LocalObjectReference{
+								Name: "s3key",
+							},
+						},
+					}},
+					Status: v1alpha1.LogSetStatus{
+						Discovery: &v1alpha1.LogSetDiscovery{
+							Port:    6001,
+							Address: "test",
+						},
+					},
+				},
+			},
+			wantConfig: `data-dir = "/var/lib/matrixone/data"
+service-type = "DN"
+
+[dn]
+listen-address = "0.0.0.0:41010"
+port-base = 41010
+
+[dn.LogtailServer]
+listen-address = "0.0.0.0:32003"
+
+[dn.lockservice]
+listen-address = "0.0.0.0:6003"
+
+[[fileservice]]
+backend = "DISK"
+data-dir = "/var/lib/matrixone/data"
+name = "LOCAL"
+
+[[fileservice]]
+backend = "S3"
+name = "S3"
+
+[fileservice.s3]
+bucket = "bucket-name"
+endpoint = "http://obs.cn-szinternal.com"
+key-prefix = "mo/data"
+parallel-mode = "1"
+
+[[fileservice]]
+backend = "S3"
+name = "ETL"
+
+[fileservice.cache]
+memory-capacity = "1B"
+
+[fileservice.s3]
+bucket = "bucket-name"
+endpoint = "http://obs.cn-szinternal.com"
+key-prefix = "mo/etl"
 
 [hakeeper-client]
 service-addresses = []
