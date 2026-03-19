@@ -135,10 +135,10 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, error) {
 	}
 	// 1. build base config file
 	if ls.Spec.InitialConfig.RestoreFrom != nil {
-		conf.Merge(common.LogServiceFSConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage))
+		conf.MergeDeep(common.LogServiceFSConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage))
 	} else {
 		// TODO(aylei): for 0.8 compatibility, remove this compatibility code after we drop 0.8 support in operator
-		conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, nil))
+		conf.MergeDeep(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, nil))
 	}
 	conf.Set([]string{"service-type"}, serviceTypeLog)
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentID(ls))

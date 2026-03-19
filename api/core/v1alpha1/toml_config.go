@@ -82,6 +82,102 @@ func (c *TomlConfig) Merge(mp map[string]interface{}) {
 	}
 }
 
+// MergeDeep merges the given map into the current config with deep merge semantics.
+// For map values present in both configs, it recursively merges rather than replacing.
+// For slices of maps that contain a "name" field, it matches entries by name and
+// deep-merges them, preserving user-specified fields that are not in the override.
+// In all cases, values in mp take precedence over existing values for conflicting keys.
+func (c *TomlConfig) MergeDeep(mp map[string]interface{}) {
+	if c.MP == nil {
+		c.MP = map[string]interface{}{}
+	}
+	c.MP = deepMergeMap(c.MP, mp)
+}
+
+func deepMergeMap(base, override map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{}, len(base)+len(override))
+	for k, v := range base {
+		result[k] = v
+	}
+	for k, v := range override {
+		baseVal, exists := result[k]
+		if !exists {
+			result[k] = v
+			continue
+		}
+		baseMap, baseOk := baseVal.(map[string]interface{})
+		overrideMap, overrideOk := v.(map[string]interface{})
+		if baseOk && overrideOk {
+			result[k] = deepMergeMap(baseMap, overrideMap)
+			continue
+		}
+		baseSlice := toNamedMapSlice(baseVal)
+		overrideSlice := toNamedMapSlice(v)
+		if baseSlice != nil && overrideSlice != nil {
+			result[k] = mergeNamedMapSlice(baseSlice, overrideSlice)
+			continue
+		}
+		result[k] = v
+	}
+	return result
+}
+
+// toNamedMapSlice converts a value to []map[string]interface{} if the value is
+// a slice of maps where the first element has a "name" key. Returns nil otherwise.
+func toNamedMapSlice(v interface{}) []map[string]interface{} {
+	var result []map[string]interface{}
+	switch s := v.(type) {
+	case []map[string]interface{}:
+		result = s
+	case []interface{}:
+		result = make([]map[string]interface{}, 0, len(s))
+		for _, item := range s {
+			m, ok := item.(map[string]interface{})
+			if !ok {
+				return nil
+			}
+			result = append(result, m)
+		}
+	default:
+		return nil
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	if _, ok := result[0]["name"]; !ok {
+		return nil
+	}
+	return result
+}
+
+func mergeNamedMapSlice(base, override []map[string]interface{}) []map[string]interface{} {
+	baseByName := make(map[string]int, len(base))
+	for i, entry := range base {
+		if name, ok := entry["name"].(string); ok {
+			baseByName[name] = i
+		}
+	}
+	matched := make(map[int]bool)
+	result := make([]map[string]interface{}, 0, len(override)+len(base))
+	for _, oe := range override {
+		name, _ := oe["name"].(string)
+		if name != "" {
+			if idx, ok := baseByName[name]; ok {
+				result = append(result, deepMergeMap(base[idx], oe))
+				matched[idx] = true
+				continue
+			}
+		}
+		result = append(result, oe)
+	}
+	for i, entry := range base {
+		if !matched[i] {
+			result = append(result, entry)
+		}
+	}
+	return result
+}
+
 // Set a key by path, override existing.
 // the keyPath has at least depth 1
 func (c *TomlConfig) Set(path []string, value interface{}) {

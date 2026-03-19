@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/json"
 )
@@ -109,6 +110,223 @@ func TestMarshal(t *testing.T) {
 	err = json.Unmarshal(data, sback)
 	g.Expect(err).Should(BeNil())
 	g.Expect(sback).Should(Equal(s))
+}
+
+func TestMergeDeep(t *testing.T) {
+	tests := []struct {
+		name     string
+		base     map[string]interface{}
+		override map[string]interface{}
+		want     map[string]interface{}
+	}{
+		{
+			name: "fileservice merge by name preserves user fields",
+			base: map[string]interface{}{
+				"fileservice": []map[string]interface{}{
+					{
+						"name":    "S3",
+						"backend": "S3",
+						"s3": map[string]interface{}{
+							"parallel-mode": "1",
+						},
+					},
+				},
+			},
+			override: map[string]interface{}{
+				"data-dir": "/data/dir",
+				"fileservice": []map[string]interface{}{
+					{"name": "LOCAL", "backend": "DISK", "data-dir": "/data/dir"},
+					{
+						"name":    "S3",
+						"backend": "S3",
+						"s3": map[string]interface{}{
+							"endpoint":   "s3.us-west-2.amazonaws.com",
+							"bucket":     "my-bucket",
+							"key-prefix": "prefix/data",
+						},
+						"cache": map[string]string{"memory-capacity": "1B"},
+					},
+					{
+						"name":    "ETL",
+						"backend": "S3",
+						"s3": map[string]interface{}{
+							"endpoint":   "s3.us-west-2.amazonaws.com",
+							"bucket":     "my-bucket",
+							"key-prefix": "prefix/etl",
+						},
+						"cache": map[string]string{"memory-capacity": "1B"},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"data-dir": "/data/dir",
+				"fileservice": []map[string]interface{}{
+					{"name": "LOCAL", "backend": "DISK", "data-dir": "/data/dir"},
+					{
+						"name":    "S3",
+						"backend": "S3",
+						"s3": map[string]interface{}{
+							"endpoint":      "s3.us-west-2.amazonaws.com",
+							"bucket":        "my-bucket",
+							"key-prefix":    "prefix/data",
+							"parallel-mode": "1",
+						},
+						"cache": map[string]string{"memory-capacity": "1B"},
+					},
+					{
+						"name":    "ETL",
+						"backend": "S3",
+						"s3": map[string]interface{}{
+							"endpoint":   "s3.us-west-2.amazonaws.com",
+							"bucket":     "my-bucket",
+							"key-prefix": "prefix/etl",
+						},
+						"cache": map[string]string{"memory-capacity": "1B"},
+					},
+				},
+			},
+		},
+		{
+			name: "no user fileservice config",
+			base: map[string]interface{}{
+				"service-type": "CN",
+			},
+			override: map[string]interface{}{
+				"data-dir": "/data/dir",
+				"fileservice": []map[string]interface{}{
+					{"name": "LOCAL", "backend": "DISK"},
+				},
+			},
+			want: map[string]interface{}{
+				"service-type": "CN",
+				"data-dir":     "/data/dir",
+				"fileservice": []map[string]interface{}{
+					{"name": "LOCAL", "backend": "DISK"},
+				},
+			},
+		},
+		{
+			name: "user adds extra fileservice entry",
+			base: map[string]interface{}{
+				"fileservice": []map[string]interface{}{
+					{"name": "CUSTOM", "backend": "DISK", "data-dir": "/custom"},
+				},
+			},
+			override: map[string]interface{}{
+				"fileservice": []map[string]interface{}{
+					{"name": "LOCAL", "backend": "DISK", "data-dir": "/data"},
+				},
+			},
+			want: map[string]interface{}{
+				"fileservice": []map[string]interface{}{
+					{"name": "LOCAL", "backend": "DISK", "data-dir": "/data"},
+					{"name": "CUSTOM", "backend": "DISK", "data-dir": "/custom"},
+				},
+			},
+		},
+		{
+			name: "deep merge nested maps",
+			base: map[string]interface{}{
+				"section": map[string]interface{}{
+					"user-key": "user-val",
+					"nested": map[string]interface{}{
+						"a": "1",
+					},
+				},
+			},
+			override: map[string]interface{}{
+				"section": map[string]interface{}{
+					"op-key": "op-val",
+					"nested": map[string]interface{}{
+						"b": "2",
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"section": map[string]interface{}{
+					"user-key": "user-val",
+					"op-key":   "op-val",
+					"nested": map[string]interface{}{
+						"a": "1",
+						"b": "2",
+					},
+				},
+			},
+		},
+		{
+			name: "override wins on conflict",
+			base: map[string]interface{}{
+				"key": "user-value",
+				"section": map[string]interface{}{
+					"endpoint": "user-endpoint",
+					"extra":    "kept",
+				},
+			},
+			override: map[string]interface{}{
+				"key": "operator-value",
+				"section": map[string]interface{}{
+					"endpoint": "operator-endpoint",
+				},
+			},
+			want: map[string]interface{}{
+				"key": "operator-value",
+				"section": map[string]interface{}{
+					"endpoint": "operator-endpoint",
+					"extra":    "kept",
+				},
+			},
+		},
+		{
+			name: "fileservice with []interface{} base from json unmarshal",
+			base: map[string]interface{}{
+				"fileservice": []interface{}{
+					map[string]interface{}{
+						"name":    "S3",
+						"backend": "S3",
+						"s3": map[string]interface{}{
+							"parallel-mode": "1",
+						},
+					},
+				},
+			},
+			override: map[string]interface{}{
+				"fileservice": []map[string]interface{}{
+					{
+						"name":    "S3",
+						"backend": "S3",
+						"s3":     map[string]interface{}{"endpoint": "s3.amazonaws.com"},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"fileservice": []map[string]interface{}{
+					{
+						"name":    "S3",
+						"backend": "S3",
+						"s3": map[string]interface{}{
+							"endpoint":      "s3.amazonaws.com",
+							"parallel-mode": "1",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "nil base",
+			base:     nil,
+			override: map[string]interface{}{"key": "val"},
+			want:     map[string]interface{}{"key": "val"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewTomlConfig(tt.base)
+			c.MergeDeep(tt.override)
+			if diff := cmp.Diff(tt.want, c.MP); diff != "" {
+				t.Errorf("MergeDeep() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
 }
 
 func TestOmitEmpty(t *testing.T) {
