@@ -37,7 +37,7 @@ core/v1alpha1/zz_generated.deepcopy.go: core/v1alpha1/*_types.go
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.15.0)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.0)
 
 CRD_REF_DOCS = $(shell pwd)/bin/crd-ref-docs
 crd-ref-docs:
