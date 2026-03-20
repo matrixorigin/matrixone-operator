@@ -18,6 +18,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Short SHA
+        id: short_sha
+        run: echo "sha8=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
@@ -27,7 +31,7 @@ jobs:
             registry.cn-hangzhou.aliyuncs.com/mocloud/matrixone-operator
             registry.cn-hangzhou.aliyuncs.com/moc-pub/matrixone-operator
           tags: |
-            type=ref,event=branch
+            type=raw,value=${{ github.ref_name }}-${{ steps.short_sha.outputs.sha8 }},enable=${{ github.ref_type == 'branch' }}
             type=sha
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
