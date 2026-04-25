@@ -2,6 +2,7 @@ header:
   license:
     spdx-id: Apache-2.0
     copyright-owner: Matrix Origin
+    copyright-year: '2025-2026'
   paths-ignore:
     - 'docs/'
     - 'examples/'
