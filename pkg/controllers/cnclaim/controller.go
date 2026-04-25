@@ -161,6 +161,13 @@ func (r *Actor) selectCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1
 	sortCNByPriority(c, idleCNs)
 	for i := range idleCNs {
 		pod := &idleCNs[i]
+		// skip pod already referenced by another CNClaim's spec.podName
+		if claimed, err := podClaimedByOthers(ctx, c.Namespace, pod.Name, c.Name); err != nil {
+			return nil, errors.WrapPrefix(err, "error checking pod claims", 0)
+		} else if claimed {
+			ctx.Log.Info("skip pod claimed by other CNClaim", "podName", pod.Name)
+			continue
+		}
 		if err := r.ensureOwnership(ctx, pod); err != nil {
 			if apierrors.IsConflict(err) {
 				ctx.Log.Info("CN pod is not up to date, try next", "podName", pod.Name)
@@ -342,9 +349,35 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 	}
 	for i := range ownedCNs {
 		cn := ownedCNs[i]
+		// skip reclaim if another CNClaim still references this pod via spec.podName
+		if claimed, err := podClaimedByOthers(ctx, c.Namespace, cn.Name, c.Name); err != nil {
+			return false, errors.WrapPrefix(err, "error checking pod claims", 0)
+		} else if claimed {
+			ctx.Log.Info("skip reclaim, pod still claimed by other CNClaim", "pod", cn.Name)
+			continue
+		}
 		ctx.Log.Info("finalize CNClaim, reclaim bound CN", "cn", cn.Name)
 		if err := r.reclaimCN(ctx, &cn); err != nil {
 			return false, err
+		}
+	}
+	return false, nil
+}
+
+// podClaimedByOthers checks if the given pod is referenced by any CNClaim's
+// spec.podName other than excludeClaim in the same namespace.
+func podClaimedByOthers(cli recon.KubeClient, namespace, podName, excludeClaim string) (bool, error) {
+	claimList := &v1alpha1.CNClaimList{}
+	if err := cli.List(claimList, client.InNamespace(namespace)); err != nil {
+		return false, err
+	}
+	for i := range claimList.Items {
+		claim := &claimList.Items[i]
+		if claim.Name == excludeClaim {
+			continue
+		}
+		if claim.Spec.PodName == podName {
+			return true, nil
 		}
 	}
 	return false, nil
