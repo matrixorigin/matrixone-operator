@@ -159,13 +159,16 @@ func (r *Actor) selectCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1
 	}
 
 	sortCNByPriority(c, idleCNs)
+	// build index once: podName -> claimName for all other CNClaims
+	claimIndex, err := buildPodClaimIndex(ctx, c.Namespace, c.Name)
+	if err != nil {
+		return nil, errors.WrapPrefix(err, "error building pod claim index", 0)
+	}
 	for i := range idleCNs {
 		pod := &idleCNs[i]
 		// skip pod already referenced by another CNClaim's spec.podName
-		if claimed, err := podClaimedByOthers(ctx, c.Namespace, pod.Name, c.Name); err != nil {
-			return nil, errors.WrapPrefix(err, "error checking pod claims", 0)
-		} else if claimed {
-			ctx.Log.Info("skip pod claimed by other CNClaim", "podName", pod.Name)
+		if holder, ok := claimIndex[pod.Name]; ok {
+			ctx.Log.Info("skip pod claimed by other CNClaim", "podName", pod.Name, "holder", holder)
 			continue
 		}
 		if err := r.ensureOwnership(ctx, pod); err != nil {
@@ -347,13 +350,16 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 	if len(ownedCNs) == 0 {
 		return true, nil
 	}
+	// build index once: podName -> claimName for all other CNClaims
+	claimIndex, err := buildPodClaimIndex(ctx, c.Namespace, c.Name)
+	if err != nil {
+		return false, errors.WrapPrefix(err, "error building pod claim index", 0)
+	}
 	for i := range ownedCNs {
 		cn := ownedCNs[i]
 		// skip reclaim if another CNClaim still references this pod via spec.podName
-		if claimed, err := podClaimedByOthers(ctx, c.Namespace, cn.Name, c.Name); err != nil {
-			return false, errors.WrapPrefix(err, "error checking pod claims", 0)
-		} else if claimed {
-			ctx.Log.Info("skip reclaim, pod still claimed by other CNClaim", "pod", cn.Name)
+		if holder, ok := claimIndex[cn.Name]; ok {
+			ctx.Log.Info("skip reclaim, pod still claimed by other CNClaim", "pod", cn.Name, "holder", holder)
 			continue
 		}
 		ctx.Log.Info("finalize CNClaim, reclaim bound CN", "cn", cn.Name)
@@ -366,6 +372,7 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 
 // podClaimedByOthers checks if the given pod is referenced by any CNClaim's
 // spec.podName other than excludeClaim in the same namespace.
+// It skips CNClaims that are being deleted (DeletionTimestamp != nil).
 func podClaimedByOthers(cli recon.KubeClient, namespace, podName, excludeClaim string) (bool, error) {
 	claimList := &v1alpha1.CNClaimList{}
 	if err := cli.List(claimList, client.InNamespace(namespace)); err != nil {
@@ -373,7 +380,7 @@ func podClaimedByOthers(cli recon.KubeClient, namespace, podName, excludeClaim s
 	}
 	for i := range claimList.Items {
 		claim := &claimList.Items[i]
-		if claim.Name == excludeClaim {
+		if claim.Name == excludeClaim || claim.DeletionTimestamp != nil {
 			continue
 		}
 		if claim.Spec.PodName == podName {
@@ -381,6 +388,25 @@ func podClaimedByOthers(cli recon.KubeClient, namespace, podName, excludeClaim s
 		}
 	}
 	return false, nil
+}
+
+// buildPodClaimIndex lists all CNClaims in the namespace and returns a map
+// from podName to the claiming CNClaim name, excluding the given claim and
+// CNClaims that are being deleted.
+func buildPodClaimIndex(cli recon.KubeClient, namespace, excludeClaim string) (map[string]string, error) {
+	claimList := &v1alpha1.CNClaimList{}
+	if err := cli.List(claimList, client.InNamespace(namespace)); err != nil {
+		return nil, err
+	}
+	index := make(map[string]string, len(claimList.Items))
+	for i := range claimList.Items {
+		claim := &claimList.Items[i]
+		if claim.Name == excludeClaim || claim.DeletionTimestamp != nil || claim.Spec.PodName == "" {
+			continue
+		}
+		index[claim.Spec.PodName] = claim.Name
+	}
+	return index, nil
 }
 
 func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, req logpb.CNStateLabel) (*metadata.CNService, error) {

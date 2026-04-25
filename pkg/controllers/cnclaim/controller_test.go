@@ -141,6 +141,23 @@ func Test_podClaimedByOthers(t *testing.T) {
 			excludeClaim: "claim-a",
 			want:         false,
 		},
+		{
+			name: "deleting claim is ignored",
+			claims: []client.Object{
+				&v1alpha1.CNClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "claim-deleting",
+						Namespace:         "ns",
+						DeletionTimestamp: &metav1.Time{Time: metav1.Now().Time},
+						Finalizers:        []string{"test"},
+					},
+					Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+				},
+			},
+			podName:      "pod-1",
+			excludeClaim: "claim-a",
+			want:         false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -151,6 +168,34 @@ func Test_podClaimedByOthers(t *testing.T) {
 			g.Expect(got).To(Equal(tt.want))
 		})
 	}
+}
+
+func Test_buildPodClaimIndex(t *testing.T) {
+	g := NewGomegaWithT(t)
+	now := metav1.Now()
+	cli := newFakeClient(
+		&v1alpha1.CNClaim{
+			ObjectMeta: metav1.ObjectMeta{Name: "self", Namespace: "ns"},
+			Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+		},
+		&v1alpha1.CNClaim{
+			ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: "ns"},
+			Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-2"}},
+		},
+		&v1alpha1.CNClaim{
+			ObjectMeta: metav1.ObjectMeta{Name: "deleting", Namespace: "ns",
+				DeletionTimestamp: &now, Finalizers: []string{"test"}},
+			Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-3"}},
+		},
+		&v1alpha1.CNClaim{
+			ObjectMeta: metav1.ObjectMeta{Name: "pending", Namespace: "ns"},
+			Spec:       v1alpha1.CNClaimSpec{},
+		},
+	)
+	index, err := buildPodClaimIndex(&fakeKubeClient{cli}, "ns", "self")
+	g.Expect(err).NotTo(HaveOccurred())
+	// "self" excluded, "deleting" filtered, "pending" has no podName
+	g.Expect(index).To(Equal(map[string]string{"pod-2": "other"}))
 }
 
 func Test_sortCNByPriority(t *testing.T) {
