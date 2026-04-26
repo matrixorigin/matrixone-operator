@@ -102,10 +102,6 @@ spec:
                       RestoreFrom declares the HAKeeper data should be restored
                       from the given path when hakeeper is bootstrapped
                     type: string
-                required:
-                - dnShards
-                - logShardReplicas
-                - logShards
                 type: object
               memoryFsSize:
                 anyOf:
