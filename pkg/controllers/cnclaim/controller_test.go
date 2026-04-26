@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,16 +15,188 @@
 package cnclaim
 
 import (
+	"context"
 	"math/rand"
 	"testing"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/onsi/gomega"
 )
+
+func newFakeClient(objs ...client.Object) client.Client {
+	scheme := runtime.NewScheme()
+	_ = v1alpha1.SchemeBuilder.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+}
+
+// fakeKubeClient adapts client.Client to recon.KubeClient for testing.
+type fakeKubeClient struct {
+	client.Client
+}
+
+func (f *fakeKubeClient) Create(obj client.Object, opts ...client.CreateOption) error {
+	return f.Client.Create(context.TODO(), obj, opts...)
+}
+func (f *fakeKubeClient) CreateOwned(obj client.Object, opts ...client.CreateOption) error {
+	return f.Client.Create(context.TODO(), obj, opts...)
+}
+func (f *fakeKubeClient) Get(objKey client.ObjectKey, obj client.Object) error {
+	return f.Client.Get(context.TODO(), objKey, obj)
+}
+func (f *fakeKubeClient) Update(obj client.Object, opts ...client.UpdateOption) error {
+	return f.Client.Update(context.TODO(), obj, opts...)
+}
+func (f *fakeKubeClient) UpdateStatus(obj client.Object, opts ...client.SubResourceUpdateOption) error {
+	return f.Client.Status().Update(context.TODO(), obj, opts...)
+}
+func (f *fakeKubeClient) Delete(obj client.Object, opts ...client.DeleteOption) error {
+	return f.Client.Delete(context.TODO(), obj, opts...)
+}
+func (f *fakeKubeClient) List(objList client.ObjectList, opts ...client.ListOption) error {
+	return f.Client.List(context.TODO(), objList, opts...)
+}
+func (f *fakeKubeClient) Patch(obj client.Object, mutateFn func() error, opts ...client.PatchOption) error {
+	return mutateFn()
+}
+func (f *fakeKubeClient) Exist(objKey client.ObjectKey, kind client.Object) (bool, error) {
+	err := f.Client.Get(context.TODO(), objKey, kind)
+	if err != nil {
+		return false, client.IgnoreNotFound(err)
+	}
+	return true, nil
+}
+
+func Test_podClaimedByOthers(t *testing.T) {
+	tests := []struct {
+		name         string
+		claims       []client.Object
+		podName      string
+		excludeClaim string
+		want         bool
+	}{
+		{
+			name:         "no claims exist",
+			claims:       nil,
+			podName:      "pod-1",
+			excludeClaim: "claim-a",
+			want:         false,
+		},
+		{
+			name: "pod only claimed by self",
+			claims: []client.Object{
+				&v1alpha1.CNClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: "claim-a", Namespace: "ns"},
+					Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+				},
+			},
+			podName:      "pod-1",
+			excludeClaim: "claim-a",
+			want:         false,
+		},
+		{
+			name: "pod claimed by another claim",
+			claims: []client.Object{
+				&v1alpha1.CNClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: "claim-a", Namespace: "ns"},
+					Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+				},
+				&v1alpha1.CNClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: "claim-b", Namespace: "ns"},
+					Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+				},
+			},
+			podName:      "pod-1",
+			excludeClaim: "claim-a",
+			want:         true,
+		},
+		{
+			name: "pod not claimed by anyone",
+			claims: []client.Object{
+				&v1alpha1.CNClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: "claim-a", Namespace: "ns"},
+					Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-2"}},
+				},
+			},
+			podName:      "pod-1",
+			excludeClaim: "claim-a",
+			want:         false,
+		},
+		{
+			name: "claim with empty podName is ignored",
+			claims: []client.Object{
+				&v1alpha1.CNClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: "claim-pending", Namespace: "ns"},
+					Spec:       v1alpha1.CNClaimSpec{},
+				},
+			},
+			podName:      "pod-1",
+			excludeClaim: "claim-a",
+			want:         false,
+		},
+		{
+			name: "deleting claim is ignored",
+			claims: []client.Object{
+				&v1alpha1.CNClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "claim-deleting",
+						Namespace:         "ns",
+						DeletionTimestamp: &metav1.Time{Time: metav1.Now().Time},
+						Finalizers:        []string{"test"},
+					},
+					Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+				},
+			},
+			podName:      "pod-1",
+			excludeClaim: "claim-a",
+			want:         false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			cli := newFakeClient(tt.claims...)
+			got, err := podClaimedByOthers(&fakeKubeClient{cli}, "ns", tt.podName, tt.excludeClaim)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(got).To(Equal(tt.want))
+		})
+	}
+}
+
+func Test_buildPodClaimIndex(t *testing.T) {
+	g := NewGomegaWithT(t)
+	now := metav1.Now()
+	cli := newFakeClient(
+		&v1alpha1.CNClaim{
+			ObjectMeta: metav1.ObjectMeta{Name: "self", Namespace: "ns"},
+			Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+		},
+		&v1alpha1.CNClaim{
+			ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: "ns"},
+			Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-2"}},
+		},
+		&v1alpha1.CNClaim{
+			ObjectMeta: metav1.ObjectMeta{Name: "deleting", Namespace: "ns",
+				DeletionTimestamp: &now, Finalizers: []string{"test"}},
+			Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-3"}},
+		},
+		&v1alpha1.CNClaim{
+			ObjectMeta: metav1.ObjectMeta{Name: "pending", Namespace: "ns"},
+			Spec:       v1alpha1.CNClaimSpec{},
+		},
+	)
+	index, err := buildPodClaimIndex(&fakeKubeClient{cli}, "ns", "self")
+	g.Expect(err).NotTo(HaveOccurred())
+	// "self" excluded, "deleting" filtered, "pending" has no podName
+	g.Expect(index).To(Equal(map[string]string{"pod-2": "other"}))
+}
 
 func Test_sortCNByPriority(t *testing.T) {
 	tests := []struct {
