@@ -66,7 +66,7 @@ type MatrixOneClusterSpec struct {
 	// ImageRepository allows user to override the default image
 	// repository in order to use a docker registry proxy or private
 	// registry.
-	// +required
+	// +optional
 	ImageRepository string `json:"imageRepository,omitempty"`
 
 	// TopologyEvenSpread specifies default topology policy for all components,

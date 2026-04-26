@@ -79,7 +79,7 @@ var _ = Describe("CNSet Webhook", func() {
 			},
 			Deps: v1alpha1.CNSetDeps{
 				LogSetRef: v1alpha1.LogSetRef{
-					ExternalLogSet: &v1alpha1.ExternalLogSet{},
+					ExternalLogSet: &v1alpha1.ExternalLogSet{HAKeeperEndpoint: "test"},
 				},
 			},
 		}
@@ -104,7 +104,7 @@ var _ = Describe("CNSet Webhook", func() {
 			},
 			Deps: v1alpha1.CNSetDeps{
 				LogSetRef: v1alpha1.LogSetRef{
-					ExternalLogSet: &v1alpha1.ExternalLogSet{},
+					ExternalLogSet: &v1alpha1.ExternalLogSet{HAKeeperEndpoint: "test"},
 				},
 			},
 		}

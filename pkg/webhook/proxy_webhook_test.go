@@ -42,7 +42,7 @@ var _ = Describe("ProxySet Webhook", func() {
 			},
 			Deps: v1alpha1.ProxySetDeps{
 				LogSetRef: v1alpha1.LogSetRef{
-					ExternalLogSet: &v1alpha1.ExternalLogSet{},
+					ExternalLogSet: &v1alpha1.ExternalLogSet{HAKeeperEndpoint: "test"},
 				},
 			},
 		}
