@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -105,25 +105,25 @@ type InitialConfig struct {
 	// LogShards is the initial number of log shards,
 	// cannot be tuned after cluster creation currently.
 	// default to 1
-	// +required
+	// +optional
 	LogShards *int `json:"logShards,omitempty"`
 
 	// DNShards is the initial number of DN shards,
 	// cannot be tuned after cluster creation currently.
 	// default to 1
-	// +required
+	// +optional
 	DNShards *int `json:"dnShards,omitempty"`
 
 	// HAKeeperReplicas is the initial number of HAKeeper replicas,
 	// cannot be tuned after cluster creation currently.
 	// default to 3 if LogSet replicas >= 3, to 1 otherwise
-	// +required
+	// +optional
 	// HAKeeperReplicas *int `json:"haKeeperReplicas,omitempty"`
 
 	// LogShardReplicas is the replica numbers of each log shard,
 	// cannot be tuned after cluster creation currently.
 	// default to 3 if LogSet replicas >= 3, to 1 otherwise
-	// +required
+	// +optional
 	LogShardReplicas *int `json:"logShardReplicas,omitempty"`
 
 	// RestoreFrom declares the HAKeeper data should be restored

@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ type MatrixOneClusterSpec struct {
 	// ImageRepository allows user to override the default image
 	// repository in order to use a docker registry proxy or private
 	// registry.
-	// +required
+	// +optional
 	ImageRepository string `json:"imageRepository,omitempty"`
 
 	// TopologyEvenSpread specifies default topology policy for all components,

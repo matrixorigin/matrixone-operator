@@ -63,7 +63,7 @@ func (f *fakeKubeClient) Delete(obj client.Object, opts ...client.DeleteOption) 
 func (f *fakeKubeClient) List(objList client.ObjectList, opts ...client.ListOption) error {
 	return f.Client.List(context.TODO(), objList, opts...)
 }
-func (f *fakeKubeClient) Patch(obj client.Object, mutateFn func() error, opts ...client.PatchOption) error {
+func (f *fakeKubeClient) Patch(_ client.Object, mutateFn func() error, _ ...client.PatchOption) error {
 	return mutateFn()
 }
 func (f *fakeKubeClient) Exist(objKey client.ObjectKey, kind client.Object) (bool, error) {
