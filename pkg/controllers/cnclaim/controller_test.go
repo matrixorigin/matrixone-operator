@@ -23,9 +23,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/onsi/gomega"
 )
@@ -196,6 +198,23 @@ func Test_buildPodClaimIndex(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	// "self" excluded, "deleting" filtered, "pending" has no podName
 	g.Expect(index).To(Equal(map[string]string{"pod-2": "other"}))
+}
+
+func Test_containsRequest(t *testing.T) {
+	g := NewGomegaWithT(t)
+	reqs := []reconcile.Request{
+		{NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-a"}},
+		{NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-b"}},
+	}
+	g.Expect(containsRequest(reqs, reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-a"},
+	})).To(BeTrue())
+	g.Expect(containsRequest(reqs, reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-c"},
+	})).To(BeFalse())
+	g.Expect(containsRequest(nil, reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-a"},
+	})).To(BeFalse())
 }
 
 func Test_sortCNByPriority(t *testing.T) {

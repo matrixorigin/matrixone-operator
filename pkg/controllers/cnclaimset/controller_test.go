@@ -26,6 +26,64 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func Test_scaleIn_skipsMigratingClaims(t *testing.T) {
+	g := NewGomegaWithT(t)
+	now := time.Now()
+
+	oc := &ownedClaims{
+		owned: []v1alpha1.CNClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "claim-migrating",
+					Namespace: "ns",
+				},
+				Spec: v1alpha1.CNClaimSpec{
+					ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-target"},
+					SourcePod:   &v1alpha1.ClaimPodRef{PodName: "pod-source"},
+				},
+				Status: v1alpha1.CNClaimStatus{
+					Phase: v1alpha1.CNClaimPhaseBound,
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "claim-normal",
+					Namespace:         "ns",
+					CreationTimestamp:  metav1.NewTime(now),
+					DeletionTimestamp: nil,
+				},
+				Spec: v1alpha1.CNClaimSpec{
+					ClaimPodRef: v1alpha1.ClaimPodRef{PodName: ""},
+				},
+				Status: v1alpha1.CNClaimStatus{
+					Phase: v1alpha1.CNClaimPhasePending,
+				},
+			},
+		},
+	}
+
+	// scaleIn with count=1 should only delete claim-normal, not the migrating one
+	sortClaimsToDelete([]ClaimAndPod{
+		{Claim: &oc.owned[1], Pod: nil},
+	})
+
+	// Verify that migrating claims are excluded from deletion candidates
+	var candidates []ClaimAndPod
+	var migrating []v1alpha1.CNClaim
+	for i := range oc.owned {
+		c := oc.owned[i]
+		if c.Spec.SourcePod != nil {
+			migrating = append(migrating, c)
+			continue
+		}
+		candidates = append(candidates, ClaimAndPod{Claim: &c, Pod: nil})
+	}
+	g.Expect(len(migrating)).To(Equal(1))
+	g.Expect(migrating[0].Name).To(Equal("claim-migrating"))
+	g.Expect(len(candidates)).To(Equal(1))
+	g.Expect(candidates[0].Claim.Name).To(Equal("claim-normal"))
+}
+
 func Test_sortClaimsToDelete(t *testing.T) {
 	type args struct {
 		cps []ClaimAndPod

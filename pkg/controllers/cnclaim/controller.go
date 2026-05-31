@@ -266,6 +266,13 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 				return recon.ErrReSync("pod status may be not update to date, wait", waitCacheTimeout)
 			}
 			c.Status.Phase = v1alpha1.CNClaimPhaseLost
+			if err := ctx.Patch(c, func() error {
+				c.Spec.PodName = ""
+				c.Spec.NodeName = ""
+				return nil
+			}); err != nil {
+				return errors.WrapPrefix(err, "error clearing lost claim spec", 0)
+			}
 			return nil
 		}
 	}
@@ -357,9 +364,16 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 	}
 	for i := range ownedCNs {
 		cn := ownedCNs[i]
-		// skip reclaim if another CNClaim still references this pod via spec.podName
+		// if another CNClaim references this pod via spec.podName, release our
+		// claimed-by label so the owning claim can take full ownership
 		if holder, ok := claimIndex[cn.Name]; ok {
-			ctx.Log.Info("skip reclaim, pod still claimed by other CNClaim", "pod", cn.Name, "holder", holder)
+			ctx.Log.Info("release pod label, pod claimed by other CNClaim", "pod", cn.Name, "holder", holder)
+			if err := ctx.Patch(&cn, func() error {
+				delete(cn.Labels, v1alpha1.PodClaimedByLabel)
+				return nil
+			}); err != nil {
+				return false, errors.WrapPrefix(err, "error releasing pod label", 0)
+			}
 			continue
 		}
 		ctx.Log.Info("finalize CNClaim, reclaim bound CN", "cn", cn.Name)
@@ -367,7 +381,7 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 			return false, err
 		}
 	}
-	return false, nil
+	return true, nil
 }
 
 // podClaimedByOthers checks if the given pod is referenced by any CNClaim's
@@ -453,27 +467,55 @@ func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Po
 func (r *Actor) Start(mgr manager.Manager) error {
 	return recon.Setup(&v1alpha1.CNClaim{}, "cn-claim-manager", mgr, r,
 		recon.WithPredicate(predicate.ResourceVersionChangedPredicate{}),
-		recon.WithBuildFn(watchPodChange),
+		recon.WithBuildFn(watchPodChangeFn(mgr.GetClient())),
 	)
 }
 
-func watchPodChange(b *builder.Builder) {
-	b.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
-		pod, ok := object.(*corev1.Pod)
-		if !ok {
-			return nil
+func watchPodChangeFn(cli client.Reader) func(*builder.Builder) {
+	return func(b *builder.Builder) {
+		b.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+			pod, ok := object.(*corev1.Pod)
+			if !ok {
+				return nil
+			}
+			var requests []reconcile.Request
+			if claimName, ok := pod.Labels[v1alpha1.PodClaimedByLabel]; ok {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: pod.Namespace,
+						Name:      claimName,
+					},
+				})
+			}
+			claimList := &v1alpha1.CNClaimList{}
+			if err := cli.List(ctx, claimList, client.InNamespace(pod.Namespace)); err == nil {
+				for i := range claimList.Items {
+					c := &claimList.Items[i]
+					if c.Spec.PodName == pod.Name {
+						req := reconcile.Request{
+							NamespacedName: types.NamespacedName{
+								Namespace: pod.Namespace,
+								Name:      c.Name,
+							},
+						}
+						if !containsRequest(requests, req) {
+							requests = append(requests, req)
+						}
+					}
+				}
+			}
+			return requests
+		}), builder.WithPredicates(common.PodStatusChangedPredicate{}))
+	}
+}
+
+func containsRequest(reqs []reconcile.Request, req reconcile.Request) bool {
+	for _, r := range reqs {
+		if r.NamespacedName == req.NamespacedName {
+			return true
 		}
-		claimName, ok := pod.Labels[v1alpha1.PodClaimedByLabel]
-		if !ok {
-			return nil
-		}
-		return []reconcile.Request{{
-			NamespacedName: types.NamespacedName{
-				Namespace: pod.Namespace,
-				Name:      claimName,
-			},
-		}}
-	}), builder.WithPredicates(common.PodStatusChangedPredicate{}))
+	}
+	return false
 }
 
 func toStoreStatus(cn *metadata.CNService, pod *corev1.Pod) v1alpha1.CNStoreStatus {
