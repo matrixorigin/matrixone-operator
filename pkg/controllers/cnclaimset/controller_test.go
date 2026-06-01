@@ -49,8 +49,7 @@ func Test_scaleIn_skipsMigratingClaims(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "claim-normal",
 					Namespace:         "ns",
-					CreationTimestamp:  metav1.NewTime(now),
-					DeletionTimestamp: nil,
+					CreationTimestamp: metav1.NewTime(now),
 				},
 				Spec: v1alpha1.CNClaimSpec{
 					ClaimPodRef: v1alpha1.ClaimPodRef{PodName: ""},
