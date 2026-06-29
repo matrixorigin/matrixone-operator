@@ -23,7 +23,6 @@ require (
 	github.com/openkruise/kruise-api v1.4.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/samber/lo v1.38.1
-	github.com/stretchr/testify v1.9.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
@@ -161,6 +160,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.12 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/tidwall/btree v1.6.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
