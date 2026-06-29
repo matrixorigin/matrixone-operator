@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,6 +69,16 @@ func (bca *Actor) Finalize(ctx *recon.Context[*v1alpha1.BucketClaim]) (bool, err
 		failCondition := newFailCondition("InUse", "bucket is in inuse, cannot be deleted")
 		bucket.Status.ConditionalStatus.Conditions = []metav1.Condition{*failCondition}
 		return false, ctx.Update(bucket)
+	}
+
+	// if bucket is Released (s3RetentionPolicy=Retain), skip data deletion and release the finalizer directly
+	if bucket.Status.State == v1alpha1.StatusReleased {
+		ctx.Log.Info(fmt.Sprintf("skip data deletion for released bucket %v (s3RetentionPolicy=Retain)", client.ObjectKeyFromObject(ctx.Obj)))
+		controllerutil.RemoveFinalizer(bucket, v1alpha1.BucketDataFinalizer)
+		if err := ctx.Update(bucket); err != nil {
+			return false, err
+		}
+		return true, nil
 	}
 
 	// if AnnAnyInstanceRunning is not set, indicates that there is no running pod instance found for its mo cluster
