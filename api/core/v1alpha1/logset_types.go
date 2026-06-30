@@ -85,20 +85,31 @@ func (l *LogSetSpec) GetStoreFailureTimeout() metav1.Duration {
 }
 
 func (l *LogSetSpec) GetPVCRetentionPolicy() PVCRetentionPolicy {
-	if l.PVCRetentionPolicy == nil {
-		l.setDefaultRetentionPolicy()
+	if l.PVCRetentionPolicy != nil {
+		return *l.PVCRetentionPolicy
 	}
-	return *l.PVCRetentionPolicy
+	// inherit from s3 policy if only s3 is set (e.g. old objects without pvcRetentionPolicy)
+	if l.SharedStorage.S3 != nil && l.SharedStorage.S3.S3RetentionPolicy != nil {
+		return *l.SharedStorage.S3.S3RetentionPolicy
+	}
+	return PVCRetentionPolicyDelete
 }
 
 func (l *LogSetSpec) GetS3RetentionPolicy() *PVCRetentionPolicy {
 	if l.SharedStorage.S3 == nil {
 		return nil
 	}
-	if l.SharedStorage.S3.S3RetentionPolicy == nil {
-		l.setDefaultRetentionPolicy()
+	if l.SharedStorage.S3.S3RetentionPolicy != nil {
+		p := *l.SharedStorage.S3.S3RetentionPolicy
+		return &p
 	}
-	return l.SharedStorage.S3.S3RetentionPolicy
+	// inherit from pvc policy if only pvc is set (e.g. old objects without s3RetentionPolicy)
+	if l.PVCRetentionPolicy != nil {
+		p := *l.PVCRetentionPolicy
+		return &p
+	}
+	defaultPolicy := PVCRetentionPolicyDelete
+	return &defaultPolicy
 }
 
 type InitialConfig struct {

@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -102,6 +102,107 @@ var _ = Describe("Matrix BucketClaim test", func() {
 			}
 			return fmt.Errorf("bucket should be deleted")
 		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+	})
+
+	It("Should keep S3 data when deleting a Released BucketClaim with pvc=Delete and s3=Retain", func() {
+		By("create logset with pvc=Delete and s3=Retain")
+		minioSecret := e2eutil.MinioSecret(env.Namespace)
+		Expect(kubeCli.Create(ctx, minioSecret)).To(Succeed())
+
+		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)
+		policyDelete := v1alpha1.PVCRetentionPolicyDelete
+		policyRetain := v1alpha1.PVCRetentionPolicyRetain
+		minioProvider.S3.S3RetentionPolicy = &policyRetain
+		ls := e2eutil.NewLogSetTpl(env.Namespace, fmt.Sprintf("%s:%s", moImageRepo, moVersion))
+		ls.Spec.PVCRetentionPolicy = &policyDelete
+		ls.Spec.SharedStorage = minioProvider
+		Expect(kubeCli.Create(ctx, ls)).To(Succeed())
+
+		var bucket *v1alpha1.BucketClaim
+		var err error
+		Eventually(func() error {
+			bucket, err = v1alpha1.ClaimedBucket(kubeCli, minioProvider.S3)
+			if err != nil || bucket == nil {
+				return fmt.Errorf("wait bucket creating for logset %v, %v", client.ObjectKeyFromObject(ls), err)
+			}
+			expectedStatus := v1alpha1.BucketClaimStatus{
+				BindTo: v1alpha1.BucketBindToMark(ls.ObjectMeta),
+				State:  v1alpha1.StatusInUse,
+			}
+			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
+				return fmt.Errorf("bucket status is not inuse, current %v", bucket.Status)
+			}
+			return nil
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("put object to s3 path")
+		object, err := e2eminio.PutObject(minioProvider.S3.Path)
+		Expect(err).Should(BeNil())
+		exist, err := e2eminio.IsObjectExist(object)
+		Expect(err).Should(BeNil())
+		Expect(exist).Should(BeTrue())
+
+		By("wait logset available to set any-instance-running annotation")
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(ls), ls); err != nil {
+				return err
+			}
+			if len(ls.Status.AvailableStores) > 0 {
+				return nil
+			}
+			return fmt.Errorf("wait logset pod in running state")
+		}, createLogSetTimeout, pollInterval).Should(Succeed())
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(bucket), bucket); err != nil {
+				return err
+			}
+			if bucket.Annotations[v1alpha1.AnnAnyInstanceRunning] == "" {
+				return fmt.Errorf("wait any-instance-running annotation on bucket")
+			}
+			return nil
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("tear down logset cluster")
+		Expect(kubeCli.Delete(ctx, ls)).To(Succeed())
+		Eventually(func() error {
+			return waitLogSetDeleted(ls)
+		}, teardownClusterTimeout, pollInterval).Should(Succeed())
+
+		By("bucket should in released state")
+		Eventually(func() error {
+			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(bucket), bucket); err != nil {
+				return err
+			}
+			if bucket.DeletionTimestamp != nil {
+				return fmt.Errorf("bucket should not be deleted before explicit bucketclaim deletion")
+			}
+			expectedStatus := v1alpha1.BucketClaimStatus{
+				BindTo: "",
+				State:  v1alpha1.StatusReleased,
+			}
+			if !reflect.DeepEqual(expectedStatus, bucket.Status) {
+				return fmt.Errorf("bucket status is not released, current %v", bucket.Status)
+			}
+			return nil
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("delete released bucket claim with finalizer intact")
+		Expect(bucket.Finalizers).To(ContainElement(v1alpha1.BucketDataFinalizer))
+		Expect(kubeCli.Delete(ctx, bucket)).To(Succeed())
+
+		By("wait bucket claim been deleted")
+		Eventually(func() error {
+			err := kubeCli.Get(ctx, client.ObjectKeyFromObject(bucket), bucket)
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return fmt.Errorf("bucket should be deleted")
+		}, waitBucketStatusTimeout, time.Second*2).Should(Succeed())
+
+		By("s3 object should still exist")
+		exist, err = e2eminio.IsObjectExist(object)
+		Expect(err).Should(BeNil())
+		Expect(exist).Should(BeTrue())
 	})
 
 	It("Should bucket been deleted use delete retain policy", func() {
