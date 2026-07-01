@@ -287,12 +287,22 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 	return cm, configSuffix, nil
 }
 
-func HaKeeperAdds(ls *v1alpha1.LogSet) []string {
-	// TODO: consider hole in asts ordinals
+// HaKeeperSvcAddrs returns the HAKeeper service addresses for the currently running LogStore pods,
+// correctly skipping ordinal holes specified by reservedOrdinals (mirrors
+// StatefulSet.spec.reserveOrdinals set during failover).
+// Use this instead of HaKeeperAdds when the caller can supply the reserved-ordinal list from the
+// underlying kruise StatefulSet (sts.Spec.ReserveOrdinals).
+func HaKeeperSvcAddrs(ls *v1alpha1.LogSet, reservedOrdinals []int) []string {
 	var seeds []string
-	for i := int32(0); i < ls.Spec.Replicas; i++ {
+	r := ls.Spec.Replicas
+	i := 0
+	for count := int32(0); count < r; i++ {
+		if slices.Contains(reservedOrdinals, i) {
+			continue
+		}
 		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
 		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, logServicePort))
+		count++
 	}
 	return seeds
 }

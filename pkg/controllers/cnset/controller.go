@@ -19,9 +19,11 @@ import (
 	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/features"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
 	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	"k8s.io/utils/pointer"
 
 	"github.com/go-errors/errors"
@@ -351,7 +353,18 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 		}
 	}
 
-	cm, configSuffix, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
+	// reservedOrdinals is only used in the service-addresses branch of buildCNSetConfigMap.
+	// When MOFeatureDiscoveryFixed is enabled the branch is never reached, so skip the
+	// extra STS GET to avoid an unnecessary dependency and potential requeue on transient errors.
+	var reservedOrdinals []int
+	if sv, ok := cn.Spec.GetSemVer(); !ok || !v1alpha1.HasMOFeature(*sv, v1alpha1.MOFeatureDiscoveryFixed) {
+		var err error
+		if reservedOrdinals, err = fetchLogSetReservedOrdinals(ctx, ctx.Dep.Deps.LogSet); err != nil {
+			return errors.WrapPrefix(err, "fetch logset reserved ordinals", 0)
+		}
+	}
+
+	cm, configSuffix, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet, reservedOrdinals)
 	if err != nil {
 		return err
 	}
@@ -359,6 +372,26 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 		cs.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
 	}
 	return common.SyncConfigMap(ctx, &cs.Spec.Template.Spec, cm, cn.Spec.GetOperatorVersion())
+}
+
+// fetchLogSetReservedOrdinals fetches the kruise StatefulSet that backs the given LogSet and
+// returns its spec.reserveOrdinals list. This allows CN config builders to generate
+// accurate service-addresses that skip ordinal holes created during LogService failover (#596).
+//
+// Any error (including "not found") is propagated to the caller instead of being swallowed:
+// by the time CN builds its ConfigMap, ls.Status.Discovery is already required to be set,
+// which implies the LogSet (and its StatefulSet) must exist. Silently falling back to "no
+// holes" on a transient read error could regenerate a service-addresses list that still
+// points at a dead ordinal, defeating the purpose of this fix. Reconcile should simply retry.
+func fetchLogSetReservedOrdinals(ctx *recon.Context[*v1alpha1.CNSet], ls *v1alpha1.LogSet) ([]int, error) {
+	if ls == nil {
+		return nil, nil
+	}
+	sts := &kruise.StatefulSet{}
+	if err := ctx.Get(client.ObjectKey{Namespace: ls.Namespace, Name: logset.LogSetStsName(ls)}, sts); err != nil {
+		return nil, err
+	}
+	return sts.Spec.ReserveOrdinals, nil
 }
 
 func setReady(cn *v1alpha1.CNSet) {

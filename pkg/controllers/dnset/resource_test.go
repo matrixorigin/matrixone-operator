@@ -25,8 +25,9 @@ import (
 
 func Test_buildDNSetConfigMap(t *testing.T) {
 	type args struct {
-		dn *v1alpha1.DNSet
-		ls *v1alpha1.LogSet
+		dn               *v1alpha1.DNSet
+		ls               *v1alpha1.LogSet
+		reservedOrdinals []int
 	}
 	tests := []struct {
 		name       string
@@ -241,11 +242,80 @@ memory-capacity = "1B"
 discovery-address = "test:6001"
 `,
 		},
+		{
+			// regression test for #596: reservedOrdinals must be threaded through to
+			// HaKeeperSvcAddrs so that service-addresses skips the failed ordinal and
+			// includes the newly created replacement pod.
+			name: "1.x failover skips reserved ordinal",
+			args: args{
+				dn: &v1alpha1.DNSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+				},
+				ls: &v1alpha1.LogSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: v1alpha1.LogSetSpec{
+						PodSet: v1alpha1.PodSet{Replicas: 3},
+						SharedStorage: v1alpha1.SharedStorageProvider{
+							FileSystem: &v1alpha1.FileSystemProvider{
+								Path: "/test",
+							},
+						},
+					},
+					Status: v1alpha1.LogSetStatus{
+						Discovery: &v1alpha1.LogSetDiscovery{
+							Port:    6001,
+							Address: "test",
+						},
+					},
+				},
+				reservedOrdinals: []int{1},
+			},
+			wantConfig: `data-dir = "/var/lib/matrixone/data"
+service-type = "DN"
+
+[dn]
+listen-address = "0.0.0.0:41010"
+port-base = 41010
+
+[dn.LogtailServer]
+listen-address = "0.0.0.0:32003"
+
+[dn.lockservice]
+listen-address = "0.0.0.0:6003"
+
+[[fileservice]]
+backend = "DISK"
+data-dir = "/var/lib/matrixone/data"
+name = "LOCAL"
+
+[[fileservice]]
+backend = "DISK"
+data-dir = "/test"
+name = "S3"
+
+[[fileservice]]
+backend = "DISK-ETL"
+data-dir = "/test"
+name = "ETL"
+
+[fileservice.cache]
+memory-capacity = "1B"
+
+[hakeeper-client]
+service-addresses = ["test-log-0.test-log-headless.test.svc:32001", "test-log-2.test-log-headless.test.svc:32001", "test-log-3.test-log-headless.test.svc:32001"]
+`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			got, configSuffix, err := buildDNSetConfigMap(tt.args.dn, tt.args.ls)
+			got, configSuffix, err := buildDNSetConfigMap(tt.args.dn, tt.args.ls, tt.args.reservedOrdinals)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildDNSetConfigMap() error = %v, wantErr %v", err, tt.wantErr)
 				return
