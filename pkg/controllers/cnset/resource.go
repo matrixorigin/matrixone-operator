@@ -271,7 +271,10 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	}
 }
 
-func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
+// buildCNSetConfigMap builds the ConfigMap for a CNSet.
+// reservedOrdinals should be set to the LogSet StatefulSet's spec.reserveOrdinals so that
+// service-addresses correctly skips ordinal holes created during failover (issue #596).
+func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet, reservedOrdinals []int) (*corev1.ConfigMap, string, error) {
 	if ls.Status.Discovery == nil {
 		return nil, "", errors.New("logset had not yet exposed HAKeeper discovery address")
 	}
@@ -286,7 +289,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		// via discovery-address, operator can take off unhealthy logstores without restart CN/TN
 		cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	} else {
-		cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+		cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperSvcAddrs(ls, reservedOrdinals))
 	}
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
 	cfg.Set([]string{"cn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))

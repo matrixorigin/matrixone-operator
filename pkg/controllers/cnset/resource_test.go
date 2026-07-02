@@ -26,8 +26,9 @@ import (
 
 func Test_buildCNSetConfigMap(t *testing.T) {
 	type args struct {
-		cn *v1alpha1.CNSet
-		ls *v1alpha1.LogSet
+		cn               *v1alpha1.CNSet
+		ls               *v1alpha1.LogSet
+		reservedOrdinals []int
 	}
 	tests := []struct {
 		name       string
@@ -223,13 +224,79 @@ memory-capacity = "1B"
 service-addresses = []
 `,
 		},
+		{
+			// regression test for #596: reservedOrdinals must be threaded through to
+			// HaKeeperSvcAddrs so that service-addresses skips the failed ordinal and
+			// includes the newly created replacement pod.
+			name: "1.x failover skips reserved ordinal",
+			args: args{
+				cn: &v1alpha1.CNSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+				},
+				ls: &v1alpha1.LogSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: v1alpha1.LogSetSpec{
+						PodSet: v1alpha1.PodSet{Replicas: 3},
+						SharedStorage: v1alpha1.SharedStorageProvider{
+							FileSystem: &v1alpha1.FileSystemProvider{
+								Path: "/test",
+							},
+						},
+					},
+					Status: v1alpha1.LogSetStatus{
+						Discovery: &v1alpha1.LogSetDiscovery{
+							Port:    6001,
+							Address: "test",
+						},
+					},
+				},
+				reservedOrdinals: []int{1},
+			},
+			wantConfig: `data-dir = "/var/lib/matrixone/data"
+service-type = "CN"
+
+[cn]
+port-base = 6002
+role = ""
+
+[cn.lockservice]
+listen-address = "0.0.0.0:6003"
+
+[[fileservice]]
+backend = "DISK"
+data-dir = "/var/lib/matrixone/data"
+name = "LOCAL"
+
+[[fileservice]]
+backend = "DISK"
+data-dir = "/test"
+name = "S3"
+
+[[fileservice]]
+backend = "DISK-ETL"
+data-dir = "/test"
+name = "ETL"
+
+[fileservice.cache]
+memory-capacity = "1B"
+
+[hakeeper-client]
+service-addresses = ["test-log-0.test-log-headless.test.svc:32001", "test-log-2.test-log-headless.test.svc:32001", "test-log-3.test-log-headless.test.svc:32001"]
+`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			got, configSuffix, err := buildCNSetConfigMap(tt.args.cn, tt.args.ls)
+			got, configSuffix, err := buildCNSetConfigMap(tt.args.cn, tt.args.ls, tt.args.reservedOrdinals)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("buildDNSetConfigMap() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("buildCNSetConfigMap() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			configKey := "config.toml"

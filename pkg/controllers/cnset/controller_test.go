@@ -155,6 +155,14 @@ func TestCNSetActor_Observe(t *testing.T) {
 							Type: corev1.ServiceTypeLoadBalancer,
 						},
 					},
+					// the LogSet's own StatefulSet must exist by the time CN builds its
+					// ConfigMap (fetchLogSetReservedOrdinals requires it, see #596).
+					&kruisev1.StatefulSet{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-log",
+							Namespace: "default",
+						},
+					},
 				).Build(),
 			},
 			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], cli client.Client, err error) {
@@ -295,6 +303,74 @@ func TestCNSetVolumeMount(t *testing.T) {
 				} else {
 					t.Error("should not have a persistent volume for cache when cacheVolume is not set")
 				}
+			}
+		})
+	}
+}
+
+// Test_fetchLogSetReservedOrdinals is a regression test for issue #596: previously any
+// error reading the LogSet StatefulSet (including "not found") was swallowed and treated
+// as "no ordinal holes", which could cause service-addresses to be regenerated with a dead
+// ordinal on a transient read failure. Errors must now propagate so reconcile retries.
+func Test_fetchLogSetReservedOrdinals(t *testing.T) {
+	s := newScheme()
+	cn := &v1alpha1.CNSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"},
+	}
+	ls := &v1alpha1.LogSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"},
+	}
+
+	tests := []struct {
+		name         string
+		client       client.Client
+		ls           *v1alpha1.LogSet
+		wantOrdinals []int
+		wantErr      bool
+	}{
+		{
+			name: "sts exists with reserved ordinals",
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
+					&kruisev1.StatefulSet{
+						ObjectMeta: metav1.ObjectMeta{Name: "test-log", Namespace: "default"},
+						Spec:       kruisev1.StatefulSetSpec{ReserveOrdinals: []int{1}},
+					},
+				).Build(),
+			},
+			ls:           ls,
+			wantOrdinals: []int{1},
+		},
+		{
+			name: "sts not found propagates error instead of falling back silently",
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
+			},
+			ls:      ls,
+			wantErr: true,
+		},
+		{
+			name: "nil logset returns no ordinals and no error",
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
+			},
+			ls: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			mockCtrl := gomock.NewController(t)
+			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
+			ctx := fake.NewContext(cn, tt.client, eventEmitter)
+
+			got, err := fetchLogSetReservedOrdinals(ctx, tt.ls)
+			if tt.wantErr {
+				g.Expect(err).NotTo(BeNil())
+			} else {
+				g.Expect(err).To(BeNil())
+				g.Expect(got).To(Equal(tt.wantOrdinals))
 			}
 		})
 	}

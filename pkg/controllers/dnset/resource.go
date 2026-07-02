@@ -198,8 +198,10 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	common.SetupMemoryFsVolume(specRef, dn.Spec.MemoryFsSize)
 }
 
-// buildDNSetConfigMap return dn set configmap
-func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
+// buildDNSetConfigMap return dn set configmap.
+// reservedOrdinals should be set to the LogSet StatefulSet's spec.reserveOrdinals so that
+// service-addresses correctly skips ordinal holes created during failover (issue #596).
+func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet, reservedOrdinals []int) (*corev1.ConfigMap, string, error) {
 	if ls.Status.Discovery == nil {
 		return nil, "", errors.New("HAKeeper discovery address not ready")
 	}
@@ -217,7 +219,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		// via discovery-address, operator can take off unhealthy logstores without restart CN/TN
 		conf.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	} else {
-		conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+		conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperSvcAddrs(ls, reservedOrdinals))
 	}
 	conf.MergeDeep(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &dn.Spec.SharedStorageCache))
 	conf.Set([]string{"service-type"}, serviceType)
@@ -281,8 +283,8 @@ func syncPersistentVolumeClaim(dn *v1alpha1.DNSet, sts *kruise.StatefulSet) {
 	}
 }
 
-func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) error {
-	cm, configSuffix, err := buildDNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
+func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet, reservedOrdinals []int) error {
+	cm, configSuffix, err := buildDNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet, reservedOrdinals)
 	if err != nil {
 		return err
 	}
