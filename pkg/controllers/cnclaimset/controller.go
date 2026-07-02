@@ -215,8 +215,13 @@ func (c *ClaimAndPod) scoreHasPod() int {
 
 func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaims, count int) error {
 	var cps []ClaimAndPod
+	var migrating []v1alpha1.CNClaim
 	for i := range oc.owned {
 		c := oc.owned[i]
+		if c.Spec.SourcePod != nil {
+			migrating = append(migrating, c)
+			continue
+		}
 		pod, err := getClaimedPod(ctx, &c)
 		if err != nil {
 			return errors.WrapPrefix(err, "error get claimed Pod", 0)
@@ -226,8 +231,10 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaim
 			Pod:   pod,
 		})
 	}
+	if len(migrating) > 0 {
+		ctx.Log.Info("skip migrating claims from scale-in", "count", len(migrating))
+	}
 	if count >= len(cps) {
-		// simply delete all claims
 		count = len(cps)
 	} else {
 		sortClaimsToDelete(cps)
@@ -246,6 +253,7 @@ func (r *Actor) scaleIn(ctx *recon.Context[*v1alpha1.CNClaimSet], oc *ownedClaim
 	for ; i < len(cps); i++ {
 		left = append(left, *cps[i].Claim)
 	}
+	left = append(left, migrating...)
 	oc.owned = left
 	return nil
 }

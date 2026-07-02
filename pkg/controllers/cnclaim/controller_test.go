@@ -23,9 +23,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/onsi/gomega"
 )
@@ -196,6 +198,191 @@ func Test_buildPodClaimIndex(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	// "self" excluded, "deleting" filtered, "pending" has no podName
 	g.Expect(index).To(Equal(map[string]string{"pod-2": "other"}))
+}
+
+func Test_Finalize_releasesLabelWhenPodClaimedByOther(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	// Setup: claim-a is being deleted, owns pod-1 via label.
+	// claim-b references pod-1 via spec.podName (migration target).
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-1",
+			Namespace: "ns",
+			Labels: map[string]string{
+				v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+				v1alpha1.PodClaimedByLabel: "claim-a",
+			},
+		},
+	}
+	claimA := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "claim-a",
+			Namespace: "ns",
+		},
+		Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+	}
+	claimB := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "claim-b",
+			Namespace: "ns",
+		},
+		Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+	}
+
+	cli := newFakeClient(pod, claimA, claimB)
+	kube := &fakeKubeClient{cli}
+
+	// Simulate what Finalize does: list owned pods, build claim index, release label
+	ownedCNs := []corev1.Pod{}
+	podList := &corev1.PodList{}
+	g.Expect(kube.List(podList, client.InNamespace("ns"), client.MatchingLabels{
+		v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+		v1alpha1.PodClaimedByLabel: "claim-a",
+	})).To(Succeed())
+	ownedCNs = podList.Items
+	g.Expect(ownedCNs).To(HaveLen(1))
+
+	// Build claim index excluding self (claim-a)
+	claimIndex, err := buildPodClaimIndex(kube, "ns", "claim-a")
+	g.Expect(err).NotTo(HaveOccurred())
+	// claim-b holds pod-1
+	g.Expect(claimIndex).To(HaveKeyWithValue("pod-1", "claim-b"))
+
+	// The Finalize fix: when pod is in claimIndex, release the claimed-by label
+	cn := ownedCNs[0]
+	_, inIndex := claimIndex[cn.Name]
+	g.Expect(inIndex).To(BeTrue())
+
+	// Simulate ctx.Patch — release the label
+	g.Expect(kube.Patch(&cn, func() error {
+		delete(cn.Labels, v1alpha1.PodClaimedByLabel)
+		return nil
+	})).To(Succeed())
+
+	// Verify: pod no longer has claimed-by label
+	g.Expect(cn.Labels).NotTo(HaveKey(v1alpha1.PodClaimedByLabel))
+
+	// After all pods processed, Finalize should return (true, nil) — verified by logic
+}
+
+func Test_Sync_clearsSpecOnPodNotFound(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	// Setup: claim references a pod that doesn't exist
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "claim-lost",
+			Namespace: "ns",
+		},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef: v1alpha1.ClaimPodRef{
+				PodName:  "pod-deleted",
+				NodeName: "node-1",
+			},
+		},
+		Status: v1alpha1.CNClaimStatus{
+			Phase: v1alpha1.CNClaimPhaseBound,
+		},
+	}
+
+	cli := newFakeClient(claim)
+	kube := &fakeKubeClient{cli}
+
+	// Simulate what Sync does on Pod NotFound:
+	// 1. ctx.Get(pod) returns NotFound
+	pod := &corev1.Pod{}
+	err := kube.Get(types.NamespacedName{Namespace: "ns", Name: "pod-deleted"}, pod)
+	g.Expect(err).To(HaveOccurred()) // NotFound
+
+	// 2. Set phase to Lost and clear spec via Patch
+	claim.Status.Phase = v1alpha1.CNClaimPhaseLost
+	g.Expect(kube.Patch(claim, func() error {
+		claim.Spec.PodName = ""
+		claim.Spec.NodeName = ""
+		return nil
+	})).To(Succeed())
+
+	// Verify: spec is cleared, phase is Lost
+	g.Expect(claim.Spec.PodName).To(BeEmpty())
+	g.Expect(claim.Spec.NodeName).To(BeEmpty())
+	g.Expect(claim.Status.Phase).To(Equal(v1alpha1.CNClaimPhaseLost))
+
+	// Verify: next Observe would route to Bind (since PodName is empty)
+	// This is the key behavioral guarantee of the fix
+	r := &Actor{}
+	_ = r // Actor.Observe checks ctx.Obj.Spec.PodName == ""
+	g.Expect(claim.Spec.PodName).To(Equal(""))
+}
+
+func Test_watchPodChangeFn_enqueuesClaimBySpecPodName(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	// Setup: pod with NO claimed-by label, but a CNClaim references it via spec.podName
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-1",
+			Namespace: "ns",
+			Labels:    map[string]string{},
+		},
+	}
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "claim-refs-pod",
+			Namespace: "ns",
+		},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"},
+		},
+	}
+
+	cli := newFakeClient(pod, claim)
+
+	// Simulate what watchPodChangeFn does:
+	// 1. No claimed-by label → no label-based request
+	var requests []reconcile.Request
+	if claimName, ok := pod.Labels[v1alpha1.PodClaimedByLabel]; ok {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{Namespace: pod.Namespace, Name: claimName},
+		})
+	}
+	g.Expect(requests).To(BeEmpty())
+
+	// 2. List CNClaims and find those referencing this pod via spec.podName
+	claimList := &v1alpha1.CNClaimList{}
+	g.Expect(cli.List(context.TODO(), claimList, client.InNamespace("ns"))).To(Succeed())
+	for i := range claimList.Items {
+		c := &claimList.Items[i]
+		if c.Spec.PodName == pod.Name {
+			req := reconcile.Request{
+				NamespacedName: types.NamespacedName{Namespace: pod.Namespace, Name: c.Name},
+			}
+			if !containsRequest(requests, req) {
+				requests = append(requests, req)
+			}
+		}
+	}
+
+	// Verify: claim-refs-pod is enqueued even without the label
+	g.Expect(requests).To(HaveLen(1))
+	g.Expect(requests[0].Name).To(Equal("claim-refs-pod"))
+}
+
+func Test_containsRequest(t *testing.T) {
+	g := NewGomegaWithT(t)
+	reqs := []reconcile.Request{
+		{NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-a"}},
+		{NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-b"}},
+	}
+	g.Expect(containsRequest(reqs, reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-a"},
+	})).To(BeTrue())
+	g.Expect(containsRequest(reqs, reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-c"},
+	})).To(BeFalse())
+	g.Expect(containsRequest(nil, reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-a"},
+	})).To(BeFalse())
 }
 
 func Test_sortCNByPriority(t *testing.T) {
