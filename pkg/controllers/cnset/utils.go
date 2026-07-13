@@ -42,6 +42,10 @@ func svcName(cn *v1alpha1.CNSet) string {
 	return resourceName(cn)
 }
 
+func metricSvcName(cn *v1alpha1.CNSet) string {
+	return resourceName(cn) + "-metric"
+}
+
 func setName(cn *v1alpha1.CNSet) string {
 	return resourceName(cn)
 }

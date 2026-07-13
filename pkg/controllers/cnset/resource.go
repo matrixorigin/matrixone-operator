@@ -157,6 +157,7 @@ func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
 		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
 	} else {
 		delete(svc.Annotations, common.PrometheusScrapeAnno)
+		delete(svc.Annotations, common.PrometheusPortAnno)
 	}
 }
 
