@@ -16,6 +16,7 @@ package cnset
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/features"
@@ -91,6 +92,10 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil
 	}); err != nil {
 		return nil, errors.WrapPrefix(err, "sync service", 0)
+	}
+
+	if err := c.syncMetricService(ctx); err != nil {
+		return nil, errors.WrapPrefix(err, "sync metric service", 0)
 	}
 
 	// diff desired cloneset and determine whether should an update be invoked
@@ -184,6 +189,41 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	return nil, recon.ErrReSync("cnset is not ready or synced", reSyncAfter)
 }
 
+// syncMetricService reconciles a dedicated ClusterIP Service exposing the CN metrics port,
+// so that Service-based Prometheus discovery (e.g. ServiceMonitor matching on port name
+// "metric") can find CN targets the same way it already does for DN/Log (issue #600).
+func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet]) error {
+	cn := ctx.Obj
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: cn.Namespace,
+			Name:      metricSvcName(cn),
+			Labels:    common.SubResourceLabels(cn),
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: common.SubResourceLabels(cn),
+		},
+	}
+	return recon.CreateOwnedOrUpdate(ctx, svc, func() error {
+		svc.Spec.Type = corev1.ServiceTypeClusterIP
+		svc.Spec.Ports = []corev1.ServicePort{{
+			Name: "metric",
+			Port: int32(common.MetricsPort),
+		}}
+		if cn.Spec.PromDiscoveredByService() {
+			if svc.Annotations == nil {
+				svc.Annotations = map[string]string{}
+			}
+			svc.Annotations[common.PrometheusScrapeAnno] = "true"
+			svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
+		} else {
+			delete(svc.Annotations, common.PrometheusScrapeAnno)
+			delete(svc.Annotations, common.PrometheusPortAnno)
+		}
+		return nil
+	})
+}
+
 func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	return ctx.Patch(c.cs, func() error {
 		scaleSet(ctx.Obj, c.cs)
@@ -208,6 +248,8 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 		Name: setName(cn),
 	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
 		Name: svcName(cn),
+	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name: metricSvcName(cn),
 	}}}
 	for _, obj := range objs {
 		obj.SetNamespace(cn.Namespace)

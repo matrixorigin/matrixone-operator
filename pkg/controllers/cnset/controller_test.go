@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 package cnset
 
 import (
+	"context"
+	"strconv"
 	"testing"
 
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
@@ -36,6 +38,148 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func baseCNSetForMetricSvcTest() *v1alpha1.CNSet {
+	return &v1alpha1.CNSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test",
+			UID:       "test-uid",
+		},
+		Spec: v1alpha1.CNSetSpec{
+			PodSet: v1alpha1.PodSet{
+				MainContainer: v1alpha1.MainContainer{
+					Image: "test:latest",
+				},
+				Replicas: 1,
+			},
+		},
+	}
+}
+
+func enableCNPromServiceDiscovery(cn *v1alpha1.CNSet) {
+	cn.Spec.ExportToPrometheus = pointer.Bool(true)
+	scheme := v1alpha1.PromDiscoverySchemeService
+	cn.Spec.PromDiscoveryScheme = &scheme
+}
+
+// Test_syncMetricService is a regression test for issue #600: CNSet must reconcile a
+// dedicated metric Service so ServiceMonitor can match on port name "metric".
+func Test_syncMetricService(t *testing.T) {
+	s := newScheme()
+	labels := common.SubResourceLabels(baseCNSetForMetricSvcTest())
+
+	tests := []struct {
+		name   string
+		cnset  *v1alpha1.CNSet
+		client client.Client
+		setup  func(cn *v1alpha1.CNSet)
+		expect func(g *WithT, cn *v1alpha1.CNSet, cli client.Client, err error)
+	}{
+		{
+			name:  "creates metric service with prom annotations when export enabled",
+			cnset: baseCNSetForMetricSvcTest(),
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
+			},
+			setup: enableCNPromServiceDiscovery,
+			expect: func(g *WithT, cn *v1alpha1.CNSet, cli client.Client, err error) {
+				g.Expect(err).To(BeNil())
+
+				svc := &corev1.Service{}
+				g.Expect(cli.Get(context.Background(), client.ObjectKey{
+					Namespace: cn.Namespace,
+					Name:      metricSvcName(cn),
+				}, svc)).To(Succeed())
+
+				g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeClusterIP))
+				g.Expect(svc.Spec.Ports).To(HaveLen(1))
+				g.Expect(svc.Spec.Ports[0].Name).To(Equal("metric"))
+				g.Expect(svc.Spec.Ports[0].Port).To(Equal(int32(common.MetricsPort)))
+				g.Expect(svc.Labels).To(Equal(labels))
+				g.Expect(svc.Spec.Selector).To(Equal(labels))
+				g.Expect(svc.Annotations[common.PrometheusScrapeAnno]).To(Equal("true"))
+				g.Expect(svc.Annotations[common.PrometheusPortAnno]).To(Equal(strconv.Itoa(common.MetricsPort)))
+			},
+		},
+		{
+			name:  "creates metric service without prom annotations when export disabled",
+			cnset: baseCNSetForMetricSvcTest(),
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
+			},
+			expect: func(g *WithT, cn *v1alpha1.CNSet, cli client.Client, err error) {
+				g.Expect(err).To(BeNil())
+
+				svc := &corev1.Service{}
+				g.Expect(cli.Get(context.Background(), client.ObjectKey{
+					Namespace: cn.Namespace,
+					Name:      metricSvcName(cn),
+				}, svc)).To(Succeed())
+
+				g.Expect(svc.Spec.Ports).To(HaveLen(1))
+				g.Expect(svc.Spec.Ports[0].Name).To(Equal("metric"))
+				g.Expect(svc.Annotations).NotTo(HaveKey(common.PrometheusScrapeAnno))
+				g.Expect(svc.Annotations).NotTo(HaveKey(common.PrometheusPortAnno))
+			},
+		},
+		{
+			name:  "removes stale prom annotations when export disabled",
+			cnset: baseCNSetForMetricSvcTest(),
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      metricSvcName(baseCNSetForMetricSvcTest()),
+							Labels:    labels,
+							Annotations: map[string]string{
+								common.PrometheusScrapeAnno: "true",
+								common.PrometheusPortAnno:   strconv.Itoa(common.MetricsPort),
+							},
+						},
+						Spec: corev1.ServiceSpec{
+							Type:     corev1.ServiceTypeClusterIP,
+							Selector: labels,
+							Ports: []corev1.ServicePort{{
+								Name: "metric",
+								Port: int32(common.MetricsPort),
+							}},
+						},
+					},
+				).Build(),
+			},
+			expect: func(g *WithT, cn *v1alpha1.CNSet, cli client.Client, err error) {
+				g.Expect(err).To(BeNil())
+
+				svc := &corev1.Service{}
+				g.Expect(cli.Get(context.Background(), client.ObjectKey{
+					Namespace: cn.Namespace,
+					Name:      metricSvcName(cn),
+				}, svc)).To(Succeed())
+				g.Expect(svc.Annotations).NotTo(HaveKey(common.PrometheusScrapeAnno))
+				g.Expect(svc.Annotations).NotTo(HaveKey(common.PrometheusPortAnno))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			cn := tt.cnset.DeepCopy()
+			if tt.setup != nil {
+				tt.setup(cn)
+			}
+
+			mockCtrl := gomock.NewController(t)
+			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
+			ctx := fake.NewContext(cn, tt.client, eventEmitter)
+
+			err := (&Actor{}).syncMetricService(ctx)
+			tt.expect(g, cn, tt.client, err)
+		})
+	}
+}
 
 func TestCNSetActor_Observe(t *testing.T) {
 	s := newScheme()
