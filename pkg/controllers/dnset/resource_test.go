@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -329,4 +330,60 @@ service-addresses = ["test-log-0.test-log-headless.test.svc:32001", "test-log-2.
 			g.Expect(cmp.Diff(tt.wantConfig, got.Data[configKey])).To(BeEmpty())
 		})
 	}
+}
+
+func TestBuildDNSetConfigMapPreservesUserFileServiceCache(t *testing.T) {
+	g := NewGomegaWithT(t)
+	userConfig := v1alpha1.NewTomlConfig(nil)
+	g.Expect(userConfig.UnmarshalTOML([]byte(`
+[[fileservice]]
+name = "S3"
+
+[fileservice.cache]
+custom-key = "keep-me"
+memory-capacity = "user-value"
+`))).To(Succeed())
+
+	memoryCacheSize := resource.MustParse("1Gi")
+	dn := &v1alpha1.DNSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "test",
+		},
+		Spec: v1alpha1.DNSetSpec{
+			PodSet: v1alpha1.PodSet{
+				Config: userConfig,
+			},
+			SharedStorageCache: v1alpha1.SharedStorageCache{
+				MemoryCacheSize: &memoryCacheSize,
+			},
+		},
+	}
+	ls := &v1alpha1.LogSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "test",
+		},
+		Spec: v1alpha1.LogSetSpec{
+			SharedStorage: v1alpha1.SharedStorageProvider{
+				S3: &v1alpha1.S3Provider{
+					Path: "bucket/prefix",
+				},
+			},
+		},
+		Status: v1alpha1.LogSetStatus{
+			Discovery: &v1alpha1.LogSetDiscovery{
+				Port:    6001,
+				Address: "test",
+			},
+		},
+	}
+
+	configMap, configSuffix, err := buildDNSetConfigMap(dn, ls, nil)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(configSuffix).To(BeEmpty())
+	config := configMap.Data["config.toml"]
+	g.Expect(config).To(ContainSubstring(`custom-key = "keep-me"`))
+	g.Expect(config).To(ContainSubstring(`memory-capacity = "1GiB"`))
+	g.Expect(config).NotTo(ContainSubstring(`memory-capacity = "user-value"`))
 }

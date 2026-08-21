@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ func TestFileServiceConfig(t *testing.T) {
 			}, {
 				"name":    "S3",
 				"backend": "S3",
-				"cache": map[string]string{
+				"cache": map[string]interface{}{
 					"memory-capacity": "1B",
 				},
 				"s3": map[string]interface{}{
@@ -68,7 +68,7 @@ func TestFileServiceConfig(t *testing.T) {
 			}, {
 				"name":    "ETL",
 				"backend": "S3",
-				"cache": map[string]string{
+				"cache": map[string]interface{}{
 					"memory-capacity": "1B",
 				},
 				"s3": map[string]interface{}{
@@ -109,7 +109,7 @@ func TestFileServiceConfig(t *testing.T) {
 					"key-prefix": "prefix/data",
 					"bucket":     "bucket",
 				},
-				"cache": map[string]string{
+				"cache": map[string]interface{}{
 					"memory-capacity": "1GiB",
 					"disk-path":       "/var/lib/matrixone/disk-cache",
 					"disk-capacity":   "1GiB",
@@ -122,7 +122,7 @@ func TestFileServiceConfig(t *testing.T) {
 					"key-prefix": "prefix/etl",
 					"bucket":     "bucket",
 				},
-				"cache": map[string]string{
+				"cache": map[string]interface{}{
 					"memory-capacity": "1B",
 				},
 			}},
