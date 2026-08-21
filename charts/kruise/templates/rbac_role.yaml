@@ -1,30 +1,9 @@
-{{- if not .Values.manager.serviceAccountName }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: kruise-leader-election-role
   namespace: {{ .Values.installation.namespace }}
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - ""
-  resources:
-  - configmaps/status
-  verbs:
-  - get
-  - update
-  - patch
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -43,33 +22,96 @@ rules:
   - events
   verbs:
   - create
-{{- end }}
 ---
-{{- if not .Values.manager.serviceAccountName }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kruise-manager-role
+  creationTimestamp: null
+  name: kruise-daemon-role
 rules:
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - nodeimages
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - nodeimages/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - ""
   resources:
-  - configmaps
+  - events
   verbs:
   - create
-  - delete
+  - update
+  - patch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - containerrecreaterequests
+  verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - containerrecreaterequests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - patch
   - update
   - watch
 - apiGroups:
   - ""
   resources:
-  - namespaces
+  - pods/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - nodepodprobes
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - nodepodprobes/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: kruise-manager-role
+rules:
 - apiGroups:
   - ""
   resources:
@@ -82,7 +124,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  {{ toYaml .Values.installation.roleListGroups }}
+{{ toYaml .Values.installation.roleListGroups | nindent 2}}
   resources:
   - '*'
   verbs:
@@ -102,8 +144,6 @@ rules:
   verbs:
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - admissionregistration.k8s.io
@@ -112,8 +152,6 @@ rules:
   verbs:
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - apiextensions.k8s.io
@@ -122,8 +160,6 @@ rules:
   verbs:
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - apps
@@ -206,6 +242,12 @@ rules:
 - apiGroups:
   - apps.kruise.io
   resources:
+  - advancedcronjobs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
   - advancedcronjobs/status
   verbs:
   - get
@@ -223,6 +265,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - broadcastjobs/finalizers
+  verbs:
+  - update
 - apiGroups:
   - apps.kruise.io
   resources:
@@ -246,6 +294,12 @@ rules:
 - apiGroups:
   - apps.kruise.io
   resources:
+  - clonesets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
   - clonesets/status
   verbs:
   - get
@@ -263,6 +317,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - containerrecreaterequests/finalizers
+  verbs:
+  - update
 - apiGroups:
   - apps.kruise.io
   resources:
@@ -286,6 +346,12 @@ rules:
 - apiGroups:
   - apps.kruise.io
   resources:
+  - daemonsets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
   - daemonsets/status
   verbs:
   - get
@@ -305,7 +371,41 @@ rules:
 - apiGroups:
   - apps.kruise.io
   resources:
+  - ephemeraljobs/finalizers
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
   - ephemeraljobs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - imagelistpulljobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - imagelistpulljobs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - imagelistpulljobs/status
   verbs:
   - get
   - patch
@@ -322,6 +422,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - imagepulljobs/finalizers
+  verbs:
+  - update
 - apiGroups:
   - apps.kruise.io
   resources:
@@ -345,6 +451,12 @@ rules:
 - apiGroups:
   - apps.kruise.io
   resources:
+  - nodeimages/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
   - nodeimages/status
   verbs:
   - get
@@ -362,6 +474,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - nodepodprobes/finalizers
+  verbs:
+  - update
 - apiGroups:
   - apps.kruise.io
   resources:
@@ -385,6 +503,12 @@ rules:
 - apiGroups:
   - apps.kruise.io
   resources:
+  - persistentpodstates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
   - persistentpodstates/status
   verbs:
   - get
@@ -405,6 +529,12 @@ rules:
 - apiGroups:
   - apps.kruise.io
   resources:
+  - podprobemarkers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
   - podprobemarkers/status
   verbs:
   - get
@@ -418,6 +548,12 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - resourcedistributions/finalizers
+  verbs:
+  - update
 - apiGroups:
   - apps.kruise.io
   resources:
@@ -441,6 +577,12 @@ rules:
 - apiGroups:
   - apps.kruise.io
   resources:
+  - sidecarsets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
   - sidecarsets/status
   verbs:
   - get
@@ -458,6 +600,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - statefulsets/finalizers
+  verbs:
+  - update
 - apiGroups:
   - apps.kruise.io
   resources:
@@ -481,6 +629,12 @@ rules:
 - apiGroups:
   - apps.kruise.io
   resources:
+  - uniteddeployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.kruise.io
+  resources:
   - uniteddeployments/status
   verbs:
   - get
@@ -496,6 +650,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - workloadspreads/finalizers
+  verbs:
+  - update
 - apiGroups:
   - apps.kruise.io
   resources:
@@ -551,6 +711,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - nodes
   verbs:
   - get
@@ -597,18 +765,6 @@ rules:
   - patch
   - update
 - apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - policy.kruise.io
   resources:
   - podunavailablebudgets
@@ -623,107 +779,28 @@ rules:
 - apiGroups:
   - policy.kruise.io
   resources:
+  - podunavailablebudgets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - policy.kruise.io
+  resources:
   - podunavailablebudgets/status
   verbs:
   - get
   - patch
   - update
+{{- if (contains "StatefulSetAutoResizePVCGate=true" .Values.featureGates) }}
+- apiGroups:
+    - storage.k8s.io
+  resources:
+    - storageclasses
+  verbs:
+    - get
+    - list
+    - watch
 {{- end }}
 ---
-{{- if not .Values.daemon.serviceAccountName }}
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  name: kruise-daemon-role
-rules:
-- apiGroups:
-  - apps.kruise.io
-  resources:
-  - nodeimages
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.kruise.io
-  resources:
-  - nodeimages/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - create
-  - update
-  - patch
-- apiGroups:
-  - apps.kruise.io
-  resources:
-  - containerrecreaterequests
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - apps.kruise.io
-  resources:
-  - containerrecreaterequests/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - apps.kruise.io
-  resources:
-  - nodepodprobes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - apps.kruise.io
-  resources:
-  - nodepodprobes/status
-  verbs:
-  - get
-  - patch
-  - update
-{{- end }}
----
-{{- if not .Values.manager.serviceAccountName }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -734,12 +811,10 @@ roleRef:
   kind: Role
   name: kruise-leader-election-role
 subjects:
-  - kind: ServiceAccount
-    name: kruise-manager
-    namespace: {{ .Values.installation.namespace }}
-{{- end }}
+- kind: ServiceAccount
+  name: kruise-manager
+  namespace: {{ .Values.installation.namespace }}
 ---
-{{- if not .Values.manager.serviceAccountName }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -749,12 +824,10 @@ roleRef:
   kind: ClusterRole
   name: kruise-manager-role
 subjects:
-  - kind: ServiceAccount
-    name: kruise-manager
-    namespace: {{ .Values.installation.namespace }}
-{{- end }}
+- kind: ServiceAccount
+  name: kruise-manager
+  namespace: {{ .Values.installation.namespace }}
 ---
-{{- if not .Values.daemon.serviceAccountName }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -764,7 +837,228 @@ roleRef:
   kind: ClusterRole
   name: kruise-daemon-role
 subjects:
-  - kind: ServiceAccount
-    name: kruise-daemon
-    namespace: {{ .Values.installation.namespace }}
+- kind: ServiceAccount
+  name: kruise-daemon
+  namespace: {{ .Values.installation.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kruise-webhook-role
+  namespace: {{ .Values.installation.namespace }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+{{- if not (contains "EnableExternalCerts=true" .Values.featureGates) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kruise-certs-role
+rules:
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  resourceNames:
+  - kruise-mutating-webhook-configuration
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  resourceNames:
+  - kruise-validating-webhook-configuration
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  resourceNames:
+  - statefulsets.apps.kruise.io
+  verbs:
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kruise-certs-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kruise-certs-role
+subjects:
+- kind: ServiceAccount
+  name: kruise-manager
+  namespace: {{ .Values.installation.namespace }}
 {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kruise-webhook-rolebinding
+  namespace: {{ .Values.installation.namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kruise-webhook-role
+subjects:
+- kind: ServiceAccount
+  name: kruise-manager
+  namespace: {{ .Values.installation.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: kruise-daemon-secret-role
+  namespace: kruise-daemon-config
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kruise-daemon-secret-rolebinding
+  namespace: kruise-daemon-config
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kruise-daemon-secret-role
+subjects:
+- kind: ServiceAccount
+  name: kruise-daemon
+  namespace: {{ .Values.installation.namespace }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: aggregate-kruise-view
+  labels:
+    # Add these permissions to the "view" default role.
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+- apiGroups: ["apps.kruise.io"]
+  resources:
+    - advancedcronjobs
+    - advancedcronjobs/status
+    - broadcastjobs
+    - broadcastjobs/status
+    - clonesets
+    - clonesets/scale
+    - clonesets/status
+    - containerrecreaterequests
+    - containerrecreaterequests/status
+    - daemonsets
+    - daemonsets/status
+    - imagelistpulljobs
+    - imagelistpulljobs/status
+    - imagepulljobs
+    - imagepulljobs/status
+    - nodeimages
+    - nodeimages/status
+    - nodepodprobes
+    - nodepodprobes/status
+    - persistentpodstates
+    - persistentpodstates/status
+    - podprobemarkers
+    - podprobemarkers/status
+    - sidecarsets
+    - sidecarsets/status
+    - statefulsets
+    - statefulsets/scale
+    - statefulsets/status
+    - uniteddeployments
+    - uniteddeployments/scale
+    - uniteddeployments/status
+    - workloadspreads
+    - workloadspreads/status
+  verbs:
+    - get
+    - list
+    - watch
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: aggregate-kruise-edit
+  labels:
+    # Add these permissions to the "admin" and "edit" default roles.
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+- apiGroups: ["apps.kruise.io"]
+  resources:
+    - advancedcronjobs
+    - broadcastjobs
+    - clonesets
+    - clonesets/scale
+    - containerrecreaterequests
+    - daemonsets
+    - imagelistpulljobs
+    - imagepulljobs
+    - nodeimages
+    - nodepodprobes
+    - persistentpodstates
+    - podprobemarkers
+    - sidecarsets
+    - statefulsets
+    - statefulsets/scale
+    - uniteddeployments
+    - uniteddeployments/scale
+    - workloadspreads
+  verbs:
+    - create
+    - delete
+    - deletecollection
+    - patch
+    - update
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: aggregate-kruise-admin
+  labels:
+    # Add these permissions to the "admin" default roles.
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+- apiGroups: ["apps.kruise.io"]
+  resources:
+    - resourcedistributions/status
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups: ["apps.kruise.io"]
+  resources:
+    - resourcedistributions
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - delete
+    - deletecollection
+    - patch
+    - update
