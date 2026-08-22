@@ -30,6 +30,12 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
+      - name: Package local chart dependencies
+        run: |
+          mkdir -p charts/matrixone-operator/charts
+          helm package charts/kruise \
+            --destination charts/matrixone-operator/charts
+
       - name: Run Artifact Hub lint
         run: |
           curl -s https://api.github.com/repos/artifacthub/hub/releases/latest | grep -E 'browser_download_url' | grep linux_amd64.tar.gz\" | grep -Eo 'https://[^\"]*' | xargs wget -O - | tar -xz
