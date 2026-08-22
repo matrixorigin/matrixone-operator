@@ -30,11 +30,15 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - name: Package local chart dependencies
+      - name: Package charts
         run: |
-          mkdir -p charts/matrixone-operator/charts
+          mkdir -p charts/matrixone-operator/charts .cr-release-packages .cr-index
           helm package charts/kruise \
             --destination charts/matrixone-operator/charts
+          helm package charts/kruise \
+            --destination .cr-release-packages
+          helm package charts/matrixone-operator \
+            --destination .cr-release-packages
 
       - name: Run Artifact Hub lint
         run: |
@@ -42,11 +46,21 @@ jobs:
           ./ah lint -p charts/matrixone-operator || exit 1
           rm -f ./ah
 
-      - name: Run chart-releaser
+      - name: Install chart-releaser
         uses: helm/chart-releaser-action@98bccfd32b0f76149d188912ac8e45ddd3f8695f # tag=v1.4.1
         with:
-          charts_dir: charts
+          install_only: true
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Publish charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_RELEASE_NAME_TEMPLATE: "chart-{{ .Version }}"
           CR_SKIP_EXISTING: true
+        run: |
+          owner="${GITHUB_REPOSITORY%%/*}"
+          repo="${GITHUB_REPOSITORY#*/}"
+          cr upload -o "$owner" -r "$repo" -c "$GITHUB_SHA"
+          cr index -o "$owner" -r "$repo" \
+            -c "https://${owner}.github.io/${repo}" --push
