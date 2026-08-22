@@ -6,32 +6,28 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: imagepulljobs.apps.kruise.io
+  name: imagelistpulljobs.apps.kruise.io
 spec:
   group: apps.kruise.io
   names:
-    kind: ImagePullJob
-    listKind: ImagePullJobList
-    plural: imagepulljobs
-    singular: imagepulljob
+    kind: ImageListPullJob
+    listKind: ImageListPullJobList
+    plural: imagelistpulljobs
+    singular: imagelistpulljob
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: Number of all nodes matched by this job
+    - description: Number of image pull job
       jsonPath: .status.desired
       name: TOTAL
       type: integer
-    - description: Number of image pull task active
-      jsonPath: .status.active
-      name: ACTIVE
-      type: integer
-    - description: Number of image pull task succeeded
+    - description: Number of image pull job succeeded
       jsonPath: .status.succeeded
-      name: SUCCEED
+      name: SUCCEEDED
       type: integer
-    - description: Number of image pull tasks failed
-      jsonPath: .status.failed
-      name: FAILED
+    - description: Number of ImagePullJobs which are finished
+      jsonPath: .status.completed
+      name: COMPLETED
       type: integer
     - description: CreationTimestamp is a timestamp representing the server time when
         this object was created. It is not guaranteed to be set in happens-before
@@ -40,14 +36,10 @@ spec:
       jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    - description: Summary of status when job is failed
-      jsonPath: .status.message
-      name: MESSAGE
-      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ImagePullJob is the Schema for the imagepulljobs API
+        description: ImageListPullJob is the Schema for the imagelistpulljobs API
         properties:
           apiVersion:
             description: |-
@@ -67,7 +59,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ImagePullJobSpec defines the desired state of ImagePullJob
+            description: ImageListPullJobSpec defines the desired state of ImageListPullJob
             properties:
               completionPolicy:
                 description: |-
@@ -101,14 +93,16 @@ spec:
                       Default is Always.
                     type: string
                 type: object
-              image:
-                description: Image is the image to be pulled by the job
-                type: string
               imagePullPolicy:
                 description: |-
                   Image pull policy.
                   One of Always, IfNotPresent. Defaults to IfNotPresent.
                 type: string
+              images:
+                description: Images is the image list to be pulled by the job
+                items:
+                  type: string
+                type: array
               parallelism:
                 anyOf:
                 - type: integer
@@ -255,39 +249,50 @@ spec:
                 x-kubernetes-map-type: atomic
             required:
             - completionPolicy
-            - image
+            - images
             type: object
           status:
-            description: ImagePullJobStatus defines the observed state of ImagePullJob
+            description: ImageListPullJobStatus defines the observed state of ImageListPullJob
             properties:
               active:
-                description: The number of actively running pulling tasks.
+                description: The number of running ImagePullJobs which are acknowledged
+                  by the imagepulljob controller.
+                format: int32
+                type: integer
+              completed:
+                description: The number of ImagePullJobs which are finished
                 format: int32
                 type: integer
               completionTime:
                 description: |-
-                  Represents time when the job was completed. It is not guaranteed to
+                  Represents time when the all the image pull job was completed. It is not guaranteed to
                   be set in happens-before order across separate operations.
                   It is represented in RFC3339 form and is in UTC.
                 format: date-time
                 type: string
               desired:
-                description: The desired number of pulling tasks, this is typically
-                  equal to the number of nodes satisfied.
+                description: The desired number of ImagePullJobs, this is typically
+                  equal to the number of len(spec.Images).
                 format: int32
                 type: integer
-              failed:
-                description: The number of pulling tasks  which reached phase Failed.
-                format: int32
-                type: integer
-              failedNodes:
-                description: The nodes that failed to pull the image.
+              failedImageStatuses:
+                description: The status of ImagePullJob which has the failed nodes(status.Failed>0)
+                  .
                 items:
-                  type: string
+                  description: FailedImageStatus the state of ImagePullJob which has
+                    the failed nodes(status.Failed>0)
+                  properties:
+                    imagePullJob:
+                      description: The name of ImagePullJob which has the failed nodes(status.Failed>0)
+                      type: string
+                    message:
+                      description: The text prompt for job running status.
+                      type: string
+                    name:
+                      description: Name of the image
+                      type: string
+                  type: object
                 type: array
-              message:
-                description: The text prompt for job running status.
-                type: string
               startTime:
                 description: |-
                   Represents time when the job was acknowledged by the job controller.
@@ -296,7 +301,7 @@ spec:
                 format: date-time
                 type: string
               succeeded:
-                description: The number of pulling tasks which reached phase Succeeded.
+                description: The number of image pull job which are finished and status.Succeeded==status.Desired.
                 format: int32
                 type: integer
             required:

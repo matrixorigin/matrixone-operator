@@ -82,8 +82,15 @@ function kind::ensure-kind() {
 }
 
 function kind::load-image() {
+    local kruise_image
+    kruise_image=$(helm template kruise "${ROOT}/charts/kruise" | awk '/^[[:space:]]+image:.*kruise-manager/ {print $2; exit}')
+    if [[ -z "${kruise_image}" ]]; then
+        echo "error: failed to resolve Kruise manager image from local chart"
+        return 1
+    fi
+
     kind::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
-    kind::prepare_image ${CLUSTER} openkruise/kruise-manager:v1.2.0
+    kind::prepare_image ${CLUSTER} "${kruise_image}"
     kind::prepare_image ${CLUSTER} minio/minio:RELEASE.2023-11-01T01-57-10Z
 }
 
@@ -113,10 +120,25 @@ function e2e::run() {
 }
 
 function e2e::install() {
+  local chart_root
+  chart_root=$(mktemp -d)
+
+  mkdir -p "${chart_root}/matrixone-operator/charts"
+  cp charts/matrixone-operator/Chart.yaml charts/matrixone-operator/values.yaml "${chart_root}/matrixone-operator/"
+  cp -R charts/matrixone-operator/templates "${chart_root}/matrixone-operator/"
+  if ! helm package charts/kruise --destination "${chart_root}/matrixone-operator/charts"; then
+    rm -rf -- "${chart_root}"
+    return 1
+  fi
+
   echo "> Create operator namespace"
   kubectl create ns "${OPNAMESPACE}"
   echo "> Install mo operator"
-  helm install mo ./charts/matrixone-operator --dependency-update --set image.repository=${REPO} --set image.tag=${TAG} -n "${OPNAMESPACE}"
+  if ! helm install mo "${chart_root}/matrixone-operator" --set image.repository="${REPO}" --set image.tag="${TAG}" -n "${OPNAMESPACE}"; then
+    rm -rf -- "${chart_root}"
+    return 1
+  fi
+  rm -rf -- "${chart_root}"
 
   echo "> Wait webhook certificate injected"
   sleep 30
@@ -137,6 +159,6 @@ function e2e::cleanup() {
 function e2e::workflow() {
   e2e::check
   trap "e2e::cleanup" EXIT
-  e2e::install
+  e2e::install || return 1
   e2e::run
 }

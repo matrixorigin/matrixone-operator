@@ -10,10 +10,18 @@ installation:
   roleListGroups:
     - '*'
 
-featureGates: ""
+featureGates: "ImagePullJobGate=true"
+
+externalCerts:
+  # annotations to patch for webhook configuration and crd
+  # e.g. cert-manager.io/inject-ca-from: kruise-system/kruise-webhook
+  annotations: {}
 
 # KUBE_CACHE_MUTATION_DETECTOR
 enableKubeCacheMutationDetector: false
+
+# imagePullSecrets to pull kruise images
+imagePullSecrets: []
 
 manager:
   # settings for log print
@@ -24,7 +32,7 @@ manager:
   replicas: 2
   image:
     repository: openkruise/kruise-manager
-    tag: v1.4.0
+    tag: v1.8.3
   webhook:
     port: 9876
   metrics:
@@ -34,6 +42,8 @@ manager:
   pprofAddr: "localhost:8090"
 
   resyncPeriod: "0"
+
+  loggingFormat: ""
 
   # resources of kruise-manager container
   resources:
@@ -50,13 +60,7 @@ manager:
   nodeSelector: {}
   tolerations: []
 
-  # set serviceAccountName to set permissions externally
-  serviceAccountName: ""
-
 webhookConfiguration:
-  enabled: true
-  failurePolicy:
-    pods: Ignore
   timeoutSeconds: 30
 
 daemon:
@@ -65,12 +69,22 @@ daemon:
     level: "4"
 
   port: 10221
+  enablePprof: true
   pprofAddr: "localhost:10222"
 
   socketLocation: "/var/run"
   socketFile: ""
 
   nodeSelector: {}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: type
+            operator: NotIn
+            values:
+            - virtual-kubelet
   resources:
     limits:
       cpu: 50m
@@ -78,8 +92,6 @@ daemon:
     requests:
       cpu: "0"
       memory: "0"
-  # set serviceAccountName to set permissions externally
-  serviceAccountName: ""
 
   # Extra environment variables that will be pass onto pods.
   # For example, when the daemon is used behind a http proxy, you can set the proxy environment variables here.
@@ -93,7 +105,16 @@ daemon:
   # - name: NO_PROXY
   #   value: localhost,0.0.0.0,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,.svc,.cluster.local
 
+  credentialProvider:
+    enable: false
+    configmap: credential-provider-config
+    hostPath: credential-provider-plugin
+    awsCredentialsDir: ""
+
 serviceAccount:
   annotations: {}
 
-imagePullPolicy: IfNotPresent
+helmHooks:
+  image:
+    repository: openkruise/kruise-helm-hook
+    tag: v0.1.0
