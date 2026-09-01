@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -166,6 +167,13 @@ var _ = Describe("CNClaim and CNPool test", func() {
 				},
 			},
 		}
+		DeferCleanup(func() {
+			By("Teardown CNPool dependencies")
+			deleteE2EObject(pool)
+			deleteE2EObject(proxy)
+			deleteE2EObject(d)
+			deleteE2EObject(l)
+		})
 		Expect(kubeCli.Create(ctx, l)).To(Succeed())
 		Expect(kubeCli.Create(ctx, d)).To(Succeed())
 		Expect(kubeCli.Create(ctx, pool)).To(Succeed())
@@ -209,6 +217,10 @@ var _ = Describe("CNClaim and CNPool test", func() {
 			},
 		}
 		Expect(kubeCli.Create(ctx, claim)).To(Succeed())
+		DeferCleanup(func() {
+			By("Teardown CNClaim")
+			deleteE2EObject(claim)
+		})
 
 		Eventually(func() error {
 			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(claim), claim); err != nil {
@@ -254,3 +266,20 @@ var _ = Describe("CNClaim and CNPool test", func() {
 		}, migrateTimeout, pollInterval).Should(Succeed())
 	})
 })
+
+func deleteE2EObject(obj client.Object) {
+	key := client.ObjectKeyFromObject(obj)
+	Expect(util.Ignore(apierrors.IsNotFound, kubeCli.Delete(ctx, obj))).To(Succeed())
+	Eventually(func() error {
+		err := kubeCli.Get(ctx, key, obj)
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		if err != nil {
+			logger.Errorw("error getting resource during teardown", "resource", fmt.Sprintf("%T", obj), "key", key, "error", err)
+			return err
+		}
+		logger.Infow("wait resource teardown", "resource", fmt.Sprintf("%T", obj), "key", key)
+		return errWait
+	}, teardownClusterTimeout, pollInterval).Should(Succeed(), "%T %s should be deleted", obj, key)
+}

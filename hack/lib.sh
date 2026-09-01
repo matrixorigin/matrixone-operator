@@ -195,7 +195,7 @@ function e2e::cleanup() {
     echo "Delete e2e test namespace"
     if ! kubectl delete namespace -l managed-by=e2e-suite \
       --ignore-not-found --wait=true --timeout=600s; then
-      kubectl get namespace -l managed-by=e2e-suite -o wide || true
+      kubectl get namespace -l managed-by=e2e-suite -o yaml || true
       return 1
     fi
     # Uninstall helm charts
