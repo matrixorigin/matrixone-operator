@@ -67,6 +67,11 @@ jobs:
 
       - name: Build
         uses: docker/build-push-action@v2
+        env:
+          # Alicloud ACR rejects the provenance attestation manifest that buildx
+          # attaches by default since BuildKit v0.11 ("unknown manifest class for
+          # application/vnd.oci.empty.v1+json"), which fails the whole push.
+          BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .

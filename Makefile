@@ -60,6 +60,27 @@ helm-pkg: manifests generate helm-lint
 	helm package -u charts/matrixone-operator -d charts/
 
 
+# Generated artifacts that must be committed whenever their sources or generators change.
+GENERATED_ARTIFACTS := \
+	api/core/v1alpha1/zz_generated.deepcopy.go \
+	charts/matrixone-operator/templates/crds \
+	deploy/crds \
+	deploy/webhook \
+	docs/reference/api-reference.md
+
+.PHONY: verify-generated
+verify-generated:
+	$(MAKE) generate
+	$(MAKE) manifests
+	$(MAKE) docs
+	@status="$$(git status --porcelain -- $(GENERATED_ARTIFACTS))"; \
+	if [[ -n "$$status" ]]; then \
+		echo "generated artifacts are out of date:"; \
+		printf '%s\n' "$$status"; \
+		echo "run 'make generate manifests docs' and commit the results"; \
+		exit 1; \
+	fi
+
 # Make sure the generated files are up to date before open PR
 reviewable: ci-reviewable go-lint check-license test
 

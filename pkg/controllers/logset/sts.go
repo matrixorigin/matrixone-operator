@@ -195,6 +195,13 @@ func stsName(ls *v1alpha1.LogSet) string {
 	return resourceName(ls)
 }
 
+// LogSetStsName returns the name of the kruise StatefulSet managed for the given LogSet.
+// Exported so that other controllers (e.g. dnset, cnset) can look up the STS to read
+// ReserveOrdinals without requiring a CRD change.
+func LogSetStsName(ls *v1alpha1.LogSet) string {
+	return stsName(ls)
+}
+
 func headlessSvcName(ls *v1alpha1.LogSet) string {
 	return resourceName(ls) + "-headless"
 }
