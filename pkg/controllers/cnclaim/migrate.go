@@ -44,6 +44,7 @@ func (r *Actor) migrate(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 		if apierrors.IsNotFound(err) {
 			return r.completeMigration(ctx)
 		}
+		return errors.WrapPrefix(err, "error get source Pod", 0)
 	}
 	if c.Status.Store.BoundTime == nil {
 		return errors.New(fmt.Sprintf("claim store %s/%s bound time is nil", c.Namespace, c.Name))

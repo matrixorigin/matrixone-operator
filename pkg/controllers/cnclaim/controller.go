@@ -63,6 +63,12 @@ func NewActor(mgr *mocli.MORPCClientManager) *Actor {
 }
 
 func (r *Actor) Observe(ctx *recon.Context[*v1alpha1.CNClaim]) (recon.Action[*v1alpha1.CNClaim], error) {
+	// Lost is terminal. In particular, do not race a CNClaimSet deleting a lost
+	// claim by binding the claim to another Pod after its stale reference is
+	// cleared. Automatic recovery, if desired, needs an explicit state transition.
+	if ctx.Obj.Status.Phase == v1alpha1.CNClaimPhaseLost {
+		return nil, nil
+	}
 	if ctx.Obj.Spec.PodName == "" {
 		return r.Bind, nil
 	}
@@ -280,6 +286,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 			c.Status.Phase = v1alpha1.CNClaimPhaseLost
 			return nil
 		}
+		return errors.WrapPrefix(err, "error get claimed Pod", 0)
 	}
 	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodUnknown {
 		c.Status.Phase = v1alpha1.CNClaimPhaseLost
@@ -394,7 +401,9 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 			return false, err
 		}
 	}
-	return true, nil
+	// Keep the finalizer for one more reconciliation so the cached Pod list can
+	// confirm that no Bound Pod is still labelled as owned by this claim.
+	return false, nil
 }
 
 func transferPodOwnership(

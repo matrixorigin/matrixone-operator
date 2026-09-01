@@ -16,6 +16,7 @@ package cnclaim
 
 import (
 	"context"
+	stderrors "errors"
 	"math/rand"
 	"testing"
 
@@ -28,20 +29,24 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/onsi/gomega"
 )
 
-func newFakeClient(objs ...client.Object) client.Client {
+func newFakeClientBuilder(objs ...client.Object) *clientfake.ClientBuilder {
 	scheme := runtime.NewScheme()
 	_ = v1alpha1.SchemeBuilder.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
 	return clientfake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(objs...).
-		WithIndex(&v1alpha1.CNClaim{}, claimPodNameField, indexClaimByPodName).
-		Build()
+		WithIndex(&v1alpha1.CNClaim{}, claimPodNameField, indexClaimByPodName)
+}
+
+func newFakeClient(objs ...client.Object) client.Client {
+	return newFakeClientBuilder(objs...).Build()
 }
 
 // fakeKubeClient adapts client.Client to recon.KubeClient for testing.
@@ -260,7 +265,7 @@ func Test_Finalize_transfersLabelWhenPodClaimedByOther(t *testing.T) {
 	ctx := reconfake.NewContext(claimA, cli, nil)
 	done, err := (&Actor{}).Finalize(ctx)
 	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(done).To(BeTrue())
+	g.Expect(done).To(BeFalse(), "ownership transfer must be confirmed by another reconciliation")
 
 	updatedPod := &corev1.Pod{}
 	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
@@ -271,6 +276,10 @@ func Test_Finalize_transfersLabelWhenPodClaimedByOther(t *testing.T) {
 	g.Expect(updatedPod.Labels).NotTo(HaveKey("source-only"))
 	g.Expect(updatedPod.Labels).To(HaveKeyWithValue("target-only", "new"))
 	g.Expect(updatedPod.Labels).To(HaveKeyWithValue("shared", "new"))
+
+	done, err = (&Actor{}).Finalize(ctx)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(done).To(BeTrue())
 }
 
 func Test_transferPodOwnership_removesLabelsNotManagedByTarget(t *testing.T) {
@@ -418,6 +427,59 @@ func Test_Sync_clearsSpecOnPodNotFound(t *testing.T) {
 	g.Expect(updatedClaim.Spec.PodName).To(BeEmpty())
 	g.Expect(updatedClaim.Spec.NodeName).To(BeEmpty())
 	g.Expect(ctx.Obj.Status.Phase).To(Equal(v1alpha1.CNClaimPhaseLost))
+}
+
+func Test_Observe_doesNotRebindLostClaim(t *testing.T) {
+	g := NewGomegaWithT(t)
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-lost", Namespace: "ns"},
+		Status:     v1alpha1.CNClaimStatus{Phase: v1alpha1.CNClaimPhaseLost},
+	}
+	ctx := reconfake.NewContext(claim, newFakeClient(claim), nil)
+
+	action, err := (&Actor{}).Observe(ctx)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(action).To(BeNil())
+}
+
+func Test_Sync_returnsPodGetError(t *testing.T) {
+	g := NewGomegaWithT(t)
+	getErr := stderrors.New("transient Pod read failure")
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod"}},
+	}
+	cli := newFakeClientBuilder(claim).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+			return getErr
+		},
+	}).Build()
+	ctx := reconfake.NewContext(claim, cli, nil)
+
+	err := (&Actor{}).Sync(ctx)
+	g.Expect(err).To(MatchError(And(ContainSubstring("error get claimed Pod"), ContainSubstring(getErr.Error()))))
+	g.Expect(claim.Spec.PodName).To(Equal("pod"))
+}
+
+func Test_migrate_returnsSourcePodGetError(t *testing.T) {
+	g := NewGomegaWithT(t)
+	getErr := stderrors.New("transient source Pod read failure")
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim", Namespace: "ns"},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "target"},
+			SourcePod:   &v1alpha1.ClaimPodRef{PodName: "source"},
+		},
+	}
+	cli := newFakeClientBuilder(claim).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+			return getErr
+		},
+	}).Build()
+	ctx := reconfake.NewContext(claim, cli, nil)
+
+	err := (&Actor{}).migrate(ctx)
+	g.Expect(err).To(MatchError(And(ContainSubstring("error get source Pod"), ContainSubstring(getErr.Error()))))
 }
 
 func Test_watchPodChangeFn_enqueuesClaimBySpecPodName(t *testing.T) {
