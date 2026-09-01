@@ -37,12 +37,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
+	claimPodNameField = "spec.podName"
+
 	waitCacheTimeout = 10 * time.Second
 
 	retryBindInterval = 5 * time.Second
@@ -265,7 +268,6 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 			if c.Status.BoundTime != nil && time.Since(c.Status.BoundTime.Time) < waitCacheTimeout {
 				return recon.ErrReSync("pod status may be not update to date, wait", waitCacheTimeout)
 			}
-			c.Status.Phase = v1alpha1.CNClaimPhaseLost
 			if err := ctx.Patch(c, func() error {
 				c.Spec.PodName = ""
 				c.Spec.NodeName = ""
@@ -273,6 +275,9 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 			}); err != nil {
 				return errors.WrapPrefix(err, "error clearing lost claim spec", 0)
 			}
+			// Patch refreshes c with the API response, including the previously
+			// persisted status, so set Lost only after the spec patch completes.
+			c.Status.Phase = v1alpha1.CNClaimPhaseLost
 			return nil
 		}
 	}
@@ -364,15 +369,16 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 	}
 	for i := range ownedCNs {
 		cn := ownedCNs[i]
-		// if another CNClaim references this pod via spec.podName, release our
-		// claimed-by label so the owning claim can take full ownership
+		// If another CNClaim references this pod via spec.podName, transfer the
+		// label directly. Removing it would leave a bound Pod temporarily
+		// unowned because label-only changes do not trigger this controller.
 		if holder, ok := claimIndex[cn.Name]; ok {
-			ctx.Log.Info("release pod label, pod claimed by other CNClaim", "pod", cn.Name, "holder", holder)
+			ctx.Log.Info("transfer pod ownership to other CNClaim", "pod", cn.Name, "holder", holder)
 			if err := ctx.Patch(&cn, func() error {
-				delete(cn.Labels, v1alpha1.PodClaimedByLabel)
+				cn.Labels[v1alpha1.PodClaimedByLabel] = holder
 				return nil
 			}); err != nil {
-				return false, errors.WrapPrefix(err, "error releasing pod label", 0)
+				return false, errors.WrapPrefix(err, "error transferring pod ownership", 0)
 			}
 			continue
 		}
@@ -465,6 +471,9 @@ func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Po
 }
 
 func (r *Actor) Start(mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &v1alpha1.CNClaim{}, claimPodNameField, indexClaimByPodName); err != nil {
+		return errors.WrapPrefix(err, "error indexing CNClaims by pod name", 0)
+	}
 	return recon.Setup(&v1alpha1.CNClaim{}, "cn-claim-manager", mgr, r,
 		recon.WithPredicate(predicate.ResourceVersionChangedPredicate{}),
 		recon.WithBuildFn(watchPodChangeFn(mgr.GetClient())),
@@ -478,35 +487,49 @@ func watchPodChangeFn(cli client.Reader) func(*builder.Builder) {
 			if !ok {
 				return nil
 			}
-			var requests []reconcile.Request
-			if claimName, ok := pod.Labels[v1alpha1.PodClaimedByLabel]; ok {
-				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: pod.Namespace,
-						Name:      claimName,
-					},
-				})
-			}
-			claimList := &v1alpha1.CNClaimList{}
-			if err := cli.List(ctx, claimList, client.InNamespace(pod.Namespace)); err == nil {
-				for i := range claimList.Items {
-					c := &claimList.Items[i]
-					if c.Spec.PodName == pod.Name {
-						req := reconcile.Request{
-							NamespacedName: types.NamespacedName{
-								Namespace: pod.Namespace,
-								Name:      c.Name,
-							},
-						}
-						if !containsRequest(requests, req) {
-							requests = append(requests, req)
-						}
-					}
-				}
-			}
-			return requests
+			return requestsForPod(ctx, cli, pod)
 		}), builder.WithPredicates(common.PodStatusChangedPredicate{}))
 	}
+}
+
+func indexClaimByPodName(object client.Object) []string {
+	claim, ok := object.(*v1alpha1.CNClaim)
+	if !ok || claim.Spec.PodName == "" {
+		return nil
+	}
+	return []string{claim.Spec.PodName}
+}
+
+func requestsForPod(ctx context.Context, cli client.Reader, pod *corev1.Pod) []reconcile.Request {
+	var requests []reconcile.Request
+	if claimName, ok := pod.Labels[v1alpha1.PodClaimedByLabel]; ok && claimName != "" {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: pod.Namespace,
+				Name:      claimName,
+			},
+		})
+	}
+
+	claimList := &v1alpha1.CNClaimList{}
+	if err := cli.List(ctx, claimList,
+		client.InNamespace(pod.Namespace),
+		client.MatchingFields{claimPodNameField: pod.Name}); err != nil {
+		ctrllog.FromContext(ctx).Error(err, "error listing CNClaims for Pod event", "pod", pod.Name)
+		return requests
+	}
+	for i := range claimList.Items {
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: pod.Namespace,
+				Name:      claimList.Items[i].Name,
+			},
+		}
+		if !containsRequest(requests, req) {
+			requests = append(requests, req)
+		}
+	}
+	return requests
 }
 
 func containsRequest(reqs []reconcile.Request, req reconcile.Request) bool {

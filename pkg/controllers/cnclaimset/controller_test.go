@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,13 +15,18 @@
 package cnclaimset
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/matrixorigin/controller-runtime/pkg/fake"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/gomega"
 )
@@ -61,26 +66,24 @@ func Test_scaleIn_skipsMigratingClaims(t *testing.T) {
 		},
 	}
 
-	// scaleIn with count=1 should only delete claim-normal, not the migrating one
-	sortClaimsToDelete([]ClaimAndPod{
-		{Claim: &oc.owned[1], Pod: nil},
-	})
+	scheme := runtime.NewScheme()
+	g.Expect(v1alpha1.AddToScheme(scheme)).To(Succeed())
+	cli := fake.KubeClientBuilder().
+		WithScheme(scheme).
+		WithObjects(&oc.owned[0], &oc.owned[1]).
+		Build()
+	ctx := fake.NewContext(&v1alpha1.CNClaimSet{
+		ObjectMeta: metav1.ObjectMeta{Name: "claimset", Namespace: "ns"},
+	}, cli, nil)
 
-	// Verify that migrating claims are excluded from deletion candidates
-	var candidates []ClaimAndPod
-	var migrating []v1alpha1.CNClaim
-	for i := range oc.owned {
-		c := oc.owned[i]
-		if c.Spec.SourcePod != nil {
-			migrating = append(migrating, c)
-			continue
-		}
-		candidates = append(candidates, ClaimAndPod{Claim: &c, Pod: nil})
-	}
-	g.Expect(len(migrating)).To(Equal(1))
-	g.Expect(migrating[0].Name).To(Equal("claim-migrating"))
-	g.Expect(len(candidates)).To(Equal(1))
-	g.Expect(candidates[0].Claim.Name).To(Equal("claim-normal"))
+	g.Expect((&Actor{}).scaleIn(ctx, oc, 1)).To(Succeed())
+	g.Expect(oc.owned).To(HaveLen(1))
+	g.Expect(oc.owned[0].Name).To(Equal("claim-migrating"))
+
+	stored := &v1alpha1.CNClaim{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKey{Namespace: "ns", Name: "claim-migrating"}, stored)).To(Succeed())
+	err := cli.Get(context.Background(), client.ObjectKey{Namespace: "ns", Name: "claim-normal"}, &v1alpha1.CNClaim{})
+	g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
 }
 
 func Test_sortClaimsToDelete(t *testing.T) {

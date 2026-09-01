@@ -19,6 +19,7 @@ import (
 	"math/rand"
 	"testing"
 
+	reconfake "github.com/matrixorigin/controller-runtime/pkg/fake"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/onsi/gomega"
@@ -36,7 +37,11 @@ func newFakeClient(objs ...client.Object) client.Client {
 	scheme := runtime.NewScheme()
 	_ = v1alpha1.SchemeBuilder.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
-	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+	return clientfake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objs...).
+		WithIndex(&v1alpha1.CNClaim{}, claimPodNameField, indexClaimByPodName).
+		Build()
 }
 
 // fakeKubeClient adapts client.Client to recon.KubeClient for testing.
@@ -200,11 +205,10 @@ func Test_buildPodClaimIndex(t *testing.T) {
 	g.Expect(index).To(Equal(map[string]string{"pod-2": "other"}))
 }
 
-func Test_Finalize_releasesLabelWhenPodClaimedByOther(t *testing.T) {
+func Test_Finalize_transfersLabelWhenPodClaimedByOther(t *testing.T) {
 	g := NewGomegaWithT(t)
+	now := metav1.Now()
 
-	// Setup: claim-a is being deleted, owns pod-1 via label.
-	// claim-b references pod-1 via spec.podName (migration target).
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod-1",
@@ -217,8 +221,10 @@ func Test_Finalize_releasesLabelWhenPodClaimedByOther(t *testing.T) {
 	}
 	claimA := &v1alpha1.CNClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "claim-a",
-			Namespace: "ns",
+			Name:              "claim-a",
+			Namespace:         "ns",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{"test"},
 		},
 		Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
 	}
@@ -231,39 +237,15 @@ func Test_Finalize_releasesLabelWhenPodClaimedByOther(t *testing.T) {
 	}
 
 	cli := newFakeClient(pod, claimA, claimB)
-	kube := &fakeKubeClient{cli}
-
-	// Simulate what Finalize does: list owned pods, build claim index, release label
-	ownedCNs := []corev1.Pod{}
-	podList := &corev1.PodList{}
-	g.Expect(kube.List(podList, client.InNamespace("ns"), client.MatchingLabels{
-		v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
-		v1alpha1.PodClaimedByLabel: "claim-a",
-	})).To(Succeed())
-	ownedCNs = podList.Items
-	g.Expect(ownedCNs).To(HaveLen(1))
-
-	// Build claim index excluding self (claim-a)
-	claimIndex, err := buildPodClaimIndex(kube, "ns", "claim-a")
+	ctx := reconfake.NewContext(claimA, cli, nil)
+	done, err := (&Actor{}).Finalize(ctx)
 	g.Expect(err).NotTo(HaveOccurred())
-	// claim-b holds pod-1
-	g.Expect(claimIndex).To(HaveKeyWithValue("pod-1", "claim-b"))
+	g.Expect(done).To(BeTrue())
 
-	// The Finalize fix: when pod is in claimIndex, release the claimed-by label
-	cn := ownedCNs[0]
-	_, inIndex := claimIndex[cn.Name]
-	g.Expect(inIndex).To(BeTrue())
-
-	// Simulate ctx.Patch — release the label
-	g.Expect(kube.Patch(&cn, func() error {
-		delete(cn.Labels, v1alpha1.PodClaimedByLabel)
-		return nil
-	})).To(Succeed())
-
-	// Verify: pod no longer has claimed-by label
-	g.Expect(cn.Labels).NotTo(HaveKey(v1alpha1.PodClaimedByLabel))
-
-	// After all pods processed, Finalize should return (true, nil) — verified by logic
+	updatedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodClaimedByLabel, "claim-b"))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.CNPodPhaseLabel, v1alpha1.CNPodPhaseBound))
 }
 
 func Test_Sync_clearsSpecOnPodNotFound(t *testing.T) {
@@ -287,32 +269,16 @@ func Test_Sync_clearsSpecOnPodNotFound(t *testing.T) {
 	}
 
 	cli := newFakeClient(claim)
-	kube := &fakeKubeClient{cli}
+	storedClaim := &v1alpha1.CNClaim{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(claim), storedClaim)).To(Succeed())
+	ctx := reconfake.NewContext(storedClaim, cli, nil)
+	g.Expect((&Actor{}).Sync(ctx)).To(Succeed())
 
-	// Simulate what Sync does on Pod NotFound:
-	// 1. ctx.Get(pod) returns NotFound
-	pod := &corev1.Pod{}
-	err := kube.Get(types.NamespacedName{Namespace: "ns", Name: "pod-deleted"}, pod)
-	g.Expect(err).To(HaveOccurred()) // NotFound
-
-	// 2. Set phase to Lost and clear spec via Patch
-	claim.Status.Phase = v1alpha1.CNClaimPhaseLost
-	g.Expect(kube.Patch(claim, func() error {
-		claim.Spec.PodName = ""
-		claim.Spec.NodeName = ""
-		return nil
-	})).To(Succeed())
-
-	// Verify: spec is cleared, phase is Lost
-	g.Expect(claim.Spec.PodName).To(BeEmpty())
-	g.Expect(claim.Spec.NodeName).To(BeEmpty())
-	g.Expect(claim.Status.Phase).To(Equal(v1alpha1.CNClaimPhaseLost))
-
-	// Verify: next Observe would route to Bind (since PodName is empty)
-	// This is the key behavioral guarantee of the fix
-	r := &Actor{}
-	_ = r // Actor.Observe checks ctx.Obj.Spec.PodName == ""
-	g.Expect(claim.Spec.PodName).To(Equal(""))
+	updatedClaim := &v1alpha1.CNClaim{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(claim), updatedClaim)).To(Succeed())
+	g.Expect(updatedClaim.Spec.PodName).To(BeEmpty())
+	g.Expect(updatedClaim.Spec.NodeName).To(BeEmpty())
+	g.Expect(ctx.Obj.Status.Phase).To(Equal(v1alpha1.CNClaimPhaseLost))
 }
 
 func Test_watchPodChangeFn_enqueuesClaimBySpecPodName(t *testing.T) {
@@ -338,32 +304,13 @@ func Test_watchPodChangeFn_enqueuesClaimBySpecPodName(t *testing.T) {
 
 	cli := newFakeClient(pod, claim)
 
-	// Simulate what watchPodChangeFn does:
-	// 1. No claimed-by label → no label-based request
-	var requests []reconcile.Request
-	if claimName, ok := pod.Labels[v1alpha1.PodClaimedByLabel]; ok {
-		requests = append(requests, reconcile.Request{
-			NamespacedName: types.NamespacedName{Namespace: pod.Namespace, Name: claimName},
-		})
-	}
-	g.Expect(requests).To(BeEmpty())
+	requests := requestsForPod(context.Background(), cli, pod)
+	g.Expect(requests).To(HaveLen(1))
+	g.Expect(requests[0].Name).To(Equal("claim-refs-pod"))
 
-	// 2. List CNClaims and find those referencing this pod via spec.podName
-	claimList := &v1alpha1.CNClaimList{}
-	g.Expect(cli.List(context.TODO(), claimList, client.InNamespace("ns"))).To(Succeed())
-	for i := range claimList.Items {
-		c := &claimList.Items[i]
-		if c.Spec.PodName == pod.Name {
-			req := reconcile.Request{
-				NamespacedName: types.NamespacedName{Namespace: pod.Namespace, Name: c.Name},
-			}
-			if !containsRequest(requests, req) {
-				requests = append(requests, req)
-			}
-		}
-	}
-
-	// Verify: claim-refs-pod is enqueued even without the label
+	// The label and field-index paths may identify the same claim; only enqueue it once.
+	pod.Labels[v1alpha1.PodClaimedByLabel] = claim.Name
+	requests = requestsForPod(context.Background(), cli, pod)
 	g.Expect(requests).To(HaveLen(1))
 	g.Expect(requests[0].Name).To(Equal("claim-refs-pod"))
 }
