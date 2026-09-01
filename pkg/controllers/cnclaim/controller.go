@@ -162,7 +162,7 @@ func (r *Actor) selectCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1
 	}
 
 	sortCNByPriority(c, idleCNs)
-	// build index once: podName -> claimName for all other CNClaims
+	// Build an index once for every Pod reference held by other CNClaims.
 	claimIndex, err := buildPodClaimIndex(ctx, c.Namespace, c.Name)
 	if err != nil {
 		return nil, errors.WrapPrefix(err, "error building pod claim index", 0)
@@ -170,8 +170,8 @@ func (r *Actor) selectCN(ctx *recon.Context[*v1alpha1.CNClaim], orphans []corev1
 	for i := range idleCNs {
 		pod := &idleCNs[i]
 		// skip pod already referenced by another CNClaim's spec.podName
-		if holder, ok := claimIndex[pod.Name]; ok {
-			ctx.Log.Info("skip pod claimed by other CNClaim", "podName", pod.Name, "holder", holder)
+		if holders := claimIndex[pod.Name]; len(holders) > 0 {
+			ctx.Log.Info("skip pod claimed by other CNClaim", "podName", pod.Name, "holders", claimNames(holders))
 			continue
 		}
 		if err := r.ensureOwnership(ctx, pod); err != nil {
@@ -362,22 +362,29 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 	if len(ownedCNs) == 0 {
 		return true, nil
 	}
-	// build index once: podName -> claimName for all other CNClaims
+	// Build an index once for every Pod reference held by other CNClaims.
 	claimIndex, err := buildPodClaimIndex(ctx, c.Namespace, c.Name)
 	if err != nil {
 		return false, errors.WrapPrefix(err, "error building pod claim index", 0)
 	}
 	for i := range ownedCNs {
 		cn := ownedCNs[i]
-		// If another CNClaim references this pod via spec.podName, transfer the
-		// label directly. Removing it would leave a bound Pod temporarily
-		// unowned because label-only changes do not trigger this controller.
-		if holder, ok := claimIndex[cn.Name]; ok {
-			ctx.Log.Info("transfer pod ownership to other CNClaim", "pod", cn.Name, "holder", holder)
-			if err := ctx.Patch(&cn, func() error {
-				cn.Labels[v1alpha1.PodClaimedByLabel] = holder
-				return nil
-			}); err != nil {
+		holders := claimIndex[cn.Name]
+		if len(holders) > 1 {
+			return false, errors.Errorf("cannot transfer pod %s ownership: multiple CNClaims reference it: %v", cn.Name, claimNames(holders))
+		}
+		// If another CNClaim references this pod via spec.podName, transfer all
+		// claim-managed Pod labels directly. Removing only claimed-by would leave
+		// stale ownership metadata, and label-only changes do not trigger this
+		// controller to let the surviving claim repair them later.
+		if len(holders) == 1 {
+			holder := &holders[0]
+			if !holder.IsReady() {
+				ctx.Log.Info("wait for target CNClaim before transferring pod ownership", "pod", cn.Name, "holder", holder.Name, "phase", holder.Status.Phase)
+				return false, nil
+			}
+			ctx.Log.Info("transfer pod ownership to other CNClaim", "pod", cn.Name, "holder", holder.Name)
+			if err := transferPodOwnership(ctx, &cn, c, holder); err != nil {
 				return false, errors.WrapPrefix(err, "error transferring pod ownership", 0)
 			}
 			continue
@@ -388,6 +395,39 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+func transferPodOwnership(
+	cli recon.KubeClient,
+	pod *corev1.Pod,
+	from, to *v1alpha1.CNClaim,
+) error {
+	return cli.Patch(pod, func() error {
+		if pod.Labels == nil {
+			pod.Labels = map[string]string{}
+		}
+
+		for key := range from.Spec.AdditionalPodLabels {
+			delete(pod.Labels, key)
+		}
+		for key, value := range to.Spec.AdditionalPodLabels {
+			pod.Labels[key] = value
+		}
+
+		pod.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseBound
+		pod.Labels[v1alpha1.PodClaimedByLabel] = to.Name
+		if claimSetName := to.Labels[v1alpha1.ClaimSetNameLabel]; claimSetName != "" {
+			pod.Labels[v1alpha1.ClaimSetNameLabel] = claimSetName
+		} else {
+			delete(pod.Labels, v1alpha1.ClaimSetNameLabel)
+		}
+		if to.Spec.OwnerName != nil {
+			pod.Labels[v1alpha1.PodOwnerNameLabel] = *to.Spec.OwnerName
+		} else {
+			delete(pod.Labels, v1alpha1.PodOwnerNameLabel)
+		}
+		return nil
+	})
 }
 
 // podClaimedByOthers checks if the given pod is referenced by any CNClaim's
@@ -411,22 +451,32 @@ func podClaimedByOthers(cli recon.KubeClient, namespace, podName, excludeClaim s
 }
 
 // buildPodClaimIndex lists all CNClaims in the namespace and returns a map
-// from podName to the claiming CNClaim name, excluding the given claim and
-// CNClaims that are being deleted.
-func buildPodClaimIndex(cli recon.KubeClient, namespace, excludeClaim string) (map[string]string, error) {
+// from podName to the CNClaims that reference it, excluding the given claim
+// and CNClaims that are being deleted. Keeping every claimant lets callers
+// detect an ambiguous ownership transfer instead of choosing one arbitrarily.
+func buildPodClaimIndex(cli recon.KubeClient, namespace, excludeClaim string) (map[string][]v1alpha1.CNClaim, error) {
 	claimList := &v1alpha1.CNClaimList{}
 	if err := cli.List(claimList, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
-	index := make(map[string]string, len(claimList.Items))
+	index := make(map[string][]v1alpha1.CNClaim, len(claimList.Items))
 	for i := range claimList.Items {
 		claim := &claimList.Items[i]
 		if claim.Name == excludeClaim || claim.DeletionTimestamp != nil || claim.Spec.PodName == "" {
 			continue
 		}
-		index[claim.Spec.PodName] = claim.Name
+		index[claim.Spec.PodName] = append(index[claim.Spec.PodName], *claim)
 	}
 	return index, nil
+}
+
+func claimNames(claims []v1alpha1.CNClaim) []string {
+	names := make([]string, 0, len(claims))
+	for i := range claims {
+		names = append(names, claims[i].Name)
+	}
+	slices.Sort(names)
+	return names
 }
 
 func (r *Actor) patchStore(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, req logpb.CNStateLabel) (*metadata.CNService, error) {

@@ -202,7 +202,8 @@ func Test_buildPodClaimIndex(t *testing.T) {
 	index, err := buildPodClaimIndex(&fakeKubeClient{cli}, "ns", "self")
 	g.Expect(err).NotTo(HaveOccurred())
 	// "self" excluded, "deleting" filtered, "pending" has no podName
-	g.Expect(index).To(Equal(map[string]string{"pod-2": "other"}))
+	g.Expect(index).To(HaveLen(1))
+	g.Expect(claimNames(index["pod-2"])).To(Equal([]string{"other"}))
 }
 
 func Test_Finalize_transfersLabelWhenPodClaimedByOther(t *testing.T) {
@@ -216,6 +217,10 @@ func Test_Finalize_transfersLabelWhenPodClaimedByOther(t *testing.T) {
 			Labels: map[string]string{
 				v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
 				v1alpha1.PodClaimedByLabel: "claim-a",
+				v1alpha1.ClaimSetNameLabel: "claimset-a",
+				v1alpha1.PodOwnerNameLabel: "owner-a",
+				"source-only":              "old",
+				"shared":                   "old",
 			},
 		},
 	}
@@ -225,15 +230,30 @@ func Test_Finalize_transfersLabelWhenPodClaimedByOther(t *testing.T) {
 			Namespace:         "ns",
 			DeletionTimestamp: &now,
 			Finalizers:        []string{"test"},
+			Labels: map[string]string{
+				v1alpha1.ClaimSetNameLabel: "claimset-a",
+			},
 		},
-		Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef:         v1alpha1.ClaimPodRef{PodName: "pod-1"},
+			OwnerName:           pointer.String("owner-a"),
+			AdditionalPodLabels: map[string]string{"source-only": "old", "shared": "old"},
+		},
 	}
 	claimB := &v1alpha1.CNClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "claim-b",
 			Namespace: "ns",
+			Labels: map[string]string{
+				v1alpha1.ClaimSetNameLabel: "claimset-b",
+			},
 		},
-		Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"}},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef:         v1alpha1.ClaimPodRef{PodName: "pod-1"},
+			OwnerName:           pointer.String("owner-b"),
+			AdditionalPodLabels: map[string]string{"target-only": "new", "shared": "new"},
+		},
+		Status: v1alpha1.CNClaimStatus{Phase: v1alpha1.CNClaimPhaseBound},
 	}
 
 	cli := newFakeClient(pod, claimA, claimB)
@@ -246,6 +266,125 @@ func Test_Finalize_transfersLabelWhenPodClaimedByOther(t *testing.T) {
 	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
 	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodClaimedByLabel, "claim-b"))
 	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.CNPodPhaseLabel, v1alpha1.CNPodPhaseBound))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.ClaimSetNameLabel, "claimset-b"))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodOwnerNameLabel, "owner-b"))
+	g.Expect(updatedPod.Labels).NotTo(HaveKey("source-only"))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue("target-only", "new"))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue("shared", "new"))
+}
+
+func Test_transferPodOwnership_removesLabelsNotManagedByTarget(t *testing.T) {
+	g := NewGomegaWithT(t)
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:      "pod-1",
+		Namespace: "ns",
+		Labels: map[string]string{
+			v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+			v1alpha1.PodClaimedByLabel: "claim-a",
+			v1alpha1.ClaimSetNameLabel: "claimset-a",
+			v1alpha1.PodOwnerNameLabel: "owner-a",
+			"source-only":              "old",
+		},
+	}}
+	from := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-a", Namespace: "ns"},
+		Spec: v1alpha1.CNClaimSpec{
+			AdditionalPodLabels: map[string]string{"source-only": "old"},
+		},
+	}
+	to := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-b", Namespace: "ns"},
+	}
+
+	cli := newFakeClient(pod)
+	storedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), storedPod)).To(Succeed())
+	ctx := reconfake.NewContext(from, cli, nil)
+	g.Expect(transferPodOwnership(ctx, storedPod, from, to)).To(Succeed())
+
+	updatedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodClaimedByLabel, to.Name))
+	g.Expect(updatedPod.Labels).NotTo(HaveKey(v1alpha1.ClaimSetNameLabel))
+	g.Expect(updatedPod.Labels).NotTo(HaveKey(v1alpha1.PodOwnerNameLabel))
+	g.Expect(updatedPod.Labels).NotTo(HaveKey("source-only"))
+}
+
+func Test_Finalize_rejectsAmbiguousOwnershipTransfer(t *testing.T) {
+	g := NewGomegaWithT(t)
+	now := metav1.Now()
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:      "pod-1",
+		Namespace: "ns",
+		Labels: map[string]string{
+			v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+			v1alpha1.PodClaimedByLabel: "claim-a",
+		},
+	}}
+	claimA := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "claim-a",
+			Namespace:         "ns",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{"test"},
+		},
+		Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+	}
+	claimB := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-b", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+	}
+	claimC := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-c", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+	}
+
+	cli := newFakeClient(pod, claimA, claimB, claimC)
+	ctx := reconfake.NewContext(claimA, cli, nil)
+	done, err := (&Actor{}).Finalize(ctx)
+	g.Expect(done).To(BeFalse())
+	g.Expect(err).To(MatchError(ContainSubstring("multiple CNClaims reference it: [claim-b claim-c]")))
+
+	updatedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodClaimedByLabel, claimA.Name))
+}
+
+func Test_Finalize_waitsForTargetClaimToBecomeReady(t *testing.T) {
+	g := NewGomegaWithT(t)
+	now := metav1.Now()
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:      "pod-1",
+		Namespace: "ns",
+		Labels: map[string]string{
+			v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+			v1alpha1.PodClaimedByLabel: "claim-a",
+		},
+	}}
+	claimA := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "claim-a",
+			Namespace:         "ns",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{"test"},
+		},
+		Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+	}
+	claimB := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-b", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+		Status:     v1alpha1.CNClaimStatus{Phase: v1alpha1.CNClaimPhasePending},
+	}
+
+	cli := newFakeClient(pod, claimA, claimB)
+	ctx := reconfake.NewContext(claimA, cli, nil)
+	done, err := (&Actor{}).Finalize(ctx)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(done).To(BeFalse())
+
+	updatedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodClaimedByLabel, claimA.Name))
 }
 
 func Test_Sync_clearsSpecOnPodNotFound(t *testing.T) {

@@ -258,10 +258,17 @@ var _ = Describe("CNClaim and CNPool test", func() {
 			if err := kubeCli.Get(ctx, client.ObjectKeyFromObject(claim), claim); err != nil {
 				return err
 			}
-			if claim.Status.Store.PodName == target.Name {
+			if claim.Status.Store.PodName == target.Name &&
+				claim.Spec.SourcePod == nil &&
+				claim.Status.Migrate == nil {
 				return nil
 			}
-			logger.Infow("wait migrate complete", "claim", claim.Name)
+			logger.Infow("wait migrate complete",
+				"claim", claim.Name,
+				"targetPod", target.Name,
+				"storePod", claim.Status.Store.PodName,
+				"sourcePod", claim.Spec.SourcePod,
+				"progress", claim.Status.Migrate)
 			return errWait
 		}, migrateTimeout, pollInterval).Should(Succeed())
 	})
