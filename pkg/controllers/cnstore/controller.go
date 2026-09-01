@@ -34,6 +34,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/pkg/querycli"
 	logpb "github.com/matrixorigin/matrixone/pkg/pb/logservice"
 	"github.com/matrixorigin/matrixone/pkg/pb/metadata"
+	querypb "github.com/matrixorigin/matrixone/pkg/pb/query"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -69,7 +70,13 @@ const resyncInterval = 30 * time.Second
 
 type Controller struct {
 	clientMgr *mocli.MORPCClientManager
-	queryCli  *querycli.Client
+	queryCli  queryClient
+}
+
+type queryClient interface {
+	ShowProcessList(context.Context, string) (*querypb.ShowProcessListResponse, error)
+	GetPipelineInfo(context.Context, string) (*querypb.GetPipelineInfoResponse, error)
+	GetReplicaCount(context.Context, string) (querypb.GetReplicaCountResponse, error)
 }
 
 type withCNSet struct {
@@ -492,10 +499,9 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	if err == nil {
 		sc = previous
 	}
-	if sc.StartedTime == nil || !sc.StartedTime.Equal(*startedTime) {
-		// clean previously recorded score and update startTime if CN is restarted
-		sc.Restarted(startedTime)
-	}
+	// Invalidate the previous round before performing any query. A failed or partial
+	// refresh must never leave an old zero looking like current evidence.
+	sc.BeginObservation(startedTime)
 
 	uid := v1alpha1.GetCNPodUUID(pod)
 	moVersion := common.GetSemanticVersion(&pod.ObjectMeta)
@@ -509,6 +515,9 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		return nil
 	}); err != nil {
 		ctx.Log.Info("error refresh stats, cn not found in store-cache", "error", err.Error())
+		// BeginObservation has already invalidated this round. Persist that state so
+		// IsSafeToReclaim remains the single reclaim-safety boundary, while preserving
+		// the existing state-sync behavior when the CN is absent from the cache.
 		return c.patchStoreStats(ctx, sc)
 	}
 
@@ -517,39 +526,52 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		Logger:  ctx.Log,
 		Enabled: diagnosDraining,
 	}
+	c.collectQueryStats(sc, queryAddress, moVersion, diagosis)
+
+	return c.patchStoreStats(ctx, sc)
+}
+
+// collectQueryStats updates one observation round. Each observation is marked
+// valid only after its query succeeds. A feature that is unavailable for the
+// current MO version is explicitly treated as not required with a zero count.
+func (c *Controller) collectQueryStats(sc *common.StoreScore, queryAddress string, moVersion semver.Version, diagosis *connectionDiagnosis) {
 	count, err := c.getSessionCount(queryAddress, moVersion, diagosis)
 	if err != nil {
-		ctx.Log.Info("error get session count", "error", err.Error())
+		diagosis.Logger.Info("error get session count", "error", err.Error())
 	} else {
 		// update session count
 		sc.SessionCount = count
+		sc.SessionObserved = true
 	}
 	var pipelineCount int
 	if v1alpha1.HasMOFeature(moVersion, v1alpha1.MOFeaturePipelineInfo) {
 		pipelineCount, err = c.getPipelineCount(queryAddress, diagosis)
 		if err != nil {
-			ctx.Log.Info("error get pipeline count", "error", err.Error())
+			diagosis.Logger.Info("error get pipeline count", "error", err.Error())
 		} else {
 			// update pipeline count
 			sc.PipelineCount = pipelineCount
+			sc.PipelineObserved = true
 		}
 	} else {
-		// clear pipeline count if feature is disabled
+		// Pipeline observation is not required for versions without the API.
 		sc.PipelineCount = 0
+		sc.PipelineObserved = true
 	}
 	var replicaCount int
 	if v1alpha1.HasMOFeature(moVersion, v1alpha1.MOFeatureShardingMigration) {
 		replicaCount, err = c.getReplicaCount(queryAddress, diagosis)
 		if err != nil {
-			ctx.Log.Info("error get replica count", "error", err.Error())
+			diagosis.Logger.Info("error get replica count", "error", err.Error())
 		} else {
 			sc.ReplicaCount = replicaCount
+			sc.ReplicaObserved = true
 		}
 	} else {
+		// Replica observation is not required for versions without sharding migration.
 		sc.ReplicaCount = 0
+		sc.ReplicaObserved = true
 	}
-
-	return c.patchStoreStats(ctx, sc)
 }
 
 func (c *Controller) patchStoreStats(ctx *recon.Context[*corev1.Pod], sc *common.StoreScore) error {
