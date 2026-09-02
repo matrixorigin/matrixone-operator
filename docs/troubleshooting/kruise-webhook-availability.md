@@ -1,18 +1,25 @@
 # Kruise webhook availability policy
 
 The bundled Kruise chart deliberately uses different failure policies based on
-the scope of the admitted resource.
+the scope of the admitted resource. MatrixOne-specific packaging and RBAC
+changes use Chart version `1.8.3-mo.1` while retaining Kruise app version
+`1.8.3`, so the artifact cannot be confused with the upstream `1.8.3` Chart.
 
-## Built-in Kubernetes resources
+## Pod admission
 
-Webhooks for Pods, Pod eviction, Deployments, ReplicaSets, StatefulSets,
+The `mpod.kb.io`, `vpod.kb.io`, and `vpodeviction.kb.io` webhooks use
+`failurePolicy: Fail`. A Kruise webhook outage therefore blocks Pod creation,
+update, deletion, and eviction requests covered by those rules.
+
+This preserves the contract of the enabled `PodUnavailableBudgetDeleteGate` and
+`PodUnavailableBudgetUpdateGate` features. It also prevents Pods from being
+created without SidecarSet, WorkloadSpread, PersistentPodState, or other Kruise
+mutations that cannot be applied retroactively after the webhook recovers.
+
+Other bundled webhooks for built-in Deployments, ReplicaSets, StatefulSets,
 Namespaces, Services, Ingresses, and CustomResourceDefinitions use
-`failurePolicy: Ignore`.
-
-This keeps core Kubernetes API operations available while the Kruise webhook
-service is starting, upgrading, or temporarily unavailable. Features implemented
-by those webhooks, such as Pod mutation and deletion protection, are not
-guaranteed during the outage and resume when the webhook recovers.
+`failurePolicy: Ignore`. API resources not selected by any Kruise webhook remain
+available during the outage.
 
 ## Kruise custom resources
 
@@ -36,6 +43,8 @@ make verify-chart
 ```
 
 The Kind E2E workflow also disconnects the Kruise webhook Service temporarily.
-It verifies that ordinary Pod admission remains available, Kruise custom
-resources remain fail-closed, and a Helm upgrade restores the Service and its
-admission path. Run that integration coverage with `make e2e-kind`.
+It verifies that unrelated core API operations remain available, Pod and Kruise
+custom-resource admission remain fail-closed, and a Helm upgrade restores the
+Service and Pod admission path. The outage scenario runs after the established
+operator E2E suite so it cannot alter that suite's initial state. Run the
+integration coverage with `make e2e-kind`.

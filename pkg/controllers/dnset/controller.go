@@ -318,25 +318,21 @@ func (d *Actor) Reconcile(mgr manager.Manager) error {
 
 func requestsForLogSetStatefulSet(reader client.Reader) handler.MapFunc {
 	return func(ctx context.Context, object client.Object) []reconcile.Request {
-		sts, ok := object.(*kruise.StatefulSet)
+		owner, ok := common.LogSetStatefulSetOwner(object)
 		if !ok {
-			return nil
-		}
-		owner := metav1.GetControllerOf(sts)
-		if owner == nil || owner.APIVersion != v1alpha1.GroupVersion.String() || owner.Kind != "LogSet" {
 			return nil
 		}
 
 		sets := &v1alpha1.DNSetList{}
-		if err := reader.List(ctx, sets, client.InNamespace(sts.Namespace)); err != nil {
-			log.FromContext(ctx).Error(err, "list DNSets for LogSet StatefulSet", "statefulset", client.ObjectKeyFromObject(sts))
+		if err := reader.List(ctx, sets); err != nil {
+			log.FromContext(ctx).Error(err, "list DNSets for LogSet StatefulSet", "statefulset", client.ObjectKeyFromObject(object))
 			return nil
 		}
 
 		requests := make([]reconcile.Request, 0, len(sets.Items))
 		for i := range sets.Items {
 			set := &sets.Items[i]
-			if set.Deps.LogSet != nil && set.Deps.LogSet.Name == owner.Name {
+			if common.ReferencesLogSet(set.Deps.LogSetRef, set.Namespace, owner) {
 				requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(set)})
 			}
 		}

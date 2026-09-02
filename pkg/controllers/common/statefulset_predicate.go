@@ -15,11 +15,44 @@
 package common
 
 import (
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/openkruise/kruise-api/apps/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
+
+// LogSetStatefulSetOwner returns the LogSet controller key for a Kruise
+// StatefulSet. It rejects similarly named resources owned by another API.
+func LogSetStatefulSetOwner(object client.Object) (client.ObjectKey, bool) {
+	sts, ok := object.(*v1beta1.StatefulSet)
+	if !ok {
+		return client.ObjectKey{}, false
+	}
+	owner := sts.GetOwnerReferences()
+	for i := range owner {
+		if owner[i].Controller != nil && *owner[i].Controller &&
+			owner[i].APIVersion == v1alpha1.GroupVersion.String() && owner[i].Kind == "LogSet" {
+			return client.ObjectKey{Namespace: sts.Namespace, Name: owner[i].Name}, true
+		}
+	}
+	return client.ObjectKey{}, false
+}
+
+// ReferencesLogSet reports whether an internal LogSet reference points to key.
+// Older embedded references may omit namespace; those are local to the
+// dependent object for compatibility with the established API semantics.
+func ReferencesLogSet(ref v1alpha1.LogSetRef, dependentNamespace string, key client.ObjectKey) bool {
+	if ref.LogSet == nil {
+		return false
+	}
+	namespace := ref.LogSet.Namespace
+	if namespace == "" {
+		namespace = dependentNamespace
+	}
+	return namespace == key.Namespace && ref.LogSet.Name == key.Name
+}
 
 // LogSetReserveOrdinalsChangedPredicate selects updates that change the LogSet
 // service-addresses consumed by CNSet and DNSet configuration. Create and delete
@@ -33,7 +66,13 @@ func LogSetReserveOrdinalsChangedPredicate() predicate.Predicate {
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSts, oldOK := e.ObjectOld.(*v1beta1.StatefulSet)
 			newSts, newOK := e.ObjectNew.(*v1beta1.StatefulSet)
-			return oldOK && newOK && !equality.Semantic.DeepEqual(oldSts.Spec.ReserveOrdinals, newSts.Spec.ReserveOrdinals)
+			if !oldOK || !newOK {
+				return false
+			}
+			if _, ok := LogSetStatefulSetOwner(newSts); !ok {
+				return false
+			}
+			return !equality.Semantic.DeepEqual(oldSts.Spec.ReserveOrdinals, newSts.Spec.ReserveOrdinals)
 		},
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}

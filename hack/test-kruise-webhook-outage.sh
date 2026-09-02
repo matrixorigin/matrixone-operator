@@ -35,8 +35,10 @@ recover() {
     kubectl delete namespace "${test_namespace}" --ignore-not-found --wait=false >/dev/null 2>&1 || true
     if [[ "${needs_recovery}" == true ]]; then
         echo "> Restore Kruise webhook after outage test"
-        helm upgrade "${release}" "${operator_chart}" -n "${release_namespace}" --reuse-values \
-            --wait --timeout=5m >/dev/null 2>&1 || true
+        if ! helm upgrade "${release}" "${operator_chart}" -n "${release_namespace}" --reuse-values \
+            --wait --timeout=5m >/dev/null; then
+            echo "error: failed to restore Kruise webhook after outage test" >&2
+        fi
     fi
     exit "${status}"
 }
@@ -50,7 +52,7 @@ kubectl -n "${kruise_namespace}" patch service "${webhook_service}" --type=merge
 
 for _ in $(seq 1 30); do
     endpoints=$(kubectl -n "${kruise_namespace}" get endpoints "${webhook_service}" \
-        -o jsonpath='{.subsets}' 2>/dev/null || true)
+        -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null || true)
     [[ -z "${endpoints}" ]] && break
     sleep 1
 done
@@ -60,11 +62,19 @@ if [[ -n "${endpoints:-}" ]]; then
 fi
 
 kubectl create namespace "${test_namespace}" >/dev/null
-kubectl -n "${test_namespace}" apply -f - >/dev/null <<'EOF'
+
+# Resources outside the Kruise webhook rules remain available.
+kubectl -n "${test_namespace}" create configmap admitted-during-outage \
+    --from-literal=status=ok >/dev/null
+
+# Pod admission remains fail-closed because Kruise mutation and PUB validation
+# cannot be repaired retroactively after an outage.
+set +e
+pod_failure_output=$(kubectl -n "${test_namespace}" apply -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
-  name: admitted-during-outage
+  name: rejected-during-outage
 spec:
   restartPolicy: Never
   containers:
@@ -72,6 +82,17 @@ spec:
       image: busybox:1.36
       command: ["sh", "-c", "exit 0"]
 EOF
+)
+pod_failure_status=$?
+set -e
+if [[ ${pod_failure_status} -eq 0 ]]; then
+    echo "Pod unexpectedly passed fail-closed Kruise admission during webhook outage" >&2
+    exit 1
+fi
+if ! grep -Eq 'failed calling webhook|no endpoints available|context deadline exceeded' <<<"${pod_failure_output}"; then
+    echo "Pod failed for an unexpected reason: ${pod_failure_output}" >&2
+    exit 1
+fi
 
 set +e
 failure_output=$(kubectl -n "${test_namespace}" apply -f - 2>&1 <<'EOF'
@@ -112,7 +133,7 @@ kubectl -n "${kruise_namespace}" rollout status deployment "${manager_deployment
 
 for _ in $(seq 1 60); do
     endpoints=$(kubectl -n "${kruise_namespace}" get endpoints "${webhook_service}" \
-        -o jsonpath='{.subsets}' 2>/dev/null || true)
+        -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null || true)
     [[ -n "${endpoints}" ]] && break
     sleep 1
 done

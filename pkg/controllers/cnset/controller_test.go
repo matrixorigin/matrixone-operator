@@ -69,6 +69,7 @@ func enableCNPromServiceDiscovery(cn *v1alpha1.CNSet) {
 func Test_syncMetricService(t *testing.T) {
 	s := newScheme()
 	labels := common.SubResourceLabels(baseCNSetForMetricSvcTest())
+	labels[common.ComponentLabelKey] = "CNSet"
 
 	tests := []struct {
 		name   string
@@ -156,10 +157,10 @@ func Test_syncMetricService(t *testing.T) {
 					Name:      metricSvcName(cn),
 				}}), svc)).To(Succeed())
 				g.Expect(svc.Labels).To(HaveKeyWithValue("drifted", "true"))
-				for key, value := range common.SubResourceLabels(cn) {
+				for key, value := range labels {
 					g.Expect(svc.Labels).To(HaveKeyWithValue(key, value))
 				}
-				g.Expect(svc.Spec.Selector).To(Equal(common.SubResourceLabels(cn)))
+				g.Expect(svc.Spec.Selector).To(Equal(labels))
 				g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeClusterIP))
 				g.Expect(svc.Spec.Ports).To(Equal([]corev1.ServicePort{{Name: "metric", Port: int32(common.MetricsPort)}}))
 				g.Expect(svc.Annotations).To(HaveKeyWithValue("user.example.com/keep", "yes"))
@@ -205,6 +206,41 @@ func Test_syncMetricService(t *testing.T) {
 				g.Expect(svc.Annotations).NotTo(HaveKey(common.PrometheusPortAnno))
 			},
 		},
+		{
+			name:  "does not mutate service controlled by another owner",
+			cnset: baseCNSetForMetricSvcTest(),
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      metricSvcName(baseCNSetForMetricSvcTest()),
+							Labels:    map[string]string{"foreign": "owner"},
+							OwnerReferences: []metav1.OwnerReference{{
+								APIVersion: "example.com/v1",
+								Kind:       "Example",
+								Name:       "foreign",
+								UID:        "foreign-uid",
+								Controller: pointer.Bool(true),
+							}},
+						},
+						Spec: corev1.ServiceSpec{
+							Type:     corev1.ServiceTypeNodePort,
+							Selector: map[string]string{"foreign": "selector"},
+							Ports:    []corev1.ServicePort{{Name: "foreign", Port: 1234}},
+						},
+					},
+				).Build(),
+			},
+			expect: func(g *WithT, cn *v1alpha1.CNSet, cli client.Client, err error) {
+				g.Expect(err).To(BeNil())
+				svc := &corev1.Service{}
+				g.Expect(cli.Get(context.Background(), client.ObjectKey{Namespace: cn.Namespace, Name: metricSvcName(cn)}, svc)).To(Succeed())
+				g.Expect(svc.Labels).To(Equal(map[string]string{"foreign": "owner"}))
+				g.Expect(svc.Spec.Selector).To(Equal(map[string]string{"foreign": "selector"}))
+				g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeNodePort))
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -227,20 +263,20 @@ func Test_syncMetricService(t *testing.T) {
 
 func TestRequestsForLogSetStatefulSet(t *testing.T) {
 	s := newScheme()
-	logSet := &v1alpha1.LogSet{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "log", UID: "log-uid"}}
+	logSet := &v1alpha1.LogSet{ObjectMeta: metav1.ObjectMeta{Namespace: "provider", Name: "log", UID: "log-uid"}}
 	matching := &v1alpha1.CNSet{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "matching"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "consumer", Name: "matching"},
 		Deps:       v1alpha1.CNSetDeps{LogSetRef: logSet.AsDependency()},
 	}
 	unrelated := &v1alpha1.CNSet{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "unrelated"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "consumer", Name: "unrelated"},
 		Deps: v1alpha1.CNSetDeps{LogSetRef: v1alpha1.LogSetRef{LogSet: &v1alpha1.LogSet{
-			ObjectMeta: metav1.ObjectMeta{Name: "other"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: "other", Name: "log"},
 		}}},
 	}
 	cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(matching, unrelated).Build()
 	sts := &kruisev1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
-		Namespace: "default",
+		Namespace: "provider",
 		Name:      "log-log",
 		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(logSet,
 			v1alpha1.GroupVersion.WithKind("LogSet"))},

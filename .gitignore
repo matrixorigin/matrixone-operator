@@ -19,11 +19,10 @@ charts/matrixone-operator/charts/
 *.tgz
 e2e*.xml
 e2e.test
-# Operational troubleshooting documents are versioned; ignore only drafts and
-# generated local test data/tools.
-docs/troubleshooting/**/*.draft.md
-docs/troubleshooting/**/.tools/
-docs/troubleshooting/**/.work/
-docs/troubleshooting/**/artifacts/
-docs/troubleshooting/**/__pycache__/
+# Operational troubleshooting documents are versioned as reviewed, top-level
+# Markdown files. Ignore evidence, logs, tools, and other generated subtrees by
+# default so environment data cannot be committed accidentally.
+docs/troubleshooting/*
+!docs/troubleshooting/*.md
+docs/troubleshooting/*.draft.md
 docs/draft/

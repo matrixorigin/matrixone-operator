@@ -40,20 +40,20 @@ import (
 
 func TestRequestsForLogSetStatefulSet(t *testing.T) {
 	s := newScheme()
-	logSet := &v1alpha1.LogSet{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "log", UID: "log-uid"}}
+	logSet := &v1alpha1.LogSet{ObjectMeta: metav1.ObjectMeta{Namespace: "provider", Name: "log", UID: "log-uid"}}
 	matching := &v1alpha1.DNSet{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "matching"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "consumer", Name: "matching"},
 		Deps:       v1alpha1.DNSetDeps{LogSetRef: logSet.AsDependency()},
 	}
 	unrelated := &v1alpha1.DNSet{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "unrelated"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "consumer", Name: "unrelated"},
 		Deps: v1alpha1.DNSetDeps{LogSetRef: v1alpha1.LogSetRef{LogSet: &v1alpha1.LogSet{
-			ObjectMeta: metav1.ObjectMeta{Name: "other"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: "other", Name: "log"},
 		}}},
 	}
 	cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(matching, unrelated).Build()
 	sts := &kruisev1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
-		Namespace: "default",
+		Namespace: "provider",
 		Name:      "log-log",
 		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(logSet,
 			v1alpha1.GroupVersion.WithKind("LogSet"))},

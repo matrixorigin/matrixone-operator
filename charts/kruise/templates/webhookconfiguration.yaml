@@ -18,9 +18,7 @@ webhooks:
         namespace: {{ .Values.installation.namespace }}
         path: /mutate-pod
     timeoutSeconds: {{ .Values.webhookConfiguration.timeoutSeconds }}
-    # Pod admission is fail-open so a Kruise webhook outage cannot block Pod
-    # creation across the cluster. Kruise custom-resource webhooks remain Fail.
-    failurePolicy: Ignore
+    failurePolicy: Fail
     name: mpod.kb.io
     namespaceSelector:
       matchExpressions:
@@ -525,7 +523,7 @@ webhooks:
         name: kruise-webhook-service
         namespace: {{ .Values.installation.namespace }}
         path: /validate-pod
-    failurePolicy: Ignore
+    failurePolicy: Fail
     timeoutSeconds: {{ .Values.webhookConfiguration.timeoutSeconds }}
     name: vpod.kb.io
     namespaceSelector:
@@ -557,7 +555,7 @@ webhooks:
         name: kruise-webhook-service
         namespace: {{ .Values.installation.namespace }}
         path: /validate-pod
-    failurePolicy: Ignore
+    failurePolicy: Fail
     timeoutSeconds: {{ .Values.webhookConfiguration.timeoutSeconds }}
     name: vpodeviction.kb.io
     namespaceSelector:

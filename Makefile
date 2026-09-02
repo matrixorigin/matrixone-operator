@@ -84,14 +84,23 @@ verify-generated:
 		exit 1; \
 	fi
 
-# Make sure the generated files are up to date before open PR
-reviewable: ci-reviewable verify-generated verify-chart go-lint check-license
+# Make sure the generated files are up to date before open PR. Keep the steps in
+# the recipe so `make -j reviewable` cannot run generators and their checks at
+# the same time.
+reviewable: ci-reviewable
+	$(MAKE) verify-generated
+	$(MAKE) verify-chart
+	$(MAKE) go-lint
+	$(MAKE) check-license
 
 ci-reviewable: generate manifests docs test
 	go mod tidy
 
-# Check whether the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action
-verify: ci-reviewable verify-generated verify-chart
+# Check whether the pull request is reviewable in CI. go-lint is deliberately
+# excluded since the workflow runs golangci-lint as a separate action.
+verify: ci-reviewable
+	$(MAKE) verify-generated
+	$(MAKE) verify-chart
 	echo "checking that branch is clean"
 	test -z "$$(git status --porcelain)" || (echo "unclean working tree, did you forget to run make reviewable?" && exit 1)
 	echo "branch is clean"

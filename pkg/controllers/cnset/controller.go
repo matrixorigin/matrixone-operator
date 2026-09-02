@@ -199,24 +199,37 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 // "metric") can find CN targets the same way it already does for DN/Log (issue #600).
 func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	cn := ctx.Obj
+	labels := common.SubResourceLabels(cn)
+	// Do not depend on TypeMeta being populated on objects read from cache.
+	labels[common.ComponentLabelKey] = "CNSet"
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cn.Namespace,
 			Name:      metricSvcName(cn),
-			Labels:    common.SubResourceLabels(cn),
+			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: common.SubResourceLabels(cn),
+			Selector: labels,
 		},
 	}
 	return recon.CreateOwnedOrUpdate(ctx, svc, func() error {
+		if owner := metav1.GetControllerOf(svc); owner != nil && !metav1.IsControlledBy(svc, cn) {
+			// A metrics-only name collision must not block CN scale, rollout, or
+			// configuration reconciliation. Do not mutate or steal a Service that
+			// is controlled by another object.
+			ctx.Log.Info("skip CN metrics Service owned by another controller",
+				"service", client.ObjectKeyFromObject(svc), "owner", owner)
+			return nil
+		}
+		// The Service spec is controller-managed; unrelated labels and
+		// annotations remain user-managed and are preserved.
 		if svc.Labels == nil {
 			svc.Labels = map[string]string{}
 		}
-		for key, value := range common.SubResourceLabels(cn) {
+		for key, value := range labels {
 			svc.Labels[key] = value
 		}
-		svc.Spec.Selector = common.SubResourceLabels(cn)
+		svc.Spec.Selector = labels
 		svc.Spec.Type = corev1.ServiceTypeClusterIP
 		svc.Spec.Ports = []corev1.ServicePort{{
 			Name: "metric",
@@ -363,25 +376,21 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 
 func requestsForLogSetStatefulSet(reader client.Reader) handler.MapFunc {
 	return func(ctx context.Context, object client.Object) []reconcile.Request {
-		sts, ok := object.(*kruise.StatefulSet)
+		owner, ok := common.LogSetStatefulSetOwner(object)
 		if !ok {
-			return nil
-		}
-		owner := metav1.GetControllerOf(sts)
-		if owner == nil || owner.APIVersion != v1alpha1.GroupVersion.String() || owner.Kind != "LogSet" {
 			return nil
 		}
 
 		sets := &v1alpha1.CNSetList{}
-		if err := reader.List(ctx, sets, client.InNamespace(sts.Namespace)); err != nil {
-			log.FromContext(ctx).Error(err, "list CNSets for LogSet StatefulSet", "statefulset", client.ObjectKeyFromObject(sts))
+		if err := reader.List(ctx, sets); err != nil {
+			log.FromContext(ctx).Error(err, "list CNSets for LogSet StatefulSet", "statefulset", client.ObjectKeyFromObject(object))
 			return nil
 		}
 
 		requests := make([]reconcile.Request, 0, len(sets.Items))
 		for i := range sets.Items {
 			set := &sets.Items[i]
-			if set.Deps.LogSet != nil && set.Deps.LogSet.Name == owner.Name {
+			if common.ReferencesLogSet(set.Deps.LogSetRef, set.Namespace, owner) {
 				requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(set)})
 			}
 		}

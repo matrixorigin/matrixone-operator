@@ -27,15 +27,16 @@ bash -n "${REPO_ROOT}/hack/package-chart.sh" \
 
 helm template test "${REPO_ROOT}/charts/kruise" >"${TEST_ROOT}/kruise.yaml"
 
-# Built-in API operations must remain available during a webhook outage. Kruise
-# custom resources remain fail-closed because their webhooks own their contract.
+# Pod admission and Kruise custom resources remain fail-closed because their
+# mutation/validation contracts cannot be repaired retroactively. Other built-in
+# validators remain fail-open. The rendered chart currently emits failurePolicy
+# before name inside each webhook block, which this check intentionally parses.
 awk '
     /^[[:space:]]+failurePolicy:/ { policy = $2 }
     /^[[:space:]]+name: [a-z].*\.kb\.io$/ {
         name = $2
         expected = "Fail"
-        if (name == "mpod.kb.io" || name == "vpod.kb.io" || name == "vpodeviction.kb.io" ||
-            name ~ /^vbuiltin/ || name == "vcustomresourcedefinition.kb.io" ||
+        if (name ~ /^vbuiltin/ || name == "vcustomresourcedefinition.kb.io" ||
             name == "vnamespace.kb.io" || name == "vingress.kb.io" || name == "vservice.kb.io") {
             expected = "Ignore"
         }
@@ -52,13 +53,29 @@ if grep -q 'StatefulSetAutoResizePVCGate=true' "${TEST_ROOT}/kruise.yaml"; then
     exit 1
 fi
 
+# Parse RBAC rule boundaries so verbs from an adjacent rule cannot produce a
+# false positive when the upstream template changes ordering.
 if ! awk '
-    /- storageclasses$/ { in_rule = 1; next }
-    in_rule && /- get$/ { get = 1 }
-    in_rule && /- list$/ { list = 1 }
-    in_rule && /- watch$/ { watch = 1 }
-    in_rule && /^---$/ { exit !(get && list && watch) }
-    END { if (in_rule) exit !(get && list && watch) }
+    function finish_rule() {
+        if (has_storage_group && has_storageclasses) {
+            found = 1
+            if (!(has_get && has_list && has_watch)) failed = 1
+        }
+        has_storage_group = has_storageclasses = has_get = has_list = has_watch = 0
+    }
+    /^- apiGroups:$/ { finish_rule(); section = "apiGroups"; next }
+    /^  resources:$/ { section = "resources"; next }
+    /^  verbs:$/ { section = "verbs"; next }
+    /^    - / {
+        value = substr($0, 7)
+        if (section == "apiGroups" && value == "storage.k8s.io") has_storage_group = 1
+        if (section == "resources" && value == "storageclasses") has_storageclasses = 1
+        if (section == "verbs" && value == "get") has_get = 1
+        if (section == "verbs" && value == "list") has_list = 1
+        if (section == "verbs" && value == "watch") has_watch = 1
+    }
+    /^---$/ { finish_rule(); section = "" }
+    END { finish_rule(); exit failed || !found }
 ' "${TEST_ROOT}/kruise.yaml"; then
     echo "Kruise must have read-only get/list/watch access to StorageClasses" >&2
     exit 1
@@ -83,5 +100,12 @@ dependencies=$(tar -tzf "${operator_package}" | awk -F/ '$1 == "matrixone-operat
 if [[ "${dependencies}" != "kruise" ]]; then
     echo "unexpected packaged dependencies:" >&2
     printf '%s\n' "${dependencies}" >&2
+    exit 1
+fi
+
+# Chart.lock is intentionally ignored by this repository. A developer-local
+# lock file must not leak into the deterministic package.
+if tar -tzf "${operator_package}" | awk '/\/Chart.lock$/ { found = 1 } END { exit !found }'; then
+    echo "ignored Chart.lock leaked into the operator package" >&2
     exit 1
 fi
