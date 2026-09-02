@@ -22,11 +22,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
-func TestLogSetStatefulSetChangedPredicate(t *testing.T) {
-	p := LogSetStatefulSetChangedPredicate()
+func TestLogSetReserveOrdinalsChangedPredicate(t *testing.T) {
+	p := LogSetReserveOrdinalsChangedPredicate()
 	oldSts := &kruisev1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "log"}}
 	newSts := oldSts.DeepCopy()
 	newSts.Spec.ReserveOrdinals = []int{1}
+
+	if p.Create(event.CreateEvent{Object: oldSts}) {
+		t.Fatal("StatefulSet creation must not change dependent lifecycle ordering")
+	}
+	if p.Delete(event.DeleteEvent{Object: oldSts}) {
+		t.Fatal("StatefulSet deletion must not change dependent lifecycle ordering")
+	}
 
 	if !p.Update(event.UpdateEvent{ObjectOld: oldSts, ObjectNew: newSts}) {
 		t.Fatal("reserveOrdinals change must trigger reconciliation")

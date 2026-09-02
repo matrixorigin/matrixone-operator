@@ -352,7 +352,7 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 			b.Owns(&kruisev1alpha1.CloneSet{}).
 				Owns(&corev1.Service{}).
 				Watches(&kruise.StatefulSet{}, handler.EnqueueRequestsFromMapFunc(requestsForLogSetStatefulSet(mgr.GetClient())),
-					builder.WithPredicates(common.LogSetStatefulSetChangedPredicate()))
+					builder.WithPredicates(common.LogSetReserveOrdinalsChangedPredicate()))
 		}))
 	if err != nil {
 		return err

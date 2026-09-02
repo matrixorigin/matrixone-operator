@@ -186,8 +186,14 @@ run-pgd: build-pgd
 	docker run --privileged --name playground -p 6001:6001 --rm -it matrixorigin/operator-playground:latest
 
 GINKGO = $(shell pwd)/bin/ginkgo
-ginkgo:
-	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo@v2.9.2)
+GINKGO_MODULE = github.com/onsi/ginkgo/v2
+GINKGO_VERSION = v2.9.5
+ginkgo: $(LOCALBIN)
+	@actual_version="$$(go version -m "$(GINKGO)" 2>/dev/null | awk -v module="$(GINKGO_MODULE)" '$$1 == "mod" && $$2 == module { print $$3 }')"; \
+	if [ "$$actual_version" != "$(GINKGO_VERSION)" ]; then \
+		echo "Installing $(GINKGO_MODULE)/ginkgo@$(GINKGO_VERSION) (found: $${actual_version:-none})"; \
+		GOBIN=$(PROJECT_DIR)/bin go install $(GINKGO_MODULE)/ginkgo@$(GINKGO_VERSION); \
+	fi
 
 MOCKGEN = $(shell pwd)/bin/mockgen
 mockgen: ## Download mockgen locally if necessary

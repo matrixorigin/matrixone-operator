@@ -295,7 +295,11 @@ var _ = Describe("MatrixOneCluster test", func() {
 		}, teardownClusterTimeout, pollInterval).Should(Succeed(), "cluster should be teardown")
 	})
 
-	It("Should create all sub-resources properly with maximum cluster name length", func() {
+	// This spec creates a complete MO cluster and has repeatedly exhausted its
+	// readiness timeout when competing with three other specs on the single-node
+	// Kind cluster. Its assertion is about generated resource names, not parallel
+	// reconciliation, so isolate it from the shared-cluster resource contention.
+	It("Should create all sub-resources properly with maximum cluster name length", Serial, func() {
 		By("Create cluster with maximum name length")
 		minioSecret := e2eutil.MinioSecret(env.Namespace)
 		minioProvider := e2eutil.MinioShareStorage(minioSecret.Name)

@@ -148,11 +148,22 @@ function e2e::install() {
     rm -rf -- "${chart_root}"
     return 1
   fi
-  if ! ./hack/test-kruise-webhook-outage.sh "${operator_chart}" mo "${OPNAMESPACE}"; then
+  rm -rf -- "${chart_root}"
+}
+
+function e2e::test-kruise-webhook-outage() {
+  local chart_root
+  local operator_chart
+  local status=0
+  chart_root=$(mktemp -d)
+
+  if ! operator_chart=$(./hack/package-chart.sh "${chart_root}"); then
     rm -rf -- "${chart_root}"
     return 1
   fi
+  ./hack/test-kruise-webhook-outage.sh "${operator_chart}" mo "${OPNAMESPACE}" || status=$?
   rm -rf -- "${chart_root}"
+  return "${status}"
 }
 
 function e2e::wait-webhook-ready() {
@@ -219,7 +230,15 @@ function e2e::workflow() {
   trap "e2e::cleanup" EXIT
   e2e::install || return 1
   local run_status=0
+  local outage_status=0
   e2e::run || run_status=$?
+  # Run the disruptive outage/upgrade scenario after the established E2E suite
+  # so it cannot change the suite's initial cluster state. Preserve an earlier
+  # suite failure while still collecting the outage-test result.
+  e2e::test-kruise-webhook-outage || outage_status=$?
+  if [[ "${run_status}" -eq 0 && "${outage_status}" -ne 0 ]]; then
+    run_status=${outage_status}
+  fi
   trap - EXIT
   e2e::cleanup || return 1
   return "${run_status}"

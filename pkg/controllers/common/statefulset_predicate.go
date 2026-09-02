@@ -21,12 +21,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// LogSetStatefulSetChangedPredicate selects events that can change the LogSet
-// service-addresses consumed by CNSet and DNSet configuration.
-func LogSetStatefulSetChangedPredicate() predicate.Predicate {
+// LogSetReserveOrdinalsChangedPredicate selects updates that change the LogSet
+// service-addresses consumed by CNSet and DNSet configuration. Create and delete
+// events are intentionally ignored: the owning LogSet already drives dependency
+// creation and teardown, and enqueueing dependants from those events would alter
+// their existing lifecycle ordering.
+func LogSetReserveOrdinalsChangedPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(event.CreateEvent) bool { return true },
-		DeleteFunc: func(event.DeleteEvent) bool { return true },
+		CreateFunc: func(event.CreateEvent) bool { return false },
+		DeleteFunc: func(event.DeleteEvent) bool { return false },
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSts, oldOK := e.ObjectOld.(*v1beta1.StatefulSet)
 			newSts, newOK := e.ObjectNew.(*v1beta1.StatefulSet)
