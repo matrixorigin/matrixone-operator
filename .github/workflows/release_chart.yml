@@ -18,12 +18,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # tag=v3.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # tag=v7.0.1
         with:
           fetch-depth: 0
 
       - name: Install Helm
-        uses: azure/setup-helm@f382f75448129b3be48f8121b9857be18d815a82 # tag=v3.4
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # tag=v5.0.1
 
       - name: Configure Git
         run: |
@@ -32,13 +32,10 @@ jobs:
 
       - name: Package charts
         run: |
-          mkdir -p charts/matrixone-operator/charts .cr-release-packages .cr-index
-          helm package charts/kruise \
-            --destination charts/matrixone-operator/charts
+          mkdir -p .cr-release-packages .cr-index
           helm package charts/kruise \
             --destination .cr-release-packages
-          helm package charts/matrixone-operator \
-            --destination .cr-release-packages
+          ./hack/package-chart.sh .cr-release-packages
 
       - name: Run Artifact Hub lint
         run: |
@@ -47,7 +44,7 @@ jobs:
           rm -f ./ah
 
       - name: Install chart-releaser
-        uses: helm/chart-releaser-action@98bccfd32b0f76149d188912ac8e45ddd3f8695f # tag=v1.4.1
+        uses: helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f # tag=v1.7.0
         with:
           install_only: true
         env:

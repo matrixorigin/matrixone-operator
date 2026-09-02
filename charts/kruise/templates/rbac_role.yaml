@@ -790,7 +790,9 @@ rules:
   - get
   - patch
   - update
-{{- if (contains "StatefulSetAutoResizePVCGate=true" .Values.featureGates) }}
+# Kruise v1.8.3 starts the StorageClass informer even when PVC auto-resize is
+# disabled. Keep this read-only permission unconditional; it does not enable
+# StatefulSetAutoResizePVCGate or permit PVC mutations (issue #610).
 - apiGroups:
     - storage.k8s.io
   resources:
@@ -799,7 +801,6 @@ rules:
     - get
     - list
     - watch
-{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
