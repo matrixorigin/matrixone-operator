@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -117,6 +117,11 @@ type PodSet struct {
 	// OperatorVersion is the controller version of mo-operator that should be used to
 	// reconcile this set
 	OperatorVersion *string `json:"operatorVersion,omitempty"`
+
+	// MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+	// Binary would be loaded from disk if MemoryFsSize is not set
+	// +optional
+	MemoryFsSize *resource.Quantity `json:"memoryFsSize,omitempty"`
 }
 
 // MainContainer is the description of the main container of a Pod

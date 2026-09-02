@@ -10,7 +10,8 @@ manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role paths="./..." output:crd:artifacts:config=../charts/matrixone-operator/templates/crds/
 
 .PHONY: generate
-generate: controller-gen core/v1alpha1/zz_generated.deepcopy.go
+generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="../hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: test
 test: manifests generate envtest ## Run tests.
@@ -21,7 +22,8 @@ docs: crd-ref-docs
 	$(CRD_REF_DOCS) --source-path=core/v1alpha1 --renderer=markdown --output-path ../docs/reference/api-reference.md
 
 ## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
+PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+LOCALBIN ?= $(PROJECT_DIR)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
@@ -32,23 +34,31 @@ envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
-core/v1alpha1/zz_generated.deepcopy.go: core/v1alpha1/*_types.go
-	$(CONTROLLER_GEN) object:headerFile="../hack/boilerplate.go.txt" paths="./..."
+CONTROLLER_GEN = $(LOCALBIN)/controller-gen
+CONTROLLER_GEN_MODULE = sigs.k8s.io/controller-tools
+CONTROLLER_GEN_PACKAGE = sigs.k8s.io/controller-tools/cmd/controller-gen
+CONTROLLER_GEN_VERSION = v0.16.0
+# After changing CONTROLLER_GEN_VERSION, run `make verify-generated` from the repository root
+# and commit every regenerated artifact.
+.PHONY: controller-gen
+controller-gen: $(LOCALBIN) ## Download the pinned controller-gen version locally if necessary.
+	$(call go-install-pinned,$(CONTROLLER_GEN),$(CONTROLLER_GEN_MODULE),$(CONTROLLER_GEN_PACKAGE),$(CONTROLLER_GEN_VERSION))
 
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.15.0)
+CRD_REF_DOCS = $(LOCALBIN)/crd-ref-docs
+CRD_REF_DOCS_MODULE = github.com/elastic/crd-ref-docs
+CRD_REF_DOCS_PACKAGE = github.com/elastic/crd-ref-docs
+CRD_REF_DOCS_VERSION = v0.0.12
+.PHONY: crd-ref-docs
+crd-ref-docs: $(LOCALBIN)
+	$(call go-install-pinned,$(CRD_REF_DOCS),$(CRD_REF_DOCS_MODULE),$(CRD_REF_DOCS_PACKAGE),$(CRD_REF_DOCS_VERSION))
 
-CRD_REF_DOCS = $(shell pwd)/bin/crd-ref-docs
-crd-ref-docs:
-	$(call go-get-tool,$(CRD_REF_DOCS),github.com/elastic/crd-ref-docs@v0.0.12)
-
-# go-get-tool will 'go get' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go install $(2); \
-}
+# go-install-pinned ensures binary $1 was built from module $2 at version $4.
+# The install package $3 can be a command below the module root.
+define go-install-pinned
+	@set -e; \
+	actual_version="$$(go version -m "$(1)" 2>/dev/null | awk -v module="$(2)" '$$1 == "mod" && $$2 == module { print $$3 }')"; \
+	if [ "$$actual_version" != "$(4)" ]; then \
+		echo "Installing $(3)@$(4) (found: $${actual_version:-none})"; \
+		GOBIN=$(LOCALBIN) go install $(3)@$(4); \
+	fi
 endef

@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,4 +33,8 @@ const (
 	LabelOwnerUID  = "matrixorigin.io/owner-uid"
 
 	ConfigSuffixAnno = "matrixorigin.io/config-suffix"
+
+	MemoryFsVolume = "tmpfs"
+	MemoryBinPath  = "/matrixone/bin"
+	BinPathEnvKey  = "MO_BIN_PATH"
 )

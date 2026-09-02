@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,15 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package e2e
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"strings"
-	"time"
+	"k8s.io/utils/pointer"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
@@ -175,6 +178,7 @@ var _ = Describe("MatrixOneCluster test", func() {
 							ImagePullPolicy: &pull,
 						},
 					},
+					OperatorVersion: pointer.String("v1.3.0"),
 				},
 				Volume: v1alpha1.Volume{
 					Size: resource.MustParse("100Mi"),

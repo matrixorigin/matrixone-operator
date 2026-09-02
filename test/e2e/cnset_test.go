@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +16,11 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/matrixorigin/matrixone-operator/pkg/utils"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"time"
+
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"

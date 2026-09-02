@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ func (r *Actor) migrate(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 		if apierrors.IsNotFound(err) {
 			return r.completeMigration(ctx)
 		}
+		return errors.WrapPrefix(err, "error get source Pod", 0)
 	}
 	if c.Status.Store.BoundTime == nil {
 		return errors.New(fmt.Sprintf("claim store %s/%s bound time is nil", c.Namespace, c.Name))
@@ -60,14 +61,14 @@ func (r *Actor) migrate(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 	case v1alpha1.CNPodPhaseBound:
 		// use connection migration to migrate workload from source to target pod
 		ctx.Log.Info("start draining source pod", "pod", source.Name)
-		if err := r.reclaimCN(ctx, source, deleteOnReclaim); err != nil {
+		if err := r.reclaimCN(ctx, source); err != nil {
 			return err
 		}
 		if err := r.reportProgress(ctx, source); err != nil {
 			return err
 		}
-		return recon.ErrReSync("source pod start draining, reqeue", migrationResyncInterval)
-	case v1alpha1.CNPodPhaseTerminating:
+		return recon.ErrReSync("source pod start draining, requeue", migrationResyncInterval)
+	case v1alpha1.CNPodPhaseTerminating, v1alpha1.CNPodPhaseIdle:
 		return r.completeMigration(ctx)
 	default:
 		return errors.Errorf("unknown pod phase: %s", source.Labels[v1alpha1.CNPodPhaseLabel])

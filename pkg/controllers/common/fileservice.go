@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,11 +18,10 @@ import (
 	"fmt"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	"github.com/matrixorigin/controller-runtime/pkg/util"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -186,7 +185,7 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 		}
 		m["data-dir"] = fs.Path
 	}
-	cacheConfig := map[string]string{}
+	cacheConfig := map[string]interface{}{}
 	if cache != nil {
 		if cache.MemoryCacheSize != nil {
 			cacheConfig["memory-capacity"] = asSizeBytes(*cache.MemoryCacheSize)

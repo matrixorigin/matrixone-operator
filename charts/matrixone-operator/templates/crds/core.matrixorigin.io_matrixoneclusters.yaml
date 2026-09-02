@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.0
   name: matrixoneclusters.core.matrixorigin.io
 spec:
   group: core.matrixorigin.io
@@ -87,6 +87,8 @@ spec:
                           StorageClassName reference to the storageclass of the desired volume,
                           the default storageclass of the cluster would be used if no specified.
                         type: string
+                    required:
+                    - size
                     type: object
                   clusterDomain:
                     description: |-
@@ -123,6 +125,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -185,10 +196,8 @@ spec:
                               Claims lists the names of resources, defined in spec.resourceClaims,
                               that are used by this container.
 
-
                               This is an alpha field and requires enabling the
                               DynamicResourceAllocation feature gate.
-
 
                               This field is immutable. It can only be set for containers.
                             items:
@@ -246,10 +255,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -441,6 +448,8 @@ spec:
                             StorageClassName reference to the storageclass of the desired volume,
                             the default storageclass of the cluster would be used if no specified.
                           type: string
+                      required:
+                      - size
                       type: object
                     clusterDomain:
                       description: |-
@@ -477,6 +486,15 @@ spec:
                     image:
                       description: Image is the docker image of the main container
                       type: string
+                    memoryFsSize:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: |-
+                        MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                        Binary would be loaded from disk if MemoryFsSize is not set
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
                     memoryLimitPercent:
                       description: |-
                         MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -544,10 +562,8 @@ spec:
                                 Claims lists the names of resources, defined in spec.resourceClaims,
                                 that are used by this container.
 
-
                                 This is an alpha field and requires enabling the
                                 DynamicResourceAllocation feature gate.
-
 
                                 This field is immutable. It can only be set for containers.
                               items:
@@ -607,10 +623,8 @@ spec:
                             Claims lists the names of resources, defined in spec.resourceClaims,
                             that are used by this container.
 
-
                             This is an alpha field and requires enabling the
                             DynamicResourceAllocation feature gate.
-
 
                             This field is immutable. It can only be set for containers.
                           items:
@@ -807,6 +821,8 @@ spec:
                           StorageClassName reference to the storageclass of the desired volume,
                           the default storageclass of the cluster would be used if no specified.
                         type: string
+                    required:
+                    - size
                     type: object
                   clusterDomain:
                     description: |-
@@ -828,6 +844,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -864,10 +889,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -1032,6 +1055,15 @@ spec:
                           from the given path when hakeeper is bootstrapped
                         type: string
                     type: object
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -1077,10 +1109,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -1207,7 +1237,6 @@ spec:
                                 description: |-
                                   Name of the referent.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                             type: object
                             x-kubernetes-map-type: atomic
@@ -1255,12 +1284,20 @@ spec:
                           StorageClassName reference to the storageclass of the desired volume,
                           the default storageclass of the cluster would be used if no specified.
                         type: string
+                    required:
+                    - size
                     type: object
                 required:
                 - replicas
                 - sharedStorage
                 - volume
                 type: object
+              memoryFsSize:
+                anyOf:
+                - type: integer
+                - type: string
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
               metricReaderEnabled:
                 description: |-
                   MetricReaderEnabled enables metric reader for operator and other apps to query
@@ -1298,6 +1335,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -1343,10 +1389,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -1427,6 +1471,10 @@ spec:
                     items:
                       type: string
                     type: array
+                  waitPluginAddr:
+                    description: WaitPluginAddr is the address of the plugin to wait
+                      for
+                    type: string
                 required:
                 - replicas
                 type: object
@@ -1467,6 +1515,8 @@ spec:
                           StorageClassName reference to the storageclass of the desired volume,
                           the default storageclass of the cluster would be used if no specified.
                         type: string
+                    required:
+                    - size
                     type: object
                   clusterDomain:
                     description: |-
@@ -1488,6 +1538,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -1524,10 +1583,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -1661,6 +1718,8 @@ spec:
                           StorageClassName reference to the storageclass of the desired volume,
                           the default storageclass of the cluster would be used if no specified.
                         type: string
+                    required:
+                    - size
                     type: object
                   clusterDomain:
                     description: |-
@@ -1697,6 +1756,15 @@ spec:
                   image:
                     description: Image is the docker image of the main container
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -1759,10 +1827,8 @@ spec:
                               Claims lists the names of resources, defined in spec.resourceClaims,
                               that are used by this container.
 
-
                               This is an alpha field and requires enabling the
                               DynamicResourceAllocation feature gate.
-
 
                               This field is immutable. It can only be set for containers.
                             items:
@@ -1820,10 +1886,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -2019,6 +2083,15 @@ spec:
                     description: PullPolicy describes a policy for if/when to pull
                       a container image
                     type: string
+                  memoryFsSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead
+                      Binary would be loaded from disk if MemoryFsSize is not set
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   memoryLimitPercent:
                     description: |-
                       MemoryLimitPercent is percent used to set GOMEMLIMIT env, its value must be in interval (0, 100].
@@ -2055,10 +2128,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -2177,7 +2248,6 @@ spec:
                         description: |-
                           Name of the referent.
                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
@@ -2206,16 +2276,8 @@ spec:
                 type: object
               conditions:
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource.\n---\nThis struct is intended for
-                    direct use as an array at the field path .status.conditions.  For
-                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
-                    observations of a foo's current state.\n\t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
-                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                    \   // other fields\n\t}"
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -2256,12 +2318,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: |-
-                        type of condition in CamelCase or in foo.example.com/CamelCase.
-                        ---
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                        useful (see .node.status.conditions), the ability to deconflict is important.
-                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -2282,7 +2339,6 @@ spec:
                     description: |-
                       Name of the referent.
                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      TODO: Add other useful fields. apiVersion, kind, uid?
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
@@ -2303,17 +2359,8 @@ spec:
                     type: array
                   conditions:
                     items:
-                      description: "Condition contains details for one aspect of the
-                        current state of this API Resource.\n---\nThis struct is intended
-                        for direct use as an array at the field path .status.conditions.
-                        \ For example,\n\n\n\ttype FooStatus struct{\n\t    // Represents
-                        the observations of a foo's current state.\n\t    // Known
-                        .status.conditions.type are: \"Available\", \"Progressing\",
-                        and \"Degraded\"\n\t    // +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t
-                        \   // +listType=map\n\t    // +listMapKey=type\n\t    Conditions
-                        []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\"
-                        patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                        \   // other fields\n\t}"
+                      description: Condition contains details for one aspect of the
+                        current state of this API Resource.
                       properties:
                         lastTransitionTime:
                           description: |-
@@ -2355,12 +2402,7 @@ spec:
                           - Unknown
                           type: string
                         type:
-                          description: |-
-                            type of condition in CamelCase or in foo.example.com/CamelCase.
-                            ---
-                            Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                            useful (see .node.status.conditions), the ability to deconflict is important.
-                            The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                          description: type of condition in CamelCase or in foo.example.com/CamelCase.
                           maxLength: 316
                           pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                           type: string
@@ -2404,17 +2446,8 @@ spec:
                     type: array
                   conditions:
                     items:
-                      description: "Condition contains details for one aspect of the
-                        current state of this API Resource.\n---\nThis struct is intended
-                        for direct use as an array at the field path .status.conditions.
-                        \ For example,\n\n\n\ttype FooStatus struct{\n\t    // Represents
-                        the observations of a foo's current state.\n\t    // Known
-                        .status.conditions.type are: \"Available\", \"Progressing\",
-                        and \"Degraded\"\n\t    // +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t
-                        \   // +listType=map\n\t    // +listMapKey=type\n\t    Conditions
-                        []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\"
-                        patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                        \   // other fields\n\t}"
+                      description: Condition contains details for one aspect of the
+                        current state of this API Resource.
                       properties:
                         lastTransitionTime:
                           description: |-
@@ -2456,12 +2489,7 @@ spec:
                           - Unknown
                           type: string
                         type:
-                          description: |-
-                            type of condition in CamelCase or in foo.example.com/CamelCase.
-                            ---
-                            Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                            useful (see .node.status.conditions), the ability to deconflict is important.
-                            The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                          description: type of condition in CamelCase or in foo.example.com/CamelCase.
                           maxLength: 316
                           pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                           type: string
@@ -2506,17 +2534,8 @@ spec:
                 properties:
                   conditions:
                     items:
-                      description: "Condition contains details for one aspect of the
-                        current state of this API Resource.\n---\nThis struct is intended
-                        for direct use as an array at the field path .status.conditions.
-                        \ For example,\n\n\n\ttype FooStatus struct{\n\t    // Represents
-                        the observations of a foo's current state.\n\t    // Known
-                        .status.conditions.type are: \"Available\", \"Progressing\",
-                        and \"Degraded\"\n\t    // +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t
-                        \   // +listType=map\n\t    // +listMapKey=type\n\t    Conditions
-                        []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\"
-                        patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                        \   // other fields\n\t}"
+                      description: Condition contains details for one aspect of the
+                        current state of this API Resource.
                       properties:
                         lastTransitionTime:
                           description: |-
@@ -2558,12 +2577,7 @@ spec:
                           - Unknown
                           type: string
                         type:
-                          description: |-
-                            type of condition in CamelCase or in foo.example.com/CamelCase.
-                            ---
-                            Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                            useful (see .node.status.conditions), the ability to deconflict is important.
-                            The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                          description: type of condition in CamelCase or in foo.example.com/CamelCase.
                           maxLength: 316
                           pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                           type: string
@@ -2607,17 +2621,8 @@ spec:
                     type: array
                   conditions:
                     items:
-                      description: "Condition contains details for one aspect of the
-                        current state of this API Resource.\n---\nThis struct is intended
-                        for direct use as an array at the field path .status.conditions.
-                        \ For example,\n\n\n\ttype FooStatus struct{\n\t    // Represents
-                        the observations of a foo's current state.\n\t    // Known
-                        .status.conditions.type are: \"Available\", \"Progressing\",
-                        and \"Degraded\"\n\t    // +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t
-                        \   // +listType=map\n\t    // +listMapKey=type\n\t    Conditions
-                        []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\"
-                        patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                        \   // other fields\n\t}"
+                      description: Condition contains details for one aspect of the
+                        current state of this API Resource.
                       properties:
                         lastTransitionTime:
                           description: |-
@@ -2659,12 +2664,7 @@ spec:
                           - Unknown
                           type: string
                         type:
-                          description: |-
-                            type of condition in CamelCase or in foo.example.com/CamelCase.
-                            ---
-                            Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                            useful (see .node.status.conditions), the ability to deconflict is important.
-                            The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                          description: type of condition in CamelCase or in foo.example.com/CamelCase.
                           maxLength: 316
                           pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                           type: string

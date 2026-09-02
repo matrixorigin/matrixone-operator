@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,18 +14,26 @@
 
 package v1alpha1
 
-import "github.com/blang/semver/v4"
+import (
+	"github.com/blang/semver/v4"
+)
 
 type Gate string
 
-var (
-	gateVersions = map[Gate][]semver.Version{
-		GateInplaceConfigmapUpdate: {semver.MustParse("1.3.0")},
-	}
+const (
+	OperatorVersionAnno = "matrixorigin.io/operator-version"
 )
 
 const (
-	GateInplaceConfigmapUpdate Gate = "InplaceConfigmapUpdate"
+	GateInplaceConfigmapUpdate   Gate = "InplaceConfigmapUpdate"
+	GateInplacePoolRollingUpdate Gate = "InplacePoolRollingUpdate"
+)
+
+var (
+	gateVersions = map[Gate][]semver.Version{
+		GateInplaceConfigmapUpdate:   {semver.MustParse("1.3.0")},
+		GateInplacePoolRollingUpdate: {semver.MustParse("1.3.0")},
+	}
 )
 
 func (g Gate) Enabled(v semver.Version) bool {

@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,13 +43,13 @@ type dnSetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &dnSetDefaulter{}
 
-func (d *dnSetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (d *dnSetDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	dnSet, ok := obj.(*v1alpha1.DNSet)
 	if !ok {
 		return unexpectedKindError("DNSet", obj)
 	}
 	d.DefaultSpec(&dnSet.Spec)
-	return setDefaultOperatorVersion(ctx, &dnSet.Spec.PodSet)
+	return nil
 }
 
 func (d *dnSetDefaulter) DefaultSpec(spec *v1alpha1.DNSetSpec) {
@@ -87,12 +87,22 @@ func (d *dnSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) (
 	return nil, invalidOrNil(errs, dnSet)
 }
 
-func (d *dnSetValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (d *dnSetValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+	var errs field.ErrorList
 	warnings, err = d.ValidateCreate(ctx, newObj)
 	if err != nil {
 		return warnings, err
 	}
-	return warnings, nil
+	oldDN, ok := oldObj.(*v1alpha1.DNSet)
+	if !ok {
+		return nil, unexpectedKindError("DNSet", oldObj)
+	}
+	newDN, ok := newObj.(*v1alpha1.DNSet)
+	if !ok {
+		return nil, unexpectedKindError("DNSet", newObj)
+	}
+	errs = append(errs, validateVolumeUpdate(oldDN.Spec.CacheVolume, newDN.Spec.CacheVolume, field.NewPath("spec").Child("cacheVolume"))...)
+	return warnings, invalidOrNil(errs, newDN)
 }
 
 func (d *dnSetValidator) ValidateDelete(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {

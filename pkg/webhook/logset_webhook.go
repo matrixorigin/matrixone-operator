@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,13 +61,13 @@ type logSetDefaulter struct{}
 
 var _ webhook.CustomDefaulter = &logSetDefaulter{}
 
-func (l *logSetDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (l *logSetDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	logSet, ok := obj.(*v1alpha1.LogSet)
 	if !ok {
 		return unexpectedKindError("LogSet", obj)
 	}
 	l.DefaultSpec(&logSet.Spec)
-	return setDefaultOperatorVersion(ctx, &logSet.Spec.PodSet)
+	return nil
 }
 
 func (l *logSetDefaulter) DefaultSpec(spec *v1alpha1.LogSetSpec) {
@@ -151,9 +151,11 @@ func (l *logSetValidator) ValidateCreate(_ context.Context, obj runtime.Object) 
 }
 
 func (l *logSetValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+	var errs field.ErrorList
 	old := oldObj.(*v1alpha1.LogSet)
 	logSet := newObj.(*v1alpha1.LogSet)
-	errs := l.ValidateSpecUpdate(&old.Spec, &logSet.Spec, logSet.ObjectMeta)
+	errs = append(errs, l.ValidateSpecUpdate(&old.Spec, &logSet.Spec, logSet.ObjectMeta)...)
+	errs = append(errs, validateVolumeUpdate(&old.Spec.Volume, &logSet.Spec.Volume, field.NewPath("spec").Child("volume"))...)
 	return nil, invalidOrNil(errs, logSet)
 }
 

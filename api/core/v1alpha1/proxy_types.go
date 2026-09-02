@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,6 +39,10 @@ type ProxySetSpec struct {
 	NodePort *int32 `json:"nodePort,omitempty"`
 
 	MinReadySeconds int32 `json:"minReadySeconds,omitempty"`
+
+	// WaitPluginAddr is the address of the plugin to wait for
+	// +optional
+	WaitPluginAddr *string `json:"waitPluginAddr,omitempty"`
 }
 
 type ProxySetStatus struct {

@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,10 @@ func headlessSvcName(cn *v1alpha1.CNSet) string {
 
 func svcName(cn *v1alpha1.CNSet) string {
 	return resourceName(cn)
+}
+
+func metricSvcName(cn *v1alpha1.CNSet) string {
+	return resourceName(cn) + "-metric"
 }
 
 func setName(cn *v1alpha1.CNSet) string {

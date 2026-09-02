@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/go-errors/errors v1.5.1
+	github.com/google/go-cmp v0.6.0
 	github.com/matrixorigin/controller-runtime v0.0.0-20240909085031-5f706d779ec6
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/gomega v1.27.7
@@ -31,7 +32,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20230510103437-eeec1cb781c3 // indirect
 	github.com/google/uuid v1.6.0 // indirect

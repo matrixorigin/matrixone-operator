@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -280,6 +280,34 @@ func validateVolumeClaims(pvcs []core.PersistentVolumeClaim, path *field.Path) f
 	var errs field.ErrorList
 	for i, pvc := range pvcs {
 		errs = append(errs, corevalidation.ValidatePersistentVolumeClaimSpec(&pvc.Spec, path.Index(i).Child("spec"), corevalidation.PersistentVolumeClaimSpecValidationOptions{})...)
+	}
+	return errs
+}
+
+func validatePodSetUpdate(oldPodSet, newPodSet *v1alpha1.PodSet, path *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	if _, ok := oldPodSet.GetSemVer(); ok {
+		// if the old CNSet has a semantic version, then we need to make sure the new one is compatible
+		if _, ok := newPodSet.GetSemVer(); !ok {
+			errs = append(errs, field.Invalid(path.Child("semanticVersion"), newPodSet.SemanticVersion, "new version must also be semantic"))
+		}
+	}
+	if newPodSet.GetOperatorVersion().LT(oldPodSet.GetOperatorVersion()) {
+		errs = append(errs, field.Invalid(path.Child("operatorVersion"), newPodSet.OperatorVersion, "new operatorVersion must be greater than or equal to the oldVersion"))
+	}
+	return errs
+}
+
+func validateVolumeUpdate(oldVolume, newVolume *v1alpha1.Volume, path *field.Path) field.ErrorList {
+	var errs field.ErrorList
+	if oldVolume == nil || newVolume == nil {
+		return nil
+	}
+	if newVolume.StorageClassName != nil && oldVolume.StorageClassName != nil && *newVolume.StorageClassName != *oldVolume.StorageClassName {
+		errs = append(errs, field.Invalid(path.Child("storageClassName"), *newVolume.StorageClassName, "storageClassName is immutable"))
+	}
+	if newVolume.Size.Cmp(oldVolume.Size) < 0 {
+		errs = append(errs, field.Invalid(path.Child("size"), newVolume.Size, "volume size cannot be decreased"))
 	}
 	return errs
 }

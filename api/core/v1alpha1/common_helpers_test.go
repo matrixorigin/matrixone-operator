@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,10 +15,11 @@
 package v1alpha1
 
 import (
+	"testing"
+
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestGetCNPodUUID(t *testing.T) {
@@ -46,6 +47,48 @@ func TestGetCNPodUUID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := GetCNPodUUID(tt.pod)
+			g.Expect(got).To(Equal(tt.want))
+		})
+	}
+}
+
+func TestGetImageTag(t *testing.T) {
+	tests := []struct {
+		name  string
+		image string
+		want  string
+	}{
+		{
+			name:  "Regular image with tag",
+			image: "matrixorigin/matrixone:1.1.1",
+			want:  "1.1.1",
+		},
+		{
+			name:  "Image with registry and tag",
+			image: "registry.example.com/matrixorigin/matrixone:latest",
+			want:  "latest",
+		},
+		{
+			name:  "Image without tag",
+			image: "matrixorigin/matrixone",
+			want:  "",
+		},
+		{
+			name:  "Image with multiple colons",
+			image: "registry.example.com:5000/matrixorigin/matrixone:v1.0.0",
+			want:  "v1.0.0",
+		},
+		{
+			name:  "Empty string",
+			image: "",
+			want:  "",
+		},
+	}
+
+	g := NewGomegaWithT(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getImageTag(tt.image)
 			g.Expect(got).To(Equal(tt.want))
 		})
 	}

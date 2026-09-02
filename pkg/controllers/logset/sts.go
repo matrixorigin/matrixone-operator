@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -114,6 +114,7 @@ func syncPodSpec(ls *v1alpha1.LogSet, specRef *corev1.PodSpec) {
 	common.SetStorageProviderConfig(ls.Spec.SharedStorage, specRef)
 	common.SyncTopology(ls.Spec.TopologyEvenSpread, specRef, &metav1.LabelSelector{MatchLabels: common.SubResourceLabels(ls)})
 	ls.Spec.Overlay.OverlayPodSpec(specRef)
+	common.SetupMemoryFsVolume(specRef, ls.Spec.MemoryFsSize)
 }
 
 // syncPersistentVolumeClaim controls the persistent volume claim of underlying pods
@@ -192,6 +193,13 @@ func buildHeadlessSvc(ls *v1alpha1.LogSet) *corev1.Service {
 
 func stsName(ls *v1alpha1.LogSet) string {
 	return resourceName(ls)
+}
+
+// LogSetStsName returns the name of the kruise StatefulSet managed for the given LogSet.
+// Exported so that other controllers (e.g. dnset, cnset) can look up the STS to read
+// ReserveOrdinals without requiring a CRD change.
+func LogSetStsName(ls *v1alpha1.LogSet) string {
+	return stsName(ls)
 }
 
 func headlessSvcName(ls *v1alpha1.LogSet) string {

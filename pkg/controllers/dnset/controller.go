@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,10 +15,12 @@
 package dnset
 
 import (
-	"github.com/matrixorigin/matrixone-operator/api/features"
-	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	"strconv"
 	"time"
+
+	"github.com/matrixorigin/matrixone-operator/api/features"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
+	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -119,8 +121,18 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return d.with(sts, svc).Scale, nil
 	}
 
+	// reservedOrdinals is only used in the service-addresses branch of buildDNSetConfigMap.
+	// When MOFeatureDiscoveryFixed is enabled the branch is never reached, so skip the
+	// extra STS GET to avoid an unnecessary dependency and potential requeue on transient errors.
+	var reservedOrdinals []int
+	if sv, ok := dn.Spec.GetSemVer(); !ok || !v1alpha1.HasMOFeature(*sv, v1alpha1.MOFeatureDiscoveryFixed) {
+		if reservedOrdinals, err = fetchLogSetReservedOrdinals(ctx, ctx.Dep.Deps.LogSet); err != nil {
+			return nil, errors.WrapPrefix(err, "fetch logset reserved ordinals", 0)
+		}
+	}
+
 	origin := sts.DeepCopy()
-	if err := syncPods(ctx, sts); err != nil {
+	if err := syncPods(ctx, sts, reservedOrdinals); err != nil {
 		return nil, err
 	}
 
@@ -132,6 +144,11 @@ func (d *Actor) Observe(ctx *recon.Context[*v1alpha1.DNSet]) (recon.Action[*v1al
 		return d.with(sts, svc).Update, nil
 	}
 
+	if dn.Spec.CacheVolume != nil {
+		if err := common.SyncStsVolumeSize(ctx, dn, dn.Spec.CacheVolume.Size, sts); err != nil {
+			return nil, errors.WrapPrefix(err, "sync volume size", 0)
+		}
+	}
 	if err := d.syncMetricService(ctx); err != nil {
 		return nil, errors.WrapPrefix(err, "sync metric service", 0)
 	}
@@ -186,7 +203,15 @@ func (d *Actor) Create(ctx *recon.Context[*v1alpha1.DNSet]) error {
 	syncPodSpec(dn, dnSet, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	syncPersistentVolumeClaim(dn, dnSet)
 
-	configMap, configSuffix, err := buildDNSetConfigMap(dn, ctx.Dep.Deps.LogSet)
+	var reservedOrdinals []int
+	if sv, ok := dn.Spec.GetSemVer(); !ok || !v1alpha1.HasMOFeature(*sv, v1alpha1.MOFeatureDiscoveryFixed) {
+		var err error
+		if reservedOrdinals, err = fetchLogSetReservedOrdinals(ctx, ctx.Dep.Deps.LogSet); err != nil {
+			return errors.WrapPrefix(err, "fetch logset reserved ordinals", 0)
+		}
+	}
+
+	configMap, configSuffix, err := buildDNSetConfigMap(dn, ctx.Dep.Deps.LogSet, reservedOrdinals)
 	if err != nil {
 		return err
 	}
@@ -250,6 +275,26 @@ func (d *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.DNSet]) error {
 		}
 		return nil
 	})
+}
+
+// fetchLogSetReservedOrdinals fetches the kruise StatefulSet that backs the given LogSet and
+// returns its spec.reserveOrdinals list. This allows DN/CN config builders to generate
+// accurate service-addresses that skip ordinal holes created during LogService failover (#596).
+//
+// Any error (including "not found") is propagated to the caller instead of being swallowed:
+// by the time DN/CN build their ConfigMap, ls.Status.Discovery is already required to be set,
+// which implies the LogSet (and its StatefulSet) must exist. Silently falling back to "no
+// holes" on a transient read error could regenerate a service-addresses list that still
+// points at a dead ordinal, defeating the purpose of this fix. Reconcile should simply retry.
+func fetchLogSetReservedOrdinals(ctx *recon.Context[*v1alpha1.DNSet], ls *v1alpha1.LogSet) ([]int, error) {
+	if ls == nil {
+		return nil, nil
+	}
+	sts := &kruise.StatefulSet{}
+	if err := ctx.Get(client.ObjectKey{Namespace: ls.Namespace, Name: logset.LogSetStsName(ls)}, sts); err != nil {
+		return nil, err
+	}
+	return sts.Spec.ReserveOrdinals, nil
 }
 
 func (d *Actor) Reconcile(mgr manager.Manager) error {

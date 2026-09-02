@@ -19,3 +19,5 @@ charts/matrixone-operator/charts/
 *.tgz
 e2e*.xml
 e2e.test
+docs/troubleshooting/
+docs/draft

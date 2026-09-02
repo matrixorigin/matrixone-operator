@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -103,9 +103,16 @@ while true; do
         echo "waiting pod dns name ${ADDR} resolvable" >&2
     fi
 done
-
+{{ if .EnableMemoryBinPath }}
+MO_BIN=${MO_BIN_PATH}/mo-service
+mkdir -p ${MO_BIN_PATH}
+cp /mo-service ${MO_BIN}
+echo "${MO_BIN} -cfg ${conf} $@"
+exec ${MO_BIN} -cfg ${conf} $@
+{{- else }}
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
+{{- end }}
 `))
 
 var startScriptTplV2 = template.Must(template.New("logservice-start-script-v2").Parse(`
@@ -167,9 +174,16 @@ while true; do
         echo "waiting pod dns name ${ADDR} resolvable" >&2
     fi
 done
-
+{{ if .EnableMemoryBinPath }}
+MO_BIN=${MO_BIN_PATH}/mo-service
+mkdir -p ${MO_BIN_PATH}
+cp /mo-service ${MO_BIN}
+echo "${MO_BIN} -cfg ${conf} $@"
+exec ${MO_BIN} -cfg ${conf} $@
+{{- else }}
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
+{{- end }}
 `))
 
 type model struct {
@@ -180,6 +194,7 @@ type model struct {
 	BootstrapFilePath      string
 	GossipFilePath         string
 	InPlaceConfigMapUpdate bool
+	EnableMemoryBinPath    bool
 }
 
 // buildGossipSeedsConfigMap build the gossip seeds configmap for log service, which will not trigger rolling-update
@@ -209,10 +224,10 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 	}
 	// 1. build base config file
 	if ls.Spec.InitialConfig.RestoreFrom != nil {
-		conf.Merge(common.LogServiceFSConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage))
+		conf.MergeDeep(common.LogServiceFSConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage))
 	} else {
 		// TODO(aylei): for 0.8 compatibility, remove this compatibility code after we drop 0.8 support in operator
-		conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, nil))
+		conf.MergeDeep(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, nil))
 	}
 	conf.Set([]string{"service-type"}, serviceTypeLog)
 	conf.Set([]string{"logservice", "deployment-id"}, deploymentID(ls))
@@ -245,6 +260,7 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 		BootstrapFilePath:      fmt.Sprintf("%s/%s", bootstrapPath, bootstrapFile),
 		GossipFilePath:         fmt.Sprintf("%s/%s", gossipPath, gossipFile),
 		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(ls.Spec.GetOperatorVersion()),
+		EnableMemoryBinPath:    ls.Spec.MemoryFsSize != nil,
 	})
 	if err != nil {
 		return nil, "", err
@@ -271,12 +287,22 @@ func buildConfigMap(ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
 	return cm, configSuffix, nil
 }
 
-func HaKeeperAdds(ls *v1alpha1.LogSet) []string {
-	// TODO: consider hole in asts ordinals
+// HaKeeperSvcAddrs returns the HAKeeper service addresses for the currently running LogStore pods,
+// correctly skipping ordinal holes specified by reservedOrdinals (mirrors
+// StatefulSet.spec.reserveOrdinals set during failover).
+// Use this instead of HaKeeperAdds when the caller can supply the reserved-ordinal list from the
+// underlying kruise StatefulSet (sts.Spec.ReserveOrdinals).
+func HaKeeperSvcAddrs(ls *v1alpha1.LogSet, reservedOrdinals []int) []string {
 	var seeds []string
-	for i := int32(0); i < ls.Spec.Replicas; i++ {
+	r := ls.Spec.Replicas
+	i := 0
+	for count := int32(0); count < r; i++ {
+		if slices.Contains(reservedOrdinals, i) {
+			continue
+		}
 		podName := fmt.Sprintf("%s-%d", stsName(ls), i)
 		seeds = append(seeds, fmt.Sprintf("%s.%s.%s.svc:%d", podName, headlessSvcName(ls), ls.Namespace, logServicePort))
+		count++
 	}
 	return seeds
 }

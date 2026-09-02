@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -151,6 +151,12 @@ type StoreScore struct {
 	SessionCount  int `json:"sessionCount"`
 	PipelineCount int `json:"pipelineCount"`
 	ReplicaCount  int `json:"replicaCount"`
+	// The observed fields distinguish a confirmed count from a zero value left by a
+	// skipped, failed, or incomplete query. Old annotations do not contain these
+	// fields and are deliberately unsafe until a fresh observation succeeds.
+	SessionObserved  bool `json:"sessionObserved"`
+	PipelineObserved bool `json:"pipelineObserved"`
+	ReplicaObserved  bool `json:"replicaObserved"`
 
 	StartedTime *time.Time `json:"startedTime,omitempty"`
 }
@@ -160,14 +166,23 @@ func (s *StoreScore) GenDeletionCost() int {
 }
 
 func (s *StoreScore) IsSafeToReclaim() bool {
-	return s.SessionCount == 0 && s.PipelineCount == 0 && s.ReplicaCount == 0
+	return s.SessionObserved && s.PipelineObserved && s.ReplicaObserved &&
+		s.SessionCount == 0 && s.PipelineCount == 0 && s.ReplicaCount == 0
 }
 
-func (s *StoreScore) Restarted(startedTime *time.Time) {
-	s.SessionCount = 0
-	s.PipelineCount = 0
-	s.ReplicaCount = 0
-	s.StartedTime = startedTime
+// BeginObservation invalidates the previous round before any query starts. Counts
+// are kept for diagnostics and deletion cost unless the CN process restarted, but
+// they cannot authorize reclaim until every required observation succeeds again.
+func (s *StoreScore) BeginObservation(startedTime *time.Time) {
+	s.SessionObserved = false
+	s.PipelineObserved = false
+	s.ReplicaObserved = false
+	if s.StartedTime == nil || !s.StartedTime.Equal(*startedTime) {
+		s.SessionCount = 0
+		s.PipelineCount = 0
+		s.ReplicaCount = 0
+		s.StartedTime = startedTime
+	}
 }
 
 // GetStoreScore get the store connection count from Pod anno

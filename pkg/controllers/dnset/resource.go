@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -103,9 +103,16 @@ while true; do
         echo "waiting pod dns name ${ADDR} resolvable" >&2
     fi
 done
-
+{{ if .EnableMemoryBinPath }}
+MO_BIN=${MO_BIN_PATH}/mo-service
+mkdir -p ${MO_BIN_PATH}
+cp /mo-service ${MO_BIN}
+echo "${MO_BIN} -cfg ${conf} $@"
+exec ${MO_BIN} -cfg ${conf} $@
+{{- else }}
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
+{{- end }}
 `))
 
 type model struct {
@@ -116,6 +123,7 @@ type model struct {
 	LockServicePort        int
 	LogtailPort            int
 	InPlaceConfigMapUpdate bool
+	EnableMemoryBinPath    bool
 }
 
 func syncReplicas(dn *v1alpha1.DNSet, cs *kruise.StatefulSet) {
@@ -186,10 +194,14 @@ func syncPodSpec(dn *v1alpha1.DNSet, sts *kruise.StatefulSet, sp v1alpha1.Shared
 	common.SyncTopology(dn.Spec.TopologyEvenSpread, specRef, sts.Spec.Selector)
 
 	dn.Spec.Overlay.OverlayPodSpec(specRef)
+
+	common.SetupMemoryFsVolume(specRef, dn.Spec.MemoryFsSize)
 }
 
-// buildDNSetConfigMap return dn set configmap
-func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
+// buildDNSetConfigMap return dn set configmap.
+// reservedOrdinals should be set to the LogSet StatefulSet's spec.reserveOrdinals so that
+// service-addresses correctly skips ordinal holes created during failover (issue #596).
+func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet, reservedOrdinals []int) (*corev1.ConfigMap, string, error) {
 	if ls.Status.Discovery == nil {
 		return nil, "", errors.New("HAKeeper discovery address not ready")
 	}
@@ -207,9 +219,9 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		// via discovery-address, operator can take off unhealthy logstores without restart CN/TN
 		conf.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	} else {
-		conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+		conf.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperSvcAddrs(ls, reservedOrdinals))
 	}
-	conf.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &dn.Spec.SharedStorageCache))
+	conf.MergeDeep(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &dn.Spec.SharedStorageCache))
 	conf.Set([]string{"service-type"}, serviceType)
 	conf.Set([]string{configAlias, "listen-address"}, getListenAddress())
 	conf.Set([]string{configAlias, "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
@@ -231,6 +243,7 @@ func buildDNSetConfigMap(dn *v1alpha1.DNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		ConfigFilePath:         fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
 		ConfigAlias:            configAlias,
 		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(dn.Spec.GetOperatorVersion()),
+		EnableMemoryBinPath:    dn.Spec.MemoryFsSize != nil,
 	})
 	if err != nil {
 		return nil, "", err
@@ -270,8 +283,8 @@ func syncPersistentVolumeClaim(dn *v1alpha1.DNSet, sts *kruise.StatefulSet) {
 	}
 }
 
-func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) error {
-	cm, configSuffix, err := buildDNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
+func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet, reservedOrdinals []int) error {
+	cm, configSuffix, err := buildDNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet, reservedOrdinals)
 	if err != nil {
 		return err
 	}
@@ -281,7 +294,6 @@ func syncPods(ctx *recon.Context[*v1alpha1.DNSet], sts *kruise.StatefulSet) erro
 	}
 	if ctx.Dep != nil {
 		syncPodSpec(ctx.Obj, sts, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
-
 	}
 
 	return common.SyncConfigMap(ctx, &sts.Spec.Template.Spec, cm, ctx.Obj.Spec.GetOperatorVersion())

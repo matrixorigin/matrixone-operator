@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ import (
 
 const (
 	RestoreCompleteAnno = "matrixorigin.io/restore-complete"
+	annSkipSync         = "matrixorigin.io/skip-sync"
 )
 
 const (
@@ -60,6 +61,10 @@ var _ recon.Actor[*v1alpha1.MatrixOneCluster] = &MatrixOneClusterActor{}
 type MatrixOneClusterActor struct{}
 
 func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (recon.Action[*v1alpha1.MatrixOneCluster], error) {
+	if ctx.Obj.Annotations[annSkipSync] != "" {
+		ctx.Log.Info(fmt.Sprintf("skip sync matrixonecluster %v", client.ObjectKeyFromObject(ctx.Obj)))
+		return nil, nil
+	}
 	mo := ctx.Obj
 	if mo.Spec.RestoreFrom != nil && mo.Annotations[RestoreCompleteAnno] == "" {
 		// do restore
@@ -353,6 +358,9 @@ func setPodSetDefault(ps *v1alpha1.PodSet, mo *v1alpha1.MatrixOneCluster) {
 	if ps.OperatorVersion == nil {
 		ps.OperatorVersion = mo.Spec.OperatorVersion
 	}
+	if ps.MemoryFsSize == nil {
+		ps.MemoryFsSize = mo.Spec.MemoryFsSize
+	}
 }
 
 func setOverlay(o **v1alpha1.Overlay, mo *v1alpha1.MatrixOneCluster) {
@@ -473,6 +481,10 @@ func syncedCondition(mo *v1alpha1.MatrixOneCluster) metav1.Condition {
 }
 
 func (r *MatrixOneClusterActor) Finalize(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (bool, error) {
+	if ctx.Obj.Annotations[annSkipSync] != "" {
+		ctx.Log.Info(fmt.Sprintf("skip finalize matrixonecluster %v", client.ObjectKeyFromObject(ctx.Obj)))
+		return true, nil
+	}
 	mo := ctx.Obj
 	err := ctx.Client.DeleteAllOf(ctx, &v1alpha1.CNSet{}, client.InNamespace(mo.Namespace), client.MatchingLabels(
 		map[string]string{common.MatrixoneClusterLabelKey: mo.Name},

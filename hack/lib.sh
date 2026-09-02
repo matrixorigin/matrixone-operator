@@ -82,8 +82,22 @@ function kind::ensure-kind() {
 }
 
 function kind::load-image() {
+    local kruise_image
+    local kruise_hook_image
+    kruise_image=$(helm template kruise "${ROOT}/charts/kruise" | awk '/^[[:space:]]+image:.*kruise-manager/ {print $2; exit}')
+    if [[ -z "${kruise_image}" ]]; then
+        echo "error: failed to resolve Kruise manager image from local chart"
+        return 1
+    fi
+    kruise_hook_image=$(helm template kruise "${ROOT}/charts/kruise" | awk '/^[[:space:]]+image:.*kruise-helm-hook/ {print $2; exit}')
+    if [[ -z "${kruise_hook_image}" ]]; then
+        echo "error: failed to resolve Kruise Helm hook image from local chart"
+        return 1
+    fi
+
     kind::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
-    kind::prepare_image ${CLUSTER} openkruise/kruise-manager:v1.2.0
+    kind::prepare_image ${CLUSTER} "${kruise_image}"
+    kind::prepare_image ${CLUSTER} "${kruise_hook_image}"
     kind::prepare_image ${CLUSTER} minio/minio:RELEASE.2023-11-01T01-57-10Z
 }
 
@@ -104,30 +118,92 @@ function e2e::check() {
 }
 
 function e2e::run() {
+    local nodes="${E2E_NODES:-4}"
     echo "> Run e2e test"
     make ginkgo
-    ./bin/ginkgo -nodes=4 -stream=true -slowSpecThreshold=3000 ./test/e2e/... -- \
+    ./bin/ginkgo -nodes="${nodes}" -stream=true -slowSpecThreshold=3000 ./test/e2e/... -- \
                 -mo-version="${MO_VERSION}" \
                 -mo-image-repo="${MO_IMAGE_REPO}"
 
 }
 
 function e2e::install() {
+  local chart_root
+  chart_root=$(mktemp -d)
+
+  mkdir -p "${chart_root}/matrixone-operator/charts"
+  cp charts/matrixone-operator/Chart.yaml charts/matrixone-operator/values.yaml "${chart_root}/matrixone-operator/"
+  cp -R charts/matrixone-operator/templates "${chart_root}/matrixone-operator/"
+  if ! helm package charts/kruise --destination "${chart_root}/matrixone-operator/charts"; then
+    rm -rf -- "${chart_root}"
+    return 1
+  fi
+
   echo "> Create operator namespace"
   kubectl create ns "${OPNAMESPACE}"
   echo "> Install mo operator"
-  helm install mo ./charts/matrixone-operator --dependency-update --set image.repository=${REPO} --set image.tag=${TAG} -n "${OPNAMESPACE}"
+  if ! helm install mo "${chart_root}/matrixone-operator" --set image.repository="${REPO}" --set image.tag="${TAG}" -n "${OPNAMESPACE}"; then
+    rm -rf -- "${chart_root}"
+    return 1
+  fi
+  rm -rf -- "${chart_root}"
 
-  echo "> Wait webhook certificate injected"
-  sleep 30
+  e2e::wait-webhook-ready
+}
+
+function e2e::wait-webhook-ready() {
+  local selector="app.kubernetes.io/name=matrixone-operator,app.kubernetes.io/instance=mo"
+  local mutating="matrixone-operator-mutating-webhook-mo"
+  local validating="matrixone-operator-validating-webhook-mo"
+  local timeout_seconds=300
+  local deadline
+
+  echo "> Wait for operator deployment"
+  if ! kubectl -n "${OPNAMESPACE}" wait deployment \
+    -l "${selector}" \
+    --for=condition=Available \
+    --timeout="${timeout_seconds}s"; then
+    kubectl -n "${OPNAMESPACE}" get pods -o wide || true
+    return 1
+  fi
+
+  echo "> Wait for webhook CA injection"
+  deadline=$((SECONDS + timeout_seconds))
+  while ((SECONDS < deadline)); do
+    local mutating_ca
+    local validating_ca
+    mutating_ca=$(kubectl get mutatingwebhookconfiguration "${mutating}" \
+      -o jsonpath='{.webhooks[0].clientConfig.caBundle}' 2>/dev/null || true)
+    validating_ca=$(kubectl get validatingwebhookconfiguration "${validating}" \
+      -o jsonpath='{.webhooks[0].clientConfig.caBundle}' 2>/dev/null || true)
+    if [[ -n "${mutating_ca}" && "${mutating_ca}" != "Cg==" && \
+          -n "${validating_ca}" && "${validating_ca}" != "Cg==" ]]; then
+      echo "> Webhook CA injection completed"
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "error: webhook CA injection did not complete within ${timeout_seconds}s"
+  kubectl get mutatingwebhookconfiguration "${mutating}" -o yaml || true
+  kubectl get validatingwebhookconfiguration "${validating}" -o yaml || true
+  kubectl -n "${OPNAMESPACE}" logs deployment/mo-matrixone-operator --tail=100 || true
+  return 1
 }
 
 function e2e::cleanup() {
     echo "Delete e2e test namespace"
-    kubectl get ns --all-namespaces --no-headers=true | awk '/^e2e/{print $1}' | xargs kubectl delete ns
+    if ! kubectl delete namespace -l managed-by=e2e-suite \
+      --ignore-not-found --wait=true --timeout=600s; then
+      kubectl get namespace -l managed-by=e2e-suite -o yaml || true
+      return 1
+    fi
     # Uninstall helm charts
     echo "Uninstall helm charts..."
-    helm uninstall mo -n "${OPNAMESPACE}"
+    if ! helm uninstall mo -n "${OPNAMESPACE}"; then
+      kubectl -n kruise-system logs job/mo-finalizer --all-containers=true || true
+      return 1
+    fi
     echo "Wait for charts uninstall"
     sleep 10
     echo "Delete operator namespace"
@@ -137,6 +213,10 @@ function e2e::cleanup() {
 function e2e::workflow() {
   e2e::check
   trap "e2e::cleanup" EXIT
-  e2e::install
-  e2e::run
+  e2e::install || return 1
+  local run_status=0
+  e2e::run || run_status=$?
+  trap - EXIT
+  e2e::cleanup || return 1
+  return "${run_status}"
 }

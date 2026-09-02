@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,15 +15,76 @@
 package cnclaimset
 
 import (
-	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
-	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"context"
 	"testing"
 	"time"
 
+	"github.com/matrixorigin/controller-runtime/pkg/fake"
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	. "github.com/onsi/gomega"
 )
+
+func Test_scaleIn_skipsMigratingClaims(t *testing.T) {
+	g := NewGomegaWithT(t)
+	now := time.Now()
+
+	oc := &ownedClaims{
+		owned: []v1alpha1.CNClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "claim-migrating",
+					Namespace: "ns",
+				},
+				Spec: v1alpha1.CNClaimSpec{
+					ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-target"},
+					SourcePod:   &v1alpha1.ClaimPodRef{PodName: "pod-source"},
+				},
+				Status: v1alpha1.CNClaimStatus{
+					Phase: v1alpha1.CNClaimPhaseBound,
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "claim-normal",
+					Namespace:         "ns",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+				Spec: v1alpha1.CNClaimSpec{
+					ClaimPodRef: v1alpha1.ClaimPodRef{PodName: ""},
+				},
+				Status: v1alpha1.CNClaimStatus{
+					Phase: v1alpha1.CNClaimPhasePending,
+				},
+			},
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	g.Expect(v1alpha1.AddToScheme(scheme)).To(Succeed())
+	cli := fake.KubeClientBuilder().
+		WithScheme(scheme).
+		WithObjects(&oc.owned[0], &oc.owned[1]).
+		Build()
+	ctx := fake.NewContext(&v1alpha1.CNClaimSet{
+		ObjectMeta: metav1.ObjectMeta{Name: "claimset", Namespace: "ns"},
+	}, cli, nil)
+
+	g.Expect((&Actor{}).scaleIn(ctx, oc, 1)).To(Succeed())
+	g.Expect(oc.owned).To(HaveLen(1))
+	g.Expect(oc.owned[0].Name).To(Equal("claim-migrating"))
+
+	stored := &v1alpha1.CNClaim{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKey{Namespace: "ns", Name: "claim-migrating"}, stored)).To(Succeed())
+	err := cli.Get(context.Background(), client.ObjectKey{Namespace: "ns", Name: "claim-normal"}, &v1alpha1.CNClaim{})
+	g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
+}
 
 func Test_sortClaimsToDelete(t *testing.T) {
 	type args struct {

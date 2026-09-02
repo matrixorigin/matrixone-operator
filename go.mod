@@ -23,7 +23,6 @@ require (
 	github.com/openkruise/kruise-api v1.4.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/samber/lo v1.38.1
-	github.com/stretchr/testify v1.9.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
@@ -32,6 +31,7 @@ require (
 	k8s.io/apiserver v0.27.2
 	k8s.io/client-go v0.27.2
 	k8s.io/component-helpers v0.27.2
+	k8s.io/klog v1.0.0
 	k8s.io/kubelet v0.27.2
 	k8s.io/kubernetes v1.27.2
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
@@ -160,6 +160,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.12 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/tidwall/btree v1.6.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
@@ -210,7 +211,9 @@ replace (
 
 replace (
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.27.2
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.27.2
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.27.2
+	k8s.io/controller-manager => k8s.io/controller-manager v0.27.2
 	k8s.io/cri-api => k8s.io/cri-api v0.27.2
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.27.2
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.27.2

@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+
 	"github.com/matrixorigin/matrixone-operator/test/e2e/e2eminio"
 	e2eutil "github.com/matrixorigin/matrixone-operator/test/e2e/util"
 
@@ -102,11 +103,15 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: env.Namespace,
+			Name:   env.Namespace,
+			Labels: e2eResourceLabels(),
 		},
 	}
 	Expect(util.Ignore(apierrors.IsAlreadyExists, kubeCli.Create(ctx, ns))).To(Succeed())
-	poolNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: env.PoolNamespace}}
+	poolNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:   env.PoolNamespace,
+		Labels: e2eResourceLabels(),
+	}}
 	Expect(util.Ignore(apierrors.IsAlreadyExists, kubeCli.Create(ctx, poolNS))).To(Succeed())
 
 	buf, err := json.Marshal(env)

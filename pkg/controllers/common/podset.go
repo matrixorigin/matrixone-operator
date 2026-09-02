@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,6 +56,11 @@ func SyncPodMeta(meta *metav1.ObjectMeta, p *v1alpha1.PodSet) {
 	v, ok := p.GetSemVer()
 	if ok {
 		meta.Annotations[SemanticVersionAnno] = v.String()
+	}
+	ov := p.GetOperatorVersion()
+	// backward compatible for old operator version
+	if ov.GT(v1alpha1.FirstOpVersion) {
+		meta.Annotations[v1alpha1.OperatorVersionAnno] = ov.String()
 	}
 }
 

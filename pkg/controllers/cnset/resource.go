@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,9 +70,16 @@ cat <<EOF > ${lsc}
 service-address = "${POD_IP}:{{ .LockServicePort }}"
 EOF
 sed -i "/\[cn.lockservice\]/r ${lsc}" ${conf}
-
+{{ if .EnableMemoryBinPath }}
+MO_BIN=${MO_BIN_PATH}/mo-service
+mkdir -p ${MO_BIN_PATH}
+cp /mo-service ${MO_BIN}
+echo "${MO_BIN} -cfg ${conf} $@"
+exec ${MO_BIN} -cfg ${conf} $@
+{{- else }}
 echo "/mo-service -cfg ${conf} $@"
 exec /mo-service -cfg ${conf} $@
+{{- end }}
 `))
 
 type model struct {
@@ -82,6 +89,7 @@ type model struct {
 
 	LockServicePort        int
 	InPlaceConfigMapUpdate bool
+	EnableMemoryBinPath    bool
 }
 
 func buildHeadlessSvc(cn *v1alpha1.CNSet) *corev1.Service {
@@ -149,6 +157,7 @@ func syncService(cn *v1alpha1.CNSet, svc *corev1.Service) {
 		svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
 	} else {
 		delete(svc.Annotations, common.PrometheusScrapeAnno)
+		delete(svc.Annotations, common.PrometheusPortAnno)
 	}
 }
 
@@ -191,7 +200,6 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 			MountPath: common.ConfigPath,
 		},
 	}
-
 	dataVolume := corev1.VolumeMount{
 		Name:      common.DataVolume,
 		MountPath: common.DataPath,
@@ -200,6 +208,7 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	if cn.Spec.CacheVolume != nil {
 		volumeMountsList = append(volumeMountsList, dataVolume)
 	}
+
 	mainRef.VolumeMounts = volumeMountsList
 
 	mainRef.Env = []corev1.EnvVar{
@@ -229,6 +238,8 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	common.SetStorageProviderConfig(sp, specRef)
 	common.SyncTopology(cn.Spec.TopologyEvenSpread, specRef, cs.Spec.Selector)
 	cn.Spec.Overlay.OverlayPodSpec(specRef)
+
+	common.SetupMemoryFsVolume(specRef, cn.Spec.MemoryFsSize)
 
 	// create or delete python udf sidecar
 	sidecar := cn.Spec.PythonUdfSidecar
@@ -261,7 +272,10 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 	}
 }
 
-func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.ConfigMap, string, error) {
+// buildCNSetConfigMap builds the ConfigMap for a CNSet.
+// reservedOrdinals should be set to the LogSet StatefulSet's spec.reserveOrdinals so that
+// service-addresses correctly skips ordinal holes created during failover (issue #596).
+func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet, reservedOrdinals []int) (*corev1.ConfigMap, string, error) {
 	if ls.Status.Discovery == nil {
 		return nil, "", errors.New("logset had not yet exposed HAKeeper discovery address")
 	}
@@ -269,14 +283,14 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 	if cfg == nil {
 		cfg = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
-	cfg.Merge(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &cn.Spec.SharedStorageCache))
+	cfg.MergeDeep(common.FileServiceConfig(fmt.Sprintf("%s/%s", common.DataPath, common.DataDir), ls.Spec.SharedStorage, &cn.Spec.SharedStorageCache))
 	cfg.Set([]string{"service-type"}, "CN")
 	if sv, ok := cn.Spec.GetSemVer(); ok && v1alpha1.HasMOFeature(*sv, v1alpha1.MOFeatureDiscoveryFixed) {
 		// issue: https://github.com/matrixorigin/MO-Cloud/issues/4158
 		// via discovery-address, operator can take off unhealthy logstores without restart CN/TN
 		cfg.Set([]string{"hakeeper-client", "discovery-address"}, ls.Status.Discovery.String())
 	} else {
-		cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperAdds(ls))
+		cfg.Set([]string{"hakeeper-client", "service-addresses"}, logset.HaKeeperSvcAddrs(ls, reservedOrdinals))
 	}
 	cfg.Set([]string{"cn", "role"}, cn.Spec.Role)
 	cfg.Set([]string{"cn", "lockservice", "listen-address"}, fmt.Sprintf("0.0.0.0:%d", common.LockServicePort))
@@ -306,6 +320,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet) (*corev1.Confi
 		CNRpcPort:              cnRPCPort,
 		LockServicePort:        common.LockServicePort,
 		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(cn.Spec.GetOperatorVersion()),
+		EnableMemoryBinPath:    cn.Spec.MemoryFsSize != nil,
 	})
 	if err != nil {
 		return nil, "", err

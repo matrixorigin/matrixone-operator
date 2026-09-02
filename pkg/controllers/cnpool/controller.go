@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -122,6 +122,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	}
 
 	desiredReplicas := inUse + pendingClaims + p.Spec.Strategy.ScaleStrategy.MaxIdle
+	activeReplicas := inUse + int32(len(idlePods))
 	totalPods += desiredReplicas
 	if totalPods > maxPods {
 		return recon.ErrReSync(fmt.Sprintf("Pool %s has reached MaxPods limit %d, total Pods: %d, requeue", p.Name, totalPods, maxPods), time.Minute)
@@ -129,13 +130,15 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 	// ensure and scale desired CNSet to provide enough CN pods
 	err = recon.CreateOwnedOrUpdate(ctx, desired, func() error {
 		// apply update, since the CNSet revision hash is not changed, this must be an inplace-update
+		specReplicas := desired.Spec.Replicas
 		csSpec := p.Spec.Template.DeepCopy()
 		syncCNSetSpec(p, csSpec)
 		desired.Spec = *csSpec
-		ctx.Log.Info("scale cnset", "cnset", desired.Name, "replicas", desiredReplicas)
+		desired.Spec.Replicas = specReplicas
+		ctx.Log.Info("scale cnset", "cnset", desired.Name, "replicas", desiredReplicas, "spec replicas", specReplicas)
 		// sync terminating pods to delete
 		desired.Spec.PodsToDelete = podNames(terminatingPods)
-		if desired.Spec.Replicas > desiredReplicas {
+		if desiredReplicas <= specReplicas {
 			// CNSet is going to be scaled-in
 			if pendingClaims > 0 {
 				// don't scale-in if we still have pending claims
@@ -146,7 +149,8 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 					"in use pods", inUse)
 				return nil
 			}
-			scaleInCount := desired.Spec.Replicas - desiredReplicas
+			// activeReplicas may be greater than desiredReplicas, we should scale-in more
+			scaleInCount := max(activeReplicas-desiredReplicas, specReplicas-desiredReplicas)
 			sortPodByDeletionOrder(idlePods)
 			if int32(len(idlePods)) > scaleInCount {
 				// pick first N to scale-in
@@ -165,7 +169,7 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNPool]) error {
 				deleted = append(deleted, pod)
 			}
 			ctx.Log.Info("scale-in CN Pool complete", "deleted", len(deleted))
-			desired.Spec.Replicas = desired.Spec.Replicas - int32(len(deleted))
+			desired.Spec.Replicas = max(specReplicas-int32(len(deleted)), desiredReplicas)
 			desired.Spec.PodsToDelete = append(desired.Spec.PodsToDelete, podNames(deleted)...)
 		} else {
 			// scale-out, if we have terminating pods left, replace them
@@ -347,8 +351,12 @@ func syncCNSetSpec(p *v1alpha1.CNPool, csSpec *v1alpha1.CNSetSpec) {
 	// override fields that managed by Pool, we expect the webhook will reject these fields if
 	// they are set by user, so that this process would not silently change users' expectation.
 	csSpec.PodManagementPolicy = pointer.String(v1alpha1.PodManagementPolicyPooling)
-	// pause update, cn pool don't rolling-update a single set, instead, we roll-out new sets if spec changes
-	csSpec.PauseUpdate = true
+	if v1alpha1.GateInplacePoolRollingUpdate.Enabled(p.Spec.Template.GetOperatorVersion()) {
+		csSpec.PauseUpdate = false
+	} else {
+		// pause update, cn pool don't rolling-update a single set, instead, we roll-out new sets if spec changes
+		csSpec.PauseUpdate = true
+	}
 	csSpec.ScalingConfig.StoreDrainEnabled = pointer.Bool(true)
 	csSpec.Labels = nil
 	csSpec.PodSet.Replicas = 0
@@ -378,6 +386,11 @@ func generateRevisionHash(cn *v1alpha1.CNSetSpec) (string, error) {
 	// special case: PodMeta can be in-place updated without restarting container
 	tpl.PodSet.Overlay.PodLabels = nil
 	tpl.PodSet.Overlay.PodAnnotations = nil
+	if v1alpha1.GateInplacePoolRollingUpdate.Enabled(cn.GetOperatorVersion()) {
+		// in-place update image and config
+		tpl.PodSet.Image = ""
+		tpl.PodSet.Config = nil
+	}
 	return common.HashControllerRevision(tpl)
 }
 

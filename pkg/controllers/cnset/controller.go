@@ -1,4 +1,4 @@
-// Copyright 2024 Matrix Origin
+// Copyright 2025 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,12 +16,16 @@ package cnset
 
 import (
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/matrixorigin/matrixone-operator/api/features"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/logset"
 	"github.com/matrixorigin/matrixone-operator/pkg/utils"
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
 	"k8s.io/utils/pointer"
-	"time"
 
 	"github.com/go-errors/errors"
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -44,6 +48,8 @@ const (
 	cnReadySeconds = 30
 
 	reSyncAfter = 10 * time.Second
+
+	cloneSetForceSpecifiedDelete = "apps.kruise.io/force-specified-delete"
 )
 
 type Actor struct{}
@@ -63,6 +69,7 @@ func (c *Actor) with(cs *kruisev1alpha1.CloneSet) *WithResources {
 func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1alpha1.CNSet], error) {
 	cn := ctx.Obj
 
+	ctx.Log.Info("observe cnset", "name", cn.Name, "operatorVersion", cn.Spec.GetOperatorVersion())
 	cs := &kruisev1alpha1.CloneSet{}
 	err, foundCs := util.IsFound(ctx.Get(client.ObjectKey{Namespace: cn.Namespace, Name: setName(cn)}, cs))
 	if err != nil {
@@ -87,6 +94,10 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, errors.WrapPrefix(err, "sync service", 0)
 	}
 
+	if err := c.syncMetricService(ctx); err != nil {
+		return nil, errors.WrapPrefix(err, "sync metric service", 0)
+	}
+
 	// diff desired cloneset and determine whether should an update be invoked
 	origin := cs.DeepCopy()
 	if err := syncCloneSet(ctx, cs); err != nil {
@@ -97,13 +108,16 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 	if !equality.Semantic.DeepEqual(origin, cs) {
 		if cn.Spec.PauseUpdate {
-			ctx.Log.Info("CNSet does not reach desired state, but update is paused, only strategy and label/anno fields will be updated")
+			ctx.Log.Info("CNSet does not reach desired state, but update is paused, only in-place update will be applied")
 			inplaceMutated := origin.DeepCopy()
 			inplaceMutated.Spec.ScaleStrategy = cs.Spec.ScaleStrategy
 			inplaceMutated.Spec.UpdateStrategy = cs.Spec.UpdateStrategy
 			inplaceMutated.Spec.Lifecycle = cs.Spec.Lifecycle
 			inplaceMutated.Spec.Template.ObjectMeta.Labels = cs.Spec.Template.ObjectMeta.Labels
 			inplaceMutated.Spec.Template.ObjectMeta.Annotations = cs.Spec.Template.ObjectMeta.Annotations
+
+			inplaceMutated.Labels = cs.Labels
+			inplaceMutated.Annotations = cs.Annotations
 			if !equality.Semantic.DeepEqual(inplaceMutated, origin) {
 				return c.with(inplaceMutated).Update, nil
 			}
@@ -157,6 +171,12 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return c.with(cs).Scale, nil
 	}
 
+	if cn.Spec.CacheVolume != nil {
+		if err := common.SyncCloneSetVolumeSize(ctx, cn, cn.Spec.CacheVolume.Size, cs); err != nil {
+			return nil, errors.WrapPrefix(err, "sync volume size", 0)
+		}
+	}
+
 	if recon.IsReady(&cn.Status.ConditionalStatus) {
 		cn.Status.Host = fmt.Sprintf("%s.%s", svc.Name, svc.Namespace)
 		cn.Status.Port = CNSQLPort
@@ -167,6 +187,41 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 
 	return nil, recon.ErrReSync("cnset is not ready or synced", reSyncAfter)
+}
+
+// syncMetricService reconciles a dedicated ClusterIP Service exposing the CN metrics port,
+// so that Service-based Prometheus discovery (e.g. ServiceMonitor matching on port name
+// "metric") can find CN targets the same way it already does for DN/Log (issue #600).
+func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet]) error {
+	cn := ctx.Obj
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: cn.Namespace,
+			Name:      metricSvcName(cn),
+			Labels:    common.SubResourceLabels(cn),
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: common.SubResourceLabels(cn),
+		},
+	}
+	return recon.CreateOwnedOrUpdate(ctx, svc, func() error {
+		svc.Spec.Type = corev1.ServiceTypeClusterIP
+		svc.Spec.Ports = []corev1.ServicePort{{
+			Name: "metric",
+			Port: int32(common.MetricsPort),
+		}}
+		if cn.Spec.PromDiscoveredByService() {
+			if svc.Annotations == nil {
+				svc.Annotations = map[string]string{}
+			}
+			svc.Annotations[common.PrometheusScrapeAnno] = "true"
+			svc.Annotations[common.PrometheusPortAnno] = strconv.Itoa(common.MetricsPort)
+		} else {
+			delete(svc.Annotations, common.PrometheusScrapeAnno)
+			delete(svc.Annotations, common.PrometheusPortAnno)
+		}
+		return nil
+	})
 }
 
 func (c *WithResources) Scale(ctx *recon.Context[*v1alpha1.CNSet]) error {
@@ -193,6 +248,8 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 		Name: setName(cn),
 	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
 		Name: svcName(cn),
+	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+		Name: metricSvcName(cn),
 	}}}
 	for _, obj := range objs {
 		obj.SetNamespace(cn.Namespace)
@@ -256,6 +313,7 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 	if err := syncCloneSet(ctx, cnSet); err != nil {
 		return errors.WrapPrefix(err, "sync clone set", 0)
 	}
+	syncPersistentVolumeClaim(cn, cnSet)
 
 	// create all resources
 	err := lo.Reduce[client.Object, error]([]client.Object{
@@ -287,7 +345,11 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 }
 func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneSet) error {
 	cn := ctx.Obj
+	pooling := cn.Spec.PodManagementPolicy != nil && *cn.Spec.PodManagementPolicy == v1alpha1.PodManagementPolicyPooling
 	cs.Spec.UpdateStrategy.Type = kruisev1alpha1.InPlaceIfPossibleCloneSetUpdateStrategyType
+	if pooling {
+		cs.Spec.UpdateStrategy.Type = kruisev1alpha1.InPlaceOnlyCloneSetUpdateStrategyType
+	}
 	cs.Spec.UpdateStrategy.MaxUnavailable = cn.Spec.UpdateStrategy.MaxUnavailable
 	cs.Spec.UpdateStrategy.MaxSurge = cn.Spec.UpdateStrategy.MaxSurge
 	cs.Spec.MinReadySeconds = cnReadySeconds
@@ -320,11 +382,31 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	if ctx.Dep != nil {
 		syncPodSpec(ctx.Obj, cs, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
 	}
-	// support update cacheVolume, NOTE: pvc only updated when pod rolling updated
-	// ref: https://openkruise.io/zh/docs/next/user-manuals/cloneset/#%E6%94%AF%E6%8C%81-pvc-%E6%A8%A1%E6%9D%BF
-	syncPersistentVolumeClaim(cn, cs)
+	if pooling {
+		if cs.Annotations == nil {
+			cs.Annotations = map[string]string{}
+		}
+		cs.Annotations[cloneSetForceSpecifiedDelete] = "y"
+		if v1alpha1.GateInplacePoolRollingUpdate.Enabled(cn.Spec.GetOperatorVersion()) {
+			if cs.Spec.Template.Annotations == nil {
+				cs.Spec.Template.Annotations = map[string]string{}
+			}
+			cs.Spec.Template.Annotations[v1alpha1.InPlacePoolRollingAnnoKey] = "y"
+		}
+	}
 
-	cm, configSuffix, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet)
+	// reservedOrdinals is only used in the service-addresses branch of buildCNSetConfigMap.
+	// When MOFeatureDiscoveryFixed is enabled the branch is never reached, so skip the
+	// extra STS GET to avoid an unnecessary dependency and potential requeue on transient errors.
+	var reservedOrdinals []int
+	if sv, ok := cn.Spec.GetSemVer(); !ok || !v1alpha1.HasMOFeature(*sv, v1alpha1.MOFeatureDiscoveryFixed) {
+		var err error
+		if reservedOrdinals, err = fetchLogSetReservedOrdinals(ctx, ctx.Dep.Deps.LogSet); err != nil {
+			return errors.WrapPrefix(err, "fetch logset reserved ordinals", 0)
+		}
+	}
+
+	cm, configSuffix, err := buildCNSetConfigMap(ctx.Obj, ctx.Dep.Deps.LogSet, reservedOrdinals)
 	if err != nil {
 		return err
 	}
@@ -332,6 +414,26 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 		cs.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
 	}
 	return common.SyncConfigMap(ctx, &cs.Spec.Template.Spec, cm, cn.Spec.GetOperatorVersion())
+}
+
+// fetchLogSetReservedOrdinals fetches the kruise StatefulSet that backs the given LogSet and
+// returns its spec.reserveOrdinals list. This allows CN config builders to generate
+// accurate service-addresses that skip ordinal holes created during LogService failover (#596).
+//
+// Any error (including "not found") is propagated to the caller instead of being swallowed:
+// by the time CN builds its ConfigMap, ls.Status.Discovery is already required to be set,
+// which implies the LogSet (and its StatefulSet) must exist. Silently falling back to "no
+// holes" on a transient read error could regenerate a service-addresses list that still
+// points at a dead ordinal, defeating the purpose of this fix. Reconcile should simply retry.
+func fetchLogSetReservedOrdinals(ctx *recon.Context[*v1alpha1.CNSet], ls *v1alpha1.LogSet) ([]int, error) {
+	if ls == nil {
+		return nil, nil
+	}
+	sts := &kruise.StatefulSet{}
+	if err := ctx.Get(client.ObjectKey{Namespace: ls.Namespace, Name: logset.LogSetStsName(ls)}, sts); err != nil {
+		return nil, err
+	}
+	return sts.Spec.ReserveOrdinals, nil
 }
 
 func setReady(cn *v1alpha1.CNSet) {
