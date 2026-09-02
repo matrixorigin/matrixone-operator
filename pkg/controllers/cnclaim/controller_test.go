@@ -16,25 +16,37 @@ package cnclaim
 
 import (
 	"context"
+	stderrors "errors"
 	"math/rand"
 	"testing"
 
+	reconfake "github.com/matrixorigin/controller-runtime/pkg/fake"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/onsi/gomega"
 )
 
-func newFakeClient(objs ...client.Object) client.Client {
+func newFakeClientBuilder(objs ...client.Object) *clientfake.ClientBuilder {
 	scheme := runtime.NewScheme()
 	_ = v1alpha1.SchemeBuilder.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
-	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+	return clientfake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objs...).
+		WithIndex(&v1alpha1.CNClaim{}, claimPodNameField, indexClaimByPodName)
+}
+
+func newFakeClient(objs ...client.Object) client.Client {
+	return newFakeClientBuilder(objs...).Build()
 }
 
 // fakeKubeClient adapts client.Client to recon.KubeClient for testing.
@@ -195,7 +207,330 @@ func Test_buildPodClaimIndex(t *testing.T) {
 	index, err := buildPodClaimIndex(&fakeKubeClient{cli}, "ns", "self")
 	g.Expect(err).NotTo(HaveOccurred())
 	// "self" excluded, "deleting" filtered, "pending" has no podName
-	g.Expect(index).To(Equal(map[string]string{"pod-2": "other"}))
+	g.Expect(index).To(HaveLen(1))
+	g.Expect(claimNames(index["pod-2"])).To(Equal([]string{"other"}))
+}
+
+func Test_Finalize_transfersLabelWhenPodClaimedByOther(t *testing.T) {
+	g := NewGomegaWithT(t)
+	now := metav1.Now()
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-1",
+			Namespace: "ns",
+			Labels: map[string]string{
+				v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+				v1alpha1.PodClaimedByLabel: "claim-a",
+				v1alpha1.ClaimSetNameLabel: "claimset-a",
+				v1alpha1.PodOwnerNameLabel: "owner-a",
+				"source-only":              "old",
+				"shared":                   "old",
+			},
+		},
+	}
+	claimA := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "claim-a",
+			Namespace:         "ns",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{"test"},
+			Labels: map[string]string{
+				v1alpha1.ClaimSetNameLabel: "claimset-a",
+			},
+		},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef:         v1alpha1.ClaimPodRef{PodName: "pod-1"},
+			OwnerName:           pointer.String("owner-a"),
+			AdditionalPodLabels: map[string]string{"source-only": "old", "shared": "old"},
+		},
+	}
+	claimB := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "claim-b",
+			Namespace: "ns",
+			Labels: map[string]string{
+				v1alpha1.ClaimSetNameLabel: "claimset-b",
+			},
+		},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef:         v1alpha1.ClaimPodRef{PodName: "pod-1"},
+			OwnerName:           pointer.String("owner-b"),
+			AdditionalPodLabels: map[string]string{"target-only": "new", "shared": "new"},
+		},
+		Status: v1alpha1.CNClaimStatus{Phase: v1alpha1.CNClaimPhaseBound},
+	}
+
+	cli := newFakeClient(pod, claimA, claimB)
+	ctx := reconfake.NewContext(claimA, cli, nil)
+	done, err := (&Actor{}).Finalize(ctx)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(done).To(BeFalse(), "ownership transfer must be confirmed by another reconciliation")
+
+	updatedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodClaimedByLabel, "claim-b"))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.CNPodPhaseLabel, v1alpha1.CNPodPhaseBound))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.ClaimSetNameLabel, "claimset-b"))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodOwnerNameLabel, "owner-b"))
+	g.Expect(updatedPod.Labels).NotTo(HaveKey("source-only"))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue("target-only", "new"))
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue("shared", "new"))
+
+	done, err = (&Actor{}).Finalize(ctx)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(done).To(BeTrue())
+}
+
+func Test_transferPodOwnership_removesLabelsNotManagedByTarget(t *testing.T) {
+	g := NewGomegaWithT(t)
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:      "pod-1",
+		Namespace: "ns",
+		Labels: map[string]string{
+			v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+			v1alpha1.PodClaimedByLabel: "claim-a",
+			v1alpha1.ClaimSetNameLabel: "claimset-a",
+			v1alpha1.PodOwnerNameLabel: "owner-a",
+			"source-only":              "old",
+		},
+	}}
+	from := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-a", Namespace: "ns"},
+		Spec: v1alpha1.CNClaimSpec{
+			AdditionalPodLabels: map[string]string{"source-only": "old"},
+		},
+	}
+	to := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-b", Namespace: "ns"},
+	}
+
+	cli := newFakeClient(pod)
+	storedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), storedPod)).To(Succeed())
+	ctx := reconfake.NewContext(from, cli, nil)
+	g.Expect(transferPodOwnership(ctx, storedPod, from, to)).To(Succeed())
+
+	updatedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodClaimedByLabel, to.Name))
+	g.Expect(updatedPod.Labels).NotTo(HaveKey(v1alpha1.ClaimSetNameLabel))
+	g.Expect(updatedPod.Labels).NotTo(HaveKey(v1alpha1.PodOwnerNameLabel))
+	g.Expect(updatedPod.Labels).NotTo(HaveKey("source-only"))
+}
+
+func Test_Finalize_rejectsAmbiguousOwnershipTransfer(t *testing.T) {
+	g := NewGomegaWithT(t)
+	now := metav1.Now()
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:      "pod-1",
+		Namespace: "ns",
+		Labels: map[string]string{
+			v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+			v1alpha1.PodClaimedByLabel: "claim-a",
+		},
+	}}
+	claimA := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "claim-a",
+			Namespace:         "ns",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{"test"},
+		},
+		Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+	}
+	claimB := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-b", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+	}
+	claimC := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-c", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+	}
+
+	cli := newFakeClient(pod, claimA, claimB, claimC)
+	ctx := reconfake.NewContext(claimA, cli, nil)
+	done, err := (&Actor{}).Finalize(ctx)
+	g.Expect(done).To(BeFalse())
+	g.Expect(err).To(MatchError(ContainSubstring("multiple CNClaims reference it: [claim-b claim-c]")))
+
+	updatedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodClaimedByLabel, claimA.Name))
+}
+
+func Test_Finalize_waitsForTargetClaimToBecomeReady(t *testing.T) {
+	g := NewGomegaWithT(t)
+	now := metav1.Now()
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:      "pod-1",
+		Namespace: "ns",
+		Labels: map[string]string{
+			v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+			v1alpha1.PodClaimedByLabel: "claim-a",
+		},
+	}}
+	claimA := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "claim-a",
+			Namespace:         "ns",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{"test"},
+		},
+		Spec: v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+	}
+	claimB := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-b", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: pod.Name}},
+		Status:     v1alpha1.CNClaimStatus{Phase: v1alpha1.CNClaimPhasePending},
+	}
+
+	cli := newFakeClient(pod, claimA, claimB)
+	ctx := reconfake.NewContext(claimA, cli, nil)
+	done, err := (&Actor{}).Finalize(ctx)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(done).To(BeFalse())
+
+	updatedPod := &corev1.Pod{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(pod), updatedPod)).To(Succeed())
+	g.Expect(updatedPod.Labels).To(HaveKeyWithValue(v1alpha1.PodClaimedByLabel, claimA.Name))
+}
+
+func Test_Sync_clearsSpecOnPodNotFound(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	// Setup: claim references a pod that doesn't exist
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "claim-lost",
+			Namespace: "ns",
+		},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef: v1alpha1.ClaimPodRef{
+				PodName:  "pod-deleted",
+				NodeName: "node-1",
+			},
+		},
+		Status: v1alpha1.CNClaimStatus{
+			Phase: v1alpha1.CNClaimPhaseBound,
+		},
+	}
+
+	cli := newFakeClient(claim)
+	storedClaim := &v1alpha1.CNClaim{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(claim), storedClaim)).To(Succeed())
+	ctx := reconfake.NewContext(storedClaim, cli, nil)
+	g.Expect((&Actor{}).Sync(ctx)).To(Succeed())
+
+	updatedClaim := &v1alpha1.CNClaim{}
+	g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(claim), updatedClaim)).To(Succeed())
+	g.Expect(updatedClaim.Spec.PodName).To(BeEmpty())
+	g.Expect(updatedClaim.Spec.NodeName).To(BeEmpty())
+	g.Expect(ctx.Obj.Status.Phase).To(Equal(v1alpha1.CNClaimPhaseLost))
+}
+
+func Test_Observe_doesNotRebindLostClaim(t *testing.T) {
+	g := NewGomegaWithT(t)
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim-lost", Namespace: "ns"},
+		Status:     v1alpha1.CNClaimStatus{Phase: v1alpha1.CNClaimPhaseLost},
+	}
+	ctx := reconfake.NewContext(claim, newFakeClient(claim), nil)
+
+	action, err := (&Actor{}).Observe(ctx)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(action).To(BeNil())
+}
+
+func Test_Sync_returnsPodGetError(t *testing.T) {
+	g := NewGomegaWithT(t)
+	getErr := stderrors.New("transient Pod read failure")
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod"}},
+	}
+	cli := newFakeClientBuilder(claim).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+			return getErr
+		},
+	}).Build()
+	ctx := reconfake.NewContext(claim, cli, nil)
+
+	err := (&Actor{}).Sync(ctx)
+	g.Expect(err).To(MatchError(And(ContainSubstring("error get claimed Pod"), ContainSubstring(getErr.Error()))))
+	g.Expect(claim.Spec.PodName).To(Equal("pod"))
+}
+
+func Test_migrate_returnsSourcePodGetError(t *testing.T) {
+	g := NewGomegaWithT(t)
+	getErr := stderrors.New("transient source Pod read failure")
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim", Namespace: "ns"},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "target"},
+			SourcePod:   &v1alpha1.ClaimPodRef{PodName: "source"},
+		},
+	}
+	cli := newFakeClientBuilder(claim).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+			return getErr
+		},
+	}).Build()
+	ctx := reconfake.NewContext(claim, cli, nil)
+
+	err := (&Actor{}).migrate(ctx)
+	g.Expect(err).To(MatchError(And(ContainSubstring("error get source Pod"), ContainSubstring(getErr.Error()))))
+}
+
+func Test_watchPodChangeFn_enqueuesClaimBySpecPodName(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	// Setup: pod with NO claimed-by label, but a CNClaim references it via spec.podName
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-1",
+			Namespace: "ns",
+			Labels:    map[string]string{},
+		},
+	}
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "claim-refs-pod",
+			Namespace: "ns",
+		},
+		Spec: v1alpha1.CNClaimSpec{
+			ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "pod-1"},
+		},
+	}
+
+	cli := newFakeClient(pod, claim)
+
+	requests := requestsForPod(context.Background(), cli, pod)
+	g.Expect(requests).To(HaveLen(1))
+	g.Expect(requests[0].Name).To(Equal("claim-refs-pod"))
+
+	// The label and field-index paths may identify the same claim; only enqueue it once.
+	pod.Labels[v1alpha1.PodClaimedByLabel] = claim.Name
+	requests = requestsForPod(context.Background(), cli, pod)
+	g.Expect(requests).To(HaveLen(1))
+	g.Expect(requests[0].Name).To(Equal("claim-refs-pod"))
+}
+
+func Test_containsRequest(t *testing.T) {
+	g := NewGomegaWithT(t)
+	reqs := []reconcile.Request{
+		{NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-a"}},
+		{NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-b"}},
+	}
+	g.Expect(containsRequest(reqs, reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-a"},
+	})).To(BeTrue())
+	g.Expect(containsRequest(reqs, reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-c"},
+	})).To(BeFalse())
+	g.Expect(containsRequest(nil, reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "ns", Name: "claim-a"},
+	})).To(BeFalse())
 }
 
 func Test_sortCNByPriority(t *testing.T) {
