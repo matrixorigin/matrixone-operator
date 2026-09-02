@@ -42,6 +42,10 @@ import (
 
 func baseCNSetForMetricSvcTest() *v1alpha1.CNSet {
 	return &v1alpha1.CNSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.String(),
+			Kind:       "CNSet",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      "test",
@@ -255,8 +259,39 @@ func Test_syncMetricService(t *testing.T) {
 			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
 			ctx := fake.NewContext(cn, tt.client, eventEmitter)
 
-			err := (&Actor{}).syncMetricService(ctx)
+			err := (&Actor{}).syncMetricService(ctx, common.SubResourceLabels(cn))
 			tt.expect(g, cn, tt.client, err)
+		})
+	}
+}
+
+func TestMetricServiceSelectorMatchesCNPodLabels(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		withTypeMeta bool
+	}{
+		{name: "without TypeMeta", withTypeMeta: false},
+		{name: "with TypeMeta", withTypeMeta: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			cn := baseCNSetForMetricSvcTest()
+			if !tc.withTypeMeta {
+				cn.TypeMeta = metav1.TypeMeta{}
+			}
+			cli := &fake.Client{Client: fake.KubeClientBuilder().WithScheme(newScheme()).Build()}
+			ctx := fake.NewContext(cn, cli, fake.NewMockEventEmitter(gomock.NewController(t)))
+
+			cnPods := buildCNSet(cn, &corev1.Service{}).Spec.Template.Labels
+			g.Expect((&Actor{}).syncMetricService(ctx, cnPods)).To(Succeed())
+			svc := &corev1.Service{}
+			g.Expect(cli.Get(context.Background(), client.ObjectKey{
+				Namespace: cn.Namespace,
+				Name:      metricSvcName(cn),
+			}, svc)).To(Succeed())
+
+			g.Expect(svc.Spec.Selector).To(Equal(cnPods))
+			g.Expect(svc.Labels).To(HaveKeyWithValue(common.ComponentLabelKey, "CNSet"))
 		})
 	}
 }

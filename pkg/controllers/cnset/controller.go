@@ -99,7 +99,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, errors.WrapPrefix(err, "sync service", 0)
 	}
 
-	if err := c.syncMetricService(ctx); err != nil {
+	if err := c.syncMetricService(ctx, cs.Spec.Template.Labels); err != nil {
 		return nil, errors.WrapPrefix(err, "sync metric service", 0)
 	}
 
@@ -197,10 +197,12 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 // syncMetricService reconciles a dedicated ClusterIP Service exposing the CN metrics port,
 // so that Service-based Prometheus discovery (e.g. ServiceMonitor matching on port name
 // "metric") can find CN targets the same way it already does for DN/Log (issue #600).
-func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet]) error {
+func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet], podSelector map[string]string) error {
 	cn := ctx.Obj
 	labels := common.SubResourceLabels(cn)
-	// Do not depend on TypeMeta being populated on objects read from cache.
+	// ServiceMonitor selects the Service by component, while the Service itself
+	// must select the labels of the existing CloneSet Pods. Keep these concerns
+	// separate so an incomplete TypeMeta cannot disconnect metrics endpoints.
 	labels[common.ComponentLabelKey] = "CNSet"
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -209,7 +211,7 @@ func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet]) error {
 			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: labels,
+			Selector: podSelector,
 		},
 	}
 	return recon.CreateOwnedOrUpdate(ctx, svc, func() error {
@@ -229,7 +231,7 @@ func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet]) error {
 		for key, value := range labels {
 			svc.Labels[key] = value
 		}
-		svc.Spec.Selector = labels
+		svc.Spec.Selector = podSelector
 		svc.Spec.Type = corev1.ServiceTypeClusterIP
 		svc.Spec.Ports = []corev1.ServicePort{{
 			Name: "metric",
