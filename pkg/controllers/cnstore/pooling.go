@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 	uid := v1alpha1.GetCNPodUUID(pod)
 
 	var ready bool
-	if err := c.withMOClientSet(ctx, func(ctx context.Context, h *mocli.ClientSet) error {
+	if err := c.withMOClientSet(ctx, func(_ context.Context, h *mocli.ClientSet) error {
 		_, ready = h.StoreCache.GetCN(uid)
 		return nil
 	}); err != nil {

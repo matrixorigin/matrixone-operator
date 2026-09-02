@@ -55,9 +55,12 @@ generate-mockgen: mockgen ## General gomock(https://github.com/golang/mock) file
 	$(MOCKGEN) -source=./runtime/pkg/reconciler/event.go -package fake > ./runtime/pkg/fake/event.go
 
 # helm package
-helm-pkg: manifests generate helm-lint
-	helm dependency build charts/matrixone-operator
-	helm package -u charts/matrixone-operator -d charts/
+helm-pkg: manifests generate verify-chart
+	./hack/package-chart.sh charts/
+
+.PHONY: verify-chart
+verify-chart:
+	./hack/verify-chart.sh
 
 
 # Generated artifacts that must be committed whenever their sources or generators change.
@@ -82,13 +85,13 @@ verify-generated:
 	fi
 
 # Make sure the generated files are up to date before open PR
-reviewable: ci-reviewable go-lint check-license test
+reviewable: ci-reviewable verify-generated verify-chart go-lint check-license
 
 ci-reviewable: generate manifests docs test
 	go mod tidy
 
 # Check whether the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action
-verify: ci-reviewable
+verify: ci-reviewable verify-generated verify-chart
 	echo "checking that branch is clean"
 	test -z "$$(git status --porcelain)" || (echo "unclean working tree, did you forget to run make reviewable?" && exit 1)
 	echo "branch is clean"
@@ -118,11 +121,16 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+SETUP_ENVTEST_MODULE = sigs.k8s.io/controller-runtime/tools/setup-envtest
+SETUP_ENVTEST_VERSION = v0.0.0-20230503192624-935faeba7003
 
 .PHONY: envtest
-envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+envtest: $(LOCALBIN) ## Install the pinned setup-envtest version if necessary.
+	@actual_version="$$(go version -m "$(ENVTEST)" 2>/dev/null | awk -v module="$(SETUP_ENVTEST_MODULE)" '$$1 == "mod" && $$2 == module { print $$3 }')"; \
+	if [ "$$actual_version" != "$(SETUP_ENVTEST_VERSION)" ]; then \
+		echo "Installing $(SETUP_ENVTEST_MODULE)@$(SETUP_ENVTEST_VERSION) (found: $${actual_version:-none})"; \
+		GOBIN=$(LOCALBIN) go install $(SETUP_ENVTEST_MODULE)@$(SETUP_ENVTEST_VERSION); \
+	fi
 
 # TODO: include E2E
 test: api-test unit
@@ -189,8 +197,14 @@ license-eye: ## Download license-eye locally if necessary
 	$(call go-get-tool,$(LICENSE_EYE),github.com/apache/skywalking-eyes/cmd/license-eye@v0.4.0)
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
-golangci-lint:
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2)
+GOLANGCI_LINT_MODULE = github.com/golangci/golangci-lint/v2
+GOLANGCI_LINT_VERSION = v2.1.6
+golangci-lint: $(LOCALBIN)
+	@actual_version="$$(go version -m "$(GOLANGCI_LINT)" 2>/dev/null | awk -v module="$(GOLANGCI_LINT_MODULE)" '$$1 == "mod" && $$2 == module { print $$3 }')"; \
+	if [ "$$actual_version" != "$(GOLANGCI_LINT_VERSION)" ]; then \
+		echo "Installing $(GOLANGCI_LINT_MODULE)/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) (found: $${actual_version:-none})"; \
+		GOBIN=$(PROJECT_DIR)/bin go install $(GOLANGCI_LINT_MODULE)/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
+	fi
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))

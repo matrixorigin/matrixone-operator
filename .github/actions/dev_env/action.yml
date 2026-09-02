@@ -10,8 +10,8 @@ runs:
       run: cat ".github/env" >> $GITHUB_ENV
 
     - name: setup go version
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # tag=v7.0.0
       with:
-        check-latest: true
+        check-latest: false
         go-version:
           ${{ env.golang-version }}

@@ -13,31 +13,19 @@ runs:
       uses: ./.github/actions/dev_env
 
     - name: check_license_header
-      uses: apache/skywalking-eyes/header@v0.6.0
+      uses: apache/skywalking-eyes/header@a196742f472feaffafea537ce5a2a4c3c53a8de4 # tag=v0.9.0
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
       with:
         log: info
         config: .licenserc.yml
 
-    - name: setup go version
-      uses: actions/setup-go@v3
-      with:
-        check-latest: true
-        go-version:
-          ${{ env.golang-version }}
-
     - name: verify
       shell: bash
       run: make verify
 
-    # disable action cache due to https://github.com/golangci/golangci-lint-action/issues/244
-    # upgrade due to https://github.com/golangci/golangci-lint/issues/2374
-    # skip cache due to https://github.com/golangci/golangci-lint-action/issues/23
     - name: golangci_lint
-      uses: golangci/golangci-lint-action@v3.1.0
+      uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # tag=v9.3.0
       with:
-        version: v1.50.0
+        version: v2.1.6
         args: --timeout 10m0s
-        skip-pkg-cache: true
-        skip-build-cache: true

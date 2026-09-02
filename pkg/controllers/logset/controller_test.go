@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -117,7 +117,7 @@ func TestLogSetActor_Observe(t *testing.T) {
 		name:   "scale out",
 		logset: tpl,
 		client: &fake.Client{
-			MockPatch: func(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
+			MockPatch: func(_ context.Context, _ runtime.Object, _ client.Patch, _ ...client.PatchOption) error {
 				return nil
 			},
 			Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(

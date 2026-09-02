@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -126,7 +126,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 				},
 			},
 		},
-		expect: func(g *WithT, mo *v1alpha1.MatrixOneCluster, err error, c client.Client) {
+		expect: func(g *WithT, mo *v1alpha1.MatrixOneCluster, err error, _ client.Client) {
 			g.Expect(recon.IsReady(&mo.Status)).To(BeTrue())
 			g.Expect(err).To(Succeed())
 		},
@@ -162,7 +162,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 				},
 			},
 		},
-		expect: func(g *WithT, mo *v1alpha1.MatrixOneCluster, err error, c client.Client) {
+		expect: func(g *WithT, mo *v1alpha1.MatrixOneCluster, _ error, _ client.Client) {
 			g.Expect(recon.IsSynced(&mo.Status)).To(BeFalse())
 			cond, ok := recon.GetCondition(&mo.Status, recon.ConditionTypeReady)
 			g.Expect(ok).To(BeTrue())
@@ -200,7 +200,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 				},
 			},
 		},
-		expect: func(g *WithT, mo *v1alpha1.MatrixOneCluster, err error, c client.Client) {
+		expect: func(g *WithT, mo *v1alpha1.MatrixOneCluster, _ error, _ client.Client) {
 			g.Expect(recon.IsSynced(&mo.Status)).To(BeFalse())
 			cond, ok := recon.GetCondition(&mo.Status, recon.ConditionTypeSynced)
 			g.Expect(ok).To(BeTrue())
@@ -219,7 +219,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			return m
 		}(),
 		objects: nil,
-		expect: func(g *WithT, _ *v1alpha1.MatrixOneCluster, err error, c client.Client) {
+		expect: func(g *WithT, _ *v1alpha1.MatrixOneCluster, _ error, c client.Client) {
 			dn := &v1alpha1.DNSet{}
 			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, dn)).To(Succeed())
 			g.Expect(dn.Spec.NodeSelector).To(Equal(map[string]string{"global-label": "global-value"}))
@@ -239,7 +239,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			return m
 		}(),
 		objects: nil,
-		expect: func(g *WithT, _ *v1alpha1.MatrixOneCluster, err error, c client.Client) {
+		expect: func(g *WithT, _ *v1alpha1.MatrixOneCluster, _ error, c client.Client) {
 			dn := &v1alpha1.DNSet{}
 			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, dn)).To(Succeed())
 			g.Expect(*dn.Spec.Overlay.ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
@@ -259,7 +259,7 @@ func TestMatrixOneClusterActor_Observe(t *testing.T) {
 			return m
 		}(),
 		objects: nil,
-		expect: func(g *WithT, _ *v1alpha1.MatrixOneCluster, err error, c client.Client) {
+		expect: func(g *WithT, _ *v1alpha1.MatrixOneCluster, _ error, c client.Client) {
 			ls := &v1alpha1.LogSet{}
 			g.Expect(c.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, ls)).To(Succeed())
 			g.Expect(*ls.Spec.PVCRetentionPolicy).To(Equal(v1alpha1.PVCRetentionPolicyRetain))

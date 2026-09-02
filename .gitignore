@@ -19,5 +19,11 @@ charts/matrixone-operator/charts/
 *.tgz
 e2e*.xml
 e2e.test
-docs/troubleshooting/
-docs/draft
+# Operational troubleshooting documents are versioned; ignore only drafts and
+# generated local test data/tools.
+docs/troubleshooting/**/*.draft.md
+docs/troubleshooting/**/.tools/
+docs/troubleshooting/**/.work/
+docs/troubleshooting/**/artifacts/
+docs/troubleshooting/**/__pycache__/
+docs/draft/

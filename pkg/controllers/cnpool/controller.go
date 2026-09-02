@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -460,7 +460,7 @@ func deletionCost(pod *corev1.Pod) int {
 
 func (r *Actor) Start(mgr manager.Manager) error {
 	return recon.Setup[*v1alpha1.CNPool](&v1alpha1.CNPool{}, "cn-pool-manager", mgr, r, recon.WithBuildFn(func(b *builder.Builder) {
-		b.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+		b.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
 			pod, ok := object.(*corev1.Pod)
 			if !ok {
 				return nil
@@ -476,7 +476,7 @@ func (r *Actor) Start(mgr manager.Manager) error {
 				},
 			}}
 		}))
-		b.Watches(&v1alpha1.CNClaim{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+		b.Watches(&v1alpha1.CNClaim{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
 			claim, ok := object.(*v1alpha1.CNClaim)
 			if !ok {
 				return nil
