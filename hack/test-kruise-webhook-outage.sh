@@ -45,10 +45,14 @@ recover() {
 trap recover EXIT
 
 echo "> Simulate Kruise webhook service outage"
-# Change a chart-managed selector to remove all endpoints without stopping the
-# controller. Helm upgrade must restore the declared selector value.
+# Change a chart-managed selector to remove all endpoints. Recreate the manager
+# Pods as well so the API server cannot reuse an admission connection that was
+# established before the Service was isolated. Helm upgrade must restore the
+# declared selector value.
 kubectl -n "${kruise_namespace}" patch service "${webhook_service}" --type=merge \
     -p '{"spec":{"selector":{"control-plane":"reliability-outage"}}}' >/dev/null
+kubectl -n "${kruise_namespace}" delete pod \
+    -l control-plane=controller-manager --wait=true --timeout=2m >/dev/null
 
 for _ in $(seq 1 30); do
     endpoints=$(kubectl -n "${kruise_namespace}" get endpoints "${webhook_service}" \
