@@ -41,6 +41,13 @@ func TestHasMOFeature(t *testing.T) {
 	g.Expect(HasMOFeature(mustParse("1.1.3"), MOFeaturePipelineInfo)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("1.2.0"), MOFeaturePipelineInfo)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("2.0.0"), MOFeaturePipelineInfo)).To(BeTrue())
+	g.Expect(HasMOFeature(mustParse("3.0.0"), MOFeaturePipelineInfo)).To(BeTrue())
+	g.Expect(HasMOFeature(mustParse("3.9.9"), MOFeaturePipelineInfo)).To(BeTrue())
+	g.Expect(HasMOFeature(mustParse("v3.0.10-90ae8dc0c-2026-04-22"), MOFeaturePipelineInfo)).To(BeTrue())
+	g.Expect(HasMOFeature(mustParse("4.0.0"), MOFeaturePipelineInfo)).To(BeTrue())
+	g.Expect(HasMOFeature(mustParse("v4.0.0-rc1"), MOFeaturePipelineInfo)).To(BeTrue())
+	g.Expect(HasMOFeature(mustParse("4.2.1"), MOFeaturePipelineInfo)).To(BeTrue())
+	g.Expect(HasMOFeature(mustParse("v4.2.1-d2393868a-2026-08-28"), MOFeaturePipelineInfo)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("1.1.1"), MOFeaturePipelineInfo)).To(BeFalse())
 	g.Expect(HasMOFeature(mustParse("1.1.1"), MOFeaturePipelineInfo)).To(BeFalse())
 	g.Expect(HasMOFeature(mustParse("1.1.2"), MOFeaturePipelineInfo)).To(BeTrue())
@@ -79,14 +86,13 @@ func TestHasMOFeature_DiscoveryFixed(t *testing.T) {
 // TestHasMOFeature_OtherFeaturesNotExtendedTo3x guards against accidentally widening the
 // version gate for features that have NOT been explicitly verified against MO 3.x. Extending
 // featureVersions in bulk (i.e. blindly adding "3.0.0" to every feature) would silently flip
-// unrelated behavior (lock migration handshake, pipeline/sharding stats collection, session
-// source accounting) on MO 3.x without dedicated verification. Only MOFeatureDiscoveryFixed
-// has been confirmed compatible with 3.x so far (see #597); this test should be updated
-// deliberately, one feature at a time, as each is verified.
+// unrelated behavior (lock migration handshake, sharding stats collection, session source
+// accounting) on MO 3.x without dedicated verification. DiscoveryFixed and PipelineInfo have
+// been verified independently; this test should be updated deliberately, one feature at a time,
+// as each remaining feature is verified.
 func TestHasMOFeature_OtherFeaturesNotExtendedTo3x(t *testing.T) {
 	g := NewGomegaWithT(t)
 	unverifiedOn3x := []MOFeature{
-		MOFeaturePipelineInfo,
 		MOFeatureSessionSource,
 		MOFeatureLockMigration,
 		MOFeatureShardingMigration,
