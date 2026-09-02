@@ -48,39 +48,6 @@ awk '
     END { exit failed }
 ' "${TEST_ROOT}/kruise.yaml"
 
-if grep -q 'StatefulSetAutoResizePVCGate=true' "${TEST_ROOT}/kruise.yaml"; then
-    echo "StatefulSetAutoResizePVCGate must remain disabled by default" >&2
-    exit 1
-fi
-
-# Parse RBAC rule boundaries so verbs from an adjacent rule cannot produce a
-# false positive when the upstream template changes ordering.
-if ! awk '
-    function finish_rule() {
-        if (has_storage_group && has_storageclasses) {
-            found = 1
-            if (!(has_get && has_list && has_watch)) failed = 1
-        }
-        has_storage_group = has_storageclasses = has_get = has_list = has_watch = 0
-    }
-    /^- apiGroups:$/ { finish_rule(); section = "apiGroups"; next }
-    /^  resources:$/ { section = "resources"; next }
-    /^  verbs:$/ { section = "verbs"; next }
-    /^    - / {
-        value = substr($0, 7)
-        if (section == "apiGroups" && value == "storage.k8s.io") has_storage_group = 1
-        if (section == "resources" && value == "storageclasses") has_storageclasses = 1
-        if (section == "verbs" && value == "get") has_get = 1
-        if (section == "verbs" && value == "list") has_list = 1
-        if (section == "verbs" && value == "watch") has_watch = 1
-    }
-    /^---$/ { finish_rule(); section = "" }
-    END { finish_rule(); exit failed || !found }
-' "${TEST_ROOT}/kruise.yaml"; then
-    echo "Kruise must have read-only get/list/watch access to StorageClasses" >&2
-    exit 1
-fi
-
 # Reproduce a dirty developer workspace in a temporary source tree. The stale
 # archive must not be copied into the operator package.
 mkdir -p "${TEST_ROOT}/source/charts" "${TEST_ROOT}/packages"

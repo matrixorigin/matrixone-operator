@@ -1,9 +1,7 @@
 # Kruise webhook availability policy
 
 The bundled Kruise chart deliberately uses different failure policies based on
-the scope of the admitted resource. MatrixOne-specific packaging and RBAC
-changes use Chart version `1.8.3-mo.1` while retaining Kruise app version
-`1.8.3`, so the artifact cannot be confused with the upstream `1.8.3` Chart.
+the scope of the admitted resource.
 
 ## Pod admission
 
@@ -27,14 +25,6 @@ Webhooks whose rules only target `apps.kruise.io` or `policy.kruise.io` resource
 use `failurePolicy: Fail`. Their defaulting and validation are part of the
 Kruise resource contract, and an outage therefore blocks changes only to the
 affected Kruise APIs instead of blocking general Kubernetes workloads.
-
-## StorageClass informer
-
-Kruise v1.8.3 starts a read-only StorageClass informer even when
-`StatefulSetAutoResizePVCGate` is disabled. The bundled ClusterRole grants
-unconditional `get`, `list`, and `watch` access to StorageClasses so the informer
-can run without repeated authorization errors. This permission does not enable
-PVC auto-resize and grants no PVC mutation verb.
 
 The chart regression checks can be run with:
 
