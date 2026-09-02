@@ -15,7 +15,8 @@ generate: controller-gen
 
 .PHONY: test
 test: manifests generate envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+	@assets="$$( $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" && \
+		KUBEBUILDER_ASSETS="$$assets" go test ./... -coverprofile cover.out
 
 .PHONY: docs
 docs: crd-ref-docs
@@ -29,7 +30,7 @@ $(LOCALBIN):
 
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 SETUP_ENVTEST_MODULE = sigs.k8s.io/controller-runtime/tools/setup-envtest
-SETUP_ENVTEST_VERSION = v0.0.0-20230503192624-935faeba7003
+SETUP_ENVTEST_VERSION = v0.0.0-20250517180713-32e5e9e948a5
 
 .PHONY: envtest
 envtest: $(LOCALBIN) ## Install the pinned setup-envtest version if necessary.

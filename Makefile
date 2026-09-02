@@ -122,7 +122,7 @@ $(LOCALBIN):
 
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 SETUP_ENVTEST_MODULE = sigs.k8s.io/controller-runtime/tools/setup-envtest
-SETUP_ENVTEST_VERSION = v0.0.0-20230503192624-935faeba7003
+SETUP_ENVTEST_VERSION = v0.0.0-20250517180713-32e5e9e948a5
 
 .PHONY: envtest
 envtest: $(LOCALBIN) ## Install the pinned setup-envtest version if necessary.
@@ -137,7 +137,8 @@ test: api-test unit
 
 # Run unit tests
 unit: generate fmt vet manifests envtest
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" CGO_ENABLED=0 go test ./pkg/... -coverprofile cover.out
+	@assets="$$( $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" && \
+		KUBEBUILDER_ASSETS="$$assets" CGO_ENABLED=0 go test ./pkg/... -coverprofile cover.out
 
 api-test:
 	cd api && make test
