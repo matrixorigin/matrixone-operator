@@ -129,12 +129,10 @@ function e2e::run() {
 
 function e2e::install() {
   local chart_root
+  local operator_chart
   chart_root=$(mktemp -d)
 
-  mkdir -p "${chart_root}/matrixone-operator/charts"
-  cp charts/matrixone-operator/Chart.yaml charts/matrixone-operator/values.yaml "${chart_root}/matrixone-operator/"
-  cp -R charts/matrixone-operator/templates "${chart_root}/matrixone-operator/"
-  if ! helm package charts/kruise --destination "${chart_root}/matrixone-operator/charts"; then
+  if ! operator_chart=$(./hack/package-chart.sh "${chart_root}"); then
     rm -rf -- "${chart_root}"
     return 1
   fi
@@ -142,13 +140,30 @@ function e2e::install() {
   echo "> Create operator namespace"
   kubectl create ns "${OPNAMESPACE}"
   echo "> Install mo operator"
-  if ! helm install mo "${chart_root}/matrixone-operator" --set image.repository="${REPO}" --set image.tag="${TAG}" -n "${OPNAMESPACE}"; then
+  if ! helm install mo "${operator_chart}" --set image.repository="${REPO}" --set image.tag="${TAG}" -n "${OPNAMESPACE}"; then
+    rm -rf -- "${chart_root}"
+    return 1
+  fi
+  if ! e2e::wait-webhook-ready; then
     rm -rf -- "${chart_root}"
     return 1
   fi
   rm -rf -- "${chart_root}"
+}
 
-  e2e::wait-webhook-ready
+function e2e::test-kruise-webhook-outage() {
+  local chart_root
+  local operator_chart
+  local status=0
+  chart_root=$(mktemp -d)
+
+  if ! operator_chart=$(./hack/package-chart.sh "${chart_root}"); then
+    rm -rf -- "${chart_root}"
+    return 1
+  fi
+  ./hack/test-kruise-webhook-outage.sh "${operator_chart}" mo "${OPNAMESPACE}" || status=$?
+  rm -rf -- "${chart_root}"
+  return "${status}"
 }
 
 function e2e::wait-webhook-ready() {
@@ -215,7 +230,15 @@ function e2e::workflow() {
   trap "e2e::cleanup" EXIT
   e2e::install || return 1
   local run_status=0
+  local outage_status=0
   e2e::run || run_status=$?
+  # Run the disruptive outage/upgrade scenario after the established E2E suite
+  # so it cannot change the suite's initial cluster state. Preserve an earlier
+  # suite failure while still collecting the outage-test result.
+  e2e::test-kruise-webhook-outage || outage_status=$?
+  if [[ "${run_status}" -eq 0 && "${outage_status}" -ne 0 ]]; then
+    run_status=${outage_status}
+  fi
   trap - EXIT
   e2e::cleanup || return 1
   return "${run_status}"

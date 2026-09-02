@@ -15,7 +15,8 @@ generate: controller-gen
 
 .PHONY: test
 test: manifests generate envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+	@assets="$$( $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" && \
+		KUBEBUILDER_ASSETS="$$assets" go test ./... -coverprofile cover.out
 
 .PHONY: docs
 docs: crd-ref-docs
@@ -28,11 +29,16 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+SETUP_ENVTEST_MODULE = sigs.k8s.io/controller-runtime/tools/setup-envtest
+SETUP_ENVTEST_VERSION = v0.0.0-20250517180713-32e5e9e948a5
 
 .PHONY: envtest
-envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+envtest: $(LOCALBIN) ## Install the pinned setup-envtest version if necessary.
+	@actual_version="$$(go version -m "$(ENVTEST)" 2>/dev/null | awk -v module="$(SETUP_ENVTEST_MODULE)" '$$1 == "mod" && $$2 == module { print $$3 }')"; \
+	if [ "$$actual_version" != "$(SETUP_ENVTEST_VERSION)" ]; then \
+		echo "Installing $(SETUP_ENVTEST_MODULE)@$(SETUP_ENVTEST_VERSION) (found: $${actual_version:-none})"; \
+		GOBIN=$(LOCALBIN) go install $(SETUP_ENVTEST_MODULE)@$(SETUP_ENVTEST_VERSION); \
+	fi
 
 CONTROLLER_GEN = $(LOCALBIN)/controller-gen
 CONTROLLER_GEN_MODULE = sigs.k8s.io/controller-tools

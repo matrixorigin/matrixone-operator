@@ -37,10 +37,15 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func baseCNSetForMetricSvcTest() *v1alpha1.CNSet {
 	return &v1alpha1.CNSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.String(),
+			Kind:       "CNSet",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      "test",
@@ -68,6 +73,7 @@ func enableCNPromServiceDiscovery(cn *v1alpha1.CNSet) {
 func Test_syncMetricService(t *testing.T) {
 	s := newScheme()
 	labels := common.SubResourceLabels(baseCNSetForMetricSvcTest())
+	labels[common.ComponentLabelKey] = "CNSet"
 
 	tests := []struct {
 		name   string
@@ -124,6 +130,49 @@ func Test_syncMetricService(t *testing.T) {
 			},
 		},
 		{
+			name:  "repairs drift while preserving user metadata",
+			cnset: baseCNSetForMetricSvcTest(),
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:   "default",
+							Name:        metricSvcName(baseCNSetForMetricSvcTest()),
+							Labels:      map[string]string{"drifted": "true"},
+							Annotations: map[string]string{"user.example.com/keep": "yes"},
+						},
+						Spec: corev1.ServiceSpec{
+							Type:     corev1.ServiceTypeNodePort,
+							Selector: map[string]string{"wrong": "selector"},
+							Ports: []corev1.ServicePort{{
+								Name: "wrong",
+								Port: 1234,
+							}},
+						},
+					},
+				).Build(),
+			},
+			setup: enableCNPromServiceDiscovery,
+			expect: func(g *WithT, cn *v1alpha1.CNSet, cli client.Client, err error) {
+				g.Expect(err).To(BeNil())
+				svc := &corev1.Service{}
+				g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(&corev1.Service{ObjectMeta: metav1.ObjectMeta{
+					Namespace: cn.Namespace,
+					Name:      metricSvcName(cn),
+				}}), svc)).To(Succeed())
+				g.Expect(svc.Labels).To(HaveKeyWithValue("drifted", "true"))
+				for key, value := range labels {
+					g.Expect(svc.Labels).To(HaveKeyWithValue(key, value))
+				}
+				g.Expect(svc.Spec.Selector).To(Equal(labels))
+				g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeClusterIP))
+				g.Expect(svc.Spec.Ports).To(Equal([]corev1.ServicePort{{Name: "metric", Port: int32(common.MetricsPort)}}))
+				g.Expect(svc.Annotations).To(HaveKeyWithValue("user.example.com/keep", "yes"))
+				g.Expect(svc.Annotations).To(HaveKeyWithValue(common.PrometheusScrapeAnno, "true"))
+				g.Expect(metav1.IsControlledBy(svc, cn)).To(BeTrue())
+			},
+		},
+		{
 			name:  "removes stale prom annotations when export disabled",
 			cnset: baseCNSetForMetricSvcTest(),
 			client: &fake.Client{
@@ -161,6 +210,41 @@ func Test_syncMetricService(t *testing.T) {
 				g.Expect(svc.Annotations).NotTo(HaveKey(common.PrometheusPortAnno))
 			},
 		},
+		{
+			name:  "does not mutate service controlled by another owner",
+			cnset: baseCNSetForMetricSvcTest(),
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      metricSvcName(baseCNSetForMetricSvcTest()),
+							Labels:    map[string]string{"foreign": "owner"},
+							OwnerReferences: []metav1.OwnerReference{{
+								APIVersion: "example.com/v1",
+								Kind:       "Example",
+								Name:       "foreign",
+								UID:        "foreign-uid",
+								Controller: pointer.Bool(true),
+							}},
+						},
+						Spec: corev1.ServiceSpec{
+							Type:     corev1.ServiceTypeNodePort,
+							Selector: map[string]string{"foreign": "selector"},
+							Ports:    []corev1.ServicePort{{Name: "foreign", Port: 1234}},
+						},
+					},
+				).Build(),
+			},
+			expect: func(g *WithT, cn *v1alpha1.CNSet, cli client.Client, err error) {
+				g.Expect(err).To(BeNil())
+				svc := &corev1.Service{}
+				g.Expect(cli.Get(context.Background(), client.ObjectKey{Namespace: cn.Namespace, Name: metricSvcName(cn)}, svc)).To(Succeed())
+				g.Expect(svc.Labels).To(Equal(map[string]string{"foreign": "owner"}))
+				g.Expect(svc.Spec.Selector).To(Equal(map[string]string{"foreign": "selector"}))
+				g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeNodePort))
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -175,10 +259,67 @@ func Test_syncMetricService(t *testing.T) {
 			eventEmitter := fake.NewMockEventEmitter(mockCtrl)
 			ctx := fake.NewContext(cn, tt.client, eventEmitter)
 
-			err := (&Actor{}).syncMetricService(ctx)
+			err := (&Actor{}).syncMetricService(ctx, common.SubResourceLabels(cn))
 			tt.expect(g, cn, tt.client, err)
 		})
 	}
+}
+
+func TestMetricServiceSelectorMatchesCNPodLabels(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		withTypeMeta bool
+	}{
+		{name: "without TypeMeta", withTypeMeta: false},
+		{name: "with TypeMeta", withTypeMeta: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			cn := baseCNSetForMetricSvcTest()
+			if !tc.withTypeMeta {
+				cn.TypeMeta = metav1.TypeMeta{}
+			}
+			cli := &fake.Client{Client: fake.KubeClientBuilder().WithScheme(newScheme()).Build()}
+			ctx := fake.NewContext(cn, cli, fake.NewMockEventEmitter(gomock.NewController(t)))
+
+			cnPods := buildCNSet(cn, &corev1.Service{}).Spec.Template.Labels
+			g.Expect((&Actor{}).syncMetricService(ctx, cnPods)).To(Succeed())
+			svc := &corev1.Service{}
+			g.Expect(cli.Get(context.Background(), client.ObjectKey{
+				Namespace: cn.Namespace,
+				Name:      metricSvcName(cn),
+			}, svc)).To(Succeed())
+
+			g.Expect(svc.Spec.Selector).To(Equal(cnPods))
+			g.Expect(svc.Labels).To(HaveKeyWithValue(common.ComponentLabelKey, "CNSet"))
+		})
+	}
+}
+
+func TestRequestsForLogSetStatefulSet(t *testing.T) {
+	s := newScheme()
+	logSet := &v1alpha1.LogSet{ObjectMeta: metav1.ObjectMeta{Namespace: "provider", Name: "log", UID: "log-uid"}}
+	matching := &v1alpha1.CNSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "consumer", Name: "matching"},
+		Deps:       v1alpha1.CNSetDeps{LogSetRef: logSet.AsDependency()},
+	}
+	unrelated := &v1alpha1.CNSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "consumer", Name: "unrelated"},
+		Deps: v1alpha1.CNSetDeps{LogSetRef: v1alpha1.LogSetRef{LogSet: &v1alpha1.LogSet{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "other", Name: "log"},
+		}}},
+	}
+	cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(matching, unrelated).Build()
+	sts := &kruisev1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
+		Namespace: "provider",
+		Name:      "log-log",
+		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(logSet,
+			v1alpha1.GroupVersion.WithKind("LogSet"))},
+	}}
+
+	requests := requestsForLogSetStatefulSet(cli)(context.Background(), sts)
+	g := NewGomegaWithT(t)
+	g.Expect(requests).To(Equal([]reconcile.Request{{NamespacedName: client.ObjectKeyFromObject(matching)}}))
 }
 
 func TestCNSetActor_Observe(t *testing.T) {
@@ -231,7 +372,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 			client: &fake.Client{
 				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
 			},
-			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], cli client.Client, err error) {
+			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], _ client.Client, err error) {
 				g.Expect(err).To(BeNil())
 				g.Expect(action.String()).To(ContainSubstring("Create"))
 			},
@@ -242,7 +383,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 			client: &fake.Client{
 				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
 			},
-			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], cli client.Client, err error) {
+			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], _ client.Client, err error) {
 				g.Expect(err).To(BeNil())
 				g.Expect(action.String()).To(ContainSubstring("Create"))
 			},
@@ -309,7 +450,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 					},
 				).Build(),
 			},
-			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], cli client.Client, err error) {
+			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], _ client.Client, err error) {
 				g.Expect(err).To(BeNil())
 				g.Expect(action.String()).To(ContainSubstring("Update"))
 			},

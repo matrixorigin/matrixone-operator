@@ -55,9 +55,12 @@ generate-mockgen: mockgen ## General gomock(https://github.com/golang/mock) file
 	$(MOCKGEN) -source=./runtime/pkg/reconciler/event.go -package fake > ./runtime/pkg/fake/event.go
 
 # helm package
-helm-pkg: manifests generate helm-lint
-	helm dependency build charts/matrixone-operator
-	helm package -u charts/matrixone-operator -d charts/
+helm-pkg: manifests generate verify-chart
+	./hack/package-chart.sh charts/
+
+.PHONY: verify-chart
+verify-chart:
+	./hack/verify-chart.sh
 
 
 # Generated artifacts that must be committed whenever their sources or generators change.
@@ -81,14 +84,23 @@ verify-generated:
 		exit 1; \
 	fi
 
-# Make sure the generated files are up to date before open PR
-reviewable: ci-reviewable go-lint check-license test
+# Make sure the generated files are up to date before open PR. Keep the steps in
+# the recipe so `make -j reviewable` cannot run generators and their checks at
+# the same time.
+reviewable: ci-reviewable
+	$(MAKE) verify-generated
+	$(MAKE) verify-chart
+	$(MAKE) go-lint
+	$(MAKE) check-license
 
 ci-reviewable: generate manifests docs test
 	go mod tidy
 
-# Check whether the pull request is reviewable in CI, go-lint is delibrately excluded since we already have golangci-lint action
+# Check whether the pull request is reviewable in CI. go-lint is deliberately
+# excluded since the workflow runs golangci-lint as a separate action.
 verify: ci-reviewable
+	$(MAKE) verify-generated
+	$(MAKE) verify-chart
 	echo "checking that branch is clean"
 	test -z "$$(git status --porcelain)" || (echo "unclean working tree, did you forget to run make reviewable?" && exit 1)
 	echo "branch is clean"
@@ -118,18 +130,24 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+SETUP_ENVTEST_MODULE = sigs.k8s.io/controller-runtime/tools/setup-envtest
+SETUP_ENVTEST_VERSION = v0.0.0-20250517180713-32e5e9e948a5
 
 .PHONY: envtest
-envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+envtest: $(LOCALBIN) ## Install the pinned setup-envtest version if necessary.
+	@actual_version="$$(go version -m "$(ENVTEST)" 2>/dev/null | awk -v module="$(SETUP_ENVTEST_MODULE)" '$$1 == "mod" && $$2 == module { print $$3 }')"; \
+	if [ "$$actual_version" != "$(SETUP_ENVTEST_VERSION)" ]; then \
+		echo "Installing $(SETUP_ENVTEST_MODULE)@$(SETUP_ENVTEST_VERSION) (found: $${actual_version:-none})"; \
+		GOBIN=$(LOCALBIN) go install $(SETUP_ENVTEST_MODULE)@$(SETUP_ENVTEST_VERSION); \
+	fi
 
 # TODO: include E2E
 test: api-test unit
 
 # Run unit tests
 unit: generate fmt vet manifests envtest
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" CGO_ENABLED=0 go test ./pkg/... -coverprofile cover.out
+	@assets="$$( $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" && \
+		KUBEBUILDER_ASSETS="$$assets" CGO_ENABLED=0 go test ./pkg/... -coverprofile cover.out
 
 api-test:
 	cd api && make test
@@ -177,8 +195,14 @@ run-pgd: build-pgd
 	docker run --privileged --name playground -p 6001:6001 --rm -it matrixorigin/operator-playground:latest
 
 GINKGO = $(shell pwd)/bin/ginkgo
-ginkgo:
-	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo@v2.9.2)
+GINKGO_MODULE = github.com/onsi/ginkgo/v2
+GINKGO_VERSION = v2.9.5
+ginkgo: $(LOCALBIN)
+	@actual_version="$$(go version -m "$(GINKGO)" 2>/dev/null | awk -v module="$(GINKGO_MODULE)" '$$1 == "mod" && $$2 == module { print $$3 }')"; \
+	if [ "$$actual_version" != "$(GINKGO_VERSION)" ]; then \
+		echo "Installing $(GINKGO_MODULE)/ginkgo@$(GINKGO_VERSION) (found: $${actual_version:-none})"; \
+		GOBIN=$(PROJECT_DIR)/bin go install $(GINKGO_MODULE)/ginkgo@$(GINKGO_VERSION); \
+	fi
 
 MOCKGEN = $(shell pwd)/bin/mockgen
 mockgen: ## Download mockgen locally if necessary
@@ -189,8 +213,14 @@ license-eye: ## Download license-eye locally if necessary
 	$(call go-get-tool,$(LICENSE_EYE),github.com/apache/skywalking-eyes/cmd/license-eye@v0.4.0)
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
-golangci-lint:
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2)
+GOLANGCI_LINT_MODULE = github.com/golangci/golangci-lint/v2
+GOLANGCI_LINT_VERSION = v2.1.6
+golangci-lint: $(LOCALBIN)
+	@actual_version="$$(go version -m "$(GOLANGCI_LINT)" 2>/dev/null | awk -v module="$(GOLANGCI_LINT_MODULE)" '$$1 == "mod" && $$2 == module { print $$3 }')"; \
+	if [ "$$actual_version" != "$(GOLANGCI_LINT_VERSION)" ]; then \
+		echo "Installing $(GOLANGCI_LINT_MODULE)/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) (found: $${actual_version:-none})"; \
+		GOBIN=$(PROJECT_DIR)/bin go install $(GOLANGCI_LINT_MODULE)/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
+	fi
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))

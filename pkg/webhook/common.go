@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -217,7 +217,7 @@ func validateMainContainerOverlay(overlay *v1alpha1.MainContainerOverlay, path *
 	// validate VolumeMounts
 	errs = append(errs, validateSliceWithConvert(overlay.VolumeMounts, path.Child("volumeMounts"),
 		apiscorev1.Convert_v1_VolumeMount_To_core_VolumeMount,
-		func(mounts []core.VolumeMount, subPath *field.Path) field.ErrorList {
+		func(_ []core.VolumeMount, _ *field.Path) field.ErrorList {
 			// TODO: complete params with Container
 			//return corevalidation.ValidateVolumeMounts(mounts, nil, nil, nil, path.Child("volumeMounts"))
 			return nil

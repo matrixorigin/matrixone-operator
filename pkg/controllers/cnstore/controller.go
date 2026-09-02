@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -506,7 +506,7 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	uid := v1alpha1.GetCNPodUUID(pod)
 	moVersion := common.GetSemanticVersion(&pod.ObjectMeta)
 	var queryAddress string
-	if err := c.withMOClientSet(ctx, func(ctx context.Context, handler *mocli.ClientSet) error {
+	if err := c.withMOClientSet(ctx, func(_ context.Context, handler *mocli.ClientSet) error {
 		cn, ok := handler.StoreCache.GetCN(uid)
 		if !ok {
 			return gerrors.Errorf("CN with uuid %s not found", uid)

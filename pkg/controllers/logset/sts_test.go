@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -171,7 +171,7 @@ func Test_syncPodSpec(t *testing.T) {
 		},
 	}}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(_ *testing.T) {
 			podSpec := tt.args.spec.DeepCopy()
 			syncPodSpec(tt.args.ls, podSpec)
 			if diff := cmp.Diff(podSpec, tt.want); diff != "" {
@@ -294,7 +294,7 @@ func Test_syncPersistentVolumeClaim(t *testing.T) {
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(_ *testing.T) {
 			syncPersistentVolumeClaim(tt.args.ls, tt.args.sts)
 		})
 	}

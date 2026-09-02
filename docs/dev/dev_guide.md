@@ -216,3 +216,17 @@ import (
 ## Package management
 
 You can use [go workspace](https://golang.google.cn/doc/tutorial/workspaces) for using new dependency.
+
+## Verify a change
+
+Run the same generated-artifact, unit, Chart, and lint checks used by CI before
+opening a pull request:
+
+```shell
+make reviewable
+```
+
+CI runs `make verify` from a clean checkout and rejects any generated files or
+module metadata that the pinned tools would change. Use `make verify-chart` for
+the faster, Chart-only policy and deterministic-packaging checks. The Kind E2E
+workflow additionally covers Kruise webhook outage, Helm upgrade, and recovery.

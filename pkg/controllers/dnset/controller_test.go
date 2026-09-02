@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package dnset
 
 import (
+	"context"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -34,7 +35,34 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+func TestRequestsForLogSetStatefulSet(t *testing.T) {
+	s := newScheme()
+	logSet := &v1alpha1.LogSet{ObjectMeta: metav1.ObjectMeta{Namespace: "provider", Name: "log", UID: "log-uid"}}
+	matching := &v1alpha1.DNSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "consumer", Name: "matching"},
+		Deps:       v1alpha1.DNSetDeps{LogSetRef: logSet.AsDependency()},
+	}
+	unrelated := &v1alpha1.DNSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "consumer", Name: "unrelated"},
+		Deps: v1alpha1.DNSetDeps{LogSetRef: v1alpha1.LogSetRef{LogSet: &v1alpha1.LogSet{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "other", Name: "log"},
+		}}},
+	}
+	cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(matching, unrelated).Build()
+	sts := &kruisev1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
+		Namespace: "provider",
+		Name:      "log-log",
+		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(logSet,
+			v1alpha1.GroupVersion.WithKind("LogSet"))},
+	}}
+
+	requests := requestsForLogSetStatefulSet(cli)(context.Background(), sts)
+	g := NewGomegaWithT(t)
+	g.Expect(requests).To(Equal([]reconcile.Request{{NamespacedName: client.ObjectKeyFromObject(matching)}}))
+}
 
 func TestDNSetActor_Observe(t *testing.T) {
 	s := newScheme()

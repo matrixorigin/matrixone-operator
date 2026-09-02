@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package cnset
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -40,7 +41,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // reconcile configuration
@@ -94,7 +99,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 		return nil, errors.WrapPrefix(err, "sync service", 0)
 	}
 
-	if err := c.syncMetricService(ctx); err != nil {
+	if err := c.syncMetricService(ctx, cs.Spec.Template.Labels); err != nil {
 		return nil, errors.WrapPrefix(err, "sync metric service", 0)
 	}
 
@@ -192,24 +197,49 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 // syncMetricService reconciles a dedicated ClusterIP Service exposing the CN metrics port,
 // so that Service-based Prometheus discovery (e.g. ServiceMonitor matching on port name
 // "metric") can find CN targets the same way it already does for DN/Log (issue #600).
-func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet]) error {
+func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet], podSelector map[string]string) error {
 	cn := ctx.Obj
+	labels := common.SubResourceLabels(cn)
+	// ServiceMonitor selects the Service by component, while the Service itself
+	// must select the labels of the existing CloneSet Pods. Keep these concerns
+	// separate so an incomplete TypeMeta cannot disconnect metrics endpoints.
+	labels[common.ComponentLabelKey] = "CNSet"
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cn.Namespace,
 			Name:      metricSvcName(cn),
-			Labels:    common.SubResourceLabels(cn),
+			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: common.SubResourceLabels(cn),
+			Selector: podSelector,
 		},
 	}
 	return recon.CreateOwnedOrUpdate(ctx, svc, func() error {
+		if owner := metav1.GetControllerOf(svc); owner != nil && !metav1.IsControlledBy(svc, cn) {
+			// A metrics-only name collision must not block CN scale, rollout, or
+			// configuration reconciliation. Do not mutate or steal a Service that
+			// is controlled by another object.
+			ctx.Log.Info("skip CN metrics Service owned by another controller",
+				"service", client.ObjectKeyFromObject(svc), "owner", owner)
+			return nil
+		}
+		// The Service spec is controller-managed; unrelated labels and
+		// annotations remain user-managed and are preserved.
+		if svc.Labels == nil {
+			svc.Labels = map[string]string{}
+		}
+		for key, value := range labels {
+			svc.Labels[key] = value
+		}
+		svc.Spec.Selector = podSelector
 		svc.Spec.Type = corev1.ServiceTypeClusterIP
 		svc.Spec.Ports = []corev1.ServicePort{{
 			Name: "metric",
 			Port: int32(common.MetricsPort),
 		}}
+		if err := controllerutil.SetControllerReference(cn, svc, ctx.Client.Scheme()); err != nil {
+			return err
+		}
 		if cn.Spec.PromDiscoveredByService() {
 			if svc.Annotations == nil {
 				svc.Annotations = map[string]string{}
@@ -335,13 +365,39 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 	err := recon.Setup[*v1alpha1.CNSet](&v1alpha1.CNSet{}, "cnset", mgr, c,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&kruisev1alpha1.CloneSet{}).
-				Owns(&corev1.Service{})
+				Owns(&corev1.Service{}).
+				Watches(&kruise.StatefulSet{}, handler.EnqueueRequestsFromMapFunc(requestsForLogSetStatefulSet(mgr.GetClient())),
+					builder.WithPredicates(common.LogSetReserveOrdinalsChangedPredicate()))
 		}))
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func requestsForLogSetStatefulSet(reader client.Reader) handler.MapFunc {
+	return func(ctx context.Context, object client.Object) []reconcile.Request {
+		owner, ok := common.LogSetStatefulSetOwner(object)
+		if !ok {
+			return nil
+		}
+
+		sets := &v1alpha1.CNSetList{}
+		if err := reader.List(ctx, sets); err != nil {
+			log.FromContext(ctx).Error(err, "list CNSets for LogSet StatefulSet", "statefulset", client.ObjectKeyFromObject(object))
+			return nil
+		}
+
+		requests := make([]reconcile.Request, 0, len(sets.Items))
+		for i := range sets.Items {
+			set := &sets.Items[i]
+			if common.ReferencesLogSet(set.Deps.LogSetRef, set.Namespace, owner) {
+				requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(set)})
+			}
+		}
+		return requests
+	}
 }
 func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneSet) error {
 	cn := ctx.Obj

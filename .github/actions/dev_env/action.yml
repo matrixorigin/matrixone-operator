@@ -6,12 +6,14 @@ runs:
 
   steps:
     - name: import env variables
+      id: versions
       shell: bash
-      run: cat ".github/env" >> $GITHUB_ENV
+      run: |
+        cat ".github/env" >> "$GITHUB_ENV"
+        sed -n 's/^golang-version=/go_version=/p' ".github/env" >> "$GITHUB_OUTPUT"
 
     - name: setup go version
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # tag=v7.0.0
       with:
-        check-latest: true
-        go-version:
-          ${{ env.golang-version }}
+        check-latest: false
+        go-version: ${{ steps.versions.outputs.go_version }}
