@@ -37,6 +37,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func baseCNSetForMetricSvcTest() *v1alpha1.CNSet {
@@ -124,6 +125,49 @@ func Test_syncMetricService(t *testing.T) {
 			},
 		},
 		{
+			name:  "repairs drift while preserving user metadata",
+			cnset: baseCNSetForMetricSvcTest(),
+			client: &fake.Client{
+				Client: fake.KubeClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:   "default",
+							Name:        metricSvcName(baseCNSetForMetricSvcTest()),
+							Labels:      map[string]string{"drifted": "true"},
+							Annotations: map[string]string{"user.example.com/keep": "yes"},
+						},
+						Spec: corev1.ServiceSpec{
+							Type:     corev1.ServiceTypeNodePort,
+							Selector: map[string]string{"wrong": "selector"},
+							Ports: []corev1.ServicePort{{
+								Name: "wrong",
+								Port: 1234,
+							}},
+						},
+					},
+				).Build(),
+			},
+			setup: enableCNPromServiceDiscovery,
+			expect: func(g *WithT, cn *v1alpha1.CNSet, cli client.Client, err error) {
+				g.Expect(err).To(BeNil())
+				svc := &corev1.Service{}
+				g.Expect(cli.Get(context.Background(), client.ObjectKeyFromObject(&corev1.Service{ObjectMeta: metav1.ObjectMeta{
+					Namespace: cn.Namespace,
+					Name:      metricSvcName(cn),
+				}}), svc)).To(Succeed())
+				g.Expect(svc.Labels).To(HaveKeyWithValue("drifted", "true"))
+				for key, value := range common.SubResourceLabels(cn) {
+					g.Expect(svc.Labels).To(HaveKeyWithValue(key, value))
+				}
+				g.Expect(svc.Spec.Selector).To(Equal(common.SubResourceLabels(cn)))
+				g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeClusterIP))
+				g.Expect(svc.Spec.Ports).To(Equal([]corev1.ServicePort{{Name: "metric", Port: int32(common.MetricsPort)}}))
+				g.Expect(svc.Annotations).To(HaveKeyWithValue("user.example.com/keep", "yes"))
+				g.Expect(svc.Annotations).To(HaveKeyWithValue(common.PrometheusScrapeAnno, "true"))
+				g.Expect(metav1.IsControlledBy(svc, cn)).To(BeTrue())
+			},
+		},
+		{
 			name:  "removes stale prom annotations when export disabled",
 			cnset: baseCNSetForMetricSvcTest(),
 			client: &fake.Client{
@@ -181,6 +225,32 @@ func Test_syncMetricService(t *testing.T) {
 	}
 }
 
+func TestRequestsForLogSetStatefulSet(t *testing.T) {
+	s := newScheme()
+	logSet := &v1alpha1.LogSet{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "log", UID: "log-uid"}}
+	matching := &v1alpha1.CNSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "matching"},
+		Deps:       v1alpha1.CNSetDeps{LogSetRef: logSet.AsDependency()},
+	}
+	unrelated := &v1alpha1.CNSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "unrelated"},
+		Deps: v1alpha1.CNSetDeps{LogSetRef: v1alpha1.LogSetRef{LogSet: &v1alpha1.LogSet{
+			ObjectMeta: metav1.ObjectMeta{Name: "other"},
+		}}},
+	}
+	cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(matching, unrelated).Build()
+	sts := &kruisev1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "log-log",
+		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(logSet,
+			v1alpha1.GroupVersion.WithKind("LogSet"))},
+	}}
+
+	requests := requestsForLogSetStatefulSet(cli)(context.Background(), sts)
+	g := NewGomegaWithT(t)
+	g.Expect(requests).To(Equal([]reconcile.Request{{NamespacedName: client.ObjectKeyFromObject(matching)}}))
+}
+
 func TestCNSetActor_Observe(t *testing.T) {
 	s := newScheme()
 	tpl := &v1alpha1.CNSet{
@@ -231,7 +301,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 			client: &fake.Client{
 				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
 			},
-			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], cli client.Client, err error) {
+			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], _ client.Client, err error) {
 				g.Expect(err).To(BeNil())
 				g.Expect(action.String()).To(ContainSubstring("Create"))
 			},
@@ -242,7 +312,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 			client: &fake.Client{
 				Client: fake.KubeClientBuilder().WithScheme(s).Build(),
 			},
-			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], cli client.Client, err error) {
+			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], _ client.Client, err error) {
 				g.Expect(err).To(BeNil())
 				g.Expect(action.String()).To(ContainSubstring("Create"))
 			},
@@ -309,7 +379,7 @@ func TestCNSetActor_Observe(t *testing.T) {
 					},
 				).Build(),
 			},
-			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], cli client.Client, err error) {
+			expect: func(g *WithT, action recon.Action[*v1alpha1.CNSet], _ client.Client, err error) {
 				g.Expect(err).To(BeNil())
 				g.Expect(action.String()).To(ContainSubstring("Update"))
 			},

@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package cnset
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -40,7 +41,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // reconcile configuration
@@ -205,11 +210,21 @@ func (c *Actor) syncMetricService(ctx *recon.Context[*v1alpha1.CNSet]) error {
 		},
 	}
 	return recon.CreateOwnedOrUpdate(ctx, svc, func() error {
+		if svc.Labels == nil {
+			svc.Labels = map[string]string{}
+		}
+		for key, value := range common.SubResourceLabels(cn) {
+			svc.Labels[key] = value
+		}
+		svc.Spec.Selector = common.SubResourceLabels(cn)
 		svc.Spec.Type = corev1.ServiceTypeClusterIP
 		svc.Spec.Ports = []corev1.ServicePort{{
 			Name: "metric",
 			Port: int32(common.MetricsPort),
 		}}
+		if err := controllerutil.SetControllerReference(cn, svc, ctx.Client.Scheme()); err != nil {
+			return err
+		}
 		if cn.Spec.PromDiscoveredByService() {
 			if svc.Annotations == nil {
 				svc.Annotations = map[string]string{}
@@ -335,13 +350,43 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 	err := recon.Setup[*v1alpha1.CNSet](&v1alpha1.CNSet{}, "cnset", mgr, c,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&kruisev1alpha1.CloneSet{}).
-				Owns(&corev1.Service{})
+				Owns(&corev1.Service{}).
+				Watches(&kruise.StatefulSet{}, handler.EnqueueRequestsFromMapFunc(requestsForLogSetStatefulSet(mgr.GetClient())),
+					builder.WithPredicates(common.LogSetStatefulSetChangedPredicate()))
 		}))
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func requestsForLogSetStatefulSet(reader client.Reader) handler.MapFunc {
+	return func(ctx context.Context, object client.Object) []reconcile.Request {
+		sts, ok := object.(*kruise.StatefulSet)
+		if !ok {
+			return nil
+		}
+		owner := metav1.GetControllerOf(sts)
+		if owner == nil || owner.APIVersion != v1alpha1.GroupVersion.String() || owner.Kind != "LogSet" {
+			return nil
+		}
+
+		sets := &v1alpha1.CNSetList{}
+		if err := reader.List(ctx, sets, client.InNamespace(sts.Namespace)); err != nil {
+			log.FromContext(ctx).Error(err, "list CNSets for LogSet StatefulSet", "statefulset", client.ObjectKeyFromObject(sts))
+			return nil
+		}
+
+		requests := make([]reconcile.Request, 0, len(sets.Items))
+		for i := range sets.Items {
+			set := &sets.Items[i]
+			if set.Deps.LogSet != nil && set.Deps.LogSet.Name == owner.Name {
+				requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(set)})
+			}
+		}
+		return requests
+	}
 }
 func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneSet) error {
 	cn := ctx.Obj

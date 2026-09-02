@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package dnset
 
 import (
+	"context"
 	"strconv"
 	"time"
 
@@ -36,7 +37,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -301,11 +305,41 @@ func (d *Actor) Reconcile(mgr manager.Manager) error {
 	err := recon.Setup[*v1alpha1.DNSet](&v1alpha1.DNSet{}, "dnset", mgr, d,
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&kruise.StatefulSet{}).
-				Owns(&corev1.Service{})
+				Owns(&corev1.Service{}).
+				Watches(&kruise.StatefulSet{}, handler.EnqueueRequestsFromMapFunc(requestsForLogSetStatefulSet(mgr.GetClient())),
+					builder.WithPredicates(common.LogSetStatefulSetChangedPredicate()))
 		}))
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func requestsForLogSetStatefulSet(reader client.Reader) handler.MapFunc {
+	return func(ctx context.Context, object client.Object) []reconcile.Request {
+		sts, ok := object.(*kruise.StatefulSet)
+		if !ok {
+			return nil
+		}
+		owner := metav1.GetControllerOf(sts)
+		if owner == nil || owner.APIVersion != v1alpha1.GroupVersion.String() || owner.Kind != "LogSet" {
+			return nil
+		}
+
+		sets := &v1alpha1.DNSetList{}
+		if err := reader.List(ctx, sets, client.InNamespace(sts.Namespace)); err != nil {
+			log.FromContext(ctx).Error(err, "list DNSets for LogSet StatefulSet", "statefulset", client.ObjectKeyFromObject(sts))
+			return nil
+		}
+
+		requests := make([]reconcile.Request, 0, len(sets.Items))
+		for i := range sets.Items {
+			set := &sets.Items[i]
+			if set.Deps.LogSet != nil && set.Deps.LogSet.Name == owner.Name {
+				requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(set)})
+			}
+		}
+		return requests
+	}
 }
