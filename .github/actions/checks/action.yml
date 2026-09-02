@@ -12,14 +12,6 @@ runs:
     - name: pre_env
       uses: ./.github/actions/dev_env
 
-    - name: check_license_header
-      uses: apache/skywalking-eyes/header@a196742f472feaffafea537ce5a2a4c3c53a8de4 # tag=v0.9.0
-      env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
-      with:
-        log: info
-        config: .licenserc.yml
-
     - name: verify
       shell: bash
       run: make verify
@@ -29,3 +21,13 @@ runs:
       with:
         version: v2.1.6
         args: --timeout 10m0s
+
+    # The header action installs its own Go toolchain while building license-eye,
+    # so keep it last to avoid changing the toolchain used by repository checks.
+    - name: check_license_header
+      uses: apache/skywalking-eyes/header@a196742f472feaffafea537ce5a2a4c3c53a8de4 # tag=v0.9.0
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      with:
+        log: info
+        config: .licenserc.yml
