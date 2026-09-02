@@ -40,7 +40,8 @@ func TestFileServiceConfig(t *testing.T) {
 			localPath: "/test",
 			sp: v1alpha1.SharedStorageProvider{
 				S3: &v1alpha1.S3Provider{
-					Path: "bucket/prefix",
+					Path:   "bucket/prefix",
+					Region: "ap-shanghai",
 					SecretRef: &corev1.LocalObjectReference{
 						Name: "aws",
 					},
@@ -62,6 +63,7 @@ func TestFileServiceConfig(t *testing.T) {
 				},
 				"s3": map[string]interface{}{
 					"endpoint":   "s3.us-west-2.amazonaws.com",
+					"region":     "ap-shanghai",
 					"key-prefix": "prefix/data",
 					"bucket":     "bucket",
 				},
@@ -73,6 +75,7 @@ func TestFileServiceConfig(t *testing.T) {
 				},
 				"s3": map[string]interface{}{
 					"endpoint":   "s3.us-west-2.amazonaws.com",
+					"region":     "ap-shanghai",
 					"key-prefix": "prefix/etl",
 					"bucket":     "bucket",
 				},
@@ -135,5 +138,36 @@ func TestFileServiceConfig(t *testing.T) {
 				t.Errorf("FileServiceConfig(), diff:\n %s", diff)
 			}
 		})
+	}
+}
+
+func TestLogServiceFSConfigWithS3Region(t *testing.T) {
+	sp := v1alpha1.SharedStorageProvider{
+		S3: &v1alpha1.S3Provider{
+			Path:   "bucket",
+			Region: "ap-shanghai",
+		},
+	}
+	want := map[string]interface{}{
+		"data-dir": "/test",
+		"fileservice": []map[string]interface{}{
+			{
+				"name":    BackupFileServiceName,
+				"backend": fsBackendTypeS3,
+				"s3": map[string]interface{}{
+					"endpoint":   "s3.us-west-2.amazonaws.com",
+					"region":     "ap-shanghai",
+					"bucket":     "bucket",
+					"key-prefix": "",
+				},
+				"cache": map[string]interface{}{
+					"memory-capacity": "1B",
+				},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(want, LogServiceFSConfig("/test", sp)); diff != "" {
+		t.Errorf("LogServiceFSConfig(), diff:\n %s", diff)
 	}
 }

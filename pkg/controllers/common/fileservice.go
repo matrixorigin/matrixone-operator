@@ -147,18 +147,15 @@ func sharedFileServiceConfig(sp v1alpha1.SharedStorageProvider, cache *v1alpha1.
 			m["backend"] = fsBackendTypeS3
 		}
 		s3Config := map[string]interface{}{}
-
-		// init default values
-		// TODO: let AWS SDK discover its own endpoint by default
-		s3Config["endpoint"] = "s3.us-west-2.amazonaws.com"
-
 		if s3.Endpoint != "" {
 			s3Config["endpoint"] = s3.Endpoint
+		} else {
+			// TODO: let AWS SDK discover its own endpoint by default
+			s3Config["endpoint"] = "s3.us-west-2.amazonaws.com"
 		}
 		if s3.Region != "" {
 			s3Config["region"] = s3.Region
 		}
-
 		paths := strings.SplitN(strings.Trim(s3.Path, "/"), "/", 2)
 		s3Config["bucket"] = paths[0]
 		keyPrefix := subDir
