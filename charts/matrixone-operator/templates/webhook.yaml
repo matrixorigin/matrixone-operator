@@ -18,6 +18,7 @@ webhooks:
       path: /mutate-core-matrixorigin-io-v1alpha1-cnset
   failurePolicy: Fail
   name: mcnset.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io
@@ -40,6 +41,7 @@ webhooks:
       path: /mutate-core-matrixorigin-io-v1alpha1-dnset
   failurePolicy: Fail
   name: mdnset.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io
@@ -62,6 +64,7 @@ webhooks:
       path: /mutate-core-matrixorigin-io-v1alpha1-logset
   failurePolicy: Fail
   name: mlogset.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io
@@ -84,6 +87,7 @@ webhooks:
       path: /mutate-core-matrixorigin-io-v1alpha1-matrixonecluster
   failurePolicy: Fail
   name: mmatrixonecluster.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io
@@ -106,6 +110,7 @@ webhooks:
       path: /mutate-core-matrixorigin-io-v1alpha1-proxyset
   failurePolicy: Fail
   name: mproxyset.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io
@@ -137,6 +142,7 @@ webhooks:
       path: /validate-core-matrixorigin-io-v1alpha1-cnset
   failurePolicy: Fail
   name: vcnset.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io
@@ -159,6 +165,7 @@ webhooks:
       path: /validate-core-matrixorigin-io-v1alpha1-dnset
   failurePolicy: Fail
   name: vdnset.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io
@@ -181,6 +188,7 @@ webhooks:
       path: /validate-core-matrixorigin-io-v1alpha1-logset
   failurePolicy: Fail
   name: vlogset.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io
@@ -203,6 +211,7 @@ webhooks:
       path: /validate-core-matrixorigin-io-v1alpha1-matrixonecluster
   failurePolicy: Fail
   name: vmatrixonecluster.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io
@@ -225,6 +234,7 @@ webhooks:
       path: /validate-core-matrixorigin-io-v1alpha1-proxyset
   failurePolicy: Fail
   name: vproxyset.kb.io
+  {{- include "matrixone-operator.webhookNamespaceSelector" $ | nindent 2 }}
   rules:
   - apiGroups:
     - core.matrixorigin.io

@@ -22,8 +22,12 @@ TEST_ROOT=$(mktemp -d)
 trap 'rm -rf -- "${TEST_ROOT}"' EXIT
 
 bash -n "${REPO_ROOT}/hack/package-chart.sh" \
+    "${REPO_ROOT}/hack/install-isolated-operator.sh" \
+    "${REPO_ROOT}/hack/test-install-isolated-operator.sh" \
     "${REPO_ROOT}/hack/test-kruise-webhook-outage.sh" \
     "${REPO_ROOT}/hack/lib.sh"
+
+"${REPO_ROOT}/hack/test-install-isolated-operator.sh"
 
 helm template test "${REPO_ROOT}/charts/kruise" >"${TEST_ROOT}/kruise.yaml"
 
@@ -74,5 +78,36 @@ fi
 # lock file must not leak into the deterministic package.
 if tar -tzf "${operator_package}" | awk '/\/Chart.lock$/ { found = 1 } END { exit !found }'; then
     echo "ignored Chart.lock leaked into the operator package" >&2
+    exit 1
+fi
+
+# An isolated Operator must scope every mutating and validating webhook to the
+# labelled E2E namespace. A cache-only namespace restriction is insufficient:
+# admission webhooks are cluster-scoped resources and otherwise keep matching
+# MatrixOne objects in unrelated namespaces.
+helm template isolated "${operator_package}" \
+    --set kruise.enabled=false \
+    --set onlyWatchReleasedNS=true \
+    --set-string 'webhook.namespaceSelector.matchLabels.matrixorigin\.io/operator-e2e=true' \
+    >"${TEST_ROOT}/isolated-operator.yaml"
+
+if ! grep -q '^[[:space:]]\{2\}onlyWatchReleasedNS: "true"$' \
+    "${TEST_ROOT}/isolated-operator.yaml"; then
+    echo "isolated Operator cache is not namespace-scoped" >&2
+    exit 1
+fi
+
+webhook_count=$(awk '/^[[:space:]]+name: [mv].*\.kb\.io$/ { count++ } END { print count + 0 }' \
+    "${TEST_ROOT}/isolated-operator.yaml")
+selector_count=$(grep -c '^[[:space:]]\{2\}namespaceSelector:$' \
+    "${TEST_ROOT}/isolated-operator.yaml" || true)
+if [[ "${webhook_count}" -eq 0 || "${selector_count}" -ne "${webhook_count}" ]]; then
+    echo "rendered ${selector_count} namespace selectors for ${webhook_count} webhooks" >&2
+    exit 1
+fi
+
+if [[ $(grep -c '^[[:space:]]\{6\}matrixorigin.io/operator-e2e: "true"$' \
+    "${TEST_ROOT}/isolated-operator.yaml" || true) -ne "${webhook_count}" ]]; then
+    echo "isolated webhook namespace label selector is missing or incomplete" >&2
     exit 1
 fi

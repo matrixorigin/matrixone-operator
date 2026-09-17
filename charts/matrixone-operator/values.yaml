@@ -23,6 +23,10 @@ webhook:
   createResource: true
   # set secret if createResource=false
   secretName: ""
+  # Limit admission requests to matching namespaces. Keep empty for the
+  # cluster-level production Operator. E2E Operators running in a shared
+  # cluster must set this together with onlyWatchReleasedNS=true.
+  namespaceSelector: {}
 
 imagePullSecrets: []
 nameOverride: ""
