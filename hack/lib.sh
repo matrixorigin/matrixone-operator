@@ -98,7 +98,7 @@ function kind::load-image() {
     kind::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
     kind::prepare_image ${CLUSTER} "${kruise_image}"
     kind::prepare_image ${CLUSTER} "${kruise_hook_image}"
-    kind::prepare_image ${CLUSTER} minio/minio:RELEASE.2023-11-01T01-57-10Z
+    kind::prepare_image ${CLUSTER} quay.io/minio/minio:RELEASE.2023-11-01T01-57-10Z
 }
 
 function kind::install-minio() {
