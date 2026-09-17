@@ -80,3 +80,13 @@ Generate default image
 {{- define "matrixone-operator.image" -}}
 "{{ .Values.globalRegistryPrefix }}{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
 {{- end }}
+
+{{/*
+Optionally scope admission webhooks to selected namespaces.
+*/}}
+{{- define "matrixone-operator.webhookNamespaceSelector" -}}
+{{- with .Values.webhook.namespaceSelector }}
+namespaceSelector:
+{{ toYaml . | indent 2 }}
+{{- end }}
+{{- end }}
