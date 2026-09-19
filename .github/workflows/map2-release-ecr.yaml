@@ -19,7 +19,7 @@ env:
   AWS_DEFAULT_REGION: ap-southeast-1
   AWS_REGION: ap-southeast-1
   ECR_REGISTRY: 431715654247.dkr.ecr.ap-southeast-1.amazonaws.com
-  ECR_REPOSITORY: map2-e2e-20260915-singlecluster/matrixone-operator
+  ECR_REPOSITORY: map2-e2e-20260915-singlecluster/operator
   GITOPS_REPO: matrixorigin/gitops
   BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
 
