@@ -1,0 +1,221 @@
+{
+  "cn": {
+    "metadata": {
+      "creationTimestamp": null
+    },
+    "spec": {
+      "image": "docker.io/matrixorigin/matrixone:synthetic-placement",
+      "resources": {
+        "requests": {
+          "cpu": "1"
+        }
+      },
+      "overlay": {
+        "env": [
+          {
+            "name": "MO_NO_DEFAULT_CREDENTIALS",
+            "value": "yes"
+          }
+        ],
+        "serviceAccountName": "mo",
+        "affinity": {
+          "nodeAffinity": {
+            "preferredDuringSchedulingIgnoredDuringExecution": [
+              {
+                "weight": 100,
+                "preference": {
+                  "matchExpressions": [
+                    {
+                      "key": "topology.kubernetes.io/zone",
+                      "operator": "In",
+                      "values": [
+                        "zone-a"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "tolerations": [
+          {
+            "key": "profile.matrixone.cloud/pool-b",
+            "operator": "Exists",
+            "effect": "NoSchedule"
+          }
+        ],
+        "podLabels": {
+          "matrixone.cloud/profile": "compute",
+          "matrixorigin.io/owner": "synthetic-cluster"
+        }
+      },
+      "replicas": 0,
+      "nodeSelector": {
+        "disk": "fast",
+        "matrixone.cloud/profile": "pool-b"
+      },
+      "config": "\n[cn]\n\n[cn.frontend]\nproxy-enabled = true\n",
+      "dnsBasedIdentity": true,
+      "memoryLimitPercent": 60,
+      "exportToPrometheus": true,
+      "promDiscoveryScheme": "Pod",
+      "cacheVolume": {
+        "size": "20Gi",
+        "storageClassName": "gp3"
+      },
+      "sharedStorageCache": {
+        "memoryCacheSize": "0"
+      },
+      "pythonUdfSidecar": {
+        "resources": {}
+      },
+      "serviceType": "ClusterIP",
+      "scalingConfig": {
+        "storeDrainEnabled": true,
+        "storeDrainTimeout": "1h0m0s"
+      },
+      "updateStrategy": {
+        "maxSurge": 1,
+        "maxUnavailable": 0
+      },
+      "terminationPolicy": "Drain"
+    },
+    "deps": {},
+    "status": {}
+  },
+  "dn": {
+    "metadata": {
+      "name": "dn",
+      "creationTimestamp": null,
+      "labels": {
+        "matrixone.cloud/profile": "compute"
+      }
+    },
+    "spec": {
+      "image": "docker.io/matrixorigin/matrixone:synthetic-placement",
+      "resources": {
+        "requests": {
+          "cpu": "1"
+        }
+      },
+      "overlay": {
+        "serviceAccountName": "mo",
+        "affinity": {
+          "nodeAffinity": {
+            "preferredDuringSchedulingIgnoredDuringExecution": [
+              {
+                "weight": 100,
+                "preference": {
+                  "matchExpressions": [
+                    {
+                      "key": "topology.kubernetes.io/zone",
+                      "operator": "In",
+                      "values": [
+                        "zone-a"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "tolerations": [
+          {
+            "key": "profile.matrixone.cloud/pool-b",
+            "operator": "Exists",
+            "effect": "NoSchedule"
+          }
+        ],
+        "podLabels": {
+          "matrixone.cloud/profile": "compute"
+        }
+      },
+      "replicas": 0,
+      "nodeSelector": {
+        "disk": "fast",
+        "matrixone.cloud/profile": "pool-b"
+      },
+      "config": "",
+      "dnsBasedIdentity": true,
+      "exportToPrometheus": true,
+      "cacheVolume": {
+        "size": "20Gi",
+        "storageClassName": "gp3"
+      },
+      "sharedStorageCache": {}
+    },
+    "deps": {},
+    "status": {}
+  },
+  "log": {
+    "metadata": {
+      "creationTimestamp": null,
+      "labels": {
+        "matrixone.cloud/profile": "compute"
+      }
+    },
+    "spec": {
+      "image": "docker.io/matrixorigin/matrixone:synthetic-placement",
+      "resources": {
+        "requests": {
+          "cpu": "1"
+        }
+      },
+      "overlay": {
+        "serviceAccountName": "mo",
+        "affinity": {
+          "nodeAffinity": {
+            "preferredDuringSchedulingIgnoredDuringExecution": [
+              {
+                "weight": 100,
+                "preference": {
+                  "matchExpressions": [
+                    {
+                      "key": "topology.kubernetes.io/zone",
+                      "operator": "In",
+                      "values": [
+                        "zone-a",
+                        "zone-b",
+                        "zone-c"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "tolerations": [
+          {
+            "key": "profile.matrixone.cloud/pool-b",
+            "operator": "Exists",
+            "effect": "NoSchedule"
+          }
+        ],
+        "podLabels": {
+          "matrixone.cloud/profile": "compute"
+        }
+      },
+      "replicas": 0,
+      "topologySpread": [
+        "topology.kubernetes.io/zone"
+      ],
+      "nodeSelector": {
+        "disk": "fast",
+        "matrixone.cloud/profile": "pool-b"
+      },
+      "config": "",
+      "dnsBasedIdentity": true,
+      "exportToPrometheus": true,
+      "volume": {
+        "size": "20Gi",
+        "storageClassName": "gp3"
+      },
+      "sharedStorage": {},
+      "initialConfig": {}
+    },
+    "status": {}
+  }
+}

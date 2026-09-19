@@ -91,31 +91,68 @@ func TestParseEndpoint(t *testing.T) {
 
 set -ex
 
-region=us-east-1
-endpoint=http://minio.mostorage:9000
+region='us-east-1'
+endpoint='http://minio.mostorage:9000'
 
 if [ -n "${region}" ]; then
   export AWS_REGION="${region}"
 fi
 
 if [ -n "${endpoint}" ]; then
-  aws --endpoint-url "${endpoint}" s3api head-bucket --bucket minio-mo || bucketNotExist=true
-  if [ $bucketNotExist ]; then
-    echo "bucket not exist"
-    exit 0
-  fi
-  aws --endpoint-url "${endpoint}" s3 rm s3://minio-mo/test --recursive
+  aws --endpoint-url "${endpoint}" s3api head-bucket --bucket 'minio-mo'
+  aws --endpoint-url "${endpoint}" s3 rm 's3://minio-mo/test' --recursive
 else
-  aws s3api head-bucket --bucket minio-mo || bucketNotExist=true
-  if [ $bucketNotExist ]; then
-    echo "bucket not exist"
-    exit 0
-  fi
-  aws s3 rm s3://minio-mo/test --recursive
+  aws s3api head-bucket --bucket 'minio-mo'
+  aws s3 rm 's3://minio-mo/test' --recursive
 fi
 `
 	endpoint, err := parseEntrypoint(&s3)
 	g := NewGomegaWithT(t)
 	g.Expect(err).To(Succeed())
 	g.Expect(endpoint).To(Equal(expect))
+}
+
+func TestFinalizeWaitsForVerifiedCleanup(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		condition batchv1.JobConditionType
+		wantDone  bool
+	}{
+		{"running", "", false},
+		{"failed cleanup retains finalizer", batchv1.JobFailed, false},
+		{"successful cleanup releases finalizer", batchv1.JobComplete, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			now := metav1.NewTime(time.Now())
+			bucket := &v1alpha1.BucketClaim{
+				ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "test", Finalizers: []string{v1alpha1.BucketDataFinalizer}, DeletionTimestamp: &now, Annotations: map[string]string{v1alpha1.AnnAnyInstanceRunning: "true"}},
+				Status:     v1alpha1.BucketClaimStatus{State: v1alpha1.StatusDeleting},
+			}
+			job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: jobName(bucket), Namespace: bucket.Namespace}}
+			if tt.condition != "" {
+				job.Status.Conditions = []batchv1.JobCondition{{Type: tt.condition, Status: corev1.ConditionTrue}}
+			}
+			scheme := runtime.NewScheme()
+			g.Expect(v1alpha1.AddToScheme(scheme)).To(Succeed())
+			g.Expect(batchv1.AddToScheme(scheme)).To(Succeed())
+			g.Expect(corev1.AddToScheme(scheme)).To(Succeed())
+			cli := fake.KubeClientBuilder().WithScheme(scheme).WithObjects(bucket, job).Build()
+			ctx := fake.NewContext(bucket, cli, fake.NewMockEventEmitter(gomock.NewController(t)))
+			done, err := New().Finalize(ctx)
+			g.Expect(err).To(Succeed())
+			g.Expect(done).To(Equal(tt.wantDone))
+			updated := &v1alpha1.BucketClaim{}
+			err = cli.Get(context.Background(), client.ObjectKeyFromObject(bucket), updated)
+			if tt.wantDone {
+				g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
+				return
+			}
+			g.Expect(err).To(Succeed())
+			g.Expect(updated.Finalizers).To(ContainElement(v1alpha1.BucketDataFinalizer))
+			if tt.condition == batchv1.JobFailed {
+				g.Expect(updated.Status.Conditions[0].Reason).To(Equal("JobFailure"))
+			}
+		})
+	}
 }
