@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,6 +63,9 @@ func buildJob(o JobObject, image string, command string, injectEnv func(c *corev
 	if o.GetOverlay() != nil {
 		o.GetOverlay().OverlayPodMeta(&tpl.ObjectMeta)
 		o.GetOverlay().OverlayPodSpec(&tpl.Spec)
+		// OverlayPodSpec preserves only a container named "main"; BR uses "br".
+		// Reassemble this Job's containers without changing the shared overlay contract.
+		tpl.Spec.Containers = append([]corev1.Container{brContainer}, o.GetOverlay().SidecarContainers...)
 	}
 	job := &batchv1.Job{
 		ObjectMeta: meta,

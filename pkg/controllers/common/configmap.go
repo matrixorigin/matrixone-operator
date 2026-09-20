@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,6 +85,10 @@ func ensureConfigMap(kubeCli recon.KubeClient, desired *corev1.ConfigMap) (strin
 		return "", err
 	}
 	if exist {
+		// This path owns configuration data, not the persisted object's lifecycle.
+		// Keep owner references, finalizers and resourceVersion from the same read
+		// so updates neither orphan the ConfigMap nor overwrite concurrent writes.
+		c.ObjectMeta = *old.ObjectMeta.DeepCopy()
 		podList := &corev1.PodList{}
 		err = kubeCli.List(podList, client.InNamespace(c.Namespace))
 		if err != nil {

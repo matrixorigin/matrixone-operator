@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -42,34 +43,29 @@ command example:
 aws --endpoint-url https://play.minio.io:9000 --region us-east-1 s3api head-bucket test0407
 aws --endpoint-url https://play.minio.io:9000 --region us-east-1 s3 rm s3://test0407/ddf --recursive
 
-First check if bucket exists, if bucket exists then remove with '--recursive' option, remove will success even if path not exist
+First check bucket access, then remove with '--recursive'. A failed HEAD cannot
+distinguish absence from denied access or transport failure, so fail closed.
 */
-var delCmd = template.Must(template.New("del-bucket-script").Parse(`
+var delCmd = template.Must(template.New("del-bucket-script").Funcs(template.FuncMap{
+	"shellQuote": shellQuote,
+}).Parse(`
 #!/bin/sh
 
 set -ex
 
-region={{ .Region }}
-endpoint={{ .EndPoint }}
+region={{ shellQuote .Region }}
+endpoint={{ shellQuote .EndPoint }}
 
 if [ -n "${region}" ]; then
   export AWS_REGION="${region}"
 fi
 
 if [ -n "${endpoint}" ]; then
-  aws --endpoint-url "${endpoint}" s3api head-bucket --bucket {{ .Bucket }} || bucketNotExist=true
-  if [ $bucketNotExist ]; then
-    echo "bucket not exist"
-    exit 0
-  fi
-  aws --endpoint-url "${endpoint}" s3 rm s3://{{ .Path }} --recursive
+  aws --endpoint-url "${endpoint}" s3api head-bucket --bucket {{ shellQuote .Bucket }}
+  aws --endpoint-url "${endpoint}" s3 rm {{ printf "s3://%s" .Path | shellQuote }} --recursive
 else
-  aws s3api head-bucket --bucket {{ .Bucket }} || bucketNotExist=true
-  if [ $bucketNotExist ]; then
-    echo "bucket not exist"
-    exit 0
-  fi
-  aws s3 rm s3://{{ .Path }} --recursive
+  aws s3api head-bucket --bucket {{ shellQuote .Bucket }}
+  aws s3 rm {{ printf "s3://%s" .Path | shellQuote }} --recursive
 fi
 `))
 
@@ -80,10 +76,26 @@ type s3Param struct {
 	Bucket   string
 }
 
+// Permit legacy S3-compatible bucket names as well as current AWS names. This
+// checks the bucket/path boundary, not each provider's complete naming rules.
+var bucketNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+
+// shellQuote preserves literal key/endpoint bytes, including quotes and newlines.
+// NUL cannot be represented in a process argument and is rejected by the caller.
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
+}
+
 func parseEntrypoint(s3 *v1alpha1.S3Provider) (string, error) {
-	bucketPath := strings.Split(s3.Path, "/")
-	if len(bucketPath) < 0 {
-		return "", fmt.Errorf("unexpected bucket path: %s", s3.Path)
+	if s3 == nil {
+		return "", fmt.Errorf("missing S3 storage configuration")
+	}
+	if strings.ContainsRune(s3.Path, '\x00') || strings.ContainsRune(s3.Endpoint, '\x00') || strings.ContainsRune(s3.Region, '\x00') {
+		return "", fmt.Errorf("S3 cleanup arguments must not contain NUL")
+	}
+	bucketPath := strings.SplitN(s3.Path, "/", 2)
+	if !bucketNamePattern.MatchString(bucketPath[0]) {
+		return "", fmt.Errorf("unexpected bucket path: %q", s3.Path)
 	}
 	buf := new(bytes.Buffer)
 	err := delCmd.Execute(buf, &s3Param{

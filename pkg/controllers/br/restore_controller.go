@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -152,13 +152,13 @@ func (c *RestoreActor) syncJob(ctx *recon.Context[*v1alpha1.RestoreJob]) error {
 		if optionalTargetSecret != nil {
 			c.Env = util.UpsertByKey(c.Env, corev1.EnvVar{Name: RestoreAccessEnvKey, ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: *optionalSourceSecret,
+					LocalObjectReference: *optionalTargetSecret,
 					Key:                  common.AWSAccessKeyID,
 				},
 			}}, util.EnvVarKey)
 			c.Env = util.UpsertByKey(c.Env, corev1.EnvVar{Name: RestoreSecretEnvKey, ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: *optionalSourceSecret,
+					LocalObjectReference: *optionalTargetSecret,
 					Key:                  common.AWSSecretAccessKey,
 				},
 			}}, util.EnvVarKey)

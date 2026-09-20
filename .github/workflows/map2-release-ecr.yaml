@@ -1,0 +1,157 @@
+name: MAP2 release ECR
+
+# arm64 image on map2. OIDC gha-images. Pin by dispatching gitops, not uses:.
+# Do not set environment: — OIDC sub must be ref:heads/map2.
+
+on:
+  push:
+    branches: [map2]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: map2-release-ecr-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_DEFAULT_REGION: ap-southeast-1
+  AWS_REGION: ap-southeast-1
+  ECR_REGISTRY: 431715654247.dkr.ecr.ap-southeast-1.amazonaws.com
+  ECR_REPOSITORY: map2-e2e-20260915-singlecluster/operator
+  GITOPS_REPO: matrixorigin/gitops
+  BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
+
+jobs:
+  release:
+    if: github.ref_name == 'map2'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+      tag: ${{ steps.image.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image coordinates
+        id: image
+        run: |
+          set -euo pipefail
+          short="${GITHUB_SHA:0:7}"
+          day="$(date -u +%Y%m%d)"
+          tag="map2-${day}-${short}"
+          repo="${ECR_REGISTRY}/${ECR_REPOSITORY}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "repo=${repo}" >> "$GITHUB_OUTPUT"
+          echo "ref=${repo}:${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Assume gha-images
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::431715654247:role/map2-e2e-20260915-singlecluster-gha-images
+          aws-region: ap-southeast-1
+          role-session-name: map2-gha-images
+
+      - name: Confirm images identity
+        run: |
+          set -euo pipefail
+          arn="$(aws sts get-caller-identity --query Arn --output text --region ap-southeast-1)"
+          echo "sts arn=${arn}"
+          case "${arn}" in
+            arn:aws:sts::431715654247:assumed-role/map2-e2e-20260915-singlecluster-gha-images/*) ;;
+            *) echo "release must assume gha-images, got ${arn}" >&2; exit 1 ;;
+          esac
+
+      - name: Login to ECR
+        id: login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Check ECR registry
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.login.outputs.registry }}" != "${ECR_REGISTRY}" ]; then
+            echo "unexpected registry ${{ steps.login.outputs.registry }}" >&2
+            exit 1
+          fi
+
+      - name: Set up docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: Dockerfile
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          secrets: "github=${{ secrets.GIT_NETRC }}"
+          tags: ${{ steps.image.outputs.ref }}
+          cache-from: |
+            type=gha
+            type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:cache
+          cache-to: |
+            type=gha,mode=max
+            type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:cache,mode=max
+
+      - name: Check digest
+        id: digest
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          digest="$(printf '%s' "$DIGEST" | tr 'A-F' 'a-f')"
+          if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            echo "digest must be sha256:<64 lowercase hex>, got ${DIGEST}" >&2
+            exit 1
+          fi
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.MAP2_CD_APP_ID }}
+          private-key: ${{ secrets.MAP2_CD_APP_PRIVATE_KEY }}
+          owner: matrixorigin
+          repositories: gitops
+
+      - name: Dispatch gitops pin
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          IMAGE: ${{ steps.image.outputs.ref }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh workflow run map2-update-image.yaml \
+            --repo "${GITOPS_REPO}" \
+            --ref map2 \
+            -f "image=${IMAGE}" \
+            -f "digest=${DIGEST}" \
+            -f "files={}" \
+            -f "sourceRepo=${GITHUB_REPOSITORY}" \
+            -f "sourceSha=${GITHUB_SHA}" \
+            -f "tag=${TAG}"
+
+      - name: Summary
+        if: always()
+        env:
+          IMAGE: ${{ steps.image.outputs.ref }}
+          DIGEST: ${{ steps.digest.outputs.digest || steps.push.outputs.digest }}
+        run: |
+          {
+            echo "## MAP2 matrixone-operator image"
+            echo "- image: \`${IMAGE}\`"
+            echo "- digest: \`${DIGEST}\`"
+            echo "- source: \`${GITHUB_REPOSITORY}@${GITHUB_SHA}\`"
+            echo "- pin: gh workflow run map2-update-image.yaml --repo ${GITOPS_REPO} --ref map2"
+          } >> "$GITHUB_STEP_SUMMARY"
