@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ import (
 
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var testEnvStarted bool
 var ctx context.Context
 var cancel context.CancelFunc
 
@@ -71,6 +72,7 @@ var _ = BeforeSuite(func() {
 	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
+	testEnvStarted = true
 
 	scheme := runtime.NewScheme()
 
@@ -124,8 +126,13 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	cancel()
+	if cancel != nil {
+		cancel()
+	}
 	By("tearing down the test environment")
+	if testEnv == nil || !testEnvStarted {
+		return
+	}
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })

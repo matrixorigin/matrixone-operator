@@ -425,7 +425,8 @@ _Appears in:_
 | `memoryFsSize` _[Quantity](#quantity)_ | MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead<br />Binary would be loaded from disk if MemoryFsSize is not set |  |  |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet,<br />node storage will be used if not specified |  |  |
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |  |  |
-| `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the python udf server in CN |  |  |
+| `udfWorker` _[UDFWorkerPolicy](#udfworkerpolicy)_ | UDFWorker is the effective typed policy for the CNSet. It is deliberately<br />placed in this flattened struct so CNPoolSpec.Template carries exactly<br />the same policy and revision hashing includes it. |  |  |
+| `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the historical demo entry point. It remains only to<br />provide a stable rejection for old manifests; it is never rendered.<br />Deprecated: use UDFWorker. |  |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service | ClusterIP | Enum: [ClusterIP NodePort LoadBalancer] <br /> |
 | `serviceAnnotations` _object (keys:string, values:string)_ | ServiceAnnotations are the annotations for the cn service |  |  |
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer,<br />reconciling will fail if the node port is not available. |  |  |
@@ -627,7 +628,8 @@ _Appears in:_
 | `memoryFsSize` _[Quantity](#quantity)_ | MemoryFsSize is the size of memory filesystem, which will be used to store matrixone binary to skip page cache overhead<br />Binary would be loaded from disk if MemoryFsSize is not set |  |  |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet,<br />node storage will be used if not specified |  |  |
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |  |  |
-| `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the python udf server in CN |  |  |
+| `udfWorker` _[UDFWorkerPolicy](#udfworkerpolicy)_ | UDFWorker is the effective typed policy for the CNSet. It is deliberately<br />placed in this flattened struct so CNPoolSpec.Template carries exactly<br />the same policy and revision hashing includes it. |  |  |
+| `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the historical demo entry point. It remains only to<br />provide a stable rejection for old manifests; it is never rendered.<br />Deprecated: use UDFWorker. |  |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ | ServiceType is the service type of cn service | ClusterIP | Enum: [ClusterIP NodePort LoadBalancer] <br /> |
 | `serviceAnnotations` _object (keys:string, values:string)_ | ServiceAnnotations are the annotations for the cn service |  |  |
 | `nodePort` _integer_ | NodePort specifies the node port to use when ServiceType is NodePort or LoadBalancer,<br />reconciling will fail if the node port is not available. |  |  |
@@ -753,7 +755,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `cacheVolume` _[Volume](#volume)_ | CacheVolume is the desired local cache volume for CNSet,<br />node storage will be used if not specified |  |  |
 | `sharedStorageCache` _[SharedStorageCache](#sharedstoragecache)_ | SharedStorageCache is the configuration of the S3 sharedStorageCache |  |  |
-| `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the python udf server in CN |  |  |
+| `udfWorker` _[UDFWorkerPolicy](#udfworkerpolicy)_ | UDFWorker is the effective typed policy for the CNSet. It is deliberately<br />placed in this flattened struct so CNPoolSpec.Template carries exactly<br />the same policy and revision hashing includes it. |  |  |
+| `pythonUdfSidecar` _[PythonUdfSidecar](#pythonudfsidecar)_ | PythonUdfSidecar is the historical demo entry point. It remains only to<br />provide a stable rejection for old manifests; it is never rendered.<br />Deprecated: use UDFWorker. |  |  |
 
 
 #### DNSet
@@ -1084,6 +1087,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `udfWorker` _[UDFWorkerPolicy](#udfworkerpolicy)_ | UDFWorker is the single cluster-level source policy. The<br />MatrixOneCluster actor propagates a deep copy to every generated CNSet;<br />per-group copies are rejected to avoid precedence ambiguity. |  |  |
 | `tp` _[CNSetSpec](#cnsetspec)_ | TP is the default CN pod set that accepts client connections and execute queries<br />Deprecated: use cnGroups instead |  |  |
 | `ap` _[CNSetSpec](#cnsetspec)_ | AP is an optional CN pod set that accept MPP sub-plans to accelerate sql queries<br />Deprecated: use cnGroups instead |  |  |
 | `cnGroups` _[CNGroup](#cngroup) array_ | CNGroups are CN pod sets that have different spec like resources, arch, store labels |  |  |
@@ -1634,6 +1638,172 @@ _Appears in:_
 - [ProxySetSpec](#proxysetspec)
 - [WebUISpec](#webuispec)
 
+
+
+#### UDFClientConfig
+
+
+
+
+
+
+
+_Appears in:_
+- [UDFWorkerPolicy](#udfworkerpolicy)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `allowUnisolated` _boolean_ |  |  |  |
+| `maxBatchBytes` _integer_ |  |  |  |
+| `maxBatchRows` _integer_ |  |  |  |
+| `maxInvocationRows` _integer_ |  |  |  |
+| `maxInvocationResultBytes` _integer_ |  |  |  |
+| `maxActiveInvocations` _integer_ |  |  |  |
+| `requestTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | A nil or zero timeout means the CN runtime default. A positive value is<br />bounded by the current runtime contract. |  |  |
+| `maxTerminalEntries` _integer_ |  |  |  |
+| `maxTerminalBytes` _integer_ |  |  |  |
+| `terminalRecordTTL` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ |  |  |  |
+
+
+#### UDFWorkerLauncher
+
+_Underlying type:_ _string_
+
+UDFWorkerLauncher identifies the process boundary used by the worker.
+
+
+
+_Appears in:_
+- [UDFWorkerPolicy](#udfworkerpolicy)
+
+
+
+#### UDFWorkerMOServiceSpec
+
+
+
+
+
+
+
+_Appears in:_
+- [UDFWorkerSpec](#udfworkerspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `path` _string_ | Path and Python are consumed by the future external mo-service launcher.<br />UUID and address are generated from workload identity and are never<br />accepted from the user. |  |  |
+| `python` _string_ |  |  |  |
+
+
+
+
+#### UDFWorkerPolicy
+
+
+
+UDFWorkerPolicy is the single typed policy used at the CNSet boundary. A
+nil policy means disabled. A non-nil policy with Enabled=false is an
+explicit, presence-aware disable and must not create worker resources.
+
+
+The policy intentionally contains no source code, artifact URI, command,
+args, or arbitrary Pod overlay. Function identity and executable artifact
+ownership belong to MatrixOne's Catalog/runtime contracts.
+
+
+
+_Appears in:_
+- [CNGroup](#cngroup)
+- [CNSetSpec](#cnsetspec)
+- [ConfigThatChangeCNSpec](#configthatchangecnspec)
+- [MatrixOneClusterSpec](#matrixoneclusterspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled is the explicit feature switch. It is not inferred from any<br />image, port, or client setting. |  |  |
+| `topology` _[UDFWorkerTopology](#udfworkertopology)_ |  |  | Enum: [disabled paired pool] <br /> |
+| `launcher` _[UDFWorkerLauncher](#udfworkerlauncher)_ |  |  | Enum: [python-image mo-service] <br /> |
+| `worker` _[UDFWorkerSpec](#udfworkerspec)_ |  |  |  |
+| `client` _[UDFClientConfig](#udfclientconfig)_ |  |  |  |
+| `pool` _[UDFWorkerPoolSpec](#udfworkerpoolspec)_ | Pool is meaningful only for the future independent worker pool<br />topology. It is retained as typed configuration so current admission can<br />reject it without interpreting replicas as a same-Pod worker count. |  |  |
+
+
+#### UDFWorkerPoolSpec
+
+
+
+
+
+
+
+_Appears in:_
+- [UDFWorkerPolicy](#udfworkerpolicy)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ |  |  |  |
+
+
+#### UDFWorkerSpec
+
+
+
+UDFWorkerSpec contains only structured workload properties controlled by
+the Operator. For the current same-Pod topology, scheduling and service
+account fields must remain empty because the worker shares the CN Pod.
+
+
+
+_Appears in:_
+- [UDFWorkerPolicy](#udfworkerpolicy)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `image` _string_ | Image must be an immutable digest for an enabled policy. |  |  |
+| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |  | Enum: [Always Never IfNotPresent] <br /> |
+| `port` _integer_ | Port is the worker's Pod-local Flight port. The Operator owns the bind<br />address and always renders 127.0.0.1 for same-Pod workers. It cannot use<br />a port occupied by the CN SQL, internal service, or metrics endpoints. |  | Maximum: 65535 <br />Minimum: 1 <br /> |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcerequirements-v1-core)_ |  |  |  |
+| `nodeSelector` _object (keys:string, values:string)_ | These fields are reserved for an external Worker workload. They are<br />rejected for the current same-Pod implementation. |  |  |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#toleration-v1-core) array_ |  |  |  |
+| `serviceAccountName` _string_ |  |  |  |
+| `updateStrategy` _[UDFWorkerUpdateStrategy](#udfworkerupdatestrategy)_ |  |  |  |
+| `moService` _[UDFWorkerMOServiceSpec](#udfworkermoservicespec)_ |  |  |  |
+
+
+
+
+#### UDFWorkerTopology
+
+_Underlying type:_ _string_
+
+UDFWorkerTopology describes the logical placement contract of a Python UDF
+worker. The current Operator implementation supports paired workers in the
+CN Pod only. The other values remain part of the typed API so that an
+unsupported request is rejected deterministically rather than silently
+rendered as a different topology.
+
+
+
+_Appears in:_
+- [UDFWorkerPolicy](#udfworkerpolicy)
+- [UDFWorkerStatus](#udfworkerstatus)
+
+
+
+#### UDFWorkerUpdateStrategy
+
+
+
+
+
+
+
+_Appears in:_
+- [UDFWorkerSpec](#udfworkerspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `drainTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#duration-v1-meta)_ | DrainTimeout is used by the future external route owner. Same-Pod<br />workers are drained with the CNSet Pod lifecycle. |  |  |
 
 
 #### Volume

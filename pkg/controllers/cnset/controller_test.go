@@ -490,6 +490,45 @@ func TestCNSetActor_Observe(t *testing.T) {
 	}
 }
 
+func TestWaitAllCNDrainedScalesRenderedCloneSet(t *testing.T) {
+	s := newScheme()
+	cn := &v1alpha1.CNSet{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"}}
+	cs := &kruisev1alpha1.CloneSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: cn.Namespace, Name: setName(cn)},
+		Spec:       kruisev1alpha1.CloneSetSpec{Replicas: pointer.Int32(2)},
+		Status:     kruisev1alpha1.CloneSetStatus{Replicas: 2},
+	}
+	cli := fake.KubeClientBuilder().WithScheme(s).WithObjects(cs).Build()
+	ctx := fake.NewContext(cn, cli, nil)
+
+	done, err := waitAllCNDrained(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if done {
+		t.Fatal("drain completed while the rendered CloneSet still had replicas")
+	}
+	current := &kruisev1alpha1.CloneSet{}
+	if err := cli.Get(ctx, client.ObjectKeyFromObject(cs), current); err != nil {
+		t.Fatal(err)
+	}
+	if current.Spec.Replicas == nil || *current.Spec.Replicas != 0 {
+		t.Fatalf("rendered CloneSet replicas = %v, want 0", current.Spec.Replicas)
+	}
+
+	current.Status.Replicas = 0
+	if err := cli.Update(ctx, current); err != nil {
+		t.Fatal(err)
+	}
+	done, err = waitAllCNDrained(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !done {
+		t.Fatal("drain did not complete after the rendered CloneSet reached zero replicas")
+	}
+}
+
 func TestCNSetVolumeMount(t *testing.T) {
 	s := newScheme()
 

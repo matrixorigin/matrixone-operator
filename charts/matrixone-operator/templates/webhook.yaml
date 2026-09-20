@@ -15,6 +15,28 @@ webhooks:
     service:
       name: webhook-service
       namespace: '{{ .Release.Namespace }}'
+      path: /mutate-core-matrixorigin-io-v1alpha1-cnpool
+  failurePolicy: Fail
+  name: mcnpool.kb.io
+  rules:
+  - apiGroups:
+    - core.matrixorigin.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - cnpools
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: '{{ .Release.Namespace }}'
       path: /mutate-core-matrixorigin-io-v1alpha1-cnset
   failurePolicy: Fail
   name: mcnset.kb.io
@@ -126,6 +148,28 @@ metadata:
   annotations:
     matrixorigin.io/ca-injection: 'y'
 webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: '{{ .Release.Namespace }}'
+      path: /validate-core-matrixorigin-io-v1alpha1-cnpool
+  failurePolicy: Fail
+  name: vcnpool.kb.io
+  rules:
+  - apiGroups:
+    - core.matrixorigin.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - cnpools
+  sideEffects: None
 - admissionReviewVersions:
   - v1
   - v1beta1

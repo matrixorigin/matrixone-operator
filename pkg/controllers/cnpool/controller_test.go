@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package cnpool
 import (
 	"context"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	kruisev1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -36,6 +38,49 @@ import (
 
 	. "github.com/onsi/gomega"
 )
+
+func validPoolUDFWorkerPolicyForTest() *v1alpha1.UDFWorkerPolicy {
+	return &v1alpha1.UDFWorkerPolicy{
+		Enabled:  true,
+		Topology: v1alpha1.UDFWorkerTopologyPaired,
+		Launcher: v1alpha1.UDFWorkerLauncherPythonImage,
+		Worker: v1alpha1.UDFWorkerSpec{
+			Image: "registry.example/udf-worker@sha256:" + strings.Repeat("c", 64),
+			Resources: corev1.ResourceRequirements{Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("1"),
+				corev1.ResourceMemory: resource.MustParse("1Gi"),
+			}},
+		},
+		Client: v1alpha1.UDFClientConfig{AllowUnisolated: true},
+	}
+}
+
+func TestBuildCNSetKeepsPoolLifecycleLabelsOutOfUserOverlay(t *testing.T) {
+	p := &v1alpha1.CNPool{
+		ObjectMeta: metav1.ObjectMeta{Name: "pool-a", Namespace: "ns"},
+		Spec: v1alpha1.CNPoolSpec{
+			Template: v1alpha1.CNSetSpec{
+				PodSet:                 v1alpha1.PodSet{MainContainer: v1alpha1.MainContainer{Image: "matrixone@sha256:" + strings.Repeat("d", 64)}},
+				ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{UDFWorker: validPoolUDFWorkerPolicyForTest()},
+			},
+		},
+	}
+	got, err := buildCNSet(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Labels[v1alpha1.PoolNameLabel] != p.Name {
+		t.Fatalf("CNSet pool metadata label = %q, want %q", got.Labels[v1alpha1.PoolNameLabel], p.Name)
+	}
+	if got.Spec.Overlay != nil {
+		if _, ok := got.Spec.Overlay.PodLabels[v1alpha1.CNPodPhaseLabel]; ok {
+			t.Fatalf("CNSet overlay contains controller-owned phase label: %#v", got.Spec.Overlay.PodLabels)
+		}
+		if _, ok := got.Spec.Overlay.PodLabels[v1alpha1.PoolNameLabel]; ok {
+			t.Fatalf("CNSet overlay contains controller-owned pool label: %#v", got.Spec.Overlay.PodLabels)
+		}
+	}
+}
 
 func Test_sortPodByDeletionOrder(t *testing.T) {
 	now := time.Now()

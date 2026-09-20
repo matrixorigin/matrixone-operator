@@ -5,6 +5,22 @@ metadata:
 spec:
   imageRepository: matrixorigin/matrixone
   version: nightly-b3da04e0
+  # Development/CI only: replace the placeholder with the digest of the
+  # current MatrixOne Python worker image before creating this resource.
+  udfWorker:
+    enabled: true
+    topology: paired
+    launcher: python-image
+    worker:
+      image: matrixorigin/mo-python-udf-worker@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      resources:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+    client:
+      # The current worker is intentionally unisolated; use only in a trusted
+      # development or CI profile until the sandbox/security gate is complete.
+      allowUnisolated: true
   logService:
     replicas: 3
     sharedStorage:
@@ -25,5 +41,3 @@ spec:
     replicas: 2
     cacheVolume:
       size: 10Gi
-    pythonUdfSidecar:
-      enabled: true

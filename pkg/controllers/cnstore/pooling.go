@@ -41,6 +41,14 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 
 	switch pod.Labels[v1alpha1.CNPodPhaseLabel] {
 	case v1alpha1.CNPodPhaseDraining:
+		// Python-enabled Pods cannot be returned to Idle. The CN process,
+		// Gateway ledger and worker heap share this Pod and would otherwise
+		// cross the next claim owner. Keep this check before the legacy
+		// ReclaimedAt fast path, which historically returned old Pods to Idle.
+		if c.pythonUDFEnabled(pod) {
+			ctx.Log.Info("evict Python-enabled CN Pod instead of pooling it")
+			return evictPoolPodGracefully(ctx, pod)
+		}
 		// recycle the pod
 		timeStr, ok := pod.Annotations[common.ReclaimedAt]
 		if !ok {
@@ -103,6 +111,26 @@ func (c *withCNSet) poolingCNReconcile(ctx *recon.Context[*corev1.Pod]) error {
 	default:
 		return errors.Errorf("unkown CN phase %s", pod.Labels[v1alpha1.CNPodPhaseLabel])
 	}
+}
+
+// pythonUDFEnabled treats the Pod marker as an optimization, not as the
+// source of truth. The CNSet policy is controller-owned and remains available
+// through the resolved withCNSet even if a stale Pod update removed the
+// marker. This keeps a Python-enabled Pod out of the Idle pool on every
+// reclaim path, including the legacy missing-ReclaimedAt fast path.
+func (c *withCNSet) pythonUDFEnabled(pod *corev1.Pod) bool {
+	if pod == nil {
+		return false
+	}
+	if pod.Labels[v1alpha1.UDFWorkerEnabledLabel] == v1alpha1.UDFWorkerEnabledValue {
+		return true
+	}
+	for _, container := range pod.Spec.Containers {
+		if container.Name == v1alpha1.ContainerUDFWorker {
+			return true
+		}
+	}
+	return c.cn != nil && c.cn.Spec.UDFWorker.IsEnabled()
 }
 
 func (c *withCNSet) patchPhase(ctx *recon.Context[*corev1.Pod], phase string) error {

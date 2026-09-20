@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -245,6 +245,11 @@ func main() {
 
 	qc, err := querycli.New()
 	exitIf(err, "unable to create query client")
+	defer func() {
+		if err := qc.Close(); err != nil {
+			setupLog.Error(err, "error closing query client")
+		}
+	}()
 	haCliMgr := mocli.NewManager(mgr.GetClient(), zapLogger.Named("mocli-manager"))
 	if features.DefaultFeatureGate.Enabled(features.CNLabel) {
 		cnLabelController := cnstore.NewController(haCliMgr, qc)

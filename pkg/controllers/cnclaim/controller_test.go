@@ -18,10 +18,12 @@ import (
 	"context"
 	stderrors "errors"
 	"math/rand"
+	"strings"
 	"testing"
 
 	reconfake "github.com/matrixorigin/controller-runtime/pkg/fake"
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -317,6 +319,63 @@ func Test_transferPodOwnership_removesLabelsNotManagedByTarget(t *testing.T) {
 	g.Expect(updatedPod.Labels).NotTo(HaveKey(v1alpha1.ClaimSetNameLabel))
 	g.Expect(updatedPod.Labels).NotTo(HaveKey(v1alpha1.PodOwnerNameLabel))
 	g.Expect(updatedPod.Labels).NotTo(HaveKey("source-only"))
+}
+
+func Test_transferPodOwnership_rejectsPythonEnabledPod(t *testing.T) {
+	storedPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "python-cn",
+			Namespace: "default",
+			Labels: map[string]string{
+				v1alpha1.UDFWorkerEnabledLabel: v1alpha1.UDFWorkerEnabledValue,
+			},
+		},
+	}
+	from := &v1alpha1.CNClaim{ObjectMeta: metav1.ObjectMeta{Name: "from", Namespace: "default"}}
+	to := &v1alpha1.CNClaim{ObjectMeta: metav1.ObjectMeta{Name: "to", Namespace: "default"}}
+	cli := newFakeClient(storedPod)
+	if err := transferPodOwnership(&fakeKubeClient{cli}, storedPod, from, to); err == nil || !strings.Contains(err.Error(), "Python-enabled") {
+		t.Fatalf("transferPodOwnership error = %v, want Python-enabled rejection", err)
+	}
+}
+
+func TestIsUDFWorkerPod(t *testing.T) {
+	if !isUDFWorkerPod(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
+		v1alpha1.UDFWorkerEnabledLabel: v1alpha1.UDFWorkerEnabledValue,
+	}}}) {
+		t.Fatal("Python-enabled marker was not recognized")
+	}
+	if isUDFWorkerPod(&corev1.Pod{}) {
+		t.Fatal("unmarked Pod was treated as Python-enabled")
+	}
+	if !isUDFWorkerPod(&corev1.Pod{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: v1alpha1.ContainerUDFWorker}}}}) {
+		t.Fatal("Worker container was not treated as Python-enabled after marker removal")
+	}
+}
+
+func TestActorIsUDFWorkerPodFallsBackToCNSetPolicy(t *testing.T) {
+	policy := &v1alpha1.UDFWorkerPolicy{Enabled: true}
+	cn := &v1alpha1.CNSet{
+		ObjectMeta: metav1.ObjectMeta{Name: "cn", Namespace: "ns"},
+		Spec:       v1alpha1.CNSetSpec{ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{UDFWorker: policy}},
+	}
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:      "pod",
+		Namespace: "ns",
+		Labels: map[string]string{
+			common.InstanceLabelKey: cn.Name,
+		},
+	}}
+	claim := &v1alpha1.CNClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim", Namespace: "ns"}}
+	cli := newFakeClient(cn)
+	ctx := reconfake.NewContext(claim, cli, nil)
+	got, err := (&Actor{}).isUDFWorkerPod(ctx, pod)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got {
+		t.Fatal("CNSet policy should identify an unmarked Python-enabled Pod")
+	}
 }
 
 func Test_Finalize_rejectsAmbiguousOwnershipTransfer(t *testing.T) {

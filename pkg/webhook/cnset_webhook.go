@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -96,6 +96,7 @@ func (c *cnSetDefaulter) DefaultSpec(spec *v1alpha1.CNSetSpec) {
 	}
 	setDefaultServiceArgs(spec)
 	setPodSetDefaults(&spec.PodSet)
+	defaultUDFWorkerPolicy(spec.UDFWorker)
 }
 
 // +kubebuilder:webhook:path=/validate-core-matrixorigin-io-v1alpha1-cnset,mutating=false,failurePolicy=fail,sideEffects=None,groups=core.matrixorigin.io,resources=cnsets,verbs=create;update,versions=v1alpha1,name=vcnset.kb.io,admissionReviewVersions={v1,v1beta1}
@@ -141,29 +142,34 @@ func (c *cnSetValidator) ValidateDelete(_ context.Context, _ runtime.Object) (wa
 }
 
 func (c *cnSetValidator) ValidateSpecCreate(spec *v1alpha1.CNSetSpec) field.ErrorList {
+	return c.ValidateSpecCreateAt(spec, field.NewPath("spec"))
+}
+
+func (c *cnSetValidator) ValidateSpecCreateAt(spec *v1alpha1.CNSetSpec, path *field.Path) field.ErrorList {
 	var errs field.ErrorList
 	if spec.CacheVolume != nil {
-		errs = append(errs, validateVolume(spec.CacheVolume, field.NewPath("spec").Child("cacheVolume"))...)
+		errs = append(errs, validateVolume(spec.CacheVolume, path.Child("cacheVolume"))...)
 	}
 	if spec.ServiceType == corev1.ServiceTypeExternalName {
-		errs = append(errs, field.Invalid(field.NewPath("spec").Child("serviceType"), spec.ServiceType, "must be one of [ClusterIP, NodePort, LoadBalancer]"))
+		errs = append(errs, field.Invalid(path.Child("serviceType"), spec.ServiceType, "must be one of [ClusterIP, NodePort, LoadBalancer]"))
 	}
 	if spec.NodePort != nil && spec.ServiceType == corev1.ServiceTypeClusterIP {
-		errs = append(errs, field.Invalid(field.NewPath("spec").Child("nodePort"), spec.NodePort, "cannot set node port when serviceType is ClusterIP"))
+		errs = append(errs, field.Invalid(path.Child("nodePort"), spec.NodePort, "cannot set node port when serviceType is ClusterIP"))
 	}
 	for i, l := range spec.Labels {
 		if l.Key == "" {
-			errs = append(errs, field.Invalid(field.NewPath("spec").Child("cnLabels").Index(i).Child("key"), spec.Labels[i], "label key cannot be empty"))
+			errs = append(errs, field.Invalid(path.Child("cnLabels").Index(i).Child("key"), spec.Labels[i], "label key cannot be empty"))
 		}
 		if len(l.Values) == 0 {
-			errs = append(errs, field.Invalid(field.NewPath("spec").Child("cnLabels").Index(i).Child("values"), spec.Labels[i], "label values cannot be empty"))
+			errs = append(errs, field.Invalid(path.Child("cnLabels").Index(i).Child("values"), spec.Labels[i], "label values cannot be empty"))
 		}
 		for j, v := range l.Values {
 			if v == "" {
-				errs = append(errs, field.Invalid(field.NewPath("spec").Child("cnLabels").Index(i).Child("values").Index(j), spec.Labels[i].Values, "label value cannot be empty string"))
+				errs = append(errs, field.Invalid(path.Child("cnLabels").Index(i).Child("values").Index(j), spec.Labels[i].Values, "label value cannot be empty string"))
 			}
 		}
 	}
-	errs = append(errs, validateGoMemLimitPercent(spec.MemoryLimitPercent, field.NewPath("spec").Child("memoryLimitPercent"))...)
+	errs = append(errs, validateGoMemLimitPercent(spec.MemoryLimitPercent, path.Child("memoryLimitPercent"))...)
+	errs = append(errs, validateUDFWorkerPolicy(spec, path)...)
 	return errs
 }

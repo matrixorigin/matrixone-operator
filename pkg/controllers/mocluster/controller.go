@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -112,6 +112,28 @@ func (r *MatrixOneClusterActor) Observe(ctx *recon.Context[*v1alpha1.MatrixOneCl
 
 func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster]) (recon.Action[*v1alpha1.MatrixOneCluster], error) {
 	mo := ctx.Obj
+
+	// Build and validate the effective CN sources before creating or updating
+	// any child resource. Restore paths and old controllers can bypass the
+	// webhook; a rejected Python policy must not leave LogSet/DNSet mutations
+	// behind while the generated CN groups are known to be invalid.
+	cnGroups := append([]v1alpha1.CNGroup{}, mo.Spec.CNGroups...)
+	// append TP and AP cnset for backward compatibility
+	if mo.Spec.TP != nil {
+		spec := *mo.Spec.TP
+		// for backward compatibility, the TP CN may store UUID in cache volume and check consistency
+		if spec.DNSBasedIdentity == nil {
+			spec.DNSBasedIdentity = pointer.Bool(false)
+		}
+		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "tp", CNSetSpec: spec})
+	}
+	if mo.Spec.AP != nil {
+		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "ap", CNSetSpec: *mo.Spec.AP})
+	}
+	if err := validateUDFWorkerSources(mo, cnGroups); err != nil {
+		return nil, errors.WrapPrefix(err, "invalid Python UDF worker configuration", 0)
+	}
+
 	if err := r.InitRootCredential(ctx); err != nil {
 		return nil, errors.WrapPrefix(err, "init cluster credential", 0)
 	}
@@ -148,20 +170,8 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 		return nil, errors.WrapPrefix(err, "sync DNSet", 0)
 	}
 
-	cnGroups := append([]v1alpha1.CNGroup{}, mo.Spec.CNGroups...)
-	// append TP and AP cnset for backward compatibility
-	if mo.Spec.TP != nil {
-		spec := *mo.Spec.TP
-		// for backward compatibility, the TP CN may store UUID in cache volume and check consistency
-		if spec.DNSBasedIdentity == nil {
-			spec.DNSBasedIdentity = pointer.Bool(false)
-		}
-		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "tp", CNSetSpec: spec})
-	}
-	if mo.Spec.AP != nil {
-		cnGroups = append(cnGroups, v1alpha1.CNGroup{Name: "ap", CNSetSpec: *mo.Spec.AP})
-	}
 	desiredCNSets := map[string]bool{}
+	desiredUDFCNSets := map[string]*v1alpha1.CNSet{}
 	for _, g := range cnGroups {
 		cnSetName := fmt.Sprintf("%s-%s", mo.Name, g.Name)
 		desiredCNSets[cnSetName] = true
@@ -178,18 +188,25 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 				tpl.Labels = map[string]string{}
 			}
 			tpl.Labels[common.MatrixoneClusterLabelKey] = mo.Name
-			tpl.Spec = g.CNSetSpec
+			tpl.Spec = *g.CNSetSpec.DeepCopy()
+			// The cluster-level policy is the only Python source for generated
+			// CN groups. Copy it into the effective CNSet boundary so direct
+			// CNSet reconciliation and CNPool hashing see the same typed value.
+			if mo.Spec.UDFWorker != nil {
+				tpl.Spec.UDFWorker = mo.Spec.UDFWorker.DeepCopy()
+			} else {
+				tpl.Spec.UDFWorker = nil
+			}
 			if mo.Spec.Proxy != nil {
 				if tpl.Spec.Config == nil {
 					tpl.Spec.Config = v1alpha1.NewTomlConfig(map[string]interface{}{})
 				}
 				tpl.Spec.Config.Set([]string{"cn", "frontend", "proxy-enabled"}, true)
 			}
-			tpl.Spec.Overlay = g.Overlay
-
 			// inherit global policies from MO
 			setPodSetDefault(&tpl.Spec.PodSet, mo)
 			setOverlay(&tpl.Spec.Overlay, mo)
+			sanitizeGeneratedCNSetOverlay(mo, &tpl.Spec)
 			// upsert DEFAULT_PASSWORD env
 			tpl.Spec.Overlay.Env = util.UpsertByKey(tpl.Spec.Overlay.Env, corev1.EnvVar{
 				Name: "DEFAULT_PASSWORD",
@@ -202,12 +219,13 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 			}, func(e corev1.EnvVar) string {
 				return e.Name
 			})
-			tpl.Spec.Image = common.CNSetImage(mo, &g.CNSetSpec)
+			tpl.Spec.Image = common.CNSetImage(mo, &tpl.Spec)
 			return nil
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, 0)
 		}
+		desiredUDFCNSets[cnSetName] = tpl.DeepCopy()
 	}
 
 	// GC no longer needed CNSets
@@ -247,6 +265,7 @@ func (r *MatrixOneClusterActor) Up(ctx *recon.Context[*v1alpha1.MatrixOneCluster
 		})
 	}
 	mo.Status.CNGroupStatus = groupStatus
+	syncUDFWorkerClusterStatus(mo, cnGroups, csList.Items, desiredUDFCNSets)
 
 	if mo.Spec.WebUI != nil {
 		webui := &v1alpha1.WebUI{

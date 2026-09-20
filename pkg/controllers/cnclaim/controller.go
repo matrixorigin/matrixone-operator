@@ -319,7 +319,18 @@ func deleteOnReclaim(p *corev1.Pod) {
 
 func (r *Actor) reclaimCN(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, opts ...reclaimOpts) error {
 	c := ctx.Obj
-	_, err := r.patchStore(ctx, pod, logpb.CNStateLabel{
+	// A Python-enabled Pod contains the CN process, Gateway state and worker
+	// process in one Pod. It must never enter the idle pool or cross a claim
+	// owner with label-only transfer. Kubernetes has no safe single-container
+	// restart primitive here, so force the existing eviction path.
+	pythonEnabled, err := r.isUDFWorkerPod(ctx, pod)
+	if err != nil {
+		return errors.WrapPrefix(err, "error determine Python-enabled CN Pod", 0)
+	}
+	if pythonEnabled {
+		opts = append(opts, deleteOnReclaim)
+	}
+	_, err = r.patchStore(ctx, pod, logpb.CNStateLabel{
 		State: metadata.WorkState_Draining,
 	})
 	if err != nil {
@@ -376,6 +387,17 @@ func (r *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNClaim]) (bool, error) {
 	}
 	for i := range ownedCNs {
 		cn := ownedCNs[i]
+		pythonEnabled, err := r.isUDFWorkerPod(ctx, &cn)
+		if err != nil {
+			return false, errors.WrapPrefix(err, "error determine Python-enabled CN Pod", 0)
+		}
+		if pythonEnabled {
+			ctx.Log.Info("reclaim Python-enabled CN Pod instead of transferring ownership", "pod", cn.Name)
+			if err := r.reclaimCN(ctx, &cn); err != nil {
+				return false, err
+			}
+			continue
+		}
 		holders := claimIndex[cn.Name]
 		if len(holders) > 1 {
 			return false, errors.Errorf("cannot transfer pod %s ownership: multiple CNClaims reference it: %v", cn.Name, claimNames(holders))
@@ -411,6 +433,9 @@ func transferPodOwnership(
 	pod *corev1.Pod,
 	from, to *v1alpha1.CNClaim,
 ) error {
+	if isUDFWorkerPod(pod) {
+		return errors.Errorf("cannot transfer Python-enabled Pod %s across CNClaim owners; reclaim it", pod.Name)
+	}
 	return cli.Patch(pod, func() error {
 		if pod.Labels == nil {
 			pod.Labels = map[string]string{}
@@ -437,6 +462,56 @@ func transferPodOwnership(
 		}
 		return nil
 	})
+}
+
+func isUDFWorkerPod(pod *corev1.Pod) bool {
+	if pod == nil {
+		return false
+	}
+	if pod.Labels[v1alpha1.UDFWorkerEnabledLabel] == v1alpha1.UDFWorkerEnabledValue {
+		return true
+	}
+	for _, container := range pod.Spec.Containers {
+		if container.Name == v1alpha1.ContainerUDFWorker {
+			return true
+		}
+	}
+	return false
+}
+
+// isUDFWorkerPod combines the rendered marker with the effective CNSet policy.
+// The marker is the fast path, but it is mutable Pod metadata; relying on it
+// alone would let a stale or manually edited marker send a Python-enabled Pod
+// through label-only claim transfer or the idle pool. A CN Pod with a missing
+// marker is resolved back to its CNSet before any ownership-changing action.
+func (r *Actor) isUDFWorkerPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod) (bool, error) {
+	if isUDFWorkerPod(pod) {
+		return true, nil
+	}
+	if pod == nil {
+		return false, nil
+	}
+	if component := pod.Labels[common.ComponentLabelKey]; component != "" && component != "CNSet" {
+		return false, nil
+	}
+	// The marker and component label are mutable Pod metadata. Resolve the
+	// CNSet from the controller-owned instance identity as well, so removing a
+	// marker or component label cannot turn an enabled Pod into an ordinary pool
+	// Pod. A missing CNSet is treated as no longer Python-enabled; any other read
+	// error is returned so the claim does not proceed on incomplete ownership
+	// evidence.
+	instanceName := pod.Labels[common.InstanceLabelKey]
+	if instanceName == "" {
+		return false, nil
+	}
+	cn := &v1alpha1.CNSet{}
+	if err := ctx.Get(client.ObjectKey{Namespace: pod.Namespace, Name: instanceName}, cn); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return cn.Spec.UDFWorker.IsEnabled(), nil
 }
 
 // podClaimedByOthers checks if the given pod is referenced by any CNClaim's

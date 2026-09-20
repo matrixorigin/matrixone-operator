@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package webhook
 import (
 	"context"
 	"fmt"
+	"strings"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,6 +29,27 @@ import (
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 )
+
+func TestMatrixOneClusterValidatesEffectiveUDFWorkerOverlay(t *testing.T) {
+	sharedPID := true
+	cluster := &v1alpha1.MatrixOneCluster{
+		Spec: v1alpha1.MatrixOneClusterSpec{
+			UDFWorker: webhookTestPolicy(),
+			TN:        &v1alpha1.DNSetSpec{},
+			CNGroups: []v1alpha1.CNGroup{{
+				Name: "analytics",
+				CNSetSpec: v1alpha1.CNSetSpec{PodSet: v1alpha1.PodSet{
+					Overlay: &v1alpha1.Overlay{ShareProcessNamespace: &sharedPID},
+				}},
+			}},
+		},
+	}
+	validator := &matrixOneClusterValidator{cn: &cnSetValidator{}, dn: &dnSetValidator{}}
+	errs := validator.validateMutateCommon(cluster)
+	if len(errs) == 0 || !strings.Contains(errs.ToAggregate().Error(), "PythonEnabledCNSetDisallowsSharedProcessNamespace") {
+		t.Fatalf("effective cluster policy errors = %v, want shared PID rejection", errs)
+	}
+}
 
 var _ = Describe("MatrixOneCluster Webhook", func() {
 

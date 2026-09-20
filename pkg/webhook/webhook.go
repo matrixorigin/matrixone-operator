@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,6 +43,9 @@ func RegisterWebhooks(mgr ctrl.Manager) error {
 		return err
 	}
 	if err := (matrixOneClusterWebhook{}).setupWebhookWithManager(mgr); err != nil {
+		return err
+	}
+	if err := (cnPoolWebhook{}).setupWebhookWithManager(mgr); err != nil {
 		return err
 	}
 	return nil

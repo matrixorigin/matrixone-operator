@@ -36,6 +36,7 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -75,12 +77,20 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	cn := ctx.Obj
 
 	ctx.Log.Info("observe cnset", "name", cn.Name, "operatorVersion", cn.Spec.GetOperatorVersion())
+	if err := validateUDFWorkerRendering(cn); err != nil {
+		return nil, err
+	}
 	cs := &kruisev1alpha1.CloneSet{}
 	err, foundCs := util.IsFound(ctx.Get(client.ObjectKey{Namespace: cn.Namespace, Name: setName(cn)}, cs))
 	if err != nil {
 		return nil, errors.WrapPrefix(err, "get cn clonset", 0)
 	}
 	if !foundCs {
+		// Also converge a stale controller-owned NetworkPolicy when a previous
+		// rollout removed the CloneSet before the CNSet object was finalized.
+		if err := c.syncUDFWorkerNetworkPolicy(ctx); err != nil {
+			return nil, errors.WrapPrefix(err, "sync UDF worker network policy", 0)
+		}
 		return c.Create, nil
 	}
 
@@ -101,6 +111,16 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 
 	if err := c.syncMetricService(ctx, cs.Spec.Template.Labels); err != nil {
 		return nil, errors.WrapPrefix(err, "sync metric service", 0)
+	}
+	// Keep the ingress baseline in place while an enabled Worker is rendered.
+	// When disabling Python, deletion is intentionally deferred until after the
+	// CloneSet template has converged and all old Worker Pods have disappeared.
+	// This prevents a stale same-Pod Worker from being exposed during the
+	// disable rollout.
+	if cn.Spec.UDFWorker.IsEnabled() {
+		if err := c.syncUDFWorkerNetworkPolicy(ctx); err != nil {
+			return nil, errors.WrapPrefix(err, "sync UDF worker network policy", 0)
+		}
 	}
 
 	// diff desired cloneset and determine whether should an update be invoked
@@ -130,6 +150,11 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 			return c.with(cs).Update, nil
 		}
 	}
+	if !cn.Spec.UDFWorker.IsEnabled() {
+		if err := c.syncUDFWorkerNetworkPolicy(ctx); err != nil {
+			return nil, errors.WrapPrefix(err, "remove UDF worker network policy", 0)
+		}
+	}
 	// calculate status
 	var stores []v1alpha1.CNStore
 	podList := &corev1.PodList{}
@@ -156,6 +181,11 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	cn.Status.Replicas = cs.Status.Replicas
 	cn.Status.ReadyReplicas = cs.Status.ReadyReplicas
 	cn.Status.LabelSelector = cs.Status.LabelSelector
+	configReady, err := c.udfWorkerConfigReady(ctx, cs)
+	if err != nil {
+		return nil, errors.WrapPrefix(err, "check UDF worker config", 0)
+	}
+	syncUDFWorkerStatusWithPods(cn, cs, podList.Items, configReady)
 	// sync status from cloneset
 	if cs.Status.ReadyReplicas >= cn.Spec.Replicas {
 		setReady(cn)
@@ -184,7 +214,7 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 
 	if recon.IsReady(&cn.Status.ConditionalStatus) {
 		cn.Status.Host = fmt.Sprintf("%s.%s", svc.Name, svc.Namespace)
-		cn.Status.Port = CNSQLPort
+		cn.Status.Port = int(CNSQLPort)
 		if cs.Status.UpdatedReadyReplicas >= cn.Spec.Replicas {
 			// CN ready and updated, reconciliation complete
 			return nil, nil
@@ -192,6 +222,44 @@ func (c *Actor) Observe(ctx *recon.Context[*v1alpha1.CNSet]) (recon.Action[*v1al
 	}
 
 	return nil, recon.ErrReSync("cnset is not ready or synced", reSyncAfter)
+}
+
+func (c *Actor) udfWorkerConfigReady(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneSet) (bool, error) {
+	if ctx.Obj.Spec.UDFWorker == nil || !ctx.Obj.Spec.UDFWorker.Enabled || cs == nil ||
+		cs.Status.ReadyReplicas < ctx.Obj.Spec.Replicas || cs.Status.UpdatedReadyReplicas < ctx.Obj.Spec.Replicas {
+		return false, nil
+	}
+	if !hasAuthoritativeUDFWorker(ctx.Obj.Spec.UDFWorker, cs) {
+		return false, nil
+	}
+	configSuffix := ""
+	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(ctx.Obj.Spec.GetOperatorVersion()) {
+		configSuffix = cs.Spec.Template.Annotations[common.ConfigSuffixAnno]
+		if configSuffix == "" {
+			return false, nil
+		}
+	}
+	for _, volume := range cs.Spec.Template.Spec.Volumes {
+		if volume.Name != common.ConfigVolume || volume.ConfigMap == nil || volume.ConfigMap.Name == "" {
+			continue
+		}
+		cm := &corev1.ConfigMap{}
+		if err := ctx.Get(client.ObjectKey{Namespace: ctx.Obj.Namespace, Name: volume.ConfigMap.Name}, cm); err != nil {
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, err
+		}
+		if !metav1.IsControlledBy(cm, ctx.Obj) {
+			return false, nil
+		}
+		configKey := common.ConfigFile
+		if configSuffix != "" {
+			configKey = fmt.Sprintf("%s-%s", common.ConfigFile, configSuffix)
+		}
+		return hasExpectedUDFWorkerConfig(cm, configKey, ctx.Obj.Spec.UDFWorker), nil
+	}
+	return false, nil
 }
 
 // syncMetricService reconciles a dedicated ClusterIP Service exposing the CN metrics port,
@@ -273,7 +341,6 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 			return false, err
 		}
 	}
-
 	objs := []client.Object{&kruisev1alpha1.CloneSet{ObjectMeta: metav1.ObjectMeta{
 		Name: setName(cn),
 	}}, &corev1.Service{ObjectMeta: metav1.ObjectMeta{
@@ -296,6 +363,25 @@ func (c *Actor) Finalize(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 			return false, nil
 		}
 	}
+	if live, err := c.hasLiveCNPods(ctx); err != nil {
+		return false, err
+	} else if live {
+		// Deleting the CloneSet object does not synchronously guarantee that all
+		// Pods have disappeared. Keep the policy until the last CN Pod
+		// is gone, then let the next reconcile remove it.
+		return false, nil
+	}
+	// Keep the legacy isolation anchor through disable rollouts too: a CN-only
+	// Pod is still selected by it. Remove only after every CN Pod has gone.
+	if err := deleteOwnedUDFWorkerNetworkPolicy(ctx); err != nil {
+		return false, err
+	}
+	np := &networkingv1.NetworkPolicy{}
+	if exist, err := ctx.Exist(client.ObjectKey{Namespace: cn.Namespace, Name: udfWorkerNetworkPolicyName(cn)}, np); err != nil {
+		return false, err
+	} else if exist && metav1.IsControlledBy(np, cn) {
+		return false, nil
+	}
 	if features.DefaultFeatureGate.Enabled(features.S3Reclaim) && cn.Deps.LogSet != nil {
 		err := v1alpha1.RemoveBucketFinalizer(ctx.Context, ctx.Client, cn.Deps.LogSet.ObjectMeta, utils.MakeHashFinalizer(v1alpha1.BucketCNFinalizerPrefix, cn))
 		if err != nil {
@@ -310,7 +396,7 @@ func waitAllCNDrained(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
 	// scale CNSet to zero and then delete the CNSet to ensure gracefulness
 	cs := &kruisev1alpha1.CloneSet{ObjectMeta: metav1.ObjectMeta{
 		Namespace: cn.Namespace,
-		Name:      cn.Name,
+		Name:      setName(cn),
 	}}
 	if err := ctx.Get(client.ObjectKeyFromObject(cs), cs); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -344,13 +430,22 @@ func (c *Actor) Create(ctx *recon.Context[*v1alpha1.CNSet]) error {
 		return errors.WrapPrefix(err, "sync clone set", 0)
 	}
 	syncPersistentVolumeClaim(cn, cnSet)
+	// Render and persist the complete CN template before creating the
+	// controller-owned NetworkPolicy. syncCloneSet only prepares the template
+	// and ConfigMap; no worker Pod can start before the CloneSet is created, so
+	// this ordering avoids leaving a policy behind when rendering fails while
+	// still establishing the policy before the first Python-enabled Pod.
+	if err := c.syncUDFWorkerNetworkPolicy(ctx); err != nil {
+		return errors.WrapPrefix(err, "sync UDF worker network policy", 0)
+	}
 
 	// create all resources
-	err := lo.Reduce[client.Object, error]([]client.Object{
+	objects := []client.Object{
 		hSvc,
 		svc,
 		cnSet,
-	}, func(errs error, o client.Object, _ int) error {
+	}
+	err := lo.Reduce[client.Object, error](objects, func(errs error, o client.Object, _ int) error {
 		err := ctx.CreateOwned(o)
 		return multierr.Append(errs, util.Ignore(apierrors.IsAlreadyExists, err))
 	}, nil)
@@ -366,14 +461,36 @@ func (c *Actor) Reconcile(mgr manager.Manager) error {
 		recon.WithBuildFn(func(b *builder.Builder) {
 			b.Owns(&kruisev1alpha1.CloneSet{}).
 				Owns(&corev1.Service{}).
+				Owns(&networkingv1.NetworkPolicy{}).
 				Watches(&kruise.StatefulSet{}, handler.EnqueueRequestsFromMapFunc(requestsForLogSetStatefulSet(mgr.GetClient())),
-					builder.WithPredicates(common.LogSetReserveOrdinalsChangedPredicate()))
+					builder.WithPredicates(common.LogSetReserveOrdinalsChangedPredicate())).
+				Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(requestsForCNSetPod),
+					builder.WithPredicates(predicate.NewPredicateFuncs(isCNSetPod)))
 		}))
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func isCNSetPod(object client.Object) bool {
+	pod, ok := object.(*corev1.Pod)
+	if !ok || pod.Labels == nil {
+		return false
+	}
+	return pod.Labels[common.ComponentLabelKey] == "CNSet" &&
+		pod.Labels[common.InstanceLabelKey] != ""
+}
+
+func requestsForCNSetPod(_ context.Context, object client.Object) []reconcile.Request {
+	if !isCNSetPod(object) {
+		return nil
+	}
+	return []reconcile.Request{{NamespacedName: client.ObjectKey{
+		Namespace: object.GetNamespace(),
+		Name:      object.GetLabels()[common.InstanceLabelKey],
+	}}}
 }
 
 func requestsForLogSetStatefulSet(reader client.Reader) handler.MapFunc {
@@ -436,7 +553,9 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 		return errors.WrapPrefix(err, "sync pod meta", 0)
 	}
 	if ctx.Dep != nil {
-		syncPodSpec(ctx.Obj, cs, ctx.Dep.Deps.LogSet.Spec.SharedStorage)
+		if err := syncPodSpec(ctx.Obj, cs, ctx.Dep.Deps.LogSet.Spec.SharedStorage); err != nil {
+			return err
+		}
 	}
 	if pooling {
 		if cs.Annotations == nil {
@@ -466,10 +585,79 @@ func syncCloneSet(ctx *recon.Context[*v1alpha1.CNSet], cs *kruisev1alpha1.CloneS
 	if err != nil {
 		return err
 	}
+	if err := ensureUDFWorkerConfigOwnership(ctx, cm); err != nil {
+		return err
+	}
 	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(cn.Spec.GetOperatorVersion()) {
 		cs.Spec.Template.Annotations[common.ConfigSuffixAnno] = configSuffix
 	}
 	return common.SyncConfigMap(ctx, &cs.Spec.Template.Spec, cm, cn.Spec.GetOperatorVersion())
+}
+
+func ensureUDFWorkerConfigOwnership(ctx *recon.Context[*v1alpha1.CNSet], desired *corev1.ConfigMap) error {
+	if ctx.Obj.Spec.UDFWorker == nil || !ctx.Obj.Spec.UDFWorker.Enabled || desired == nil {
+		return nil
+	}
+	current := &corev1.ConfigMap{}
+	name := desired.Name
+	if !v1alpha1.GateInplaceConfigmapUpdate.Enabled(ctx.Obj.Spec.GetOperatorVersion()) {
+		var err error
+		name, err = common.LegacyConfigMapName(desired)
+		if err != nil {
+			return err
+		}
+	}
+	key := client.ObjectKey{Namespace: desired.Namespace, Name: name}
+	if err := ctx.Get(key, current); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if !metav1.IsControlledBy(current, ctx.Obj) {
+		return errors.Errorf("UDFWorkerConfigMapNameConflict: %s/%s is not controlled by CNSet %s", current.Namespace, current.Name, ctx.Obj.Name)
+	}
+	return nil
+}
+
+// hasLiveUDFWorkerPods finds old same-Pod workers by the controller-owned
+// marker or by the authoritative Worker container name. The marker is the
+// fast path, but inspecting the template also protects cleanup if a stale or
+// manually edited Pod update removed the marker. The CNSet selector prevents a
+// colliding Pod from another workload in the namespace from delaying cleanup.
+func (c *Actor) hasLiveUDFWorkerPods(ctx *recon.Context[*v1alpha1.CNSet]) (bool, error) {
+	pods := &corev1.PodList{}
+	labels := common.SubResourceLabels(ctx.Obj)
+	if err := ctx.List(pods, client.InNamespace(ctx.Obj.Namespace), client.MatchingLabels(labels)); err != nil {
+		return false, err
+	}
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if pod.Labels[v1alpha1.UDFWorkerEnabledLabel] == v1alpha1.UDFWorkerEnabledValue {
+			return true, nil
+		}
+		for _, container := range pod.Spec.Containers {
+			if container.Name == v1alpha1.ContainerUDFWorker {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func deleteOwnedUDFWorkerNetworkPolicy(ctx *recon.Context[*v1alpha1.CNSet]) error {
+	current := &networkingv1.NetworkPolicy{}
+	key := client.ObjectKey{Namespace: ctx.Obj.Namespace, Name: udfWorkerNetworkPolicyName(ctx.Obj)}
+	if err := ctx.Get(key, current); err != nil {
+		return util.Ignore(apierrors.IsNotFound, err)
+	}
+	if !metav1.IsControlledBy(current, ctx.Obj) {
+		// A deterministic name collision must never allow the CNSet controller
+		// to delete a policy it did not create. Platform policies stay untouched.
+		ctx.Log.Info("leave unowned UDF worker NetworkPolicy in place", "networkPolicy", key)
+		return nil
+	}
+	return util.Ignore(apierrors.IsNotFound, ctx.Delete(current, client.Preconditions{UID: &current.UID, ResourceVersion: &current.ResourceVersion}))
 }
 
 // fetchLogSetReservedOrdinals fetches the kruise StatefulSet that backs the given LogSet and
