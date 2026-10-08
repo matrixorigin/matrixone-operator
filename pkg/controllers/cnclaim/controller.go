@@ -18,7 +18,6 @@ import (
 	"cmp"
 	"context"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/go-errors/errors"
@@ -317,16 +316,24 @@ func deleteOnReclaim(p *corev1.Pod) {
 	p.Annotations[v1alpha1.DeleteOnReclaimAnno] = "y"
 }
 
+func requireKnownCNStoreState(err error) error {
+	if err == nil {
+		return nil
+	}
+	return errors.WrapPrefix(err, "cannot enter CN drain while store state is unknown", 0)
+}
+
 func (r *Actor) reclaimCN(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.Pod, opts ...reclaimOpts) error {
 	c := ctx.Obj
 	_, err := r.patchStore(ctx, pod, logpb.CNStateLabel{
 		State: metadata.WorkState_Draining,
 	})
-	if err != nil {
-		// #3177: skip if CN is not found
-		if !strings.Contains(err.Error(), "does not exist") {
-			return errors.Wrap(err, 0)
-		}
+	if err := requireKnownCNStoreState(err); err != nil {
+		// A missing CN store is an unknown retirement state.  Do not release
+		// claim ownership and let the CN lifecycle proceed: the cnstore
+		// finalizer must retain deletion protection until a fresh, instance-bound
+		// drain handshake is observed.
+		return err
 	}
 	// set the CN Pod to draining phase and let the draining process handle recycling
 	if err := ctx.Patch(pod, func() error {

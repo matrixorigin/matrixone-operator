@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,6 +56,11 @@ func TestHasMOFeature(t *testing.T) {
 	g.Expect(HasMOFeature(mustParse("v1.2.0-alpha.1"), MOFeatureLockMigration)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("v1.2.2-woraround-something-else"), MOFeatureLockMigration)).To(BeTrue())
 	g.Expect(HasMOFeature(mustParse("2.0.1"), MOFeatureLockMigration)).To(BeTrue())
+	// v4 RPC symbols are visible in source, but paired-binary and retirement
+	// semantics are not yet verified, so the Operator must fail closed.
+	g.Expect(HasMOFeature(mustParse("4.0.0"), MOFeatureLockMigration)).To(BeFalse())
+	g.Expect(HasMOFeature(mustParse("v4.2.0-7a68d42c4e-2026-09-19"), MOFeatureLockMigration)).To(BeFalse())
+	g.Expect(HasMOFeature(mustParse("3.0.0"), MOFeatureLockMigration)).To(BeFalse())
 	featureVersions["dummy"] = []semver.Version{mustParse("1.2.3")}
 	t.Cleanup(func() { delete(featureVersions, "dummy") })
 	g.Expect(HasMOFeature(mustParse("v1.2.3"), "dummy")).To(BeTrue())
@@ -87,9 +92,8 @@ func TestHasMOFeature_DiscoveryFixed(t *testing.T) {
 // version gate for features that have NOT been explicitly verified against MO 3.x. Extending
 // featureVersions in bulk (i.e. blindly adding "3.0.0" to every feature) would silently flip
 // unrelated behavior (lock migration handshake, sharding stats collection, session source
-// accounting) on MO 3.x without dedicated verification. DiscoveryFixed and PipelineInfo have
-// been verified independently; this test should be updated deliberately, one feature at a time,
-// as each remaining feature is verified.
+// accounting) on MO 3.x without dedicated verification. Each future feature/version extension
+// needs explicit wire, semantics, and compatibility evidence before this table is changed.
 func TestHasMOFeature_OtherFeaturesNotExtendedTo3x(t *testing.T) {
 	g := NewGomegaWithT(t)
 	unverifiedOn3x := []MOFeature{

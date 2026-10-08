@@ -37,6 +37,10 @@ type fakeQueryClient struct {
 	replicaCalls  int
 }
 
+func (f *fakeQueryClient) GetLockServiceIdentity(context.Context, string) (string, string, error) {
+	return "cn", "instance-cn", nil
+}
+
 func (f *fakeQueryClient) ShowProcessList(context.Context, string) (*querypb.ShowProcessListResponse, error) {
 	if f.sessionErr != nil {
 		return nil, f.sessionErr

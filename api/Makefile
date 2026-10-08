@@ -44,11 +44,14 @@ CONTROLLER_GEN = $(LOCALBIN)/controller-gen
 CONTROLLER_GEN_MODULE = sigs.k8s.io/controller-tools
 CONTROLLER_GEN_PACKAGE = sigs.k8s.io/controller-tools/cmd/controller-gen
 CONTROLLER_GEN_VERSION = v0.16.0
+# The pinned generators use old x/tools versions that cannot be built with
+# Go 1.26. Keep their versions (and output) fixed with a compatible Go.
+GENERATOR_TOOLCHAIN = go1.23.12
 # After changing CONTROLLER_GEN_VERSION, run `make verify-generated` from the repository root
 # and commit every regenerated artifact.
 .PHONY: controller-gen
 controller-gen: $(LOCALBIN) ## Download the pinned controller-gen version locally if necessary.
-	$(call go-install-pinned,$(CONTROLLER_GEN),$(CONTROLLER_GEN_MODULE),$(CONTROLLER_GEN_PACKAGE),$(CONTROLLER_GEN_VERSION))
+	$(call go-install-pinned,$(CONTROLLER_GEN),$(CONTROLLER_GEN_MODULE),$(CONTROLLER_GEN_PACKAGE),$(CONTROLLER_GEN_VERSION),GOTOOLCHAIN=$(GENERATOR_TOOLCHAIN))
 
 CRD_REF_DOCS = $(LOCALBIN)/crd-ref-docs
 CRD_REF_DOCS_MODULE = github.com/elastic/crd-ref-docs
@@ -56,7 +59,7 @@ CRD_REF_DOCS_PACKAGE = github.com/elastic/crd-ref-docs
 CRD_REF_DOCS_VERSION = v0.0.12
 .PHONY: crd-ref-docs
 crd-ref-docs: $(LOCALBIN)
-	$(call go-install-pinned,$(CRD_REF_DOCS),$(CRD_REF_DOCS_MODULE),$(CRD_REF_DOCS_PACKAGE),$(CRD_REF_DOCS_VERSION))
+	$(call go-install-pinned,$(CRD_REF_DOCS),$(CRD_REF_DOCS_MODULE),$(CRD_REF_DOCS_PACKAGE),$(CRD_REF_DOCS_VERSION),GOTOOLCHAIN=$(GENERATOR_TOOLCHAIN))
 
 # go-install-pinned ensures binary $1 was built from module $2 at version $4.
 # The install package $3 can be a command below the module root.
@@ -65,6 +68,6 @@ define go-install-pinned
 	actual_version="$$(go version -m "$(1)" 2>/dev/null | awk -v module="$(2)" '$$1 == "mod" && $$2 == module { print $$3 }')"; \
 	if [ "$$actual_version" != "$(4)" ]; then \
 		echo "Installing $(3)@$(4) (found: $${actual_version:-none})"; \
-		GOBIN=$(LOCALBIN) go install $(3)@$(4); \
+		GOBIN=$(LOCALBIN) GOWORK=off $(5) go install $(3)@$(4); \
 	fi
 endef

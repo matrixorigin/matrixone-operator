@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright 2026 Matrix Origin
 
 if [ -z "$ROOT" ]; then
     echo "error: ROOT should be initialized"
@@ -15,6 +16,7 @@ HELM_VERSION=${HELM_VERSION:-3.5.0}
 KIND_BIN=$BIN/kind
 KIND_VERSION=${KIND_VERSION:-0.14.0}
 OPNAMESPACE=${OPNAMESPACE:-"mo-system"}
+E2E_MINIO_IMAGE=matrixone-e2e/minio:RELEASE.2023-11-01T01-57-10Z
 export PATH=$PATH:${BIN}
 
 test -d "$BIN" || mkdir -p "$BIN"
@@ -52,12 +54,44 @@ function hack::ensure_kind() {
     chmod +x $KIND_BIN
 }
 
-function kind::prepare_image() {
-    if [ ! $(docker image ls ${2} --format="true") ] ;
-    then
-        docker pull ${2}
+function kind::prepare_image() (
+    local cluster="$1"
+    local image="$2"
+    local platform="linux/${ARCH}"
+    local archive
+    local local_platform
+    local save_help
+    local -a save_args
+
+    echo "> Prepare kind image ${image} (${platform})"
+
+    # Export only the node platform. On containerd-backed Docker, an unbounded
+    # save may fetch missing platforms/attestations from the registry even after
+    # a successful pull. Older Docker uses the legacy single-platform store.
+    local_platform=$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "${image}" 2>/dev/null) || local_platform=""
+    if [[ "${local_platform}" != "${platform}" ]]; then
+        echo "> Pull ${image}"
+        docker pull --platform "${platform}" "${image}" || return
     fi
-    kind load docker-image --name ${1} ${2}
+    archive=$(mktemp) || return
+    trap 'rm -f -- "${archive}"' EXIT
+    save_help=$(docker image save --help) || return
+    save_args=(image save -o "${archive}")
+    if [[ "${save_help}" == *"--platform"* ]]; then
+        save_args+=(--platform "${platform}")
+    fi
+    echo "> Export ${image}"
+    docker "${save_args[@]}" "${image}" || return
+    echo "> Load ${image} into ${cluster}"
+    kind load image-archive --name "${cluster}" "${archive}"
+)
+
+function kind::prepare_minio() {
+    # The historical Quay image is no longer anonymously accessible. Build the
+    # same upstream release instead of upgrading MinIO or using an opaque mirror.
+    docker build --platform "linux/${ARCH}" -f "${ROOT}/hack/Dockerfile.minio" \
+        -t "${E2E_MINIO_IMAGE}" "${ROOT}/hack" || return
+    kind::prepare_image "${CLUSTER}" "${E2E_MINIO_IMAGE}"
 }
 
 function kind::cleanup() {
@@ -74,7 +108,7 @@ function kind::ensure-kind() {
     kind create cluster --name "${CLUSTER}"
     kubectl apply -f test/kind-rbac.yml
     make build
-    kind load docker-image --name "${CLUSTER}" ${REPO}:${TAG}
+    kind::prepare_image "${CLUSTER}" "${REPO}:${TAG}"
 
     echo "> Ensure k8s cluster is ready"
     kubectl cluster-info
@@ -95,14 +129,16 @@ function kind::load-image() {
         return 1
     fi
 
-    kind::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
-    kind::prepare_image ${CLUSTER} "${kruise_image}"
-    kind::prepare_image ${CLUSTER} "${kruise_hook_image}"
-    kind::prepare_image ${CLUSTER} minio/minio:RELEASE.2023-11-01T01-57-10Z
+    kind::prepare_image "${CLUSTER}" "${MO_IMAGE_REPO}:${MO_VERSION}"
+    kind::prepare_image "${CLUSTER}" "${kruise_image}"
+    kind::prepare_image "${CLUSTER}" "${kruise_hook_image}"
+    kind::prepare_minio
 }
 
 function kind::install-minio() {
-    kubectl -n default apply -f examples/minio.yaml
+    # Keep the standalone example unchanged; only kind uses the locally built image.
+    sed "s@image: quay.io/minio/minio:RELEASE.2023-11-01T01-57-10Z@image: ${E2E_MINIO_IMAGE}@" \
+        "${ROOT}/examples/minio.yaml" | kubectl -n default apply -f -
 }
 
 function e2e::check() {

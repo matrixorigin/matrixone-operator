@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,53 @@ import (
 type LockServiceClient struct {
 	client morpc.RPCClient
 	tnAddr string
+}
+
+// DrainProof is bound to one lock-service incarnation and one allocator epoch.
+// It is not interchangeable with the legacy UUID restart response.
+type DrainProof struct {
+	ServiceID        string
+	AttemptID        string
+	AllocatorID      string
+	AllocatorVersion uint64
+}
+
+func (l *LockServiceClient) BeginDrain(ctx context.Context, serviceID, attemptID string) (DrainProof, error) {
+	resp, err := l.sendToTN(ctx, &lock.Request{
+		Method:     lock.Method_BeginDrain,
+		BeginDrain: lock.BeginDrainRequest{ServiceID: serviceID, AttemptID: attemptID},
+	})
+	if err != nil {
+		return DrainProof{}, errors.WrapPrefix(err, "begin instance-bound lock drain", 0)
+	}
+	p := resp.BeginDrain
+	if !p.OK || p.ServiceID != serviceID || p.AttemptID != attemptID || p.AllocatorID == "" || p.AllocatorVersion == 0 {
+		return DrainProof{}, errors.New("lock-service rejected or returned an incomplete drain proof")
+	}
+	return DrainProof{ServiceID: p.ServiceID, AttemptID: p.AttemptID,
+		AllocatorID: p.AllocatorID, AllocatorVersion: p.AllocatorVersion}, nil
+}
+
+func (l *LockServiceClient) QueryDrain(ctx context.Context, proof DrainProof) (bool, error) {
+	if proof.ServiceID == "" || proof.AttemptID == "" || proof.AllocatorID == "" || proof.AllocatorVersion == 0 {
+		return false, errors.New("lock-service drain proof is incomplete")
+	}
+	resp, err := l.sendToTN(ctx, &lock.Request{
+		Method: lock.Method_QueryDrain,
+		QueryDrain: lock.QueryDrainRequest{
+			ServiceID: proof.ServiceID, AttemptID: proof.AttemptID,
+			AllocatorID: proof.AllocatorID, AllocatorVersion: proof.AllocatorVersion,
+		},
+	})
+	if err != nil {
+		return false, errors.WrapPrefix(err, "query instance-bound lock drain", 0)
+	}
+	p := resp.QueryDrain
+	if p.ServiceID != proof.ServiceID || p.AttemptID != proof.AttemptID ||
+		p.AllocatorID != proof.AllocatorID || p.AllocatorVersion != proof.AllocatorVersion {
+		return false, errors.New("lock-service drain response identity changed")
+	}
+	return p.Safe, nil
 }
 
 func NewLockServiceClient(tnAddr string, logger *zap.Logger) (*LockServiceClient, error) {

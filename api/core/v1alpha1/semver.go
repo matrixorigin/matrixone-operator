@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,8 +35,11 @@ var (
 	// the new major branch before its gate is extended, to avoid unintentionally flipping
 	// behavior (e.g. lock migration handshake, pipeline/sharding stats collection).
 	featureVersions = map[MOFeature][]semver.Version{
-		MOFeaturePipelineInfo:      {semver.MustParse("1.1.2"), semver.MustParse("1.2.0"), semver.MustParse("2.0.0"), semver.MustParse("3.0.0"), semver.MustParse("4.0.0")},
-		MOFeatureSessionSource:     {semver.MustParse("1.1.2"), semver.MustParse("1.2.0"), semver.MustParse("2.0.0")},
+		MOFeaturePipelineInfo:  {semver.MustParse("1.1.2"), semver.MustParse("1.2.0"), semver.MustParse("2.0.0"), semver.MustParse("3.0.0"), semver.MustParse("4.0.0")},
+		MOFeatureSessionSource: {semver.MustParse("1.1.2"), semver.MustParse("1.2.0"), semver.MustParse("2.0.0")},
+		// v4 source contains the RPC symbols, but paired-binary and retirement
+		// semantics have not been verified. Keep v4 fail-closed until that
+		// independent compatibility gate is complete.
 		MOFeatureLockMigration:     {semver.MustParse("1.2.0"), semver.MustParse("2.0.0")},
 		MOFeatureShardingMigration: {semver.MustParse("2.0.0")},
 	}

@@ -211,6 +211,21 @@ func Test_buildPodClaimIndex(t *testing.T) {
 	g.Expect(claimNames(index["pod-2"])).To(Equal([]string{"other"}))
 }
 
+func Test_requireKnownCNStoreStateDoesNotShortcutMissingStore(t *testing.T) {
+	g := NewGomegaWithT(t)
+	for _, err := range []error{
+		stderrors.New("store does not exist"),
+		stderrors.New("temporary HAKeeper RPC failure"),
+	} {
+		got := requireKnownCNStoreState(err)
+		g.Expect(got).To(MatchError(And(
+			ContainSubstring("cannot enter CN drain while store state is unknown"),
+			ContainSubstring(err.Error()),
+		)))
+	}
+	g.Expect(requireKnownCNStoreState(nil)).To(Succeed())
+}
+
 func Test_Finalize_transfersLabelWhenPodClaimedByOther(t *testing.T) {
 	g := NewGomegaWithT(t)
 	now := metav1.Now()

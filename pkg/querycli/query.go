@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,6 +77,22 @@ func (c *Client) GetReplicaCount(ctx context.Context, address string) (pb.GetRep
 		return pb.GetReplicaCountResponse{}, errors.WrapPrefix(err, "error send request", 0)
 	}
 	return resp.GetReplicaCount, nil
+}
+
+// GetLockServiceIdentity reads the exact lock-service incarnation from the CN
+// query endpoint. A UUID-only response from an older CN is not sufficient.
+func (c *Client) GetLockServiceIdentity(ctx context.Context, address string) (string, string, error) {
+	resp, err := c.SendReq(ctx, address, &pb.Request{
+		CmdMethod:          pb.CmdMethod_GetLockInfo,
+		GetLockInfoRequest: &pb.GetLockInfoRequest{IdentityOnly: true},
+	})
+	if err != nil {
+		return "", "", errors.WrapPrefix(err, "query CN lock-service identity", 0)
+	}
+	if resp.GetLockInfoResponse == nil || resp.GetLockInfoResponse.CnId == "" || resp.GetLockInfoResponse.LockServiceID == "" {
+		return "", "", errors.New("CN did not provide a complete lock-service identity")
+	}
+	return resp.GetLockInfoResponse.CnId, resp.GetLockInfoResponse.LockServiceID, nil
 }
 
 func (c *Client) SendReq(ctx context.Context, address string, req *pb.Request) (*pb.Response, error) {
