@@ -136,3 +136,32 @@ To teardown the cluster, delete the mo object in k8s:
 > kubectl -n ${NS} delete matrixonecluster mo
 matrixonecluster.core.matrixorigin.io "mo" deleted
 ```
+
+## Acceptance, upgrade and retention checks
+
+The example chart and MO versions above are historical examples, not a compatibility matrix. Pin and verify Kubernetes, chart, controller image, MO image, backup image and CRD revisions separately. Offline deployments need all chart dependencies and images, not just the database image. Save rendered manifests and inspect registry overrides, RBAC, webhook reachability, storage and watch scope.
+
+Before applying a cluster or BackupJob, use server-side validation on the target cluster:
+
+```bash
+kubectl -n "${NS}" apply --dry-run=server -f mo.yaml
+kubectl -n "${NS}" apply --dry-run=server -f backupjob.yaml
+```
+
+Helm deployed and Pod Running are not database acceptance criteria. Inspect MatrixOneCluster conditions, desired/ready replicas, events, PVCs and controller logs, then connect through the actual Service and independently read back a dedicated SQL fixture.
+
+For a BackupJob, wait on the specific namespace and job, then inspect the outcome:
+
+```bash
+kubectl -n "${NS}" wait --for=condition=Ended backupjob/backupjob --timeout=10m
+kubectl -n "${NS}" get backupjob backupjob -o yaml
+kubectl -n "${NS}" get backups
+```
+
+**Ended=True also occurs on failure.** Require phase=Completed and a valid status.backup reference before restoring. `restoreFrom` references a Backup resource, not the BackupJob name. Restore into a separate cluster and object-storage prefix, then compare schema, primary keys and every field; startup alone does not prove data integrity.
+
+Before upgrades, save Helm values/manifests and CR/CRD definitions. Inspect the selected chart's CRD delivery and schema migration procedure. Helm rollback does not restore database data or guarantee CRD rollback.
+
+Before teardown, inspect ownerReferences/finalizers, PVC retention, PV reclaimPolicy, Kruise settings, namespace Secrets/Backup resources and object-storage prefixes. Deleting a cluster, namespace, Operator or CRD has different effects; do not assume universal data preservation. Rehearse deletion and restoration in an isolated cluster. Diagnose stuck finalizers instead of routinely force-removing them.
+
+Static YAML/CRD validation and Helm rendering do not certify deployment, failover, upgrades or retention. Record actual cluster tests separately.
