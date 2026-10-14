@@ -4,9 +4,9 @@
 
 Prerequisites:
 
-- Kubernetes 1.18 or later;
+- Kubernetes compatible with the selected chart’s `kubeVersion` and your platform support policy;
    - or [Docker](https://docs.docker.com/engine/install/) and [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) if you do not have an existing k8s cluster available;
-- [kubectl 1.18 or later](https://kubernetes.io/docs/tasks/tools/);
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) compatible with the Kubernetes server;
 - [helm 3](https://helm.sh/docs/intro/install/).
 
 ## Prepare Your Kubernetes Cluster
@@ -17,7 +17,9 @@ Verify the cluster meets the minimal version requirement, refer to [kubernetes s
 > kubectl version
 ```
 
-The server version should >= 1.18.
+Compare the server version with `helm show chart` for the selected chart. The chart at commit `10aef15c57f98f92b442d79810f8ad3d53bbd85b` declares `kubeVersion: ">=1.19.0-0"`; that constraint is a minimum, not certification of every later Kubernetes release.
+
+The versioned install/cluster examples below are historical examples. Select and validate a chart/controller/CRD/MO combination before using them in production.
 
 ## Install MatrixOne Operator
 
