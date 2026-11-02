@@ -94,6 +94,10 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 	// claim CN
 	claimedPod, err := r.claimCN(ctx, orphanCNs)
 	if err != nil {
+		if stderrors.Is(err, errSQLNotReady) {
+			ctx.Log.Info("wait CN SQL service ready before binding", "reason", err.Error())
+			return recon.ErrReSync("CN SQL service is not ready, wait", sqlProbeInterval)
+		}
 		return errors.WrapPrefix(err, "error claim idle CN", 0)
 	}
 
@@ -227,7 +231,8 @@ func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.P
 		return recon.ErrReSync("pod is not in normal state, wait", retryPatchInterval)
 	}
 	c := ctx.Obj
-	if c.Status.Store.PodName != pod.Name {
+	probed := needSQLProbe(c, pod)
+	if probed {
 		// do not publish Working (and thus make the CN routable by proxy) before the CN can serve SQL
 		if err := r.checkSQLReady(ctx, pod); err != nil {
 			return err
@@ -260,8 +265,8 @@ func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.P
 		c.Status.Phase = v1alpha1.CNClaimPhaseBound
 	}
 	newStore := toStoreStatus(store, pod)
-	if c.Status.Store.PodName != newStore.PodName {
-		// refresh boundTime if store changed
+	if probed {
+		// refresh boundTime if store changed or the CN restarted, so the next sync can skip probing
 		newStore.BoundTime = &metav1.Time{Time: time.Now()}
 	} else {
 		newStore.BoundTime = c.Status.Store.BoundTime

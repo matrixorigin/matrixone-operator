@@ -128,3 +128,113 @@ func Test_Sync_waitsForSQLReadyBeforePublishingWorking(t *testing.T) {
 	g.Expect(rs.RequeueAfter).To(Equal(sqlProbeInterval))
 	g.Expect(claim.Status.Phase).To(Equal(v1alpha1.CNClaimPhasePending))
 }
+
+func runningMainContainer(started time.Time) []corev1.ContainerStatus {
+	return []corev1.ContainerStatus{{
+		Name:  v1alpha1.ContainerMain,
+		State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(started)}},
+	}}
+}
+
+func Test_needSQLProbe(t *testing.T) {
+	bound := time.Date(2026, 10, 30, 1, 2, 52, 0, time.UTC)
+	boundClaim := func(podName string, bt *metav1.Time) *v1alpha1.CNClaim {
+		return &v1alpha1.CNClaim{Status: v1alpha1.CNClaimStatus{Store: v1alpha1.CNStoreStatus{PodName: podName, BoundTime: bt}}}
+	}
+	pod := func(cs []corev1.ContainerStatus) *corev1.Pod {
+		return &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "cn-0"}, Status: corev1.PodStatus{ContainerStatuses: cs}}
+	}
+	bt := &metav1.Time{Time: bound}
+	tests := []struct {
+		name  string
+		claim *v1alpha1.CNClaim
+		pod   *corev1.Pod
+		want  bool
+	}{
+		{"never bound", boundClaim("", nil), pod(runningMainContainer(bound.Add(-time.Minute))), true},
+		{"bound to another pod", boundClaim("cn-1", bt), pod(runningMainContainer(bound.Add(-time.Minute))), true},
+		{"bound time missing", boundClaim("cn-0", nil), pod(runningMainContainer(bound.Add(-time.Minute))), true},
+		{"main container not running", boundClaim("cn-0", bt), pod(nil), true},
+		{"restarted after bind", boundClaim("cn-0", bt), pod(runningMainContainer(bound.Add(time.Minute))), true},
+		{"started within the bound second", boundClaim("cn-0", bt), pod(runningMainContainer(bound)), true},
+		{"verified since last start", boundClaim("cn-0", bt), pod(runningMainContainer(bound.Add(-time.Minute))), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			NewGomegaWithT(t).Expect(needSQLProbe(tt.claim, tt.pod)).To(Equal(tt.want))
+		})
+	}
+}
+
+func boundClaimAndPod(started time.Time, bound time.Time) (*v1alpha1.CNClaim, *corev1.Pod) {
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "cn-0"}},
+		Status: v1alpha1.CNClaimStatus{
+			Phase: v1alpha1.CNClaimPhaseBound,
+			Store: v1alpha1.CNStoreStatus{PodName: "cn-0", BoundTime: &metav1.Time{Time: bound}},
+		},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cn-0",
+			Namespace: "ns",
+			Labels:    map[string]string{pub.LifecycleStateKey: string(pub.LifecycleStateNormal)},
+		},
+		Status: corev1.PodStatus{PodIP: "10.0.0.7", ContainerStatuses: runningMainContainer(started)},
+	}
+	return claim, pod
+}
+
+func Test_Sync_reprobesAfterInPlaceRestart(t *testing.T) {
+	g := NewGomegaWithT(t)
+	bound := time.Now().Add(-time.Hour).Truncate(time.Second)
+	claim, pod := boundClaimAndPod(bound.Add(30*time.Minute), bound)
+	ctx := reconfake.NewContext(claim, newFakeClient(claim, pod), nil)
+
+	r := &Actor{sqlProbe: func(context.Context, string) error { return stderrors.New("handshake timeout") }}
+	var rs *recon.ReSync
+	g.Expect(stderrors.As(r.Sync(ctx), &rs)).To(BeTrue())
+	g.Expect(rs.RequeueAfter).To(Equal(sqlProbeInterval))
+}
+
+func Test_Sync_skipsProbeForVerifiedCN(t *testing.T) {
+	g := NewGomegaWithT(t)
+	bound := time.Now().Add(-time.Hour).Truncate(time.Second)
+	claim, pod := boundClaimAndPod(bound.Add(-time.Minute), bound)
+	ctx := reconfake.NewContext(claim, newFakeClient(claim, pod), nil)
+
+	probed := false
+	r := &Actor{sqlProbe: func(context.Context, string) error {
+		probed = true
+		return nil
+	}}
+	// patchStore fails without a CNSet, which is irrelevant here: only the probe decision is checked
+	_ = r.Sync(ctx)
+	g.Expect(probed).To(BeFalse())
+}
+
+func Test_Bind_waitsForSQLReady(t *testing.T) {
+	g := NewGomegaWithT(t)
+	claim := &v1alpha1.CNClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim", Namespace: "ns"}}
+	orphan := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cn-0",
+			Namespace: "ns",
+			Labels: map[string]string{
+				pub.LifecycleStateKey:      string(pub.LifecycleStateNormal),
+				v1alpha1.CNPodPhaseLabel:   v1alpha1.CNPodPhaseBound,
+				v1alpha1.PodClaimedByLabel: claim.Name,
+			},
+		},
+		Status: corev1.PodStatus{PodIP: "10.0.0.7"},
+	}
+	ctx := reconfake.NewContext(claim, newFakeClient(claim, orphan), nil)
+
+	r := &Actor{sqlProbe: func(context.Context, string) error { return stderrors.New("handshake timeout") }}
+	var rs *recon.ReSync
+	g.Expect(stderrors.As(r.Bind(ctx), &rs)).To(BeTrue())
+	g.Expect(rs.RequeueAfter).To(Equal(sqlProbeInterval))
+	g.Expect(claim.Spec.PodName).To(BeEmpty())
+	g.Expect(claim.Status.Phase).To(Equal(v1alpha1.CNClaimPhasePending))
+}

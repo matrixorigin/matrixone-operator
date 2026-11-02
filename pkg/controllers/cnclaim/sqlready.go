@@ -23,7 +23,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
+	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -64,6 +66,19 @@ func probeMySQLHandshake(ctx context.Context, addr string) error {
 		return fmt.Errorf("unexpected MySQL handshake packet: seq=%d first-byte=%#x", header[3], header[4])
 	}
 	return nil
+}
+
+// needSQLProbe reports whether the current CN process may not have been verified
+// yet: the pod was never bound by this claim, or its main container started at or
+// after the last bind (e.g. in-place update or restart). Times are persisted with
+// second precision, so a start within the bound second is treated as a restart.
+func needSQLProbe(c *v1alpha1.CNClaim, pod *corev1.Pod) bool {
+	bound := c.Status.Store.BoundTime
+	if c.Status.Store.PodName != pod.Name || bound == nil {
+		return true
+	}
+	started := common.GetCNStartedTime(pod)
+	return started == nil || !started.Before(bound.Time)
 }
 
 func (r *Actor) checkSQLReady(ctx context.Context, pod *corev1.Pod) error {
