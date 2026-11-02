@@ -98,7 +98,7 @@ function kind::load-image() {
     kind::prepare_image ${CLUSTER} ${MO_IMAGE_REPO}:${MO_VERSION}
     kind::prepare_image ${CLUSTER} "${kruise_image}"
     kind::prepare_image ${CLUSTER} "${kruise_hook_image}"
-    kind::prepare_image ${CLUSTER} bitnamilegacy/minio:2023.11.1
+    kind::prepare_image ${CLUSTER} registry.cn-hangzhou.aliyuncs.com/moc-pub/plugin:minio-2023.11.1
 }
 
 function kind::install-minio() {

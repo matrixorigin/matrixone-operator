@@ -30,8 +30,8 @@ spec:
     spec:
       containers:
         - name: minio
-          # minio/minio is no longer pullable from Docker Hub; same MinIO release rebuilt by Bitnami
-          image: bitnamilegacy/minio:2023.11.1
+          # minio/minio is no longer published; mirror of bitnamilegacy/minio:2023.11.1 (same MinIO commit)
+          image: registry.cn-hangzhou.aliyuncs.com/moc-pub/plugin:minio-2023.11.1
           securityContext:
             runAsUser: 0
           command: ["/bin/sh", "-c"]
