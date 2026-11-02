@@ -17,8 +17,10 @@ package cnclaim
 import (
 	"cmp"
 	"context"
+	stderrors "errors"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-errors/errors"
@@ -56,6 +58,10 @@ const (
 // Actor reconciles CN Claim
 type Actor struct {
 	clientMgr *mocli.MORPCClientManager
+	sqlProbe  sqlReadyProbe
+
+	proberOnce sync.Once
+	prober     *asyncSQLProber
 }
 
 func NewActor(mgr *mocli.MORPCClientManager) *Actor {
@@ -92,6 +98,10 @@ func (r *Actor) Bind(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 	// claim CN
 	claimedPod, err := r.claimCN(ctx, orphanCNs)
 	if err != nil {
+		if stderrors.Is(err, errSQLNotReady) {
+			ctx.Log.Info("wait CN SQL service ready before binding", "reason", err.Error())
+			return recon.ErrReSync("CN SQL service is not ready, wait", sqlProbeInterval)
+		}
 		return errors.WrapPrefix(err, "error claim idle CN", 0)
 	}
 
@@ -225,6 +235,13 @@ func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.P
 		return recon.ErrReSync("pod is not in normal state, wait", retryPatchInterval)
 	}
 	c := ctx.Obj
+	probed := needSQLProbe(c, pod)
+	if probed {
+		// do not publish Working (and thus make the CN routable by proxy) before the CN can serve SQL
+		if err := r.checkSQLReady(pod); err != nil {
+			return err
+		}
+	}
 	// alter CN label and working state
 	store, err := r.patchStore(ctx, pod, logpb.CNStateLabel{
 		State:  metadata.WorkState_Working,
@@ -252,8 +269,8 @@ func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.P
 		c.Status.Phase = v1alpha1.CNClaimPhaseBound
 	}
 	newStore := toStoreStatus(store, pod)
-	if c.Status.Store.PodName != newStore.PodName {
-		// refresh boundTime if store changed
+	if probed {
+		// refresh boundTime if store changed or the CN restarted, so the next sync can skip probing
 		newStore.BoundTime = &metav1.Time{Time: time.Now()}
 	} else {
 		newStore.BoundTime = c.Status.Store.BoundTime
@@ -296,6 +313,10 @@ func (r *Actor) Sync(ctx *recon.Context[*v1alpha1.CNClaim]) error {
 		return errors.Wrap(err, 0)
 	}
 	if err := r.syncBindPod(ctx, pod); err != nil {
+		if stderrors.Is(err, errSQLNotReady) {
+			ctx.Log.Info("wait CN SQL service ready before binding", "podName", pod.Name, "reason", err.Error())
+			return recon.ErrReSync("CN SQL service is not ready, wait", sqlProbeInterval)
+		}
 		ctx.Log.Info("error keep bound CN working", "error", err)
 		return recon.ErrReSync("error keep bound CN working", retryPatchInterval)
 	}

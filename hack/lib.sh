@@ -206,6 +206,15 @@ function e2e::wait-webhook-ready() {
   return 1
 }
 
+function e2e::dump-diagnostics() {
+    echo "::group::operator logs"
+    kubectl -n "${OPNAMESPACE}" logs deployment/mo-matrixone-operator --all-containers=true --tail=-1 || true
+    echo "::endgroup::"
+    echo "::group::remaining CN claims, pools and pods"
+    kubectl get cnclaims,cnpools,pods -A -o wide || true
+    echo "::endgroup::"
+}
+
 function e2e::cleanup() {
     echo "Delete e2e test namespace"
     if ! kubectl delete namespace -l managed-by=e2e-suite \
@@ -232,6 +241,10 @@ function e2e::workflow() {
   local run_status=0
   local outage_status=0
   e2e::run || run_status=$?
+  # dump before the outage scenario redeploys the operator and drops these logs
+  if [[ "${run_status}" -ne 0 ]]; then
+    e2e::dump-diagnostics
+  fi
   # Run the disruptive outage/upgrade scenario after the established E2E suite
   # so it cannot change the suite's initial cluster state. Preserve an earlier
   # suite failure while still collecting the outage-test result.
