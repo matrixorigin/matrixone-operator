@@ -18,6 +18,8 @@ import (
 	"context"
 	stderrors "errors"
 	"net"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -86,20 +88,167 @@ func Test_probeMySQLHandshake(t *testing.T) {
 
 func Test_checkSQLReady(t *testing.T) {
 	g := NewGomegaWithT(t)
-	var gotAddr string
+	addrs := make(chan string, 1)
 	r := &Actor{sqlProbe: func(_ context.Context, addr string) error {
-		gotAddr = addr
+		addrs <- addr
 		return nil
 	}}
-	g.Expect(r.checkSQLReady(context.Background(), &corev1.Pod{})).To(MatchError(errSQLNotReady))
-	g.Expect(gotAddr).To(BeEmpty())
+	g.Expect(r.checkSQLReady(&corev1.Pod{})).To(MatchError(errSQLNotReady))
 
-	pod := &corev1.Pod{Status: corev1.PodStatus{PodIP: "10.0.0.7"}}
-	g.Expect(r.checkSQLReady(context.Background(), pod)).To(Succeed())
-	g.Expect(gotAddr).To(Equal("10.0.0.7:6001"))
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{UID: "uid-1"},
+		Status:     corev1.PodStatus{PodIP: "10.0.0.7", ContainerStatuses: runningMainContainer(time.Now())},
+	}
+	g.Expect(r.checkSQLReady(pod)).To(MatchError(errSQLNotReady))
+	g.Eventually(addrs).Should(Receive(Equal("10.0.0.7:6001")))
+	g.Eventually(func() error { return r.checkSQLReady(pod) }).Should(Succeed())
+}
 
-	r.sqlProbe = func(context.Context, string) error { return stderrors.New("boom") }
-	g.Expect(r.checkSQLReady(context.Background(), pod)).To(MatchError(errSQLNotReady))
+// blockingProbe returns a probe that blocks until release is closed, and counts its starts.
+func blockingProbe(release <-chan struct{}, err error) (sqlReadyProbe, *atomic.Int32) {
+	var started atomic.Int32
+	return func(context.Context, string) error {
+		started.Add(1)
+		<-release
+		return err
+	}, &started
+}
+
+func Test_asyncSQLProber_doesNotBlockAndDedupes(t *testing.T) {
+	g := NewGomegaWithT(t)
+	release := make(chan struct{})
+	defer close(release)
+	probe, started := blockingProbe(release, nil)
+	p := newAsyncSQLProber(probe, 2, time.Minute)
+	key := sqlProbeKey{uid: "a", addr: "a:6001"}
+
+	begin := time.Now()
+	g.Expect(p.check(key)).To(MatchError(errSQLNotReady))
+	g.Expect(p.check(key)).To(MatchError(ContainSubstring("in progress")))
+	g.Expect(time.Since(begin)).To(BeNumerically("<", time.Second))
+	g.Eventually(started.Load).Should(BeEquivalentTo(1))
+	g.Consistently(started.Load, 100*time.Millisecond).Should(BeEquivalentTo(1))
+}
+
+func Test_asyncSQLProber_boundsConcurrency(t *testing.T) {
+	g := NewGomegaWithT(t)
+	release := make(chan struct{})
+	defer close(release)
+	probe, started := blockingProbe(release, nil)
+	p := newAsyncSQLProber(probe, 1, time.Minute)
+
+	g.Expect(p.check(sqlProbeKey{uid: "a"})).To(MatchError(errSQLNotReady))
+	g.Eventually(started.Load).Should(BeEquivalentTo(1))
+	g.Expect(p.check(sqlProbeKey{uid: "b"})).To(MatchError(ContainSubstring("too many probes")))
+	g.Consistently(started.Load, 100*time.Millisecond).Should(BeEquivalentTo(1))
+}
+
+func Test_asyncSQLProber_results(t *testing.T) {
+	t.Run("success is consumed once", func(t *testing.T) {
+		g := NewGomegaWithT(t)
+		release := make(chan struct{})
+		probe, started := blockingProbe(release, nil)
+		p := newAsyncSQLProber(probe, 1, time.Minute)
+		key := sqlProbeKey{uid: "a"}
+		g.Expect(p.check(key)).To(MatchError(errSQLNotReady))
+		close(release)
+		g.Eventually(func() error { return p.check(key) }).Should(Succeed())
+		g.Expect(p.check(key)).To(MatchError(ContainSubstring("probe started")))
+		g.Eventually(started.Load).Should(BeEquivalentTo(2))
+	})
+
+	t.Run("failure keeps the cause and immediately retries", func(t *testing.T) {
+		g := NewGomegaWithT(t)
+		release := make(chan struct{})
+		close(release)
+		probe, started := blockingProbe(release, stderrors.New("handshake timeout"))
+		p := newAsyncSQLProber(probe, 1, time.Minute)
+		key := sqlProbeKey{uid: "a"}
+		g.Expect(p.check(key)).To(MatchError(errSQLNotReady))
+		g.Eventually(func() int {
+			p.mu.Lock()
+			defer p.mu.Unlock()
+			return len(p.results)
+		}).Should(Equal(1))
+		err := p.check(key)
+		g.Expect(err).To(MatchError(errSQLNotReady))
+		g.Expect(err).To(MatchError(ContainSubstring("handshake timeout")))
+		g.Eventually(started.Load).Should(BeEquivalentTo(2))
+	})
+
+	t.Run("stale success is discarded", func(t *testing.T) {
+		g := NewGomegaWithT(t)
+		release := make(chan struct{})
+		close(release)
+		probe, started := blockingProbe(release, nil)
+		p := newAsyncSQLProber(probe, 1, 10*time.Second)
+		var mu sync.Mutex
+		now := time.Now()
+		p.now = func() time.Time {
+			mu.Lock()
+			defer mu.Unlock()
+			return now
+		}
+		key := sqlProbeKey{uid: "a"}
+		g.Expect(p.check(key)).To(MatchError(errSQLNotReady))
+		g.Eventually(func() int {
+			p.mu.Lock()
+			defer p.mu.Unlock()
+			return len(p.results)
+		}).Should(Equal(1))
+		mu.Lock()
+		now = now.Add(11 * time.Second)
+		mu.Unlock()
+		g.Expect(p.check(key)).To(MatchError(ContainSubstring("probe started")))
+		g.Eventually(started.Load).Should(BeEquivalentTo(2))
+	})
+
+	t.Run("a restarted CN does not reuse the previous result", func(t *testing.T) {
+		g := NewGomegaWithT(t)
+		release := make(chan struct{})
+		close(release)
+		probe, _ := blockingProbe(release, nil)
+		p := newAsyncSQLProber(probe, 1, time.Minute)
+		before := sqlProbeKey{uid: "a", started: 1}
+		g.Expect(p.check(before)).To(MatchError(errSQLNotReady))
+		g.Eventually(func() int {
+			p.mu.Lock()
+			defer p.mu.Unlock()
+			return len(p.results)
+		}).Should(Equal(1))
+		g.Expect(p.check(sqlProbeKey{uid: "a", started: 2})).To(MatchError(errSQLNotReady))
+	})
+}
+
+func Test_Sync_doesNotBlockOnHangingProbe(t *testing.T) {
+	g := NewGomegaWithT(t)
+	claim := &v1alpha1.CNClaim{
+		ObjectMeta: metav1.ObjectMeta{Name: "claim", Namespace: "ns"},
+		Spec:       v1alpha1.CNClaimSpec{ClaimPodRef: v1alpha1.ClaimPodRef{PodName: "cn-0"}},
+		Status:     v1alpha1.CNClaimStatus{Phase: v1alpha1.CNClaimPhasePending},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cn-0",
+			Namespace: "ns",
+			Labels:    map[string]string{pub.LifecycleStateKey: string(pub.LifecycleStateNormal)},
+		},
+		Status: corev1.PodStatus{PodIP: "10.0.0.7"},
+	}
+	ctx := reconfake.NewContext(claim, newFakeClient(claim, pod), nil)
+	release := make(chan struct{})
+	defer close(release)
+	probe, _ := blockingProbe(release, nil)
+	r := &Actor{sqlProbe: probe}
+
+	for i := 0; i < 3; i++ {
+		begin := time.Now()
+		var rs *recon.ReSync
+		g.Expect(stderrors.As(r.Sync(ctx), &rs)).To(BeTrue())
+		g.Expect(rs.RequeueAfter).To(Equal(sqlProbeInterval))
+		g.Expect(time.Since(begin)).To(BeNumerically("<", time.Second))
+	}
+	g.Expect(claim.Status.Phase).To(Equal(v1alpha1.CNClaimPhasePending))
 }
 
 func Test_Sync_waitsForSQLReadyBeforePublishingWorking(t *testing.T) {

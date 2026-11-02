@@ -21,17 +21,23 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/cnset"
 	"github.com/matrixorigin/matrixone-operator/pkg/controllers/common"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
 	sqlProbeTimeout  = 3 * time.Second
 	sqlProbeInterval = 3 * time.Second
+	// bounds the probes that may be blocked on bootstrapping CNs at the same time
+	sqlProbeConcurrency = 8
+	// must exceed sqlProbeInterval so a result is still there on the next requeue
+	sqlProbeResultTTL = 10 * time.Second
 
 	mysqlProtocolV10 = 0x0a
 )
@@ -81,17 +87,106 @@ func needSQLProbe(c *v1alpha1.CNClaim, pod *corev1.Pod) bool {
 	return started == nil || !started.Before(bound.Time)
 }
 
-func (r *Actor) checkSQLReady(ctx context.Context, pod *corev1.Pod) error {
+// sqlProbeKey identifies one CN process: a restart changes the start time and
+// thus never reuses a result obtained for the previous process.
+type sqlProbeKey struct {
+	uid     types.UID
+	started int64
+	addr    string
+}
+
+type sqlProbeResult struct {
+	err  error
+	done time.Time
+}
+
+// asyncSQLProber runs probes in the background so that a CN which accepts TCP
+// but never greets does not hold the single CNClaim reconcile worker.
+type asyncSQLProber struct {
+	probe sqlReadyProbe
+	ttl   time.Duration
+	now   func() time.Time
+	sem   chan struct{}
+
+	mu       sync.Mutex
+	inflight map[sqlProbeKey]struct{}
+	results  map[sqlProbeKey]sqlProbeResult
+}
+
+func newAsyncSQLProber(probe sqlReadyProbe, concurrency int, ttl time.Duration) *asyncSQLProber {
+	return &asyncSQLProber{
+		probe:    probe,
+		ttl:      ttl,
+		now:      time.Now,
+		sem:      make(chan struct{}, concurrency),
+		inflight: map[sqlProbeKey]struct{}{},
+		results:  map[sqlProbeKey]sqlProbeResult{},
+	}
+}
+
+// check never blocks. It returns nil only by consuming a fresh successful
+// result for key; otherwise it makes sure a probe is (or will be) running and
+// returns an error wrapping errSQLNotReady.
+func (p *asyncSQLProber) check(key sqlProbeKey) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	now := p.now()
+	for k, r := range p.results {
+		if now.Sub(r.done) > p.ttl {
+			delete(p.results, k)
+		}
+	}
+	reason := "probe started"
+	if r, ok := p.results[key]; ok {
+		delete(p.results, key)
+		if r.err == nil {
+			return nil
+		}
+		// start the next attempt right away instead of waiting for another requeue
+		reason = r.err.Error()
+	}
+	if _, ok := p.inflight[key]; ok {
+		return fmt.Errorf("%w: %s: probe in progress", errSQLNotReady, key.addr)
+	}
+	select {
+	case p.sem <- struct{}{}:
+	default:
+		return fmt.Errorf("%w: %s: too many probes in flight", errSQLNotReady, key.addr)
+	}
+	p.inflight[key] = struct{}{}
+	go func() {
+		defer func() { <-p.sem }()
+		// not tied to the reconcile context, which ends before the probe; the probe has its own timeout
+		err := p.probe(context.Background(), key.addr)
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		delete(p.inflight, key)
+		p.results[key] = sqlProbeResult{err: err, done: p.now()}
+	}()
+	return fmt.Errorf("%w: %s: %s", errSQLNotReady, key.addr, reason)
+}
+
+func (r *Actor) sqlProber() *asyncSQLProber {
+	r.proberOnce.Do(func() {
+		probe := r.sqlProbe
+		if probe == nil {
+			probe = probeMySQLHandshake
+		}
+		r.prober = newAsyncSQLProber(probe, sqlProbeConcurrency, sqlProbeResultTTL)
+	})
+	return r.prober
+}
+
+func (r *Actor) checkSQLReady(pod *corev1.Pod) error {
 	if pod.Status.PodIP == "" {
 		return fmt.Errorf("%w: pod IP is not assigned", errSQLNotReady)
 	}
-	probe := r.sqlProbe
-	if probe == nil {
-		probe = probeMySQLHandshake
+	key := sqlProbeKey{
+		uid:  pod.UID,
+		addr: net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(cnset.CNSQLPort)),
 	}
-	addr := net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(cnset.CNSQLPort))
-	if err := probe(ctx, addr); err != nil {
-		return fmt.Errorf("%w: %s: %v", errSQLNotReady, addr, err)
+	if started := common.GetCNStartedTime(pod); started != nil {
+		key.started = started.UnixNano()
 	}
-	return nil
+	return r.sqlProber().check(key)
 }

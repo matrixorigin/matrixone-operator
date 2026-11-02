@@ -20,6 +20,7 @@ import (
 	stderrors "errors"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-errors/errors"
@@ -58,6 +59,9 @@ const (
 type Actor struct {
 	clientMgr *mocli.MORPCClientManager
 	sqlProbe  sqlReadyProbe
+
+	proberOnce sync.Once
+	prober     *asyncSQLProber
 }
 
 func NewActor(mgr *mocli.MORPCClientManager) *Actor {
@@ -234,7 +238,7 @@ func (r *Actor) syncBindPod(ctx *recon.Context[*v1alpha1.CNClaim], pod *corev1.P
 	probed := needSQLProbe(c, pod)
 	if probed {
 		// do not publish Working (and thus make the CN routable by proxy) before the CN can serve SQL
-		if err := r.checkSQLReady(ctx, pod); err != nil {
+		if err := r.checkSQLReady(pod); err != nil {
 			return err
 		}
 	}
