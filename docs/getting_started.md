@@ -4,9 +4,9 @@
 
 Prerequisites:
 
-- Kubernetes 1.18 or later;
+- Kubernetes compatible with the selected chart’s `kubeVersion` and your platform support policy;
    - or [Docker](https://docs.docker.com/engine/install/) and [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) if you do not have an existing k8s cluster available;
-- [kubectl 1.18 or later](https://kubernetes.io/docs/tasks/tools/);
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) compatible with the Kubernetes server;
 - [helm 3](https://helm.sh/docs/intro/install/).
 
 ## Prepare Your Kubernetes Cluster
@@ -17,7 +17,9 @@ Verify the cluster meets the minimal version requirement, refer to [kubernetes s
 > kubectl version
 ```
 
-The server version should >= 1.18.
+Compare the server version with `helm show chart` for the selected chart. The chart at commit `10aef15c57f98f92b442d79810f8ad3d53bbd85b` declares `kubeVersion: ">=1.19.0-0"`; that constraint is a minimum, not certification of every later Kubernetes release.
+
+The versioned install/cluster examples below are historical examples. Select and validate a chart/controller/CRD/MO combination before using them in production.
 
 ## Install MatrixOne Operator
 
@@ -136,3 +138,32 @@ To teardown the cluster, delete the mo object in k8s:
 > kubectl -n ${NS} delete matrixonecluster mo
 matrixonecluster.core.matrixorigin.io "mo" deleted
 ```
+
+## Acceptance, upgrade and retention checks
+
+The example chart and MO versions above are historical examples, not a compatibility matrix. Pin and verify Kubernetes, chart, controller image, MO image, backup image and CRD revisions separately. Offline deployments need all chart dependencies and images, not just the database image. Save rendered manifests and inspect registry overrides, RBAC, webhook reachability, storage and watch scope.
+
+Before applying a cluster or BackupJob, use server-side validation on the target cluster:
+
+```bash
+kubectl -n "${NS}" apply --dry-run=server -f mo.yaml
+kubectl -n "${NS}" apply --dry-run=server -f backupjob.yaml
+```
+
+Helm deployed and Pod Running are not database acceptance criteria. Inspect MatrixOneCluster conditions, desired/ready replicas, events, PVCs and controller logs, then connect through the actual Service and independently read back a dedicated SQL fixture.
+
+For a BackupJob, wait on the specific namespace and job, then inspect the outcome:
+
+```bash
+kubectl -n "${NS}" wait --for=condition=Ended backupjob/backupjob --timeout=10m
+kubectl -n "${NS}" get backupjob backupjob -o yaml
+kubectl -n "${NS}" get backups
+```
+
+**Ended=True also occurs on failure.** Require phase=Completed and a valid status.backup reference before restoring. `restoreFrom` references a Backup resource, not the BackupJob name. Restore into a separate cluster and object-storage prefix, then compare schema, primary keys and every field; startup alone does not prove data integrity.
+
+Before upgrades, save Helm values/manifests and CR/CRD definitions. Inspect the selected chart's CRD delivery and schema migration procedure. Helm rollback does not restore database data or guarantee CRD rollback.
+
+Before teardown, inspect ownerReferences/finalizers, PVC retention, PV reclaimPolicy, Kruise settings, namespace Secrets/Backup resources and object-storage prefixes. Deleting a cluster, namespace, Operator or CRD has different effects; do not assume universal data preservation. Rehearse deletion and restoration in an isolated cluster. Diagnose stuck finalizers instead of routinely force-removing them.
+
+Static YAML/CRD validation and Helm rendering do not certify deployment, failover, upgrades or retention. Record actual cluster tests separately.
