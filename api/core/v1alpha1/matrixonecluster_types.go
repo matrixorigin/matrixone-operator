@@ -24,6 +24,12 @@ import (
 // Note that MatrixOneCluster does not support specify overlay for underlying sets directly due to the size limitation
 // of kubernetes apiserver
 type MatrixOneClusterSpec struct {
+	// UDFWorker is the single cluster-level source policy. The
+	// MatrixOneCluster actor propagates a deep copy to every generated CNSet;
+	// per-group copies are rejected to avoid precedence ambiguity.
+	// +optional
+	UDFWorker *UDFWorkerPolicy `json:"udfWorker,omitempty"`
+
 	// TP is the default CN pod set that accepts client connections and execute queries
 	// Deprecated: use cnGroups instead
 	// +optional
@@ -130,6 +136,8 @@ type CNGroup struct {
 // MatrixOneClusterStatus defines the observed state of MatrixOneCluster
 type MatrixOneClusterStatus struct {
 	ConditionalStatus `json:",inline"`
+
+	UDFWorker UDFWorkerStatus `json:"udfWorker,omitempty"`
 
 	// Phase is a human-readable description of current cluster condition,
 	// programmatic client should rely on ConditionalStatus rather than phase.

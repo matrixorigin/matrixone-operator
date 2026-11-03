@@ -211,7 +211,10 @@ spec:
                       default to Service
                     type: string
                   pythonUdfSidecar:
-                    description: PythonUdfSidecar is the python udf server in CN
+                    description: |-
+                      PythonUdfSidecar is the historical demo entry point. It remains only to
+                      provide a stable rejection for old manifests; it is never rendered.
+                      Deprecated: use UDFWorker.
                     properties:
                       enabled:
                         type: boolean
@@ -430,6 +433,228 @@ spec:
                     items:
                       type: string
                     type: array
+                  udfWorker:
+                    description: |-
+                      UDFWorker is the effective typed policy for the CNSet. It is deliberately
+                      placed in this flattened struct so CNPoolSpec.Template carries exactly
+                      the same policy and revision hashing includes it.
+                    properties:
+                      client:
+                        properties:
+                          allowUnisolated:
+                            type: boolean
+                          maxActiveInvocations:
+                            type: integer
+                          maxBatchBytes:
+                            format: int64
+                            type: integer
+                          maxBatchRows:
+                            format: int64
+                            type: integer
+                          maxInvocationResultBytes:
+                            format: int64
+                            type: integer
+                          maxInvocationRows:
+                            format: int64
+                            type: integer
+                          maxTerminalBytes:
+                            format: int64
+                            type: integer
+                          maxTerminalEntries:
+                            format: int64
+                            type: integer
+                          requestTimeout:
+                            description: |-
+                              A nil or zero timeout means the CN runtime default. A positive value is
+                              bounded by the current runtime contract.
+                            type: string
+                          terminalRecordTTL:
+                            type: string
+                        type: object
+                      enabled:
+                        description: |-
+                          Enabled is the explicit feature switch. It is not inferred from any
+                          image, port, or client setting.
+                        type: boolean
+                      launcher:
+                        description: UDFWorkerLauncher identifies the process boundary
+                          used by the worker.
+                        enum:
+                        - python-image
+                        - mo-service
+                        type: string
+                      pool:
+                        description: |-
+                          Pool is meaningful only for the future independent worker pool
+                          topology. It is retained as typed configuration so current admission can
+                          reject it without interpreting replicas as a same-Pod worker count.
+                        properties:
+                          replicas:
+                            format: int32
+                            type: integer
+                        type: object
+                      topology:
+                        description: |-
+                          UDFWorkerTopology describes the logical placement contract of a Python UDF
+                          worker. The current Operator implementation supports paired workers in the
+                          CN Pod only. The other values remain part of the typed API so that an
+                          unsupported request is rejected deterministically rather than silently
+                          rendered as a different topology.
+                        enum:
+                        - disabled
+                        - paired
+                        - pool
+                        type: string
+                      worker:
+                        description: |-
+                          UDFWorkerSpec contains only structured workload properties controlled by
+                          the Operator. For the current same-Pod topology, scheduling and service
+                          account fields must remain empty because the worker shares the CN Pod.
+                        properties:
+                          image:
+                            description: Image must be an immutable digest for an
+                              enabled policy.
+                            type: string
+                          imagePullPolicy:
+                            description: PullPolicy describes a policy for if/when
+                              to pull a container image
+                            enum:
+                            - Always
+                            - Never
+                            - IfNotPresent
+                            type: string
+                          moService:
+                            properties:
+                              path:
+                                description: |-
+                                  Path and Python are consumed by the future external mo-service launcher.
+                                  UUID and address are generated from workload identity and are never
+                                  accepted from the user.
+                                type: string
+                              python:
+                                type: string
+                            type: object
+                          nodeSelector:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              These fields are reserved for an external Worker workload. They are
+                              rejected for the current same-Pod implementation.
+                            type: object
+                          port:
+                            description: |-
+                              Port is the worker's Pod-local Flight port. The Operator owns the bind
+                              address and always renders 127.0.0.1 for same-Pod workers. It cannot use
+                              a port occupied by the CN SQL, internal service, or metrics endpoints.
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          resources:
+                            description: ResourceRequirements describes the compute
+                              resource requirements.
+                            properties:
+                              claims:
+                                description: |-
+                                  Claims lists the names of resources, defined in spec.resourceClaims,
+                                  that are used by this container.
+
+                                  This is an alpha field and requires enabling the
+                                  DynamicResourceAllocation feature gate.
+
+                                  This field is immutable. It can only be set for containers.
+                                items:
+                                  description: ResourceClaim references one entry
+                                    in PodSpec.ResourceClaims.
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Name must match the name of one entry in pod.spec.resourceClaims of
+                                        the Pod where this field is used. It makes that resource available
+                                        inside a container.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                                x-kubernetes-list-map-keys:
+                                - name
+                                x-kubernetes-list-type: map
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  Limits describes the maximum amount of compute resources allowed.
+                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  Requests describes the minimum amount of compute resources required.
+                                  If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                                  otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                type: object
+                            type: object
+                          serviceAccountName:
+                            type: string
+                          tolerations:
+                            items:
+                              description: |-
+                                The pod this Toleration is attached to tolerates any taint that matches
+                                the triple <key,value,effect> using the matching operator <operator>.
+                              properties:
+                                effect:
+                                  description: |-
+                                    Effect indicates the taint effect to match. Empty means match all taint effects.
+                                    When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+                                  type: string
+                                key:
+                                  description: |-
+                                    Key is the taint key that the toleration applies to. Empty means match all taint keys.
+                                    If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    Operator represents a key's relationship to the value.
+                                    Valid operators are Exists and Equal. Defaults to Equal.
+                                    Exists is equivalent to wildcard for value, so that a pod can
+                                    tolerate all taints of a particular category.
+                                  type: string
+                                tolerationSeconds:
+                                  description: |-
+                                    TolerationSeconds represents the period of time the toleration (which must be
+                                    of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
+                                    it is not set, which means tolerate the taint forever (do not evict). Zero and
+                                    negative values will be treated as 0 (evict immediately) by the system.
+                                  format: int64
+                                  type: integer
+                                value:
+                                  description: |-
+                                    Value is the taint value the toleration matches to.
+                                    If the operator is Exists, the value should be empty, otherwise just a regular string.
+                                  type: string
+                              type: object
+                            type: array
+                          updateStrategy:
+                            properties:
+                              drainTimeout:
+                                description: |-
+                                  DrainTimeout is used by the future external route owner. Same-Pod
+                                  workers are drained with the CNSet Pod lifecycle.
+                                type: string
+                            type: object
+                        type: object
+                    type: object
                   updateStrategy:
                     description: UpdateStrategy is the rolling-update strategy of
                       CN

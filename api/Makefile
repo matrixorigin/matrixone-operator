@@ -6,7 +6,8 @@ ENVTEST_K8S_VERSION = 1.24.1
 .PHONY: manifests
 ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=../deploy/crds output:webhook:artifacts:config=../deploy/webhook
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role paths="./..." output:crd:artifacts:config=../deploy/crds
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) webhook paths="../pkg/..." output:webhook:artifacts:config=../deploy/webhook
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role paths="./..." output:crd:artifacts:config=../charts/matrixone-operator/templates/crds/
 
 .PHONY: generate

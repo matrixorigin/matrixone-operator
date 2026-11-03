@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,8 +50,8 @@ func SyncConfigMap(kubeCli recon.KubeClient, podSpec *corev1.PodSpec, cm *corev1
 	var desiredName string
 	var err error
 	vp := util.FindFirst(podSpec.Volumes, util.WithVolumeName("config"))
-	if vp != nil {
-		currentCmName = vp.Name
+	if vp != nil && vp.VolumeSource.ConfigMap != nil {
+		currentCmName = vp.VolumeSource.ConfigMap.Name
 	}
 	if v1alpha1.GateInplaceConfigmapUpdate.Enabled(operatorVersion) {
 		desiredName, err = ensureConfigMap(kubeCli, cm)
@@ -85,6 +86,14 @@ func ensureConfigMap(kubeCli recon.KubeClient, desired *corev1.ConfigMap) (strin
 		return "", err
 	}
 	if exist {
+		// The desired ConfigMap is built from the CN spec and therefore does not
+		// carry API-server metadata. Preserve the existing ownership and update
+		// identity when replacing its data; otherwise a normal reconcile would
+		// silently orphan the ConfigMap and reset its resource version.
+		c.OwnerReferences = append([]metav1.OwnerReference(nil), old.OwnerReferences...)
+		c.Finalizers = append([]string(nil), old.Finalizers...)
+		c.UID = old.UID
+		c.ResourceVersion = old.ResourceVersion
 		podList := &corev1.PodList{}
 		err = kubeCli.List(podList, client.InNamespace(c.Namespace))
 		if err != nil {
@@ -112,17 +121,35 @@ func ensureConfigMap(kubeCli recon.KubeClient, desired *corev1.ConfigMap) (strin
 
 // Deprecated: use ensureConfigMap instead
 func ensureConfigMapLegacy(kubeCli recon.KubeClient, currentCm string, desired *corev1.ConfigMap) (string, error) {
-	c := desired.DeepCopy()
-	if err := addConfigMapDigest(c); err != nil {
-		return "", errors.Wrap(err, 0)
+	desiredName, err := LegacyConfigMapName(desired)
+	if err != nil {
+		return "", err
 	}
 	// config digest not changed
-	if c.Name == currentCm {
+	if desiredName == currentCm {
 		return currentCm, nil
 	}
 	// otherwise ensure the configmap exists
-	err := util.Ignore(apierrors.IsAlreadyExists, kubeCli.CreateOwned(c))
+	c := desired.DeepCopy()
+	c.Name = desiredName
+	err = util.Ignore(apierrors.IsAlreadyExists, kubeCli.CreateOwned(c))
 	if err != nil {
+		return "", errors.Wrap(err, 0)
+	}
+	return c.Name, nil
+}
+
+// LegacyConfigMapName returns the content-addressed ConfigMap name used by
+// pre-in-place ConfigMap updates. Callers that need to validate ownership
+// must calculate this name before the legacy create path can ignore an
+// AlreadyExists error; checking only the unsuffixed desired name would allow a
+// foreign digest ConfigMap to be mounted by a Python-enabled CNSet.
+func LegacyConfigMapName(desired *corev1.ConfigMap) (string, error) {
+	if desired == nil {
+		return "", errors.New("desired ConfigMap is nil")
+	}
+	c := desired.DeepCopy()
+	if err := addConfigMapDigest(c); err != nil {
 		return "", errors.Wrap(err, 0)
 	}
 	return c.Name, nil

@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,13 @@
 
 package common
 
+import "github.com/matrixorigin/matrixone-operator/api/core/v1alpha1"
+
 const (
 	LockServicePort = 6003
 	LogtailPort     = 32003
 
-	MetricsPort = 7001
+	MetricsPort = int(v1alpha1.CNUDFWorkerReservedMetricsPort)
 
 	DeletionCostAnno = "controller.kubernetes.io/pod-deletion-cost"
 

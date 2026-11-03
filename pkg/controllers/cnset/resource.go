@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -166,6 +166,9 @@ func syncPodMeta(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) error {
 	if meta.Annotations == nil {
 		meta.Annotations = map[string]string{}
 	}
+	if err := validateUDFWorkerRendering(cn); err != nil {
+		return err
+	}
 	s, err := json.Marshal(cn.Spec.Labels)
 	if err != nil {
 		return err
@@ -176,10 +179,37 @@ func syncPodMeta(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet) error {
 	}
 	common.SyncPodMeta(meta, &cn.Spec.PodSet)
 	cn.Spec.Overlay.OverlayPodMeta(&cs.Spec.Template.ObjectMeta)
+	if poolName := cn.Labels[v1alpha1.PoolNameLabel]; poolName != "" && cn.Spec.PodManagementPolicy != nil && *cn.Spec.PodManagementPolicy == v1alpha1.PodManagementPolicyPooling {
+		// Pool lifecycle labels are produced by the Pool controller in CNSet
+		// metadata. Apply them after the user overlay so a restored or stale
+		// overlay cannot change the pool selected by claims or the initial phase
+		// used by the pooling controller.
+		if cs.Spec.Template.Labels == nil {
+			cs.Spec.Template.Labels = map[string]string{}
+		}
+		cs.Spec.Template.Labels[v1alpha1.PoolNameLabel] = poolName
+		cs.Spec.Template.Labels[v1alpha1.CNPodPhaseLabel] = v1alpha1.CNPodPhaseUnknown
+		_, outdated := cn.Labels[v1alpha1.PodOutdatedLabel]
+		if cn.Spec.Overlay != nil {
+			// Preserve a legacy disabled pool's exclusion until its controller
+			// migrates metadata. Enabled policies reject this overlay at entry.
+			_, legacyOutdated := cn.Spec.Overlay.PodLabels[v1alpha1.PodOutdatedLabel]
+			outdated = outdated || legacyOutdated
+		}
+		if outdated {
+			cs.Spec.Template.Labels[v1alpha1.PodOutdatedLabel] = "y"
+		} else {
+			delete(cs.Spec.Template.Labels, v1alpha1.PodOutdatedLabel)
+		}
+	}
+	syncUDFWorkerPodMarker(cn, &cs.Spec.Template.ObjectMeta)
 	return nil
 }
 
-func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.SharedStorageProvider) {
+func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.SharedStorageProvider) error {
+	if err := validateUDFWorkerRendering(cn); err != nil {
+		return err
+	}
 	specRef := &cs.Spec.Template.Spec
 
 	mainRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
@@ -241,45 +271,40 @@ func syncPodSpec(cn *v1alpha1.CNSet, cs *kruisev1alpha1.CloneSet, sp v1alpha1.Sh
 
 	common.SetupMemoryFsVolume(specRef, cn.Spec.MemoryFsSize)
 
-	// create or delete python udf sidecar
-	sidecar := cn.Spec.PythonUdfSidecar
-	if sidecar.Enabled {
-		pythonUdfRef := util.FindFirst(specRef.Containers, func(c corev1.Container) bool {
-			return c.Name == v1alpha1.ContainerPythonUdf
-		})
-		if pythonUdfRef == nil {
-			pythonUdfRef = &corev1.Container{Name: v1alpha1.ContainerPythonUdf}
-		}
-		pythonUdfRef.Image = v1alpha1.ContainerPythonUdfDefaultImage
-		if sidecar.Image != "" {
-			pythonUdfRef.Image = sidecar.Image
-		}
-		pythonUdfRef.Resources = sidecar.Resources
-		port := v1alpha1.ContainerPythonUdfDefaultPort
-		if sidecar.Port != 0 {
-			port = sidecar.Port
-		}
-		pythonUdfRef.Command = []string{"/bin/bash", "-c", fmt.Sprintf("python -u server.py --address=localhost:%d", port)}
-		if sidecar.Overlay != nil {
-			tmpOverlay := &v1alpha1.Overlay{
-				MainContainerOverlay: *sidecar.Overlay,
-			}
-			tmpOverlay.OverlayMainContainer(pythonUdfRef)
-		}
-		specRef.Containers = append(specRef.Containers, *pythonUdfRef)
-	} else {
-		// do nothing, because all containers except main have been deleted in the previous code
+	// The overlay is intentionally complete before the current Worker is
+	// appended. This makes the bind address, command, args, resources, port,
+	// and container-owned metadata authoritative even if an older controller or
+	// a restored object supplied a generic sidecar list.
+	if policy := cn.Spec.UDFWorker; policy != nil && policy.Enabled {
+		// These fields are not part of the supported UDF overlay contract, but a
+		// restored or hand-edited CloneSet can still carry them. Normalize them
+		// before publishing the paired template so the Worker cannot inherit a
+		// host network/PID namespace, a shared process namespace, an init-time
+		// code mutation, a privileged Pod security context, or a custom service
+		// account.
+		specRef.HostNetwork = false
+		specRef.HostPID = false
+		specRef.ShareProcessNamespace = nil
+		specRef.InitContainers = nil
+		specRef.SecurityContext = nil
+		specRef.ServiceAccountName = ""
+		specRef.RuntimeClassName = nil
+		specRef.Containers = append(specRef.Containers, authoritativeUDFWorkerContainer(policy))
 	}
+	return nil
 }
 
 // buildCNSetConfigMap builds the ConfigMap for a CNSet.
 // reservedOrdinals should be set to the LogSet StatefulSet's spec.reserveOrdinals so that
 // service-addresses correctly skips ordinal holes created during failover (issue #596).
 func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet, reservedOrdinals []int) (*corev1.ConfigMap, string, error) {
+	if err := cn.Spec.ValidateUDFWorkerConfiguration(); err != nil {
+		return nil, "", errors.WrapPrefix(err, "invalid UDF worker policy", 0)
+	}
 	if ls.Status.Discovery == nil {
 		return nil, "", errors.New("logset had not yet exposed HAKeeper discovery address")
 	}
-	cfg := cn.Spec.Config
+	cfg := cn.Spec.Config.DeepCopy()
 	if cfg == nil {
 		cfg = v1alpha1.NewTomlConfig(map[string]interface{}{})
 	}
@@ -298,13 +323,10 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet, reservedOrdina
 	if cn.Spec.GetExportToPrometheus() {
 		cfg.Set([]string{"observability", "enableMetricToProm"}, true)
 	}
-	sidecar := cn.Spec.PythonUdfSidecar
-	if sidecar.Enabled {
-		port := v1alpha1.ContainerPythonUdfDefaultPort
-		if sidecar.Port != 0 {
-			port = sidecar.Port
+	if policy := cn.Spec.UDFWorker; policy != nil && policy.Enabled {
+		for key, value := range udfWorkerClientConfig(policy) {
+			cfg.Set([]string{"cn", "python-udf-client", key}, value)
 		}
-		cfg.Set([]string{"cn", "python-udf-client", "server-address"}, fmt.Sprintf("localhost:%d", port))
 	}
 	if cn.Spec.ScalingConfig.GetStoreDrainEnabled() {
 		cfg.Set([]string{"cn", "init-work-state"}, "Draining")
@@ -316,7 +338,7 @@ func buildCNSetConfigMap(cn *v1alpha1.CNSet, ls *v1alpha1.LogSet, reservedOrdina
 	buff := new(bytes.Buffer)
 	err = startScriptTpl.Execute(buff, &model{
 		ConfigFilePath:         fmt.Sprintf("%s/%s", common.ConfigPath, common.ConfigFile),
-		CNSQLPort:              CNSQLPort,
+		CNSQLPort:              int(CNSQLPort),
 		CNRpcPort:              cnRPCPort,
 		LockServicePort:        common.LockServicePort,
 		InPlaceConfigMapUpdate: v1alpha1.GateInplaceConfigmapUpdate.Enabled(cn.Spec.GetOperatorVersion()),

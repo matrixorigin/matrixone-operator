@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,12 +23,14 @@ import (
 	"github.com/matrixorigin/matrixone/pkg/common/morpc"
 	pb "github.com/matrixorigin/matrixone/pkg/pb/query"
 	"github.com/matrixorigin/matrixone/pkg/txn/rpc"
+	"github.com/matrixorigin/matrixone/pkg/util/toml"
 )
 
 var timeout = 10 * time.Second
 
 type Client struct {
-	c morpc.RPCClient
+	c      morpc.RPCClient
+	status morpc.RPCClient
 }
 
 func New() (*Client, error) {
@@ -41,7 +43,36 @@ func New() (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{c: queryCli}, nil
+	statusCli, err := (rpc.Config{MaxMessageSize: toml.ByteSize(maxPythonStatusRPCBytes)}).NewClient("", "query-service",
+		func() morpc.Message { return &pythonUDFStatusResponse{} })
+	if err != nil {
+		_ = queryCli.Close()
+		return nil, err
+	}
+	return &Client{c: queryCli, status: statusCli}, nil
+}
+
+// Close releases both query-service clients. They are separate because the
+// normal response pool and the Python status response have different wire
+// message types. Callers that own a Client must close it when their runtime
+// stops; morpc futures and backend goroutines otherwise outlive the
+// controller that created them.
+func (c *Client) Close() error {
+	if c == nil {
+		return nil
+	}
+	var firstErr error
+	if c.status != nil {
+		if err := c.status.Close(); err != nil {
+			firstErr = err
+		}
+	}
+	if c.c != nil {
+		if err := c.c.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 func (c *Client) ShowProcessList(ctx context.Context, address string) (*pb.ShowProcessListResponse, error) {
@@ -100,9 +131,13 @@ func (c *Client) SendReq(ctx context.Context, address string, req *pb.Request) (
 	if err != nil {
 		return nil, errors.WrapPrefix(err, "error send request", 0)
 	}
+	defer f.Close()
 	msg, err := f.Get()
 	if err != nil {
 		return nil, errors.WrapPrefix(err, "error get msg", 0)
+	}
+	if msg == nil {
+		return nil, errors.New("query service returned an empty response")
 	}
 	resp, ok := msg.(*pb.Response)
 	if !ok {

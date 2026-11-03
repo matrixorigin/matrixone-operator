@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,6 +89,7 @@ func (m *matrixOneClusterDefaulter) Default(ctx context.Context, obj runtime.Obj
 	if moc.Spec.AP != nil {
 		m.cn.DefaultSpec(moc.Spec.AP)
 	}
+	defaultUDFWorkerPolicy(moc.Spec.UDFWorker)
 	for i := range moc.Spec.CNGroups {
 		m.cn.DefaultSpec(&moc.Spec.CNGroups[i].CNSetSpec)
 	}
@@ -154,19 +155,39 @@ func (m *matrixOneClusterValidator) ValidateDelete(_ context.Context, _ runtime.
 
 func (m *matrixOneClusterValidator) validateMutateCommon(moc *v1alpha1.MatrixOneCluster) field.ErrorList {
 	var errs field.ErrorList
+	if moc.Spec.UDFWorker != nil {
+		// Validate the cluster source with the same policy rules used at the
+		// CNSet boundary. The generated CNSet receives a deep copy later.
+		proxySpec := &v1alpha1.CNSetSpec{ConfigThatChangeCNSpec: v1alpha1.ConfigThatChangeCNSpec{
+			UDFWorker: moc.Spec.UDFWorker,
+		}}
+		errs = append(errs, validateUDFWorkerPolicy(proxySpec, field.NewPath("spec"))...)
+	}
 	errs = append(errs, m.dn.ValidateSpecCreate(moc.GetTN())...)
 	groups := map[string]bool{}
 	if moc.Spec.TP != nil {
-		errs = append(errs, m.cn.ValidateSpecCreate(moc.Spec.TP)...)
+		errs = append(errs, m.cn.ValidateSpecCreateAt(moc.Spec.TP, field.NewPath("spec", "tp"))...)
+		errs = append(errs, validateEffectiveCNGroupUDFWorkerOverlay(moc.Spec.TP, moc.Spec.UDFWorker,
+			field.NewPath("spec", "tp"))...)
+		if moc.Spec.TP.UDFWorker != nil {
+			errs = append(errs, field.Forbidden(field.NewPath("spec", "tp", "udfWorker"),
+				"CNGroupUDFWorkerPolicyMustComeFromMatrixOneCluster"))
+		}
 		groups["tp"] = true
 	}
 	if moc.Spec.AP != nil {
-		errs = append(errs, m.cn.ValidateSpecCreate(moc.Spec.AP)...)
+		errs = append(errs, m.cn.ValidateSpecCreateAt(moc.Spec.AP, field.NewPath("spec", "ap"))...)
+		errs = append(errs, validateEffectiveCNGroupUDFWorkerOverlay(moc.Spec.AP, moc.Spec.UDFWorker,
+			field.NewPath("spec", "ap"))...)
+		if moc.Spec.AP.UDFWorker != nil {
+			errs = append(errs, field.Forbidden(field.NewPath("spec", "ap", "udfWorker"),
+				"CNGroupUDFWorkerPolicyMustComeFromMatrixOneCluster"))
+		}
 		groups["ap"] = true
 	}
 
 	for i, cn := range moc.Spec.CNGroups {
-		errs = append(errs, m.validateCNGroup(cn, field.NewPath("spec").Child("cnGroups").Index(i))...)
+		errs = append(errs, m.validateCNGroup(cn, field.NewPath("spec").Child("cnGroups").Index(i), moc.Spec.UDFWorker)...)
 		if groups[cn.Name] {
 			errs = append(errs, field.Invalid(field.NewPath("spec").Child("cnGroups").Index(i).Child("name"), cn.Name, "name must be unique"))
 		}
@@ -178,13 +199,31 @@ func (m *matrixOneClusterValidator) validateMutateCommon(moc *v1alpha1.MatrixOne
 	return errs
 }
 
-func (m *matrixOneClusterValidator) validateCNGroup(g v1alpha1.CNGroup, parent *field.Path) field.ErrorList {
+func (m *matrixOneClusterValidator) validateCNGroup(g v1alpha1.CNGroup, parent *field.Path, clusterPolicy *v1alpha1.UDFWorkerPolicy) field.ErrorList {
 	var errs field.ErrorList
 	if es := validation.IsDNS1123Subdomain(g.Name); es != nil {
 		for _, err := range es {
 			errs = append(errs, field.Invalid(parent.Child("name"), g.Name, err))
 		}
 	}
-	errs = append(errs, m.cn.ValidateSpecCreate(&g.CNSetSpec)...)
+	errs = append(errs, m.cn.ValidateSpecCreateAt(&g.CNSetSpec, parent)...)
+	errs = append(errs, validateEffectiveCNGroupUDFWorkerOverlay(&g.CNSetSpec, clusterPolicy, parent)...)
+	if g.UDFWorker != nil {
+		errs = append(errs, field.Forbidden(parent.Child("udfWorker"),
+			"CNGroupUDFWorkerPolicyMustComeFromMatrixOneCluster"))
+	}
 	return errs
+}
+
+// validateEffectiveCNGroupUDFWorkerOverlay applies the policy precedence used
+// by MatrixOneClusterActor (cluster policy becomes the generated CNSet policy)
+// while preserving the group-specific Pod overlay. The copy is read-only and
+// prevents admission validation from mutating the user's object.
+func validateEffectiveCNGroupUDFWorkerOverlay(spec *v1alpha1.CNSetSpec, clusterPolicy *v1alpha1.UDFWorkerPolicy, path *field.Path) field.ErrorList {
+	if clusterPolicy == nil {
+		return nil
+	}
+	effective := *spec
+	effective.UDFWorker = clusterPolicy
+	return validateUDFWorkerPodOverlay(&effective, path, clusterPolicy.Enabled)
 }

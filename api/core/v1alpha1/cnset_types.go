@@ -1,4 +1,4 @@
-// Copyright 2025 Matrix Origin
+// Copyright 2025-2026 Matrix Origin
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"time"
 
 	recon "github.com/matrixorigin/controller-runtime/pkg/reconciler"
@@ -35,12 +36,6 @@ const (
 	CNStoreStateUp       string = "Up"
 
 	defaultMinDelaySeconds = 15
-)
-
-const (
-	ContainerPythonUdf             string = "python-udf"
-	ContainerPythonUdfDefaultPort  int    = 50051
-	ContainerPythonUdfDefaultImage string = "composer000/mo-python-udf-server:latest" // TODO change it
 )
 
 type CNSetTerminationPolicy string
@@ -108,8 +103,34 @@ type ConfigThatChangeCNSpec struct {
 	// SharedStorageCache is the configuration of the S3 sharedStorageCache
 	SharedStorageCache SharedStorageCache `json:"sharedStorageCache,omitempty"`
 
-	// PythonUdfSidecar is the python udf server in CN
-	PythonUdfSidecar PythonUdfSidecar `json:"pythonUdfSidecar,omitempty"`
+	// UDFWorker is the effective typed policy for the CNSet. It is deliberately
+	// placed in this flattened struct so CNPoolSpec.Template carries exactly
+	// the same policy and revision hashing includes it.
+	// +optional
+	UDFWorker *UDFWorkerPolicy `json:"udfWorker,omitempty"`
+
+	// PythonUdfSidecar is the historical demo entry point. It remains only to
+	// provide a stable rejection for old manifests; it is never rendered.
+	// +optional
+	// Deprecated: use UDFWorker.
+	PythonUdfSidecar *PythonUdfSidecar `json:"pythonUdfSidecar,omitempty"`
+}
+
+// ValidateUDFWorkerConfiguration is the controller-side fail-closed check for
+// the effective CNSet boundary. Admission adds field-specific errors, while
+// this method protects restore and reconcile paths that may receive an object
+// created by an older controller or with admission temporarily bypassed.
+func (s *CNSetSpec) ValidateUDFWorkerConfiguration() error {
+	if s == nil {
+		return nil
+	}
+	if s.PythonUdfSidecar != nil {
+		return fmt.Errorf("LegacyPythonUdfSidecarUnsupported: recreate the function with spec.udfWorker")
+	}
+	if s.Config != nil && s.Config.Get("cn", "python-udf-client") != nil {
+		return fmt.Errorf("PythonClientConfigManagedByUDFWorkerPolicy")
+	}
+	return s.UDFWorker.Validate()
 }
 
 func (s *CNSetSpec) GetReusePVC() bool {
@@ -183,6 +204,8 @@ type CNLabel struct {
 // CNSetStatus Figure out what status should be exposed
 type CNSetStatus struct {
 	ConditionalStatus `json:",inline"`
+
+	UDFWorker UDFWorkerStatus `json:"udfWorker,omitempty"`
 
 	Stores []CNStore `json:"stores,omitempty"`
 

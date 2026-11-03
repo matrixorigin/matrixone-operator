@@ -77,6 +77,7 @@ type queryClient interface {
 	ShowProcessList(context.Context, string) (*querypb.ShowProcessListResponse, error)
 	GetPipelineInfo(context.Context, string) (*querypb.GetPipelineInfoResponse, error)
 	GetReplicaCount(context.Context, string) (querypb.GetReplicaCountResponse, error)
+	GetPythonUdfStatus(context.Context, string) (*querycli.PythonUDFStatus, error)
 }
 
 type withCNSet struct {
@@ -86,7 +87,11 @@ type withCNSet struct {
 }
 
 func NewController(mgr *mocli.MORPCClientManager, qc *querycli.Client) *Controller {
-	return &Controller{clientMgr: mgr, queryCli: qc}
+	var query queryClient
+	if qc != nil {
+		query = qc
+	}
+	return &Controller{clientMgr: mgr, queryCli: query}
 }
 
 var _ recon.Actor[*corev1.Pod] = &Controller{}
@@ -518,7 +523,10 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 		// BeginObservation has already invalidated this round. Persist that state so
 		// IsSafeToReclaim remains the single reclaim-safety boundary, while preserving
 		// the existing state-sync behavior when the CN is absent from the cache.
-		return c.patchStoreStats(ctx, sc)
+		if patchErr := c.patchStoreStats(ctx, sc); patchErr != nil {
+			return patchErr
+		}
+		return c.patchPythonUDFStatus(ctx, c.unavailablePythonUDFStatus(pod))
 	}
 
 	_, diagnosDraining := pod.Annotations[diagnosDrainingAnno]
@@ -528,7 +536,10 @@ func (c *withCNSet) syncStats(ctx *recon.Context[*corev1.Pod]) error {
 	}
 	c.collectQueryStats(sc, queryAddress, moVersion, diagosis)
 
-	return c.patchStoreStats(ctx, sc)
+	if err := c.patchStoreStats(ctx, sc); err != nil {
+		return err
+	}
+	return c.patchPythonUDFStatus(ctx, c.queryPythonUDFStatus(ctx.Context, pod, queryAddress))
 }
 
 // collectQueryStats updates one observation round. Each observation is marked
@@ -721,7 +732,7 @@ func (annotationChangedExcludeStats) Update(e event.UpdateEvent) bool {
 	newAnnos := e.ObjectNew.GetAnnotations()
 	for k, v := range newAnnos {
 		// exclude stats
-		if k == common.DeletionCostAnno || k == v1alpha1.StoreConnectionAnno || k == v1alpha1.StoreScoreAnno {
+		if k == common.DeletionCostAnno || k == v1alpha1.StoreConnectionAnno || k == v1alpha1.StoreScoreAnno || k == v1alpha1.UDFWorkerStatusAnno {
 			continue
 		}
 		// only consider newly added annotations or annotation value change, deletion of annotation key
